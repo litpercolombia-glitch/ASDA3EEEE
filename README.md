@@ -37,13 +37,14 @@
 - **Modo Oscuro**: Soporte completo para tema claro/oscuro
 - **Almacenamiento Local**: Persistencia de datos con expiración configurable (24h)
 
-### 🤖 Capacidades de IA
+### 🤖 Capacidades de IA (Powered by Claude)
 
-- **Gemini Vision**: Análisis de fotos de entrega
-- **Gemini Flash**: Transcripción de audio
-- **Gemini Image**: Generación de imágenes de marketing
-- **Search Grounding**: Búsqueda en tiempo real para tracking
-- **Asistente Virtual**: Chat contextual sobre envíos
+- **Claude Vision**: Análisis de fotos de entrega con precisión superior
+- **Claude Sonnet 4**: Razonamiento avanzado y análisis contextual
+- **Asistente Virtual**: Chat inteligente en español sobre envíos
+- **Análisis de Screenshots**: Extracción automática de datos de 17track
+- **Generación de Contenido**: Mensajes para clientes y marketing
+- **Análisis de Lote**: Evaluación de múltiples envíos simultáneamente
 
 ### 🚚 Transportadoras Soportadas
 
@@ -63,10 +64,11 @@
 - **Tailwind CSS** - Estilos utility-first
 - **Lucide React** - Iconografía moderna
 
-### Integracion IA
+### Integración IA
 
-- **Google Gemini API** - Modelos de IA (Vision, Flash, Image)
-- **@google/genai** - SDK oficial de Google
+- **Claude API (Anthropic)** - IA principal con razonamiento superior
+- **@anthropic-ai/sdk** - SDK oficial de Anthropic
+- **Google Gemini API** - IA secundaria (legacy)
 
 ### Utilidades
 
@@ -87,7 +89,7 @@
 
 - Node.js 18+
 - npm 9+
-- API Key de Google Gemini ([Obtener aquí](https://aistudio.google.com/apikey))
+- API Key de Claude ([Obtener aquí](https://console.anthropic.com/))
 
 ### Pasos
 
@@ -101,7 +103,7 @@ npm install
 
 # Configurar variables de entorno
 cp .env.example .env
-# Editar .env y añadir tu VITE_GEMINI_API_KEY
+# Editar .env y añadir tu VITE_CLAUDE_API_KEY
 
 # Ejecutar en desarrollo
 npm run dev
@@ -114,7 +116,10 @@ npm run dev
 Crea un archivo `.env` en la raíz del proyecto:
 
 ```bash
-# API de Google Gemini (REQUERIDO)
+# API de Claude - Anthropic (REQUERIDO)
+VITE_CLAUDE_API_KEY=tu_api_key_aqui
+
+# API de Google Gemini (OPCIONAL - Legacy)
 VITE_GEMINI_API_KEY=tu_api_key_aqui
 
 # Configuración de Almacenamiento
@@ -286,26 +291,29 @@ exportSessionData(shipments: Shipment[]): void
 importSessionData(file: File): Promise<Shipment[]>
 ```
 
-### Gemini Service (`services/geminiService.ts`)
+### Claude Service (`services/claudeService.ts`)
 
 ```typescript
-// Análisis de imágenes
+// Análisis de imágenes con Claude Vision
 analyzeEvidenceImage(base64Image: string): Promise<string>
 
-// Transcripción
-transcribeAudio(base64Audio: string): Promise<string>
-
-// Generación de imágenes
-generateMarketingImage(prompt: string): Promise<string | null>
+// Generación de contenido de marketing
+generateMarketingContent(prompt: string): Promise<string>
 
 // Tracking con IA
 trackShipmentWithAI(trackingNumber: string, carrier: string): Promise<AITrackingResult>
 
-// Screenshot analysis
+// Análisis de screenshots de tracking
 analyzeTrackingScreenshot(base64Image: string): Promise<AITrackingResult[]>
 
-// Asistente
+// Asistente inteligente
 askAssistant(question: string, context?: string): Promise<string>
+
+// Análisis de lote de envíos
+batchAnalyzeShipments(shipments: Shipment[]): Promise<string>
+
+// Generación de mensajes para clientes
+generateCustomerMessage(shipment: Shipment, situation: string): Promise<string>
 ```
 
 ## 🎨 Componentes UI Reutilizables
@@ -418,7 +426,8 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 
 ## 🙏 Agradecimientos
 
-- Google Gemini por la API de IA
+- Anthropic por Claude y su excelente API
+- Google Gemini por la API de IA (legacy support)
 - 17Track por el servicio de tracking
 - Comunidad de React y TypeScript
 - Contribuidores de código abierto

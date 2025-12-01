@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Shipment, ShipmentStatus } from '../types';
 import { X, Upload, Wand2, Loader2, Download, FileText } from 'lucide-react';
-import { analyzeEvidenceImage } from '../services/geminiService';
+import { analyzeEvidenceImage } from '../services/claudeService';
 import * as ReactDOMServer from 'react-dom/server';
 
 interface EvidenceModalProps {

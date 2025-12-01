@@ -6,7 +6,7 @@ import {
   getShipmentRecommendation,
   generateClaimPDF,
 } from '../services/logisticsService';
-import { trackShipmentWithAI } from '../services/geminiService';
+import { trackShipmentWithAI } from '../services/claudeService';
 import {
   Truck,
   CheckCircle,

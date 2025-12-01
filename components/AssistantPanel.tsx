@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { askAssistant } from '../services/geminiService';
+import { askAssistant } from '../services/claudeService';
 import { GeminiChatMessage, Shipment } from '../types';
 import {
   Send,

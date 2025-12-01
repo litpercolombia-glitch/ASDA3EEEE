@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shipment, ShipmentStatus } from '../types';
 import { generateBulkTrackingUrl } from '../services/logisticsService';
-import { parseTrackingScreenshot } from '../services/geminiService';
+import { analyzeTrackingScreenshot } from '../services/claudeService';
 import {
   X,
   ExternalLink,
@@ -62,7 +62,7 @@ export const BatchTrackingModal: React.FC<BatchTrackingModalProps> = ({
   const handleAnalyze = async (base64Img: string) => {
     setIsProcessing(true);
     setStep(2);
-    const results = await parseTrackingScreenshot(base64Img);
+    const results = await analyzeTrackingScreenshot(base64Img);
 
     // Filter results to only include IDs that exist in our provided shipments list (optional, but safer)
     // Actually, we trust the ID matching.

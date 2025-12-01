@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Shipment, ShipmentStatus, CarrierName, AITrackingResult } from '../types';
 import { getTrackingUrl } from '../services/logisticsService';
-import { trackShipmentWithAI } from '../services/geminiService';
+import { trackShipmentWithAI } from '../services/claudeService';
 import {
   Camera,
   ExternalLink,

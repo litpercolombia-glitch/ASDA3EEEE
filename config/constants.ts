@@ -4,6 +4,14 @@
 
 // API Configuration
 export const API_CONFIG = {
+  // Claude API (Primary - Anthropic)
+  CLAUDE_API_KEY: import.meta.env.VITE_CLAUDE_API_KEY || '',
+  CLAUDE_MODELS: {
+    DEFAULT: 'claude-sonnet-4-20250514', // Latest Claude Sonnet
+    VISION: 'claude-sonnet-4-20250514', // Supports vision
+    HAIKU: 'claude-3-5-haiku-20241022', // Fast responses
+  },
+  // Gemini API (Legacy - keeping for backward compatibility)
   GEMINI_API_KEY: import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '',
   GEMINI_MODELS: {
     VISION: 'gemini-3-pro-preview',
