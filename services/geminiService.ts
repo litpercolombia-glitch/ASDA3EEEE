@@ -1,167 +1,228 @@
-import { GoogleGenAI, Type } from "@google/genai";
-import { AITrackingResult, ShipmentStatus, Shipment } from "../types";
+import { GoogleGenAI, Type } from '@google/genai';
+import { AITrackingResult, ShipmentStatus, Shipment } from '../types';
+import { API_CONFIG } from '../config/constants';
+import { APIError, logError } from '../utils/errorHandler';
+import { validateApiKey } from '../utils/validators';
 
-const getAI = () => {
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) throw new Error("API Key not found");
-    return new GoogleGenAI({ apiKey });
+/**
+ * Get configured GoogleGenAI instance
+ */
+const getAI = (): GoogleGenAI => {
+  const apiKey = API_CONFIG.GEMINI_API_KEY;
+  validateApiKey(apiKey);
+  return new GoogleGenAI({ apiKey });
 };
 
-// 1. Image Analysis (Gemini 3 Pro Preview)
+/**
+ * Analyze delivery evidence image using Gemini Vision
+ * @param base64Image - Base64 encoded image data
+ * @returns Analysis description
+ */
 export const analyzeEvidenceImage = async (base64Image: string): Promise<string> => {
-    try {
-        const ai = getAI();
-        const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
-        
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-pro-preview',
-            contents: {
-                parts: [
-                    { inlineData: { mimeType: 'image/jpeg', data: base64Data } },
-                    { text: "Analiza esta imagen de evidencia de entrega logística. Describe el estado del paquete, si es legible la guía, y si hay daños visibles. Sé breve y profesional." }
-                ]
-            }
-        });
-        return response.text || "No se pudo analizar la imagen.";
-    } catch (error) {
-        console.error("Error analysing image:", error);
-        return "Error al conectar con Gemini Vision.";
+  try {
+    const ai = getAI();
+    const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
+
+    if (!base64Data) {
+      throw new APIError('Imagen inválida o vacía', 400);
     }
+
+    const response = await ai.models.generateContent({
+      model: API_CONFIG.GEMINI_MODELS.VISION,
+      contents: {
+        parts: [
+          { inlineData: { mimeType: 'image/jpeg', data: base64Data } },
+          {
+            text: 'Analiza esta imagen de evidencia de entrega logística. Describe el estado del paquete, si es legible la guía, y si hay daños visibles. Sé breve y profesional.',
+          },
+        ],
+      },
+    });
+
+    const result = response.text || 'No se pudo analizar la imagen.';
+    return result;
+  } catch (error) {
+    logError(error, 'analyzeEvidenceImage');
+
+    if (error instanceof APIError) {
+      throw error;
+    }
+
+    throw new APIError('Error al analizar imagen con Gemini Vision', 500, error);
+  }
 };
 
-// 2. Transcribe Audio (Gemini 2.5 Flash)
+/**
+ * Transcribe audio using Gemini
+ * @param base64Audio - Base64 encoded audio data
+ * @returns Transcription text
+ */
 export const transcribeAudio = async (base64Audio: string): Promise<string> => {
-    try {
-        const ai = getAI();
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: {
-                parts: [
-                    { inlineData: { mimeType: 'audio/wav', data: base64Audio } },
-                    { text: "Transcribe this audio strictly verbatim." }
-                ]
-            }
-        });
-        return response.text || "";
-    } catch (error) {
-        console.error("Transcription error:", error);
-        return "Error en transcripción.";
+  try {
+    const ai = getAI();
+
+    if (!base64Audio) {
+      throw new APIError('Audio inválido o vacío', 400);
     }
+
+    const response = await ai.models.generateContent({
+      model: API_CONFIG.GEMINI_MODELS.FLASH,
+      contents: {
+        parts: [
+          { inlineData: { mimeType: 'audio/wav', data: base64Audio } },
+          { text: 'Transcribe this audio strictly verbatim.' },
+        ],
+      },
+    });
+
+    return response.text || '';
+  } catch (error) {
+    logError(error, 'transcribeAudio');
+    throw new APIError('Error en transcripción de audio', 500, error);
+  }
 };
 
-// 3. Generate Marketing Image (Gemini 3 Pro Image)
+/**
+ * Generate marketing image using Gemini
+ * @param prompt - Image generation prompt
+ * @returns Base64 encoded image or null
+ */
 export const generateMarketingImage = async (prompt: string): Promise<string | null> => {
-    try {
-        const ai = getAI();
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-pro-image-preview',
-            contents: {
-                parts: [{ text: prompt }]
-            },
-            config: {
-                imageConfig: {
-                    aspectRatio: "1:1",
-                    imageSize: "1K"
-                }
-            }
-        });
+  try {
+    const ai = getAI();
 
-        // Loop through parts to find the image
-        if (response.candidates?.[0]?.content?.parts) {
-            for (const part of response.candidates[0].content.parts) {
-                if (part.inlineData) {
-                    return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-                }
-            }
-        }
-        return null;
-    } catch (error) {
-        console.error("Image generation error:", error);
-        return null;
+    if (!prompt || prompt.trim().length === 0) {
+      throw new APIError('Prompt vacío para generación de imagen', 400);
     }
-}
+
+    const response = await ai.models.generateContent({
+      model: API_CONFIG.GEMINI_MODELS.IMAGE,
+      contents: {
+        parts: [{ text: prompt }],
+      },
+      config: {
+        imageConfig: {
+          aspectRatio: '1:1',
+          imageSize: '1K',
+        },
+      },
+    });
+
+    // Loop through parts to find the image
+    if (response.candidates?.[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+        }
+      }
+    }
+
+    return null;
+  } catch (error) {
+    logError(error, 'generateMarketingImage');
+    return null;
+  }
+};
 
 // 4. General Assistance with Context and Image Capabilities
-export const askAssistant = async (query: string, shipmentsContext?: Shipment[], location?: GeolocationCoordinates): Promise<{text: string, image?: string}> => {
-    try {
-        const ai = getAI();
-        
-        // Context Injection
-        let systemContext = "";
-        if (shipmentsContext && shipmentsContext.length > 0) {
-            const summary = shipmentsContext.slice(0, 50).map(s => `Guía: ${s.id}, Transportadora: ${s.carrier}, Estado: ${s.status}, Tel: ${s.phone || 'N/A'}`).join('\n');
-            systemContext = `CONTEXTO DE ENVÍOS ACTUALES (Usa esto para responder si preguntan por guías específicas):\n${summary}\n\n`;
-        }
+export const askAssistant = async (
+  query: string,
+  shipmentsContext?: Shipment[],
+  location?: GeolocationCoordinates
+): Promise<{ text: string; image?: string }> => {
+  try {
+    const ai = getAI();
 
-        const fullPrompt = `${systemContext}Usuario pregunta: "${query}"`;
-        
-        let toolConfig = undefined;
-        let tools = undefined;
-
-        // Use Maps Grounding if the query asks about location
-        if (query.toLowerCase().includes('donde') || query.toLowerCase().includes('ubicacion') || query.toLowerCase().includes('oficina')) {
-            tools = [{ googleMaps: {} }];
-            if (location) {
-                toolConfig = {
-                    retrievalConfig: {
-                        latLng: {
-                            latitude: location.latitude,
-                            longitude: location.longitude
-                        }
-                    }
-                };
-            }
-        } else {
-             // Use Search Grounding for other queries
-             tools = [{ googleSearch: {} }];
-        }
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: fullPrompt,
-            config: {
-                tools: tools,
-                toolConfig: toolConfig,
-                systemInstruction: "Eres un asistente experto de 'Litper Logística'. Ayuda con rastreo, redacción de mensajes para clientes y ubicación de oficinas. Si el usuario pide crear o generar una imagen, indica en tu respuesta '[GENERAR_IMAGEN: descripción detallada]'.",
-            }
-        });
-
-        let text = response.text || "Lo siento, no pude procesar eso.";
-        
-        // Check for grounding chunks to append links
-        const grounding = response.candidates?.[0]?.groundingMetadata;
-        if (grounding?.groundingChunks) {
-             const links = grounding.groundingChunks
-                .map((c: any) => c.web?.uri || c.maps?.uri)
-                .filter(Boolean);
-            if (links.length > 0) {
-                text += `\n\nFuentes:\n${links.join('\n')}`;
-            }
-        }
-
-        // Check for image generation intent from the model's text
-        const imageMatch = text.match(/\[GENERAR_IMAGEN:\s*(.*?)\]/);
-        let generatedImageUrl = undefined;
-        
-        if (imageMatch) {
-            const imagePrompt = imageMatch[1];
-            text = text.replace(imageMatch[0], '(Generando imagen...)');
-            generatedImageUrl = await generateMarketingImage(imagePrompt) || undefined;
-        }
-
-        return { text, image: generatedImageUrl };
-    } catch (error) {
-        console.error("Assistant error:", error);
-        return { text: "Error consultando al asistente Gemini." };
+    // Context Injection
+    let systemContext = '';
+    if (shipmentsContext && shipmentsContext.length > 0) {
+      const summary = shipmentsContext
+        .slice(0, 50)
+        .map(
+          (s) =>
+            `Guía: ${s.id}, Transportadora: ${s.carrier}, Estado: ${s.status}, Tel: ${s.phone || 'N/A'}`
+        )
+        .join('\n');
+      systemContext = `CONTEXTO DE ENVÍOS ACTUALES (Usa esto para responder si preguntan por guías específicas):\n${summary}\n\n`;
     }
+
+    const fullPrompt = `${systemContext}Usuario pregunta: "${query}"`;
+
+    let toolConfig = undefined;
+    let tools = undefined;
+
+    // Use Maps Grounding if the query asks about location
+    if (
+      query.toLowerCase().includes('donde') ||
+      query.toLowerCase().includes('ubicacion') ||
+      query.toLowerCase().includes('oficina')
+    ) {
+      tools = [{ googleMaps: {} }];
+      if (location) {
+        toolConfig = {
+          retrievalConfig: {
+            latLng: {
+              latitude: location.latitude,
+              longitude: location.longitude,
+            },
+          },
+        };
+      }
+    } else {
+      // Use Search Grounding for other queries
+      tools = [{ googleSearch: {} }];
+    }
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: fullPrompt,
+      config: {
+        tools: tools,
+        toolConfig: toolConfig,
+        systemInstruction:
+          "Eres un asistente experto de 'Litper Logística'. Ayuda con rastreo, redacción de mensajes para clientes y ubicación de oficinas. Si el usuario pide crear o generar una imagen, indica en tu respuesta '[GENERAR_IMAGEN: descripción detallada]'.",
+      },
+    });
+
+    let text = response.text || 'Lo siento, no pude procesar eso.';
+
+    // Check for grounding chunks to append links
+    const grounding = response.candidates?.[0]?.groundingMetadata;
+    if (grounding?.groundingChunks) {
+      const links = grounding.groundingChunks
+        .map((c: any) => c.web?.uri || c.maps?.uri)
+        .filter(Boolean);
+      if (links.length > 0) {
+        text += `\n\nFuentes:\n${links.join('\n')}`;
+      }
+    }
+
+    // Check for image generation intent from the model's text
+    const imageMatch = text.match(/\[GENERAR_IMAGEN:\s*(.*?)\]/);
+    let generatedImageUrl = undefined;
+
+    if (imageMatch) {
+      const imagePrompt = imageMatch[1];
+      text = text.replace(imageMatch[0], '(Generando imagen...)');
+      generatedImageUrl = (await generateMarketingImage(imagePrompt)) || undefined;
+    }
+
+    return { text, image: generatedImageUrl };
+  } catch (error) {
+    console.error('Assistant error:', error);
+    return { text: 'Error consultando al asistente Gemini.' };
+  }
 };
 
 // 5. Smart Logistics Tracking (Gemini 2.5 Flash with Search)
-export const trackShipmentWithAI = async (carrier: string, guideId: string): Promise<AITrackingResult> => {
-    try {
-        const ai = getAI();
-        
-        const prompt = `
+export const trackShipmentWithAI = async (
+  carrier: string,
+  guideId: string
+): Promise<AITrackingResult> => {
+  try {
+    const ai = getAI();
+
+    const prompt = `
             ACTÚA COMO UN ANALISTA DE LOGÍSTICA SENIOR DE "LITPER LOGÍSTICA".
             
             TAREA: Investigar el estado real de la guía "${guideId}" de la transportadora "${carrier}".
@@ -184,45 +245,50 @@ export const trackShipmentWithAI = async (carrier: string, guideId: string): Pro
             }
         `;
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-                tools: [{ googleSearch: {} }],
-                responseMimeType: 'application/json'
-            }
-        });
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        tools: [{ googleSearch: {} }],
+        responseMimeType: 'application/json',
+      },
+    });
 
-        let cleanText = response.text || "{}";
-        // CRITICAL FIX: Clean markdown wrappers often returned by LLMs
-        cleanText = cleanText.replace(/```json/g, '').replace(/```/g, '').trim();
-        
-        const result = JSON.parse(cleanText);
+    let cleanText = response.text || '{}';
+    // CRITICAL FIX: Clean markdown wrappers often returned by LLMs
+    cleanText = cleanText
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
 
-        return {
-            statusSummary: result.statusSummary || "Verificación Pendiente",
-            timeElapsed: result.timeElapsed || "-",
-            recommendation: result.recommendation || "Consulte directamente en 17TRACK.",
-            lastUpdate: result.lastUpdate || "Reciente"
-        };
-    } catch (error) {
-        console.error("Tracking error:", error);
-        return {
-            statusSummary: "Error Conexión IA",
-            timeElapsed: "-",
-            recommendation: "Intente rastrear manualmente usando el botón de 17TRACK.",
-            lastUpdate: "Ahora"
-        };
-    }
+    const result = JSON.parse(cleanText);
+
+    return {
+      statusSummary: result.statusSummary || 'Verificación Pendiente',
+      timeElapsed: result.timeElapsed || '-',
+      recommendation: result.recommendation || 'Consulte directamente en 17TRACK.',
+      lastUpdate: result.lastUpdate || 'Reciente',
+    };
+  } catch (error) {
+    console.error('Tracking error:', error);
+    return {
+      statusSummary: 'Error Conexión IA',
+      timeElapsed: '-',
+      recommendation: 'Intente rastrear manualmente usando el botón de 17TRACK.',
+      lastUpdate: 'Ahora',
+    };
+  }
 };
 
 // 6. Bulk Tracking from Screenshot (Gemini 3 Pro Vision)
-export const parseTrackingScreenshot = async (base64Image: string): Promise<{id: string, status: ShipmentStatus, rawStatus: string}[]> => {
-    try {
-        const ai = getAI();
-        const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
+export const parseTrackingScreenshot = async (
+  base64Image: string
+): Promise<{ id: string; status: ShipmentStatus; rawStatus: string }[]> => {
+  try {
+    const ai = getAI();
+    const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
 
-        const prompt = `
+    const prompt = `
             Eres un asistente de automatización logística.
             Analiza esta captura de pantalla de un sitio de rastreo de envíos (17TRACK).
             
@@ -245,23 +311,22 @@ export const parseTrackingScreenshot = async (base64Image: string): Promise<{id:
             Solo devuelve el JSON puro, sin markdown.
         `;
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-pro-preview',
-            contents: {
-                parts: [
-                    { inlineData: { mimeType: 'image/png', data: base64Data } },
-                    { text: prompt }
-                ]
-            }
-        });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: {
+        parts: [{ inlineData: { mimeType: 'image/png', data: base64Data } }, { text: prompt }],
+      },
+    });
 
-        let cleanText = response.text || "[]";
-        cleanText = cleanText.replace(/```json/g, '').replace(/```/g, '').trim();
-        
-        return JSON.parse(cleanText);
+    let cleanText = response.text || '[]';
+    cleanText = cleanText
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
 
-    } catch (error) {
-        console.error("Screenshot parsing error:", error);
-        return [];
-    }
-}
+    return JSON.parse(cleanText);
+  } catch (error) {
+    console.error('Screenshot parsing error:', error);
+    return [];
+  }
+};

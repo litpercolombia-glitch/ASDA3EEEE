@@ -16,10 +16,10 @@ export enum CarrierName {
 }
 
 export enum ShipmentRiskLevel {
-  URGENT = 'URGENTE',     // Red
+  URGENT = 'URGENTE', // Red
   ATTENTION = 'ATENCIÓN', // Amber/Orange
-  WATCH = 'SEGUIMIENTO',  // Yellow
-  NORMAL = 'NORMAL'       // Green
+  WATCH = 'SEGUIMIENTO', // Yellow
+  NORMAL = 'NORMAL', // Green
 }
 
 export interface ShipmentRisk {
@@ -87,7 +87,7 @@ export interface ReportStats {
   criticalPoints: string[];
   totalValuePotential: number; // New stat
   projectedLoss: number; // New stat (Shipping cost loss)
-  topCitiesIssues: {city: string, count: number, percentage: number}[]; // Updated stat
+  topCitiesIssues: { city: string; count: number; percentage: number }[]; // Updated stat
   statusBreakdown: Record<string, number>; // New: Detailed counts per status
   untrackedCount: number; // New: Guides from summary only
 }
