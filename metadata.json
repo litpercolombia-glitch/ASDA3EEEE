@@ -1,0 +1,9 @@
+{
+  "name": "Litper Pro seguimient",
+  "description": "Sistema de seguimiento masivo de guías de transporte con inteligencia artificial Gemini, detección automática de transportadora y gestión de evidencia.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
