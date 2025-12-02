@@ -22,6 +22,7 @@ import { AssistantPanel } from './components/AssistantPanel';
 import { BatchTrackingModal } from './components/BatchTrackingModal';
 import { AlertDashboard } from './components/AlertDashboard';
 import { QuickReferencePanel } from './components/QuickReferencePanel';
+import { PredictiveReport } from './components/PredictiveReport';
 import {
   Package,
   Search,
@@ -75,6 +76,7 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false); // For Alert clicks
+  const [isPredictiveReportOpen, setIsPredictiveReportOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -414,6 +416,15 @@ const App: React.FC = () => {
             >
               <Download className="w-4 h-4" />
               Excel
+            </button>
+
+            <button
+              onClick={() => setIsPredictiveReportOpen(true)}
+              className="hidden sm:flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white border border-purple-500 rounded-lg text-sm font-bold transition-all shadow-sm"
+              title="Reporte Predictivo con IA"
+            >
+              <Sparkles className="w-4 h-4" />
+              Reporte IA
             </button>
 
             <button
@@ -876,6 +887,13 @@ const App: React.FC = () => {
         onClose={() => setIsSidebarOpen(false)}
         shipments={filteredShipments}
       />
+
+      {isPredictiveReportOpen && (
+        <PredictiveReport
+          shipments={shipments}
+          onClose={() => setIsPredictiveReportOpen(false)}
+        />
+      )}
     </div>
   );
 };
