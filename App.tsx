@@ -23,6 +23,7 @@ import { BatchTrackingModal } from './components/BatchTrackingModal';
 import { AlertDashboard } from './components/AlertDashboard';
 import { QuickReferencePanel } from './components/QuickReferencePanel';
 import { PredictiveReport } from './components/PredictiveReport';
+import { PredictiveSystemPanel } from './components/PredictiveSystemPanel';
 import {
   Package,
   Search,
@@ -77,6 +78,7 @@ const App: React.FC = () => {
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false); // For Alert clicks
   const [isPredictiveReportOpen, setIsPredictiveReportOpen] = useState(false);
+  const [isPredictiveSystemOpen, setIsPredictiveSystemOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -425,6 +427,15 @@ const App: React.FC = () => {
             >
               <Sparkles className="w-4 h-4" />
               Reporte IA
+            </button>
+
+            <button
+              onClick={() => setIsPredictiveSystemOpen(true)}
+              className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg text-sm font-bold transition-all shadow-sm"
+              title="Sistema de Predicción Logística"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Predicción
             </button>
 
             <button
@@ -892,6 +903,12 @@ const App: React.FC = () => {
         <PredictiveReport
           shipments={shipments}
           onClose={() => setIsPredictiveReportOpen(false)}
+        />
+      )}
+
+      {isPredictiveSystemOpen && (
+        <PredictiveSystemPanel
+          onClose={() => setIsPredictiveSystemOpen(false)}
         />
       )}
     </div>
