@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Shipment, ShipmentStatus, CarrierName, AITrackingResult, ReportStats } from './types';
+import { Shipment, ShipmentStatus, CarrierName, AITrackingResult, ReportStats, ErrorTrackingEntry, TrackingErrorType } from './types';
 import {
   detectCarrier,
   saveShipments,
@@ -14,6 +14,13 @@ import {
   parsePhoneRegistry,
   getShipmentRecommendation,
 } from './services/logisticsService';
+import {
+  LoadSummaryView,
+  LoadHistoryPage,
+  ErrorTrackingTable,
+  DynamicClassificationButtons,
+  AIDelayPatternAnalysis
+} from './components/services';
 import { DetailedShipmentCard } from './components/DetailedShipmentCard';
 import { GeneralReport } from './components/GeneralReport';
 import { EvidenceModal } from './components/EvidenceModal';
@@ -98,6 +105,13 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeBatchId, setActiveBatchId] = useState<string>('ALL');
 
+  // Error tracking state
+  const [trackingErrors, setTrackingErrors] = useState<ErrorTrackingEntry[]>([]);
+  const [showLoadSummary, setShowLoadSummary] = useState(false);
+  const [lastBatchId, setLastBatchId] = useState<string | null>(null);
+  const [lastBatchDate, setLastBatchDate] = useState<string>(new Date().toISOString());
+  const [showHistory, setShowHistory] = useState(false);
+
   // Excel parser hook
   const { parseExcelFile, isLoading: isExcelLoading, xlsxLoaded, parseResult: excelResult, reset: resetExcel } = useShipmentExcelParser();
 
@@ -170,11 +184,33 @@ const App: React.FC = () => {
         setNotification('No se encontraron celulares válidos.');
       }
     } else if (activeInputTab === 'REPORT') {
-      const { shipments: newShipments } = parseDetailedInput(
+      const { shipments: newShipments, errors: parseErrors } = parseDetailedInput(
         inputText,
         phoneRegistry,
         forcedCarrier
       );
+
+      // Create error tracking entries for any errors found
+      const batchId = newShipments[0]?.batchId || `batch-${Date.now()}`;
+      const batchDate = new Date().toISOString();
+
+      const newErrorEntries: ErrorTrackingEntry[] = (parseErrors || []).map((err, idx) => ({
+        id: `error-${batchId}-${idx}`,
+        guideNumber: err.guideNumber || 'N/A',
+        phone: err.phone,
+        errorType: err.type as TrackingErrorType || 'PARSE_ERROR',
+        errorReason: err.reason || 'Error al procesar',
+        rawData: err.rawData,
+        timestamp: batchDate,
+        batchId,
+        attemptedCarrier: err.carrier,
+        resolved: false,
+      }));
+
+      if (newErrorEntries.length > 0) {
+        setTrackingErrors(prev => [...prev, ...newErrorEntries]);
+      }
+
       if (newShipments.length > 0) {
         setShipments((prev) => {
           const ids = new Set(newShipments.map((s) => s.id));
@@ -182,11 +218,14 @@ const App: React.FC = () => {
           return [...filteredPrev, ...newShipments];
         });
         setViewMode('DETAILED');
-        setNotification(`Carga exitosa: ${newShipments.length} guías añadidas y vinculadas.`);
+        setNotification(`Carga exitosa: ${newShipments.length} guías añadidas y vinculadas.${newErrorEntries.length > 0 ? ` (${newErrorEntries.length} errores)` : ''}`);
         setInputText('');
         if (newShipments[0].batchId) {
           setActiveBatchId(newShipments[0].batchId);
+          setLastBatchId(newShipments[0].batchId);
         }
+        setLastBatchDate(batchDate);
+        setShowLoadSummary(true);
         setActiveInputTab('SUMMARY');
       } else {
         alert('No se detectaron guías en el reporte. Verifique el formato.');
@@ -500,21 +539,94 @@ const App: React.FC = () => {
         {/* HOME TAB */}
         {currentTab === 'home' && viewMode !== 'ALERTS' && (
           <>
+            {/* Show Load Summary when a batch was just loaded */}
+            {showLoadSummary && lastBatchId && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    Resumen de Última Carga
+                  </h2>
+                  <button
+                    onClick={() => setShowLoadSummary(false)}
+                    className="text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  >
+                    Cerrar resumen
+                  </button>
+                </div>
+                <LoadSummaryView
+                  shipments={shipments.filter(s => s.batchId === lastBatchId)}
+                  errors={trackingErrors.filter(e => e.batchId === lastBatchId)}
+                  batchId={lastBatchId}
+                  batchDate={lastBatchDate}
+                  onGuideClick={(shipment) => {
+                    setSelectedShipment(shipment);
+                    setIsDetailModalOpen(true);
+                  }}
+                  onRetryError={(error) => {
+                    setNotification(`Reintentando guía ${error.guideNumber}...`);
+                  }}
+                  onMarkErrorResolved={(errorId, note) => {
+                    setTrackingErrors(prev =>
+                      prev.map(e => e.id === errorId ? { ...e, resolved: true, resolutionNote: note } : e)
+                    );
+                    setNotification('Error marcado como resuelto');
+                  }}
+                  onViewHistory={() => setShowHistory(true)}
+                />
+              </div>
+            )}
+
+            {/* Show History View */}
+            {showHistory && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-slate-800 dark:text-white">
+                    Historial de Cargas
+                  </h2>
+                  <button
+                    onClick={() => setShowHistory(false)}
+                    className="text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  >
+                    Cerrar historial
+                  </button>
+                </div>
+                <LoadHistoryPage
+                  shipments={shipments}
+                  errors={trackingErrors}
+                  onGuideClick={(shipment) => {
+                    setSelectedShipment(shipment);
+                    setIsDetailModalOpen(true);
+                  }}
+                  onRetryError={(error) => {
+                    setNotification(`Reintentando guía ${error.guideNumber}...`);
+                  }}
+                  onMarkErrorResolved={(errorId, note) => {
+                    setTrackingErrors(prev =>
+                      prev.map(e => e.id === errorId ? { ...e, resolved: true, resolutionNote: note } : e)
+                    );
+                    setNotification('Error marcado como resuelto');
+                  }}
+                />
+              </div>
+            )}
+
             {/* INPUT SECTION - Guide Loading Wizard */}
-            <GuideLoadingWizard
-              activeInputTab={activeInputTab}
-              onTabChange={setActiveInputTab}
-              phoneRegistryCount={Object.keys(phoneRegistry).length}
-              shipmentsCount={shipments.length}
-              inputCarrier={inputCarrier}
-              onCarrierChange={setInputCarrier}
-              inputText={inputText}
-              onInputChange={setInputText}
-              onProcess={handleProcessInput}
-              onExcelUpload={handleExcelUpload}
-              isExcelLoading={isExcelLoading}
-              xlsxLoaded={xlsxLoaded}
-            />
+            {!showHistory && (
+              <GuideLoadingWizard
+                activeInputTab={activeInputTab}
+                onTabChange={setActiveInputTab}
+                phoneRegistryCount={Object.keys(phoneRegistry).length}
+                shipmentsCount={shipments.length}
+                inputCarrier={inputCarrier}
+                onCarrierChange={setInputCarrier}
+                inputText={inputText}
+                onInputChange={setInputText}
+                onProcess={handleProcessInput}
+                onExcelUpload={handleExcelUpload}
+                isExcelLoading={isExcelLoading}
+                xlsxLoaded={xlsxLoaded}
+              />
+            )}
 
             {/* Batch selector */}
             {uniqueBatches.length > 0 && viewMode === 'DETAILED' && (
