@@ -79,8 +79,6 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false); // For Alert clicks
-  const [isPredictiveReportOpen, setIsPredictiveReportOpen] = useState(false);
-  const [isPredictiveSystemOpen, setIsPredictiveSystemOpen] = useState(false);
   const [appView, setAppView] = useState<AppView>('main');
   const [darkMode, setDarkMode] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
@@ -334,6 +332,39 @@ const App: React.FC = () => {
   const currentStats = calculateStats(filteredShipments);
   const uniqueBatches = Array.from(new Set(shipments.map((s) => s.batchId))).filter(Boolean);
 
+  // Render different views based on appView
+  if (appView === 'predictive-report') {
+    return (
+      <div className="min-h-screen bg-slate-100 dark:bg-navy-950">
+        <PredictiveReport
+          shipments={shipments}
+          onClose={() => setAppView('main')}
+        />
+      </div>
+    );
+  }
+
+  if (appView === 'predictive-system') {
+    return (
+      <div className="min-h-screen bg-slate-100 dark:bg-navy-950">
+        <PredictiveSystemPanel
+          onClose={() => setAppView('main')}
+        />
+      </div>
+    );
+  }
+
+  if (appView === 'traffic-light') {
+    return (
+      <div className="min-h-screen bg-slate-100 dark:bg-navy-950">
+        <CityTrafficLight
+          onBack={() => setAppView('main')}
+        />
+      </div>
+    );
+  }
+
+  // Main view
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-navy-950 text-slate-900 dark:text-slate-100 font-sans pb-32 transition-colors duration-300 relative">
       <header className="bg-navy-900 text-white shadow-2xl sticky top-0 z-30 border-b border-gold-500/20">
@@ -889,19 +920,6 @@ const App: React.FC = () => {
         onClose={() => setIsSidebarOpen(false)}
         shipments={filteredShipments}
       />
-
-      {isPredictiveReportOpen && (
-        <PredictiveReport
-          shipments={shipments}
-          onClose={() => setIsPredictiveReportOpen(false)}
-        />
-      )}
-
-      {isPredictiveSystemOpen && (
-        <PredictiveSystemPanel
-          onClose={() => setIsPredictiveSystemOpen(false)}
-        />
-      )}
     </div>
   );
 };
