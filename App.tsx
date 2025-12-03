@@ -24,6 +24,8 @@ import { AlertDashboard } from './components/AlertDashboard';
 import { QuickReferencePanel } from './components/QuickReferencePanel';
 import { PredictiveReport } from './components/PredictiveReport';
 import { PredictiveSystemPanel } from './components/PredictiveSystemPanel';
+import { CityTrafficLight } from './components/CityTrafficLight';
+import { AppNavigator, AppView } from './components/AppNavigator';
 import {
   Package,
   Search,
@@ -79,6 +81,7 @@ const App: React.FC = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false); // For Alert clicks
   const [isPredictiveReportOpen, setIsPredictiveReportOpen] = useState(false);
   const [isPredictiveSystemOpen, setIsPredictiveSystemOpen] = useState(false);
+  const [appView, setAppView] = useState<AppView>('main');
   const [darkMode, setDarkMode] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -420,23 +423,11 @@ const App: React.FC = () => {
               Excel
             </button>
 
-            <button
-              onClick={() => setIsPredictiveReportOpen(true)}
-              className="hidden sm:flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white border border-purple-500 rounded-lg text-sm font-bold transition-all shadow-sm"
-              title="Reporte Predictivo con IA"
-            >
-              <Sparkles className="w-4 h-4" />
-              Reporte IA
-            </button>
-
-            <button
-              onClick={() => setIsPredictiveSystemOpen(true)}
-              className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg text-sm font-bold transition-all shadow-sm"
-              title="Sistema de Predicción Logística"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              Predicción
-            </button>
+            <AppNavigator
+              currentView={appView}
+              onViewChange={setAppView}
+              hasShipments={shipments.length > 0}
+            />
 
             <button
               onClick={() => setDarkMode(!darkMode)}
