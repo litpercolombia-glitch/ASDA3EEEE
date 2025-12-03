@@ -16,10 +16,10 @@ export enum CarrierName {
 }
 
 export enum ShipmentRiskLevel {
-  URGENT = 'URGENTE',     // Red
+  URGENT = 'URGENTE', // Red
   ATTENTION = 'ATENCIÓN', // Amber/Orange
-  WATCH = 'SEGUIMIENTO',  // Yellow
-  NORMAL = 'NORMAL'       // Green
+  WATCH = 'SEGUIMIENTO', // Yellow
+  NORMAL = 'NORMAL', // Green
 }
 
 export interface ShipmentRisk {
@@ -87,7 +87,93 @@ export interface ReportStats {
   criticalPoints: string[];
   totalValuePotential: number; // New stat
   projectedLoss: number; // New stat (Shipping cost loss)
-  topCitiesIssues: {city: string, count: number, percentage: number}[]; // Updated stat
+  topCitiesIssues: { city: string; count: number; percentage: number }[]; // Updated stat
   statusBreakdown: Record<string, number>; // New: Detailed counts per status
   untrackedCount: number; // New: Guides from summary only
 }
+
+// ============================================
+// PREDICTIVE SYSTEM TYPES
+// ============================================
+
+export interface DeliveryData {
+  ciudad: string;
+  transportadora: string;
+  devoluciones: number;
+  entregas: number;
+  total: number;
+}
+
+export interface TimeData {
+  ciudad: string;
+  transportadora: string;
+  dias: number;
+}
+
+export interface CarrierPerformance {
+  carrier: string;
+  deliveryRate: number;
+  returnRate: number;
+  avgTime: number;
+  avgTimeValue: number;
+  total: number;
+  deliveries: number;
+  returns: number;
+}
+
+export interface CityData {
+  [carrier: string]: CarrierPerformance;
+}
+
+export interface HistoricalData {
+  [city: string]: CarrierPerformance[];
+}
+
+export type RiskLevel = 'BAJO' | 'MEDIO' | 'ALTO' | 'CRÍTICO' | 'DESCONOCIDO';
+
+export interface RiskFactors {
+  tasaExito: number;
+  tiempoPromedio: number;
+  volumenDatos: number;
+  confiabilidad: 'Alta' | 'Media' | 'Baja';
+}
+
+export interface RiskAnalysis {
+  risk: RiskLevel;
+  score: number;
+  factors: RiskFactors;
+  recommendations: string[];
+}
+
+export interface Alert {
+  type: 'WARNING' | 'CRITICAL' | 'INFO';
+  message: string;
+  action: string;
+  ciudad?: string;
+  transportadora?: string;
+  timestamp: string;
+}
+
+export interface KPIMetrics {
+  successRate: number;
+  avgCost: number;
+  avgDeliveryTime: number;
+  totalLoss: number;
+  changeFromPrevious: {
+    successRate: number;
+    avgCost: number;
+    avgDeliveryTime: number;
+    totalLoss: number;
+  };
+}
+
+export interface ProblematicZone {
+  ciudad: string;
+  returnRate: number;
+  totalShipments: number;
+  totalReturns: number;
+  worstCarrier: string;
+  trend: 'improving' | 'worsening' | 'stable';
+}
+
+export type ProductType = 'Frágil' | 'Electrónico' | 'Ropa' | 'Alimentos' | 'Documentos' | 'Otro';
