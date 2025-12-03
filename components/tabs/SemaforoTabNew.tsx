@@ -43,6 +43,7 @@ const SemaforoColorBadge: React.FC<{ color: SemaforoColor; tasaExito: number }> 
       border: 'border-emerald-200 dark:border-emerald-800',
       icon: '🟢',
       label: 'Excelente',
+      range: '≥75%',
     },
     AMARILLO: {
       bg: 'bg-yellow-100 dark:bg-yellow-900/30',
@@ -50,6 +51,7 @@ const SemaforoColorBadge: React.FC<{ color: SemaforoColor; tasaExito: number }> 
       border: 'border-yellow-200 dark:border-yellow-800',
       icon: '🟡',
       label: 'Bueno',
+      range: '65-74%',
     },
     NARANJA: {
       bg: 'bg-orange-100 dark:bg-orange-900/30',
@@ -57,6 +59,7 @@ const SemaforoColorBadge: React.FC<{ color: SemaforoColor; tasaExito: number }> 
       border: 'border-orange-200 dark:border-orange-800',
       icon: '🟠',
       label: 'Alerta',
+      range: '50-64%',
     },
     ROJO: {
       bg: 'bg-red-100 dark:bg-red-900/30',
@@ -64,6 +67,7 @@ const SemaforoColorBadge: React.FC<{ color: SemaforoColor; tasaExito: number }> 
       border: 'border-red-200 dark:border-red-800',
       icon: '🔴',
       label: 'Crítico',
+      range: '<50%',
     },
   };
 
@@ -329,15 +333,15 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
         <div className="flex flex-wrap items-center gap-4 text-sm">
           <span className="flex items-center gap-1.5">
             <span>🟢</span>
-            <span className="text-slate-600 dark:text-slate-300">Excelente (&gt;85% éxito)</span>
+            <span className="text-slate-600 dark:text-slate-300">Excelente (≥75%)</span>
           </span>
           <span className="flex items-center gap-1.5">
             <span>🟡</span>
-            <span className="text-slate-600 dark:text-slate-300">Bueno (70-85%)</span>
+            <span className="text-slate-600 dark:text-slate-300">Bueno (65-74%)</span>
           </span>
           <span className="flex items-center gap-1.5">
             <span>🟠</span>
-            <span className="text-slate-600 dark:text-slate-300">Alerta (50-70%)</span>
+            <span className="text-slate-600 dark:text-slate-300">Alerta (50-64%)</span>
           </span>
           <span className="flex items-center gap-1.5">
             <span>🔴</span>

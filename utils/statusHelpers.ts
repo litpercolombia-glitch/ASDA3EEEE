@@ -10,6 +10,72 @@ export type NormalizedStatus =
   | 'PENDIENTE'
   | 'DESCONOCIDO';
 
+/**
+ * Parses a date string in multiple formats to a Date object
+ * Supports: ISO, DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, "YYYY-MM-DD HH:mm"
+ * CRITICAL: This function is used to determine event ordering
+ */
+export const parseDate = (dateStr: string | Date | undefined): Date => {
+  if (!dateStr) return new Date(0);
+
+  // If already a Date object
+  if (dateStr instanceof Date) {
+    return isNaN(dateStr.getTime()) ? new Date(0) : dateStr;
+  }
+
+  const str = String(dateStr).trim();
+
+  // Try ISO format first (most common from APIs)
+  const isoDate = new Date(str);
+  if (!isNaN(isoDate.getTime())) return isoDate;
+
+  // Try DD/MM/YYYY or DD-MM-YYYY format (common in Colombia)
+  const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(.*)$/);
+  if (dmyMatch) {
+    const [, day, month, year, timePart] = dmyMatch;
+    let hours = 0, minutes = 0;
+
+    // Check if there's a time component
+    const timeMatch = timePart.match(/(\d{1,2}):(\d{2})/);
+    if (timeMatch) {
+      hours = parseInt(timeMatch[1], 10);
+      minutes = parseInt(timeMatch[2], 10);
+    }
+
+    return new Date(
+      parseInt(year, 10),
+      parseInt(month, 10) - 1,
+      parseInt(day, 10),
+      hours,
+      minutes
+    );
+  }
+
+  // Try YYYY-MM-DD format
+  const ymdMatch = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})(.*)$/);
+  if (ymdMatch) {
+    const [, year, month, day, timePart] = ymdMatch;
+    let hours = 0, minutes = 0;
+
+    const timeMatch = timePart.match(/(\d{1,2}):(\d{2})/);
+    if (timeMatch) {
+      hours = parseInt(timeMatch[1], 10);
+      minutes = parseInt(timeMatch[2], 10);
+    }
+
+    return new Date(
+      parseInt(year, 10),
+      parseInt(month, 10) - 1,
+      parseInt(day, 10),
+      hours,
+      minutes
+    );
+  }
+
+  // Fallback to epoch (beginning of time)
+  return new Date(0);
+};
+
 // Status configuration for UI
 export const STATUS_CONFIG: Record<NormalizedStatus, {
   label: string;
@@ -176,7 +242,10 @@ export const normalizeStatus = (rawStatus: string): NormalizedStatus => {
 
 /**
  * Gets the actual status of a shipment based on the most recent event
- * CRITICAL: The status is ALWAYS the last event with the most recent date
+ * CRITICAL RULE: The status is ALWAYS the LAST event with the MOST RECENT date
+ *
+ * This function sorts events by date (descending) and returns the normalized
+ * status from the most recent event's description.
  */
 export const getActualStatus = (guia: Shipment): NormalizedStatus => {
   // 1. Get all events from the shipment
@@ -187,22 +256,32 @@ export const getActualStatus = (guia: Shipment): NormalizedStatus => {
     return normalizeStatus(guia.status);
   }
 
-  // 2. Sort by date descending (most recent first)
+  // 2. Sort by date DESCENDING (most recent FIRST)
+  // Using parseDate to handle multiple date formats correctly
   const eventosOrdenados = [...eventos].sort((a, b) => {
-    const fechaA = new Date(a.date);
-    const fechaB = new Date(b.date);
+    const fechaA = parseDate(a.date);
+    const fechaB = parseDate(b.date);
     return fechaB.getTime() - fechaA.getTime();
   });
 
-  // 3. The first event (most recent) is the actual status
+  // 3. The FIRST event after sorting (most recent) is the ACTUAL status
   const ultimoEvento = eventosOrdenados[0];
 
-  // 4. Normalize the status
-  const statusFromDescription = normalizeStatus(ultimoEvento.description);
+  // 4. Get status from event description first
+  const rawStatus = ultimoEvento.estado || ultimoEvento.status || ultimoEvento.description || '';
+  const statusFromEvent = normalizeStatus(rawStatus);
 
-  // If we got a meaningful status from description, use it
-  if (statusFromDescription !== 'DESCONOCIDO') {
-    return statusFromDescription;
+  // If we got a meaningful status from the event, use it
+  if (statusFromEvent !== 'DESCONOCIDO') {
+    return statusFromEvent;
+  }
+
+  // Try the event's description field specifically
+  if (ultimoEvento.description) {
+    const statusFromDescription = normalizeStatus(ultimoEvento.description);
+    if (statusFromDescription !== 'DESCONOCIDO') {
+      return statusFromDescription;
+    }
   }
 
   // Otherwise, fall back to the rawStatus or stored status
@@ -266,17 +345,25 @@ export const groupBySemaforo = (shipments: Shipment[]): Record<SemaforoColor, Sh
 
 /**
  * Calculates hours since the last event update
+ * Uses parseDate for robust date handling
  */
 export const getHoursSinceUpdate = (guia: Shipment): number => {
   const eventos = guia.detailedInfo?.events || [];
   if (eventos.length === 0) return 0;
 
+  // Sort by date descending to get the most recent event
   const eventosOrdenados = [...eventos].sort((a, b) => {
-    return new Date(b.date).getTime() - new Date(a.date).getTime();
+    const fechaA = parseDate(a.date);
+    const fechaB = parseDate(b.date);
+    return fechaB.getTime() - fechaA.getTime();
   });
 
-  const lastDate = new Date(eventosOrdenados[0].date);
+  const lastDate = parseDate(eventosOrdenados[0].date);
   const now = new Date();
+
+  // If date is at epoch (invalid), return 0
+  if (lastDate.getTime() === 0) return 0;
+
   return Math.abs(now.getTime() - lastDate.getTime()) / 36e5;
 };
 
