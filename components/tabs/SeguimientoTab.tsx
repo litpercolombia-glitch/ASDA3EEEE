@@ -20,6 +20,12 @@ import {
   AlertCircle,
   Bot,
   Download,
+  List,
+  LayoutGrid,
+  CheckCircle2,
+  XCircle,
+  Eye,
+  ClipboardCopy,
 } from 'lucide-react';
 import { Shipment, ShipmentStatus, CarrierName } from '../../types';
 import { GuiaRetrasada, AlertLevel } from '../../types/logistics';
@@ -35,10 +41,131 @@ interface SeguimientoTabProps {
   onRefresh?: () => void;
 }
 
-const AlertBadge: React.FC<{ level: AlertLevel; count: number; onClick: () => void }> = ({
+// =====================================
+// RESUMEN DE VALIDACIÓN DE CARGA
+// =====================================
+const LoadingSummary: React.FC<{
+  shipments: Shipment[];
+  onStatusFilter: (status: string) => void;
+}> = ({ shipments, onStatusFilter }) => {
+  // Agrupar por status
+  const statusGroups = useMemo(() => {
+    const groups: Record<string, Shipment[]> = {};
+    shipments.forEach((s) => {
+      const status = s.status || 'SIN_ESTADO';
+      if (!groups[status]) groups[status] = [];
+      groups[status].push(s);
+    });
+    return groups;
+  }, [shipments]);
+
+  // Validaciones
+  const guiasConTelefono = shipments.filter((s) => s.phone).length;
+  const guiasSinTelefono = shipments.filter((s) => !s.phone).length;
+  const guiasConDestino = shipments.filter((s) => s.detailedInfo?.destination).length;
+  const guiasConHistorial = shipments.filter((s) => s.detailedInfo?.events && s.detailedInfo.events.length > 0).length;
+
+  // Status con colores
+  const statusColors: Record<string, { bg: string; text: string; icon: string }> = {
+    DELIVERED: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-400', icon: '✅' },
+    IN_TRANSIT: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-400', icon: '🚚' },
+    RETURNED: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400', icon: '↩️' },
+    ISSUE: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-400', icon: '⚠️' },
+    IN_OFFICE: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-400', icon: '📦' },
+    PENDING: { bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-700 dark:text-slate-400', icon: '⏳' },
+    SIN_ESTADO: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-400', icon: '❓' },
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      DELIVERED: 'Entregado',
+      IN_TRANSIT: 'En Tránsito',
+      RETURNED: 'Devuelto',
+      ISSUE: 'Con Novedad',
+      IN_OFFICE: 'En Oficina',
+      PENDING: 'Pendiente',
+      SIN_ESTADO: 'Sin Estado',
+    };
+    return labels[status] || status;
+  };
+
+  return (
+    <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-4 mb-4">
+      <div className="flex items-center gap-2 mb-3">
+        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+        <h3 className="font-bold text-slate-800 dark:text-white">Resumen de Carga</h3>
+        <span className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full ml-auto">
+          {shipments.length} guías totales
+        </span>
+      </div>
+
+      {/* Validación de datos */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 text-xs">
+        <div className={`p-2 rounded-lg ${guiasSinTelefono === 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
+          <div className="flex items-center gap-1">
+            <Phone className="w-3 h-3" />
+            <span className={guiasSinTelefono === 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>
+              {guiasConTelefono} con teléfono
+            </span>
+          </div>
+          {guiasSinTelefono > 0 && (
+            <span className="text-red-500 text-xs">⚠️ {guiasSinTelefono} sin teléfono</span>
+          )}
+        </div>
+        <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+          <div className="flex items-center gap-1 text-blue-700 dark:text-blue-400">
+            <MapPin className="w-3 h-3" />
+            <span>{guiasConDestino} con destino</span>
+          </div>
+        </div>
+        <div className="p-2 rounded-lg bg-purple-50 dark:bg-purple-900/20">
+          <div className="flex items-center gap-1 text-purple-700 dark:text-purple-400">
+            <Calendar className="w-3 h-3" />
+            <span>{guiasConHistorial} con historial</span>
+          </div>
+        </div>
+        <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20">
+          <div className="flex items-center gap-1 text-amber-700 dark:text-amber-400">
+            <Truck className="w-3 h-3" />
+            <span>{new Set(shipments.map(s => s.carrier)).size} transportadoras</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Clasificación por Status */}
+      <div className="border-t border-slate-200 dark:border-navy-700 pt-3">
+        <p className="text-xs text-slate-500 mb-2 font-medium">CLASIFICACIÓN POR STATUS (click para filtrar):</p>
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(statusGroups)
+            .sort((a, b) => b[1].length - a[1].length)
+            .map(([status, guias]) => {
+              const colors = statusColors[status] || statusColors.SIN_ESTADO;
+              return (
+                <button
+                  key={status}
+                  onClick={() => onStatusFilter(status)}
+                  className={`${colors.bg} ${colors.text} px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 hover:opacity-80 transition-opacity border border-transparent hover:border-current`}
+                >
+                  <span>{colors.icon}</span>
+                  <span>{getStatusLabel(status)}</span>
+                  <span className="font-bold bg-white/50 dark:bg-black/20 px-1.5 rounded">{guias.length}</span>
+                </button>
+              );
+            })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// =====================================
+// BADGE DE ALERTA
+// =====================================
+const AlertBadge: React.FC<{ level: AlertLevel; count: number; onClick: () => void; active: boolean }> = ({
   level,
   count,
   onClick,
+  active,
 }) => {
   const config = {
     CRITICO: {
@@ -47,7 +174,7 @@ const AlertBadge: React.FC<{ level: AlertLevel; count: number; onClick: () => vo
       text: 'text-red-700 dark:text-red-400',
       icon: '🔴',
       label: 'CRÍTICAS',
-      desc: '(5+ días sin movimiento)',
+      desc: '(5+ días)',
     },
     ALTO: {
       bg: 'bg-orange-100 dark:bg-orange-900/30',
@@ -55,7 +182,7 @@ const AlertBadge: React.FC<{ level: AlertLevel; count: number; onClick: () => vo
       text: 'text-orange-700 dark:text-orange-400',
       icon: '🟠',
       label: 'ALERTA',
-      desc: '(3-4 días sin movimiento)',
+      desc: '(3-4 días)',
     },
     MEDIO: {
       bg: 'bg-yellow-100 dark:bg-yellow-900/30',
@@ -63,7 +190,7 @@ const AlertBadge: React.FC<{ level: AlertLevel; count: number; onClick: () => vo
       text: 'text-yellow-700 dark:text-yellow-400',
       icon: '🟡',
       label: 'SEGUIMIENTO',
-      desc: '(2 días sin movimiento)',
+      desc: '(2 días)',
     },
     BAJO: {
       bg: 'bg-green-100 dark:bg-green-900/30',
@@ -71,7 +198,7 @@ const AlertBadge: React.FC<{ level: AlertLevel; count: number; onClick: () => vo
       text: 'text-green-700 dark:text-green-400',
       icon: '🟢',
       label: 'NORMAL',
-      desc: '(menos de 2 días)',
+      desc: '(< 2 días)',
     },
   };
 
@@ -80,26 +207,180 @@ const AlertBadge: React.FC<{ level: AlertLevel; count: number; onClick: () => vo
   return (
     <button
       onClick={onClick}
-      className={`flex-1 ${c.bg} ${c.border} border rounded-xl p-4 text-left hover:shadow-md transition-all`}
+      className={`flex-1 ${c.bg} ${c.border} border rounded-lg p-2 text-left hover:shadow-md transition-all ${active ? 'ring-2 ring-offset-1 ring-amber-500' : ''}`}
     >
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-2xl">{c.icon}</span>
-        <span className={`text-2xl font-bold ${c.text}`}>{count}</span>
+      <div className="flex items-center justify-between">
+        <span className="text-lg">{c.icon}</span>
+        <span className={`text-xl font-bold ${c.text}`}>{count}</span>
       </div>
-      <p className={`font-bold text-sm ${c.text}`}>
-        {count} guías {c.label}
-      </p>
-      <p className="text-xs text-slate-500 dark:text-slate-400">{c.desc}</p>
+      <p className={`font-bold text-xs ${c.text}`}>{c.label}</p>
     </button>
   );
 };
 
-const GuiaCard: React.FC<{
+// =====================================
+// TARJETA COMPACTA DE GUÍA (para vista comprimida)
+// =====================================
+const CompactGuiaRow: React.FC<{
   guiaRetrasada: GuiaRetrasada;
-  onCapture: (id: string) => void;
-}> = ({ guiaRetrasada, onCapture }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [copied, setCopied] = useState(false);
+  onExpand: () => void;
+}> = ({ guiaRetrasada, onExpand }) => {
+  const [copiedGuia, setCopiedGuia] = useState(false);
+  const [copiedPhone, setCopiedPhone] = useState(false);
+  const { guia, diasSinMovimiento, ultimoEstado, nivelAlerta } = guiaRetrasada;
+
+  const alertColors = {
+    CRITICO: 'border-l-red-500 bg-red-50/30 dark:bg-red-900/10',
+    ALTO: 'border-l-orange-500 bg-orange-50/30 dark:bg-orange-900/10',
+    MEDIO: 'border-l-yellow-500 bg-yellow-50/30 dark:bg-yellow-900/10',
+    BAJO: 'border-l-green-500 bg-green-50/30 dark:bg-green-900/10',
+  };
+
+  const alertBadgeColors = {
+    CRITICO: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400',
+    ALTO: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400',
+    MEDIO: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400',
+    BAJO: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400',
+  };
+
+  const handleCopyGuia = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(guia.id);
+    setCopiedGuia(true);
+    setTimeout(() => setCopiedGuia(false), 1500);
+  };
+
+  const handleCopyPhone = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (guia.phone) {
+      navigator.clipboard.writeText(guia.phone);
+      setCopiedPhone(true);
+      setTimeout(() => setCopiedPhone(false), 1500);
+    }
+  };
+
+  const handleWhatsApp = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (guia.phone) {
+      const message = encodeURIComponent(
+        `Hola! Le escribo de Litper sobre su pedido con guía ${guia.id}. El estado actual es: ${ultimoEstado}. ¿Podemos coordinar la entrega?`
+      );
+      window.open(`https://wa.me/57${guia.phone}?text=${message}`, '_blank');
+    }
+  };
+
+  return (
+    <div
+      className={`border-l-4 ${alertColors[nivelAlerta]} border border-slate-200 dark:border-navy-700 rounded-lg p-2 hover:shadow-md transition-all cursor-pointer`}
+      onClick={onExpand}
+    >
+      <div className="flex items-center gap-2">
+        {/* Guía con botón de copiar */}
+        <div className="flex items-center gap-1 min-w-[140px]">
+          <Package className="w-4 h-4 text-slate-400 flex-shrink-0" />
+          <span className="font-mono font-bold text-sm text-slate-800 dark:text-white truncate">
+            {guia.id}
+          </span>
+          <button
+            onClick={handleCopyGuia}
+            className="p-1 hover:bg-slate-200 dark:hover:bg-navy-700 rounded transition-colors flex-shrink-0"
+            title="Copiar número de guía"
+          >
+            {copiedGuia ? (
+              <Check className="w-3.5 h-3.5 text-green-500" />
+            ) : (
+              <Copy className="w-3.5 h-3.5 text-slate-400" />
+            )}
+          </button>
+        </div>
+
+        {/* Teléfono con botón de copiar */}
+        <div className="flex items-center gap-1 min-w-[120px]">
+          <Phone className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+          {guia.phone ? (
+            <>
+              <span className="font-mono text-xs text-slate-600 dark:text-slate-400">
+                {guia.phone}
+              </span>
+              <button
+                onClick={handleCopyPhone}
+                className="p-1 hover:bg-slate-200 dark:hover:bg-navy-700 rounded transition-colors flex-shrink-0"
+                title="Copiar teléfono"
+              >
+                {copiedPhone ? (
+                  <Check className="w-3.5 h-3.5 text-green-500" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5 text-slate-400" />
+                )}
+              </button>
+            </>
+          ) : (
+            <span className="text-xs text-slate-400 italic">Sin tel.</span>
+          )}
+        </div>
+
+        {/* Transportadora */}
+        <div className="hidden md:flex items-center gap-1 min-w-[80px]">
+          <Truck className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+          <span className="text-xs text-slate-600 dark:text-slate-400 truncate">
+            {guia.carrier}
+          </span>
+        </div>
+
+        {/* Destino */}
+        <div className="hidden lg:flex items-center gap-1 flex-1 min-w-[100px]">
+          <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+          <span className="text-xs text-slate-600 dark:text-slate-400 truncate">
+            {guia.detailedInfo?.destination || '-'}
+          </span>
+        </div>
+
+        {/* Estado (comprimido) */}
+        <div className="flex-1 min-w-[150px] max-w-[200px] hidden xl:block">
+          <p className="text-xs text-slate-600 dark:text-slate-400 truncate" title={ultimoEstado}>
+            {ultimoEstado.substring(0, 40)}{ultimoEstado.length > 40 ? '...' : ''}
+          </p>
+        </div>
+
+        {/* Días sin movimiento */}
+        <div className={`px-2 py-0.5 rounded-full text-xs font-bold ${alertBadgeColors[nivelAlerta]} flex items-center gap-1 flex-shrink-0`}>
+          <Clock className="w-3 h-3" />
+          {diasSinMovimiento}d
+        </div>
+
+        {/* Acciones rápidas */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {guia.phone && (
+            <button
+              onClick={handleWhatsApp}
+              className="p-1.5 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+              title="Enviar WhatsApp"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); onExpand(); }}
+            className="p-1.5 bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300 rounded hover:bg-slate-200 dark:hover:bg-navy-700 transition-colors"
+            title="Ver detalles"
+          >
+            <Eye className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// =====================================
+// TARJETA EXPANDIDA DE GUÍA
+// =====================================
+const ExpandedGuiaCard: React.FC<{
+  guiaRetrasada: GuiaRetrasada;
+  onCollapse: () => void;
+}> = ({ guiaRetrasada, onCollapse }) => {
+  const [copiedGuia, setCopiedGuia] = useState(false);
+  const [copiedPhone, setCopiedPhone] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const { guia, diasSinMovimiento, ultimoEstado, ultimaFecha, nivelAlerta, recomendacionIA } =
     guiaRetrasada;
@@ -118,8 +399,16 @@ const GuiaCard: React.FC<{
 
   const handleCopyGuia = () => {
     navigator.clipboard.writeText(guia.id);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedGuia(true);
+    setTimeout(() => setCopiedGuia(false), 2000);
+  };
+
+  const handleCopyPhone = () => {
+    if (guia.phone) {
+      navigator.clipboard.writeText(guia.phone);
+      setCopiedPhone(true);
+      setTimeout(() => setCopiedPhone(false), 2000);
+    }
   };
 
   const handleWhatsApp = () => {
@@ -140,13 +429,11 @@ const GuiaCard: React.FC<{
           pixelRatio: 2,
         });
 
-        // Try to copy to clipboard
         try {
           const blob = await (await fetch(dataUrl)).blob();
           await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
           alert('Imagen copiada al portapapeles');
         } catch {
-          // Fallback: download
           const link = document.createElement('a');
           link.download = `historial-${guia.id}-${Date.now()}.png`;
           link.href = dataUrl;
@@ -161,7 +448,7 @@ const GuiaCard: React.FC<{
   return (
     <div
       ref={cardRef}
-      className={`bg-white dark:bg-navy-900 rounded-xl border-l-4 ${alertColors[nivelAlerta]} border border-slate-200 dark:border-navy-700 overflow-hidden transition-all`}
+      className={`bg-white dark:bg-navy-900 rounded-xl border-l-4 ${alertColors[nivelAlerta]} border border-slate-200 dark:border-navy-700 overflow-hidden transition-all shadow-lg`}
     >
       {/* Header */}
       <div className="p-4">
@@ -185,9 +472,10 @@ const GuiaCard: React.FC<{
                 <span className="font-bold text-slate-800 dark:text-white">{guia.id}</span>
                 <button
                   onClick={handleCopyGuia}
-                  className="text-slate-400 hover:text-slate-600 p-1"
+                  className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 dark:hover:bg-navy-800 rounded"
+                  title="Copiar número de guía"
                 >
-                  {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                  {copiedGuia ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                 </button>
               </div>
               <p className="text-xs text-slate-500 flex items-center gap-1">
@@ -197,7 +485,7 @@ const GuiaCard: React.FC<{
             </div>
           </div>
 
-          <div className="text-right">
+          <div className="flex items-center gap-2">
             <div
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
                 nivelAlerta === 'CRITICO'
@@ -210,18 +498,31 @@ const GuiaCard: React.FC<{
               }`}
             >
               <Clock className="w-3 h-3" />
-              {diasSinMovimiento} días sin movimiento
+              {diasSinMovimiento} días
             </div>
+            <button
+              onClick={onCollapse}
+              className="p-1 hover:bg-slate-100 dark:hover:bg-navy-800 rounded"
+            >
+              <ChevronUp className="w-5 h-5 text-slate-400" />
+            </button>
           </div>
         </div>
 
-        {/* Info row */}
+        {/* Info row con botones de copiar */}
         <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-400 mb-3">
           {guia.phone && (
-            <span className="flex items-center gap-1">
+            <div className="flex items-center gap-1 bg-slate-50 dark:bg-navy-950 px-2 py-1 rounded">
               <Phone className="w-4 h-4" />
-              {guia.phone}
-            </span>
+              <span className="font-mono">{guia.phone}</span>
+              <button
+                onClick={handleCopyPhone}
+                className="p-0.5 hover:bg-slate-200 dark:hover:bg-navy-800 rounded ml-1"
+                title="Copiar teléfono"
+              >
+                {copiedPhone ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+            </div>
           )}
           {guia.detailedInfo?.destination && (
             <span className="flex items-center gap-1">
@@ -276,83 +577,53 @@ const GuiaCard: React.FC<{
             <Camera className="w-4 h-4" />
             Capturar
           </button>
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-navy-700 transition-colors"
-          >
-            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            Historial
-          </button>
         </div>
       </div>
 
-      {/* Expanded History */}
-      {isExpanded && (
-        <div className="border-t border-slate-200 dark:border-navy-700 p-4 bg-slate-50 dark:bg-navy-950">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="font-bold text-slate-700 dark:text-white text-sm flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Historial de Eventos
-            </h4>
-            <button
-              onClick={handleCapture}
-              className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1"
-            >
-              <Camera className="w-3 h-3" />
-              Capturar imagen
-            </button>
-          </div>
-
-          {sortedEvents.length > 0 ? (
-            <div className="space-y-3">
-              {sortedEvents.map((event, idx) => (
-                <div key={idx} className="flex items-start gap-3">
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={`w-3 h-3 rounded-full ${
-                        idx === 0
-                          ? 'bg-amber-500'
-                          : 'bg-slate-300 dark:bg-slate-600'
-                      }`}
-                    />
-                    {idx < sortedEvents.length - 1 && (
-                      <div className="w-0.5 h-full min-h-[20px] bg-slate-200 dark:bg-slate-700" />
-                    )}
-                  </div>
-                  <div className="flex-1 pb-3">
-                    <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-                      <span>{new Date(event.date).toLocaleDateString('es-CO')}</span>
-                      <span>
-                        {new Date(event.date).toLocaleTimeString('es-CO', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
-                    </div>
-                    <p className="text-sm text-slate-700 dark:text-slate-300">{event.description}</p>
-                    {event.location && (
-                      <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
-                        <MapPin className="w-3 h-3" />
-                        {event.location}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-slate-500 text-center py-4">No hay eventos registrados</p>
-          )}
+      {/* History */}
+      <div className="border-t border-slate-200 dark:border-navy-700 p-4 bg-slate-50 dark:bg-navy-950">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="font-bold text-slate-700 dark:text-white text-sm flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            Historial de Eventos
+          </h4>
         </div>
-      )}
+
+        {sortedEvents.length > 0 ? (
+          <div className="space-y-2 max-h-40 overflow-y-auto">
+            {sortedEvents.slice(0, 5).map((event, idx) => (
+              <div key={idx} className="flex items-start gap-2 text-xs">
+                <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${idx === 0 ? 'bg-amber-500' : 'bg-slate-300'}`} />
+                <div>
+                  <span className="text-slate-500">
+                    {new Date(event.date).toLocaleDateString('es-CO')} -
+                  </span>
+                  <span className="text-slate-700 dark:text-slate-300 ml-1">{event.description}</span>
+                </div>
+              </div>
+            ))}
+            {sortedEvents.length > 5 && (
+              <p className="text-xs text-slate-400 text-center">+{sortedEvents.length - 5} eventos más</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500 text-center py-2">No hay eventos registrados</p>
+        )}
+      </div>
     </div>
   );
 };
 
+// =====================================
+// COMPONENTE PRINCIPAL
+// =====================================
 export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRefresh }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterAlertLevel, setFilterAlertLevel] = useState<AlertLevel | 'ALL'>('ALL');
   const [filterTransportadora, setFilterTransportadora] = useState<CarrierName | 'ALL'>('ALL');
+  const [filterStatus, setFilterStatus] = useState<string | 'ALL'>('ALL');
+  const [viewMode, setViewMode] = useState<'compact' | 'expanded'>('compact');
+  const [expandedGuia, setExpandedGuia] = useState<string | null>(null);
 
   // Calculate delayed shipments
   const guiasRetrasadas = useMemo(() => {
@@ -390,9 +661,14 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
         return false;
       }
 
+      // Status filter
+      if (filterStatus !== 'ALL' && gr.guia.status !== filterStatus) {
+        return false;
+      }
+
       return true;
     });
-  }, [guiasRetrasadas, searchQuery, filterAlertLevel, filterTransportadora]);
+  }, [guiasRetrasadas, searchQuery, filterAlertLevel, filterTransportadora, filterStatus]);
 
   // Get unique carriers
   const carriers = useMemo(() => {
@@ -400,9 +676,8 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
     return Array.from(unique).filter((c) => c !== CarrierName.UNKNOWN);
   }, [shipments]);
 
-  const handleCapture = (id: string) => {
-    // This will be handled by each card
-    console.log('Capture requested for:', id);
+  const handleStatusFilter = (status: string) => {
+    setFilterStatus(filterStatus === status ? 'ALL' : status);
   };
 
   if (shipments.length === 0) {
@@ -422,75 +697,100 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
-            <Package className="w-8 h-8 text-emerald-500" />
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <Package className="w-6 h-6 text-emerald-500" />
             Seguimiento de Guías
           </h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">
-            {shipments.length} guías totales • {guiasRetrasadas.length} requieren atención
+          <p className="text-slate-500 dark:text-slate-400 text-sm">
+            {shipments.length} totales • {guiasRetrasadas.length} requieren atención
           </p>
         </div>
-        {onRefresh && (
-          <button
-            onClick={onRefresh}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-navy-800 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-navy-700 transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Actualizar
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* View mode toggle */}
+          <div className="flex items-center bg-slate-100 dark:bg-navy-800 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('compact')}
+              className={`p-1.5 rounded ${viewMode === 'compact' ? 'bg-white dark:bg-navy-700 shadow-sm' : ''}`}
+              title="Vista compacta"
+            >
+              <List className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+            </button>
+            <button
+              onClick={() => setViewMode('expanded')}
+              className={`p-1.5 rounded ${viewMode === 'expanded' ? 'bg-white dark:bg-navy-700 shadow-sm' : ''}`}
+              title="Vista expandida"
+            >
+              <LayoutGrid className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+            </button>
+          </div>
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-navy-800 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-navy-700 transition-colors text-sm"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Actualizar
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Alert Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* Resumen de Validación de Carga */}
+      <LoadingSummary shipments={shipments} onStatusFilter={handleStatusFilter} />
+
+      {/* Alert Summary (más compacto) */}
+      <div className="grid grid-cols-4 gap-2">
         <AlertBadge
           level="CRITICO"
           count={alertCounts.CRITICO}
           onClick={() => setFilterAlertLevel(filterAlertLevel === 'CRITICO' ? 'ALL' : 'CRITICO')}
+          active={filterAlertLevel === 'CRITICO'}
         />
         <AlertBadge
           level="ALTO"
           count={alertCounts.ALTO}
           onClick={() => setFilterAlertLevel(filterAlertLevel === 'ALTO' ? 'ALL' : 'ALTO')}
+          active={filterAlertLevel === 'ALTO'}
         />
         <AlertBadge
           level="MEDIO"
           count={alertCounts.MEDIO}
           onClick={() => setFilterAlertLevel(filterAlertLevel === 'MEDIO' ? 'ALL' : 'MEDIO')}
+          active={filterAlertLevel === 'MEDIO'}
         />
         <AlertBadge
           level="BAJO"
           count={alertCounts.BAJO}
           onClick={() => setFilterAlertLevel(filterAlertLevel === 'BAJO' ? 'ALL' : 'BAJO')}
+          active={filterAlertLevel === 'BAJO'}
         />
       </div>
 
-      {/* Filters */}
-      <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
-        <div className="flex flex-col md:flex-row gap-4">
+      {/* Filters (más compacto) */}
+      <div className="bg-white dark:bg-navy-900 rounded-lg border border-slate-200 dark:border-navy-700 p-3">
+        <div className="flex flex-col md:flex-row gap-3">
           {/* Search */}
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Buscar por guía, teléfono o ciudad..."
+              placeholder="Buscar guía, teléfono o ciudad..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
           {/* Carrier filter */}
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-400" />
             <select
               value={filterTransportadora}
               onChange={(e) => setFilterTransportadora(e.target.value as CarrierName | 'ALL')}
-              className="px-4 py-2.5 bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="px-3 py-2 bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value="ALL">Todas las transportadoras</option>
               {carriers.map((c) => (
@@ -503,23 +803,29 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
         </div>
 
         {/* Active filters */}
-        {(filterAlertLevel !== 'ALL' || filterTransportadora !== 'ALL' || searchQuery) && (
-          <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-navy-700">
-            <span className="text-xs text-slate-500">Filtros activos:</span>
+        {(filterAlertLevel !== 'ALL' || filterTransportadora !== 'ALL' || searchQuery || filterStatus !== 'ALL') && (
+          <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-slate-200 dark:border-navy-700">
+            <span className="text-xs text-slate-500">Filtros:</span>
             {filterAlertLevel !== 'ALL' && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full text-xs">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full text-xs">
                 {filterAlertLevel}
                 <button onClick={() => setFilterAlertLevel('ALL')}>×</button>
               </span>
             )}
             {filterTransportadora !== 'ALL' && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full text-xs">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full text-xs">
                 {filterTransportadora}
                 <button onClick={() => setFilterTransportadora('ALL')}>×</button>
               </span>
             )}
+            {filterStatus !== 'ALL' && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs">
+                {filterStatus}
+                <button onClick={() => setFilterStatus('ALL')}>×</button>
+              </span>
+            )}
             {searchQuery && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full text-xs">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full text-xs">
                 "{searchQuery}"
                 <button onClick={() => setSearchQuery('')}>×</button>
               </span>
@@ -528,59 +834,76 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
               onClick={() => {
                 setFilterAlertLevel('ALL');
                 setFilterTransportadora('ALL');
+                setFilterStatus('ALL');
                 setSearchQuery('');
               }}
               className="text-xs text-slate-500 hover:text-slate-700 underline"
             >
-              Limpiar todos
+              Limpiar
             </button>
           </div>
         )}
       </div>
 
       {/* Results count */}
-      <div className="flex items-center justify-between text-sm text-slate-500">
+      <div className="flex items-center justify-between text-xs text-slate-500">
         <span>
-          Mostrando {filteredGuias.length} de {guiasRetrasadas.length} guías con retraso
+          Mostrando {filteredGuias.length} de {guiasRetrasadas.length} guías
+        </span>
+        <span className="text-slate-400">
+          Click en una guía para ver detalles
         </span>
       </div>
 
-      {/* Shipment cards */}
-      <div className="space-y-4">
+      {/* Shipment list */}
+      <div className="space-y-2">
         {filteredGuias.map((gr) => (
-          <GuiaCard key={gr.guia.id} guiaRetrasada={gr} onCapture={handleCapture} />
+          expandedGuia === gr.guia.id ? (
+            <ExpandedGuiaCard
+              key={gr.guia.id}
+              guiaRetrasada={gr}
+              onCollapse={() => setExpandedGuia(null)}
+            />
+          ) : (
+            <CompactGuiaRow
+              key={gr.guia.id}
+              guiaRetrasada={gr}
+              onExpand={() => setExpandedGuia(gr.guia.id)}
+            />
+          )
         ))}
 
         {filteredGuias.length === 0 && (
-          <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-12 text-center">
+          <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-8 text-center">
             {guiasRetrasadas.length === 0 ? (
               <>
-                <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Check className="w-8 h-8 text-green-500" />
+                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Check className="w-6 h-6 text-green-500" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">
                   ¡Todo en orden!
                 </h3>
-                <p className="text-slate-500">No hay guías retrasadas en este momento</p>
+                <p className="text-slate-500 text-sm">No hay guías retrasadas</p>
               </>
             ) : (
               <>
-                <div className="w-16 h-16 bg-slate-100 dark:bg-navy-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Search className="w-8 h-8 text-slate-400" />
+                <div className="w-12 h-12 bg-slate-100 dark:bg-navy-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Search className="w-6 h-6 text-slate-400" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">
                   Sin resultados
                 </h3>
-                <p className="text-slate-500 mb-4">
+                <p className="text-slate-500 text-sm mb-3">
                   No se encontraron guías con los filtros seleccionados
                 </p>
                 <button
                   onClick={() => {
                     setFilterAlertLevel('ALL');
                     setFilterTransportadora('ALL');
+                    setFilterStatus('ALL');
                     setSearchQuery('');
                   }}
-                  className="text-emerald-500 hover:text-emerald-600 font-medium"
+                  className="text-emerald-500 hover:text-emerald-600 font-medium text-sm"
                 >
                   Limpiar filtros
                 </button>
