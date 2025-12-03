@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Shipment, ShipmentStatus, CarrierName, AITrackingResult, ReportStats } from './types';
 import {
   detectCarrier,
@@ -11,7 +11,6 @@ import {
   importSessionData,
   calculateStats,
   parseSummaryInput,
-  generateInlineChatReport,
   parsePhoneRegistry,
   getShipmentRecommendation,
 } from './services/logisticsService';
@@ -22,10 +21,13 @@ import { AssistantPanel } from './components/AssistantPanel';
 import { BatchTrackingModal } from './components/BatchTrackingModal';
 import { AlertDashboard } from './components/AlertDashboard';
 import { QuickReferencePanel } from './components/QuickReferencePanel';
-import { PredictiveReport } from './components/PredictiveReport';
 import { PredictiveSystemPanel } from './components/PredictiveSystemPanel';
-import { CityTrafficLight } from './components/CityTrafficLight';
-import { AppNavigator, AppView } from './components/AppNavigator';
+import { TabNavigation, MainTab } from './components/TabNavigation';
+import { AIReportTab } from './components/AIReportTab';
+import { SemaforoTab } from './components/SemaforoTab';
+import { GuiasDetailModal } from './components/GuiasDetailModal';
+import { GuideLoadingWizard } from './components/GuideLoadingWizard';
+import { useShipmentExcelParser } from './hooks/useShipmentExcelParser';
 import {
   Package,
   Search,
@@ -56,14 +58,24 @@ import {
   List,
   LayoutList,
   Link,
+  Home,
+  BarChart3,
+  Target,
+  Activity,
+  FileUp,
+  AlertTriangle,
+  Lightbulb,
 } from 'lucide-react';
 
 const App: React.FC = () => {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [phoneRegistry, setPhoneRegistry] = useState<Record<string, string>>({});
 
+  // Main tab navigation
+  const [currentTab, setCurrentTab] = useState<MainTab>('home');
+
   const [viewMode, setViewMode] = useState<'SIMPLE' | 'DETAILED' | 'ALERTS'>('SIMPLE');
-  const [activeInputTab, setActiveInputTab] = useState<'REPORT' | 'PHONES' | 'SUMMARY'>('PHONES'); // Default to Phones
+  const [activeInputTab, setActiveInputTab] = useState<'REPORT' | 'PHONES' | 'SUMMARY' | 'EXCEL'>('PHONES');
   const [inputCarrier, setInputCarrier] = useState<CarrierName | 'AUTO'>('AUTO');
 
   const [inputText, setInputText] = useState('');
@@ -72,21 +84,22 @@ const App: React.FC = () => {
   const [specialFilter, setSpecialFilter] = useState<
     'ALL' | 'ISSUES' | 'LONG_TRANSIT' | 'UNTRACKED'
   >('ALL');
-  const [filterStatus, setFilterStatus] = useState<ShipmentStatus | null>(null); // New filter state
+  const [filterStatus, setFilterStatus] = useState<ShipmentStatus | null>(null);
 
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false); // For Alert clicks
-  const [appView, setAppView] = useState<AppView>('main');
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  // New Search & Batch State
   const [searchQuery, setSearchQuery] = useState('');
   const [activeBatchId, setActiveBatchId] = useState<string>('ALL');
+
+  // Excel parser hook
+  const { parseExcelFile, isLoading: isExcelLoading, xlsxLoaded, parseResult: excelResult, reset: resetExcel } = useShipmentExcelParser();
 
   // Load data on mount
   useEffect(() => {
@@ -131,19 +144,16 @@ const App: React.FC = () => {
   const handleProcessInput = () => {
     if (!inputText.trim()) return;
 
-    // Determine if we need to force a carrier
     const forcedCarrier = inputCarrier !== 'AUTO' ? inputCarrier : undefined;
 
     if (activeInputTab === 'PHONES') {
       const newPhones = parsePhoneRegistry(inputText);
 
-      // Update Registry State
       setPhoneRegistry((prev) => {
         const updated = { ...prev, ...newPhones };
         return updated;
       });
 
-      // Also attempt to update existing shipments if matches found
       const mergedShipments = mergePhoneNumbers(inputText, shipments);
       const countDiff =
         mergedShipments.filter((s) => s.phone).length - shipments.filter((s) => s.phone).length;
@@ -155,14 +165,11 @@ const App: React.FC = () => {
           `${Object.keys(newPhones).length} celulares registrados. ${countDiff > 0 ? countDiff + ' guías actualizadas.' : 'Ahora cargue el reporte.'}`
         );
         setInputText('');
-        // Suggest moving to Report tab
         setActiveInputTab('REPORT');
       } else {
         setNotification('No se encontraron celulares válidos.');
       }
     } else if (activeInputTab === 'REPORT') {
-      // Pass phoneRegistry to parser to auto-link phones during creation
-      // Pass forcedCarrier to override detection
       const { shipments: newShipments } = parseDetailedInput(
         inputText,
         phoneRegistry,
@@ -180,14 +187,11 @@ const App: React.FC = () => {
         if (newShipments[0].batchId) {
           setActiveBatchId(newShipments[0].batchId);
         }
-        // Auto-advance to SUMMARY tab
         setActiveInputTab('SUMMARY');
       } else {
         alert('No se detectaron guías en el reporte. Verifique el formato.');
       }
     } else if (activeInputTab === 'SUMMARY') {
-      // Pass phoneRegistry AND existing shipments to parser to avoid duplicates
-      // Pass forcedCarrier
       const { shipments: newSummaryShipments } = parseSummaryInput(
         inputText,
         phoneRegistry,
@@ -199,7 +203,6 @@ const App: React.FC = () => {
         setShipments((prev) => [...prev, ...newSummaryShipments]);
         setViewMode('DETAILED');
 
-        // Logic to check completeness
         const totalShipments = shipments.length + newSummaryShipments.length;
         const expected = Object.keys(phoneRegistry).length;
 
@@ -212,11 +215,36 @@ const App: React.FC = () => {
         }
         setInputText('');
       } else {
-        // Even if no NEW shipments, give feedback
         setNotification('Resumen procesado. No se encontraron guías nuevas faltantes.');
         setInputText('');
       }
     }
+  };
+
+  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const result = await parseExcelFile(file, phoneRegistry);
+
+    if (result.success && result.shipments.length > 0) {
+      setShipments((prev) => {
+        const ids = new Set(result.shipments.map((s) => s.id));
+        const filteredPrev = prev.filter((s) => !ids.has(s.id));
+        return [...filteredPrev, ...result.shipments];
+      });
+      setViewMode('DETAILED');
+      setNotification(`✅ ${result.shipments.length} guías cargadas desde Excel`);
+
+      if (result.shipments[0]?.batchId) {
+        setActiveBatchId(result.shipments[0].batchId);
+      }
+    } else if (result.error) {
+      alert(`Error: ${result.error}`);
+    }
+
+    // Reset file input
+    e.target.value = '';
   };
 
   const handleUpdateStatus = (id: string, status: ShipmentStatus) => {
@@ -253,13 +281,6 @@ const App: React.FC = () => {
     exportToExcel(shipments);
   };
 
-  const handleAssistantReport = (): string => {
-    // Filter for Untracked guides for the assistant report if the filter is active, otherwise all
-    const guidesToReport =
-      specialFilter === 'UNTRACKED' ? shipments.filter((s) => s.source === 'SUMMARY') : shipments;
-    return generateInlineChatReport(guidesToReport);
-  };
-
   const handleExportSession = () => {
     exportSessionData(shipments);
   };
@@ -270,8 +291,6 @@ const App: React.FC = () => {
       try {
         const loadedData = await importSessionData(file);
         setShipments(loadedData);
-        // Also restore registry if possible (mock logic here as registry isn't saved in json currently)
-        // But loading shipments will have phones attached so it's fine.
         setViewMode('DETAILED');
         setNotification(`Sesión cargada: ${loadedData.length} guías.`);
       } catch (err) {
@@ -294,7 +313,7 @@ const App: React.FC = () => {
     window.scrollTo({ top: 800, behavior: 'smooth' });
   };
 
-  // --- FILTERING LOGIC ---
+  // Filtering logic
   const filteredShipments = shipments.filter((s) => {
     if (activeBatchId !== 'ALL' && s.batchId !== activeBatchId) return false;
 
@@ -332,34 +351,11 @@ const App: React.FC = () => {
   const currentStats = calculateStats(filteredShipments);
   const uniqueBatches = Array.from(new Set(shipments.map((s) => s.batchId))).filter(Boolean);
 
-  // Render different views based on appView
-  if (appView === 'predictive-report') {
+  // Render different tabs based on currentTab
+  if (currentTab === 'predict') {
     return (
       <div className="min-h-screen bg-slate-100 dark:bg-navy-950">
-        <PredictiveReport
-          shipments={shipments}
-          onClose={() => setAppView('main')}
-        />
-      </div>
-    );
-  }
-
-  if (appView === 'predictive-system') {
-    return (
-      <div className="min-h-screen bg-slate-100 dark:bg-navy-950">
-        <PredictiveSystemPanel
-          onClose={() => setAppView('main')}
-        />
-      </div>
-    );
-  }
-
-  if (appView === 'traffic-light') {
-    return (
-      <div className="min-h-screen bg-slate-100 dark:bg-navy-950">
-        <CityTrafficLight
-          onBack={() => setAppView('main')}
-        />
+        <PredictiveSystemPanel onClose={() => setCurrentTab('home')} />
       </div>
     );
   }
@@ -367,6 +363,7 @@ const App: React.FC = () => {
   // Main view
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-navy-950 text-slate-900 dark:text-slate-100 font-sans pb-32 transition-colors duration-300 relative">
+      {/* Header */}
       <header className="bg-navy-900 text-white shadow-2xl sticky top-0 z-30 border-b border-gold-500/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -375,20 +372,22 @@ const App: React.FC = () => {
               onClick={() => {
                 setShipments([]);
                 setViewMode('SIMPLE');
+                setCurrentTab('home');
               }}
             >
               <Crown className="w-6 h-6 text-navy-900" />
             </div>
             <div className="hidden md:block">
               <h1 className="text-xl font-serif font-bold tracking-tight text-white leading-tight">
-                LITPER <span className="text-gold-500">SEGUIMIENTO DE GUIA</span>
+                LITPER <span className="text-gold-500">LOGÍSTICA</span>
               </h1>
               <p className="text-[10px] text-slate-400 font-medium tracking-[0.2em] uppercase">
-                Gestión Logística Premium
+                Gestión Premium de Envíos
               </p>
             </div>
           </div>
 
+          {/* Search bar */}
           {shipments.length > 0 && (
             <div className="hidden md:flex items-center bg-navy-800 rounded-lg px-3 py-2 border border-navy-700 mx-4 w-64 focus-within:ring-2 focus-within:ring-gold-500 transition-all">
               <Search className="w-4 h-4 text-slate-400 mr-2" />
@@ -402,6 +401,7 @@ const App: React.FC = () => {
             </div>
           )}
 
+          {/* Header actions */}
           <div className="flex items-center gap-2 md:gap-4">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -440,7 +440,7 @@ const App: React.FC = () => {
               >
                 <Siren className={`w-4 h-4 ${viewMode !== 'ALERTS' ? 'animate-pulse' : ''}`} />
                 <span className="hidden md:inline">
-                  {viewMode === 'ALERTS' ? 'Ver Tablero' : 'Centro Alertas'}
+                  {viewMode === 'ALERTS' ? 'Ver Tablero' : 'Alertas'}
                 </span>
               </button>
             )}
@@ -454,12 +454,6 @@ const App: React.FC = () => {
               Excel
             </button>
 
-            <AppNavigator
-              currentView={appView}
-              onViewChange={setAppView}
-              hasShipments={shipments.length > 0}
-            />
-
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-2 rounded-full bg-navy-800 hover:bg-navy-700 transition-colors text-slate-400 hover:text-gold-400"
@@ -470,6 +464,7 @@ const App: React.FC = () => {
           </div>
         </div>
 
+        {/* Mobile search */}
         {shipments.length > 0 && (
           <div className="md:hidden px-4 pb-4">
             <div className="flex items-center bg-navy-800 rounded-lg px-3 py-2 border border-navy-700 w-full">
@@ -486,6 +481,7 @@ const App: React.FC = () => {
         )}
       </header>
 
+      {/* Notification */}
       {notification && (
         <div className="fixed top-24 right-4 z-50 bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-xl animate-in fade-in slide-in-from-right-10 flex items-center gap-3">
           <CheckCircle className="w-5 h-5" />
@@ -494,166 +490,244 @@ const App: React.FC = () => {
       )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* INPUT SECTION */}
-        {viewMode !== 'ALERTS' && (
-          <section className="bg-white dark:bg-navy-900 rounded-2xl shadow-lg border border-slate-200 dark:border-navy-800 overflow-hidden">
-            <div className="flex border-b border-slate-200 dark:border-navy-800 overflow-x-auto">
-              <button
-                onClick={() => setActiveInputTab('PHONES')}
-                className={`flex-1 min-w-[150px] py-4 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${activeInputTab === 'PHONES' ? 'bg-white dark:bg-navy-900 text-emerald-600 border-b-4 border-emerald-500' : 'bg-slate-50 dark:bg-navy-950 text-slate-400 hover:text-slate-600'}`}
-              >
-                <div
-                  className={`p-1.5 rounded-full ${activeInputTab === 'PHONES' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-500'}`}
-                >
-                  <Smartphone className="w-4 h-4" />
-                </div>
-                1. Asociar Celulares
-              </button>
-              <button
-                onClick={() => setActiveInputTab('REPORT')}
-                className={`flex-1 min-w-[150px] py-4 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${activeInputTab === 'REPORT' ? 'bg-white dark:bg-navy-900 text-orange-600 border-b-4 border-orange-500' : 'bg-slate-50 dark:bg-navy-950 text-slate-400 hover:text-slate-600'}`}
-              >
-                <div
-                  className={`p-1.5 rounded-full ${activeInputTab === 'REPORT' ? 'bg-orange-100 text-orange-600' : 'bg-slate-200 text-slate-500'}`}
-                >
-                  <ClipboardList className="w-4 h-4" />
-                </div>
-                2. Cargar Reporte
-              </button>
-              <button
-                onClick={() => setActiveInputTab('SUMMARY')}
-                className={`flex-1 min-w-[150px] py-4 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${activeInputTab === 'SUMMARY' ? 'bg-white dark:bg-navy-900 text-blue-600 border-b-4 border-blue-500' : 'bg-slate-50 dark:bg-navy-950 text-slate-400 hover:text-slate-600'}`}
-              >
-                <div
-                  className={`p-1.5 rounded-full ${activeInputTab === 'SUMMARY' ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-500'}`}
-                >
-                  <LayoutList className="w-4 h-4" />
-                </div>
-                3. Resumen Guías
-              </button>
-            </div>
+        {/* Tab Navigation */}
+        <TabNavigation
+          currentTab={currentTab}
+          onTabChange={setCurrentTab}
+          hasShipments={shipments.length > 0}
+        />
 
-            <div>
-              {/* NEW: Carrier Selection Buttons */}
-              {(activeInputTab === 'REPORT' || activeInputTab === 'SUMMARY') && (
-                <div className="px-6 pt-4 pb-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-bold text-slate-400 uppercase mr-2">
-                      Transportadora:
-                    </span>
+        {/* HOME TAB */}
+        {currentTab === 'home' && viewMode !== 'ALERTS' && (
+          <>
+            {/* INPUT SECTION - Guide Loading Wizard */}
+            <GuideLoadingWizard
+              activeInputTab={activeInputTab}
+              onTabChange={setActiveInputTab}
+              phoneRegistryCount={Object.keys(phoneRegistry).length}
+              shipmentsCount={shipments.length}
+              inputCarrier={inputCarrier}
+              onCarrierChange={setInputCarrier}
+              inputText={inputText}
+              onInputChange={setInputText}
+              onProcess={handleProcessInput}
+              onExcelUpload={handleExcelUpload}
+              isExcelLoading={isExcelLoading}
+              xlsxLoaded={xlsxLoaded}
+            />
+
+            {/* Batch selector */}
+            {uniqueBatches.length > 0 && viewMode === 'DETAILED' && (
+              <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                <span className="text-xs font-bold uppercase text-slate-500 flex-shrink-0">
+                  Hojas de Carga:
+                </span>
+                <button
+                  onClick={() => setActiveBatchId('ALL')}
+                  className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors flex-shrink-0 ${activeBatchId === 'ALL' ? 'bg-navy-900 text-white border-navy-900' : 'bg-white dark:bg-navy-900 text-slate-500 border-slate-200'}`}
+                >
+                  Todas
+                </button>
+                {uniqueBatches.map((bId, idx) => (
+                  <button
+                    key={bId}
+                    onClick={() => setActiveBatchId(bId as string)}
+                    className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors flex-shrink-0 ${activeBatchId === bId ? 'bg-orange-500 text-white border-orange-500' : 'bg-white dark:bg-navy-900 text-slate-500 border-slate-200'}`}
+                  >
+                    Lote #{idx + 1}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Detailed view */}
+            {viewMode === 'DETAILED' && (
+              <section className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                {currentStats && <GeneralReport stats={currentStats} onFilter={handleSpecialFilter} />}
+
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4 border-b border-slate-200 dark:border-navy-800 pb-4">
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-orange-500" />
+                    Guías Gestionadas ({filteredShipments.length})
+                    {specialFilter !== 'ALL' && (
+                      <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full border border-red-200">
+                        Filtro:{' '}
+                        {specialFilter === 'ISSUES'
+                          ? 'Novedades'
+                          : specialFilter === 'UNTRACKED'
+                            ? 'No Vinculadas'
+                            : 'Más de 5 días'}
+                      </span>
+                    )}
+                    {filterStatus && (
+                      <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full border border-purple-200">
+                        Estado: {filterStatus}
+                      </span>
+                    )}
+                  </h3>
+
+                  <div className="flex flex-wrap gap-2">
                     <button
-                      onClick={() => setInputCarrier('AUTO')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                        inputCarrier === 'AUTO'
-                          ? 'bg-slate-700 text-white border-slate-700 shadow-md'
-                          : 'bg-slate-100 dark:bg-navy-800 text-slate-500 dark:text-slate-400 border-transparent hover:bg-slate-200'
-                      }`}
+                      onClick={() => {
+                        setFilterCarrier('ALL');
+                        setSpecialFilter('ALL');
+                        setFilterStatus(null);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${filterCarrier === 'ALL' && specialFilter === 'ALL' && !filterStatus ? 'bg-navy-900 text-white border-navy-900' : 'bg-white dark:bg-navy-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-navy-700 hover:border-gold-500'}`}
                     >
-                      AUTO (Detectar)
+                      TODAS
                     </button>
                     {Object.values(CarrierName)
                       .filter((c) => c !== CarrierName.UNKNOWN)
                       .map((c) => (
                         <button
                           key={c}
-                          onClick={() => setInputCarrier(c)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                            inputCarrier === c
-                              ? `text-white shadow-md transform scale-105 ${
-                                  c === CarrierName.INTER_RAPIDISIMO
-                                    ? 'bg-orange-500 border-orange-500'
-                                    : c === CarrierName.ENVIA
-                                      ? 'bg-red-600 border-red-600'
-                                      : c === CarrierName.COORDINADORA
-                                        ? 'bg-blue-600 border-blue-600'
-                                        : c === CarrierName.TCC
-                                          ? 'bg-yellow-500 border-yellow-500'
-                                          : 'bg-emerald-600 border-emerald-600'
-                                }`
-                              : 'bg-slate-50 dark:bg-navy-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-navy-700 hover:bg-white dark:hover:bg-navy-700'
-                          }`}
+                          onClick={() => {
+                            setFilterCarrier(c);
+                            setSpecialFilter('ALL');
+                            setFilterStatus(null);
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${filterCarrier === c ? 'bg-gold-500 text-navy-900 border-gold-500 shadow-md' : 'bg-white dark:bg-navy-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-navy-700 hover:border-gold-500'}`}
                         >
-                          {c}
+                          {c.toUpperCase()}
                         </button>
                       ))}
                   </div>
                 </div>
-              )}
 
-              <div className="flex gap-0 flex-col lg:flex-row h-auto">
-                <div className="flex-1 p-4 md:p-6">
-                  <textarea
-                    className="w-full h-40 lg:h-48 border-2 border-dashed border-slate-300 dark:border-navy-700 rounded-xl p-4 font-mono text-xs md:text-sm focus:border-orange-500 focus:bg-orange-50/10 dark:focus:bg-navy-950 outline-none transition-all resize-none bg-slate-50 dark:bg-navy-950 text-slate-600 dark:text-slate-300 placeholder:text-slate-400"
-                    placeholder={
-                      activeInputTab === 'PHONES'
-                        ? 'Pegue aquí las columnas: [Guía] [Celular] o viceversa...'
-                        : activeInputTab === 'REPORT'
-                          ? 'Pegue aquí el texto del reporte detallado (Guía, Estatus, País, Eventos...)'
-                          : 'Pegue aquí el resumen de 17TRACK (ID, País, Evento, Estado...)'
-                    }
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                  />
-                </div>
-
-                <div className="flex flex-col gap-4 justify-start min-w-[200px] p-4 md:p-6 pt-0 lg:pt-6 bg-slate-50 dark:bg-navy-950/50 border-l border-slate-100 dark:border-navy-800">
-                  <button
-                    onClick={handleProcessInput}
-                    className={`w-full text-white px-6 py-3.5 rounded-xl font-bold transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 ${
-                      activeInputTab === 'REPORT'
-                        ? 'bg-orange-600 hover:bg-orange-700 shadow-orange-500/30'
-                        : activeInputTab === 'PHONES'
-                          ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/30'
-                          : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/30'
-                    }`}
-                  >
-                    {activeInputTab === 'REPORT' ? (
-                      <FileText className="w-5 h-5" />
-                    ) : activeInputTab === 'PHONES' ? (
-                      <Smartphone className="w-5 h-5" />
-                    ) : (
-                      <LayoutList className="w-5 h-5" />
+                {/* List of guides */}
+                {specialFilter === 'UNTRACKED' ? (
+                  <div className="bg-white dark:bg-navy-900 rounded-2xl shadow-sm border border-slate-200 dark:border-navy-800 overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left text-slate-600 dark:text-slate-300">
+                        <thead className="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-navy-950 border-b border-slate-200 dark:border-navy-800">
+                          <tr>
+                            <th className="px-6 py-4 font-bold">Guía</th>
+                            <th className="px-6 py-4 font-bold">Celular</th>
+                            <th className="px-6 py-4 font-bold">Fechas / Status</th>
+                            <th className="px-6 py-4 font-bold">Status</th>
+                            <th className="px-6 py-4 font-bold">Recomendaciones</th>
+                            <th className="px-6 py-4 font-bold">Días</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredShipments.map((shipment) => (
+                            <tr
+                              key={shipment.id}
+                              className="bg-white dark:bg-navy-900 border-b border-slate-100 dark:border-navy-800 hover:bg-slate-50 dark:hover:bg-navy-800/50"
+                            >
+                              <td className="px-6 py-4 font-bold text-orange-600">{shipment.id}</td>
+                              <td className="px-6 py-4 font-mono">{shipment.phone || '-'}</td>
+                              <td
+                                className="px-6 py-4 max-w-xs"
+                                title={shipment.detailedInfo?.rawStatus}
+                              >
+                                <span className="font-mono text-xs opacity-70 block">
+                                  {shipment.detailedInfo?.events[0]?.date.replace('T', ' ')}
+                                </span>
+                                <span className="text-xs">{shipment.detailedInfo?.rawStatus}</span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span
+                                  className={`px-2 py-1 rounded text-xs font-bold ${
+                                    shipment.status === ShipmentStatus.DELIVERED
+                                      ? 'bg-emerald-100 text-emerald-700'
+                                      : shipment.status === ShipmentStatus.ISSUE
+                                        ? 'bg-red-100 text-red-700'
+                                        : 'bg-blue-100 text-blue-700'
+                                  }`}
+                                >
+                                  {shipment.status}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 italic text-xs">
+                                {getShipmentRecommendation(shipment)}
+                              </td>
+                              <td className="px-6 py-4 font-bold">
+                                ({shipment.detailedInfo?.daysInTransit} Días)
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-1">
+                    {filteredShipments.map((shipment, index) => (
+                      <DetailedShipmentCard
+                        key={shipment.id}
+                        shipment={shipment}
+                        index={index}
+                        onUpdateSmartTracking={handleUpdateSmartTracking}
+                      />
+                    ))}
+                    {filteredShipments.length === 0 && (
+                      <div className="text-center py-12 text-slate-400 border-2 border-dashed border-slate-200 dark:border-navy-800 rounded-xl">
+                        <p>No se encontraron guías con el filtro seleccionado.</p>
+                        <button
+                          onClick={() => {
+                            setSpecialFilter('ALL');
+                            setFilterStatus(null);
+                          }}
+                          className="text-indigo-500 hover:underline mt-2 text-sm font-bold"
+                        >
+                          Ver todas
+                        </button>
+                      </div>
                     )}
-                    {activeInputTab === 'REPORT'
-                      ? 'Añadir a Lote'
-                      : activeInputTab === 'PHONES'
-                        ? 'Guardar Celulares'
-                        : 'Cargar Resumen'}
-                  </button>
-                  <p className="text-xs text-slate-400 text-center">
-                    {activeInputTab === 'PHONES' &&
-                      `Registrados: ${Object.keys(phoneRegistry).length}`}
-                  </p>
-                </div>
+                  </div>
+                )}
+
+                {/* Error shipments */}
+                {errorShipments.length > 0 && specialFilter !== 'UNTRACKED' && (
+                  <div className="mt-12 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-200 dark:border-red-900 p-6">
+                    <h3 className="text-lg font-bold text-red-800 dark:text-red-400 flex items-center gap-2 mb-4">
+                      <AlertOctagon className="w-6 h-6" />
+                      Guías con Errores ({errorShipments.length})
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead className="text-xs text-red-700 uppercase bg-red-100 dark:bg-red-900/50">
+                          <tr>
+                            <th className="px-6 py-3">Guía</th>
+                            <th className="px-6 py-3">Transportadora</th>
+                            <th className="px-6 py-3">Error</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {errorShipments.map((s) => (
+                            <tr
+                              key={s.id}
+                              className="bg-white dark:bg-navy-950 border-b border-red-100 dark:border-red-900"
+                            >
+                              <td className="px-6 py-4 font-bold">{s.id}</td>
+                              <td className="px-6 py-4">{s.carrier}</td>
+                              <td className="px-6 py-4 text-red-600">
+                                {s.detailedInfo?.errorDetails?.join(', ') || 'Sin eventos'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* Simple view (empty state) */}
+            {viewMode === 'SIMPLE' && (
+              <div className="text-center py-12 text-slate-400">
+                <Package className="w-16 h-16 mx-auto mb-4 opacity-20" />
+                <p>Cargue un reporte para ver el detalle de las guías.</p>
               </div>
-            </div>
-          </section>
+            )}
+          </>
         )}
 
-        {uniqueBatches.length > 0 && viewMode === 'DETAILED' && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-2">
-            <span className="text-xs font-bold uppercase text-slate-500 flex-shrink-0">
-              Hojas de Carga:
-            </span>
-            <button
-              onClick={() => setActiveBatchId('ALL')}
-              className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors flex-shrink-0 ${activeBatchId === 'ALL' ? 'bg-navy-900 text-white border-navy-900' : 'bg-white dark:bg-navy-900 text-slate-500 border-slate-200'}`}
-            >
-              Todas
-            </button>
-            {uniqueBatches.map((bId, idx) => (
-              <button
-                key={bId}
-                onClick={() => setActiveBatchId(bId as string)}
-                className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors flex-shrink-0 ${activeBatchId === bId ? 'bg-orange-500 text-white border-orange-500' : 'bg-white dark:bg-navy-900 text-slate-500 border-slate-200'}`}
-              >
-                Lote #{idx + 1}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {viewMode === 'ALERTS' && (
+        {/* Alert Dashboard */}
+        {currentTab === 'home' && viewMode === 'ALERTS' && (
           <AlertDashboard
             shipments={shipments}
             onSelectShipment={(s) => {
@@ -663,205 +737,34 @@ const App: React.FC = () => {
           />
         )}
 
-        {viewMode === 'DETAILED' && (
-          <section className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-            {currentStats && <GeneralReport stats={currentStats} onFilter={handleSpecialFilter} />}
-
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 border-b border-slate-200 dark:border-navy-800 pb-4">
-              <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                <FileText className="w-5 h-5 text-orange-500" />
-                Guías Gestionadas ({filteredShipments.length})
-                {specialFilter !== 'ALL' && (
-                  <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full border border-red-200">
-                    Filtro:{' '}
-                    {specialFilter === 'ISSUES'
-                      ? 'Novedades'
-                      : specialFilter === 'UNTRACKED'
-                        ? 'Guías No Vinculadas'
-                        : 'Más de 5 días'}
-                  </span>
-                )}
-                {filterStatus && (
-                  <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full border border-purple-200">
-                    Estado: {filterStatus}
-                  </span>
-                )}
-              </h3>
-
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => {
-                    setFilterCarrier('ALL');
-                    setSpecialFilter('ALL');
-                    setFilterStatus(null);
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${filterCarrier === 'ALL' && specialFilter === 'ALL' && !filterStatus ? 'bg-navy-900 text-white border-navy-900' : 'bg-white dark:bg-navy-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-navy-700 hover:border-gold-500'}`}
-                >
-                  TODAS
-                </button>
-                {Object.values(CarrierName)
-                  .filter((c) => c !== CarrierName.UNKNOWN)
-                  .map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => {
-                        setFilterCarrier(c);
-                        setSpecialFilter('ALL');
-                        setFilterStatus(null);
-                      }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${filterCarrier === c ? 'bg-gold-500 text-navy-900 border-gold-500 shadow-md' : 'bg-white dark:bg-navy-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-navy-700 hover:border-gold-500'}`}
-                    >
-                      {c.toUpperCase()}
-                    </button>
-                  ))}
-              </div>
-            </div>
-
-            {/* LIST OF GUIDES */}
-            {specialFilter === 'UNTRACKED' ? (
-              // TABLE VIEW FOR UNTRACKED GUIDES
-              <div className="bg-white dark:bg-navy-900 rounded-2xl shadow-sm border border-slate-200 dark:border-navy-800 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left text-slate-600 dark:text-slate-300">
-                    <thead className="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-navy-950 border-b border-slate-200 dark:border-navy-800">
-                      <tr>
-                        <th className="px-6 py-4 font-bold">Guía</th>
-                        <th className="px-6 py-4 font-bold">Celular</th>
-                        <th className="px-6 py-4 font-bold">Fechas / Status</th>
-                        <th className="px-6 py-4 font-bold">Status</th>
-                        <th className="px-6 py-4 font-bold">Recomendaciones</th>
-                        <th className="px-6 py-4 font-bold">Días después despacho</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredShipments.map((shipment) => (
-                        <tr
-                          key={shipment.id}
-                          className="bg-white dark:bg-navy-900 border-b border-slate-100 dark:border-navy-800 hover:bg-slate-50 dark:hover:bg-navy-800/50"
-                        >
-                          <td className="px-6 py-4 font-bold text-orange-600">{shipment.id}</td>
-                          <td className="px-6 py-4 font-mono">{shipment.phone || '3000000000'}</td>
-                          <td
-                            className="px-6 py-4 max-w-xs"
-                            title={shipment.detailedInfo?.rawStatus}
-                          >
-                            <span className="font-mono text-xs opacity-70 block">
-                              {shipment.detailedInfo?.events[0]?.date.replace('T', ' ')}
-                            </span>
-                            <span className="text-xs">{shipment.detailedInfo?.rawStatus}</span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`px-2 py-1 rounded text-xs font-bold ${
-                                shipment.status === ShipmentStatus.DELIVERED
-                                  ? 'bg-emerald-100 text-emerald-700'
-                                  : shipment.status === ShipmentStatus.ISSUE
-                                    ? 'bg-red-100 text-red-700'
-                                    : 'bg-blue-100 text-blue-700'
-                              }`}
-                            >
-                              {shipment.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 italic text-xs">
-                            {getShipmentRecommendation(shipment)}
-                          </td>
-                          <td className="px-6 py-4 font-bold">
-                            ({shipment.detailedInfo?.daysInTransit} Días)
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              // STANDARD CARD VIEW (Now using Compact Row by default)
-              <div className="grid grid-cols-1 gap-1">
-                {filteredShipments.map((shipment, index) => (
-                  <DetailedShipmentCard
-                    key={shipment.id}
-                    shipment={shipment}
-                    index={index}
-                    onUpdateSmartTracking={handleUpdateSmartTracking}
-                  />
-                ))}
-                {filteredShipments.length === 0 && (
-                  <div className="text-center py-12 text-slate-400 border-2 border-dashed border-slate-200 dark:border-navy-800 rounded-xl">
-                    <p>No se encontraron guías con el filtro seleccionado.</p>
-                    <button
-                      onClick={() => {
-                        setSpecialFilter('ALL');
-                        setFilterStatus(null);
-                      }}
-                      className="text-indigo-500 hover:underline mt-2 text-sm font-bold"
-                    >
-                      Ver todas
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ... Error section ... */}
-            {errorShipments.length > 0 && specialFilter !== 'UNTRACKED' && (
-              <div className="mt-12 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-200 dark:border-red-900 p-6">
-                <h3 className="text-lg font-bold text-red-800 dark:text-red-400 flex items-center gap-2 mb-4">
-                  <AlertOctagon className="w-6 h-6" />
-                  Guías con Errores o Sin Información ({errorShipments.length})
-                </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="text-xs text-red-700 uppercase bg-red-100 dark:bg-red-900/50">
-                      <tr>
-                        <th className="px-6 py-3">Guía</th>
-                        <th className="px-6 py-3">Transportadora</th>
-                        <th className="px-6 py-3">Error Detectado</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {errorShipments.map((s) => (
-                        <tr
-                          key={s.id}
-                          className="bg-white dark:bg-navy-950 border-b border-red-100 dark:border-red-900"
-                        >
-                          <td className="px-6 py-4 font-bold">{s.id}</td>
-                          <td className="px-6 py-4">{s.carrier}</td>
-                          <td className="px-6 py-4 text-red-600">
-                            {s.detailedInfo?.errorDetails?.join(', ') ||
-                              'Formato irreconocible o sin eventos'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </section>
+        {/* AI REPORT TAB */}
+        {currentTab === 'report' && (
+          <AIReportTab
+            shipments={shipments}
+            onNavigateToSemaforo={() => setCurrentTab('semaforo')}
+          />
         )}
 
-        {/* ... Simple View, Footer, Modals ... */}
-        {viewMode === 'SIMPLE' && (
-          <div className="text-center py-12 text-slate-400">
-            <Package className="w-16 h-16 mx-auto mb-4 opacity-20" />
-            <p>Cargue un reporte para ver el detalle de las guías.</p>
-          </div>
+        {/* SEMAFORO TAB */}
+        {currentTab === 'semaforo' && (
+          <SemaforoTab shipments={shipments} />
         )}
       </main>
 
+      {/* Footer */}
       <footer className="bg-white dark:bg-navy-900 border-t border-slate-200 dark:border-navy-800 py-6 mt-12">
         <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
-          <p className="text-slate-500 text-xs">© 2025 Litper Logística - Versión Premium 2.1</p>
+          <p className="text-slate-500 text-xs">© 2025 Litper Logística - Versión Premium 3.0</p>
           <div
             className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold transition-colors ${isOnline ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'}`}
           >
             {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-            {isOnline ? 'Sistema Conectado' : 'Modo Offline (Solo Lectura)'}
+            {isOnline ? 'Sistema Conectado' : 'Modo Offline'}
           </div>
         </div>
       </footer>
 
+      {/* Floating action buttons */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-4">
         <button
           onClick={() => setIsAssistantOpen(true)}
@@ -872,6 +775,7 @@ const App: React.FC = () => {
         </button>
       </div>
 
+      {/* Modals */}
       {selectedShipment && !isDetailModalOpen && (
         <EvidenceModal
           shipment={selectedShipment}
@@ -912,7 +816,7 @@ const App: React.FC = () => {
         isOpen={isAssistantOpen}
         onClose={() => setIsAssistantOpen(false)}
         shipmentsContext={shipments}
-        onGenerateReport={handleAssistantReport}
+        onGenerateReport={() => ''}
       />
 
       <QuickReferencePanel
