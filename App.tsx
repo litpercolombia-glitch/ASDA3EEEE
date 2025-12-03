@@ -26,6 +26,7 @@ import { TabNavigation, MainTab } from './components/TabNavigation';
 import { AIReportTab } from './components/AIReportTab';
 import { SemaforoTab } from './components/SemaforoTab';
 import { GuiasDetailModal } from './components/GuiasDetailModal';
+import { GuideLoadingWizard } from './components/GuideLoadingWizard';
 import { useShipmentExcelParser } from './hooks/useShipmentExcelParser';
 import {
   Package,
@@ -499,221 +500,21 @@ const App: React.FC = () => {
         {/* HOME TAB */}
         {currentTab === 'home' && viewMode !== 'ALERTS' && (
           <>
-            {/* INPUT SECTION */}
-            <section className="bg-white dark:bg-navy-900 rounded-2xl shadow-lg border border-slate-200 dark:border-navy-800 overflow-hidden">
-              <div className="flex border-b border-slate-200 dark:border-navy-800 overflow-x-auto">
-                <button
-                  onClick={() => setActiveInputTab('PHONES')}
-                  className={`flex-1 min-w-[130px] py-4 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${activeInputTab === 'PHONES' ? 'bg-white dark:bg-navy-900 text-emerald-600 border-b-4 border-emerald-500' : 'bg-slate-50 dark:bg-navy-950 text-slate-400 hover:text-slate-600'}`}
-                >
-                  <div className={`p-1.5 rounded-full ${activeInputTab === 'PHONES' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-500'}`}>
-                    <Smartphone className="w-4 h-4" />
-                  </div>
-                  <span className="hidden sm:inline">1. Celulares</span>
-                </button>
-                <button
-                  onClick={() => setActiveInputTab('REPORT')}
-                  className={`flex-1 min-w-[130px] py-4 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${activeInputTab === 'REPORT' ? 'bg-white dark:bg-navy-900 text-orange-600 border-b-4 border-orange-500' : 'bg-slate-50 dark:bg-navy-950 text-slate-400 hover:text-slate-600'}`}
-                >
-                  <div className={`p-1.5 rounded-full ${activeInputTab === 'REPORT' ? 'bg-orange-100 text-orange-600' : 'bg-slate-200 text-slate-500'}`}>
-                    <ClipboardList className="w-4 h-4" />
-                  </div>
-                  <span className="hidden sm:inline">2. Reporte</span>
-                </button>
-                <button
-                  onClick={() => setActiveInputTab('SUMMARY')}
-                  className={`flex-1 min-w-[130px] py-4 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${activeInputTab === 'SUMMARY' ? 'bg-white dark:bg-navy-900 text-blue-600 border-b-4 border-blue-500' : 'bg-slate-50 dark:bg-navy-950 text-slate-400 hover:text-slate-600'}`}
-                >
-                  <div className={`p-1.5 rounded-full ${activeInputTab === 'SUMMARY' ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-500'}`}>
-                    <LayoutList className="w-4 h-4" />
-                  </div>
-                  <span className="hidden sm:inline">3. Resumen</span>
-                </button>
-                <button
-                  onClick={() => setActiveInputTab('EXCEL')}
-                  className={`flex-1 min-w-[130px] py-4 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${activeInputTab === 'EXCEL' ? 'bg-white dark:bg-navy-900 text-purple-600 border-b-4 border-purple-500' : 'bg-slate-50 dark:bg-navy-950 text-slate-400 hover:text-slate-600'}`}
-                >
-                  <div className={`p-1.5 rounded-full ${activeInputTab === 'EXCEL' ? 'bg-purple-100 text-purple-600' : 'bg-slate-200 text-slate-500'}`}>
-                    <FileSpreadsheet className="w-4 h-4" />
-                  </div>
-                  <span className="hidden sm:inline">4. Excel</span>
-                </button>
-              </div>
-
-              {/* Excel Upload Tab */}
-              {activeInputTab === 'EXCEL' ? (
-                <div className="p-6">
-                  <div className="max-w-lg mx-auto text-center">
-                    <div className="bg-gradient-to-br from-purple-500 to-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                      <FileUp className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
-                      Cargar Guías desde Excel
-                    </h3>
-                    <p className="text-slate-500 dark:text-slate-400 mb-6 text-sm">
-                      Sube un archivo Excel (.xlsx, .xls) con tus guías
-                    </p>
-
-                    <div className="bg-slate-50 dark:bg-navy-950 rounded-xl p-6 mb-6">
-                      <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">
-                        Columnas recomendadas:
-                      </h4>
-                      <div className="grid grid-cols-2 gap-2 text-xs text-left">
-                        <div className="bg-white dark:bg-navy-900 px-3 py-2 rounded-lg">
-                          <span className="text-purple-600 font-bold">GUIA</span> - Número de guía
-                        </div>
-                        <div className="bg-white dark:bg-navy-900 px-3 py-2 rounded-lg">
-                          <span className="text-purple-600 font-bold">ESTADO</span> - Estado actual
-                        </div>
-                        <div className="bg-white dark:bg-navy-900 px-3 py-2 rounded-lg">
-                          <span className="text-purple-600 font-bold">TELEFONO</span> - Celular cliente
-                        </div>
-                        <div className="bg-white dark:bg-navy-900 px-3 py-2 rounded-lg">
-                          <span className="text-purple-600 font-bold">TRANSPORTADORA</span> - Carrier
-                        </div>
-                        <div className="bg-white dark:bg-navy-900 px-3 py-2 rounded-lg">
-                          <span className="text-purple-600 font-bold">DESTINO</span> - Ciudad destino
-                        </div>
-                        <div className="bg-white dark:bg-navy-900 px-3 py-2 rounded-lg">
-                          <span className="text-purple-600 font-bold">DIAS</span> - Días en tránsito
-                        </div>
-                      </div>
-                    </div>
-
-                    <label className={`
-                      inline-flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-lg cursor-pointer
-                      transition-all transform hover:scale-105 shadow-lg
-                      ${isExcelLoading
-                        ? 'bg-slate-400 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white hover:shadow-xl'
-                      }
-                    `}>
-                      {isExcelLoading ? (
-                        <>
-                          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          Procesando...
-                        </>
-                      ) : (
-                        <>
-                          <FileUp className="w-6 h-6" />
-                          Seleccionar Archivo Excel
-                        </>
-                      )}
-                      <input
-                        type="file"
-                        accept=".xlsx,.xls"
-                        onChange={handleExcelUpload}
-                        disabled={isExcelLoading}
-                        className="hidden"
-                      />
-                    </label>
-
-                    {!xlsxLoaded && (
-                      <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-yellow-700 dark:text-yellow-400 text-sm flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4" />
-                        Cargando librería Excel...
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                /* Text input tabs */
-                <div>
-                  {/* Carrier Selection */}
-                  {(activeInputTab === 'REPORT' || activeInputTab === 'SUMMARY') && (
-                    <div className="px-6 pt-4 pb-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-bold text-slate-400 uppercase mr-2">
-                          Transportadora:
-                        </span>
-                        <button
-                          onClick={() => setInputCarrier('AUTO')}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                            inputCarrier === 'AUTO'
-                              ? 'bg-slate-700 text-white border-slate-700 shadow-md'
-                              : 'bg-slate-100 dark:bg-navy-800 text-slate-500 dark:text-slate-400 border-transparent hover:bg-slate-200'
-                          }`}
-                        >
-                          AUTO (Detectar)
-                        </button>
-                        {Object.values(CarrierName)
-                          .filter((c) => c !== CarrierName.UNKNOWN)
-                          .map((c) => (
-                            <button
-                              key={c}
-                              onClick={() => setInputCarrier(c)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                                inputCarrier === c
-                                  ? `text-white shadow-md transform scale-105 ${
-                                      c === CarrierName.INTER_RAPIDISIMO
-                                        ? 'bg-orange-500 border-orange-500'
-                                        : c === CarrierName.ENVIA
-                                          ? 'bg-red-600 border-red-600'
-                                          : c === CarrierName.COORDINADORA
-                                            ? 'bg-blue-600 border-blue-600'
-                                            : c === CarrierName.TCC
-                                              ? 'bg-yellow-500 border-yellow-500'
-                                              : 'bg-emerald-600 border-emerald-600'
-                                    }`
-                                  : 'bg-slate-50 dark:bg-navy-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-navy-700 hover:bg-white dark:hover:bg-navy-700'
-                              }`}
-                            >
-                              {c}
-                            </button>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex gap-0 flex-col lg:flex-row h-auto">
-                    <div className="flex-1 p-4 md:p-6">
-                      <textarea
-                        className="w-full h-40 lg:h-48 border-2 border-dashed border-slate-300 dark:border-navy-700 rounded-xl p-4 font-mono text-xs md:text-sm focus:border-orange-500 focus:bg-orange-50/10 dark:focus:bg-navy-950 outline-none transition-all resize-none bg-slate-50 dark:bg-navy-950 text-slate-600 dark:text-slate-300 placeholder:text-slate-400"
-                        placeholder={
-                          activeInputTab === 'PHONES'
-                            ? 'Pegue aquí las columnas: [Guía] [Celular] o viceversa...'
-                            : activeInputTab === 'REPORT'
-                              ? 'Pegue aquí el texto del reporte detallado (Guía, Estatus, País, Eventos...)'
-                              : 'Pegue aquí el resumen de 17TRACK (ID, País, Evento, Estado...)'
-                        }
-                        value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-4 justify-start min-w-[200px] p-4 md:p-6 pt-0 lg:pt-6 bg-slate-50 dark:bg-navy-950/50 border-l border-slate-100 dark:border-navy-800">
-                      <button
-                        onClick={handleProcessInput}
-                        className={`w-full text-white px-6 py-3.5 rounded-xl font-bold transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 ${
-                          activeInputTab === 'REPORT'
-                            ? 'bg-orange-600 hover:bg-orange-700 shadow-orange-500/30'
-                            : activeInputTab === 'PHONES'
-                              ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/30'
-                              : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/30'
-                        }`}
-                      >
-                        {activeInputTab === 'REPORT' ? (
-                          <FileText className="w-5 h-5" />
-                        ) : activeInputTab === 'PHONES' ? (
-                          <Smartphone className="w-5 h-5" />
-                        ) : (
-                          <LayoutList className="w-5 h-5" />
-                        )}
-                        {activeInputTab === 'REPORT'
-                          ? 'Añadir a Lote'
-                          : activeInputTab === 'PHONES'
-                            ? 'Guardar Celulares'
-                            : 'Cargar Resumen'}
-                      </button>
-                      <p className="text-xs text-slate-400 text-center">
-                        {activeInputTab === 'PHONES' &&
-                          `Registrados: ${Object.keys(phoneRegistry).length}`}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </section>
+            {/* INPUT SECTION - Guide Loading Wizard */}
+            <GuideLoadingWizard
+              activeInputTab={activeInputTab}
+              onTabChange={setActiveInputTab}
+              phoneRegistryCount={Object.keys(phoneRegistry).length}
+              shipmentsCount={shipments.length}
+              inputCarrier={inputCarrier}
+              onCarrierChange={setInputCarrier}
+              inputText={inputText}
+              onInputChange={setInputText}
+              onProcess={handleProcessInput}
+              onExcelUpload={handleExcelUpload}
+              isExcelLoading={isExcelLoading}
+              xlsxLoaded={xlsxLoaded}
+            />
 
             {/* Batch selector */}
             {uniqueBatches.length > 0 && viewMode === 'DETAILED' && (
