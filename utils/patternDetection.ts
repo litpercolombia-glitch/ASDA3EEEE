@@ -278,6 +278,11 @@ export function detectarPatrones(
 
 /**
  * Classify city for semaforo
+ * THRESHOLDS (as specified):
+ * - VERDE: ≥75% éxito - Excelente rendimiento
+ * - AMARILLO: 65-74% éxito - Buen rendimiento
+ * - NARANJA: 50-64% éxito - Alerta
+ * - ROJO: <50% éxito - Crítico
  */
 export function clasificarCiudadSemaforo(
   ciudad: string,
@@ -293,23 +298,24 @@ export function clasificarCiudadSemaforo(
   let semaforo: CiudadSemaforo['semaforo'];
   let recomendacionIA: string;
 
-  if (tasaExito >= 85) {
+  // New thresholds as specified
+  if (tasaExito >= 75) {
     semaforo = 'VERDE';
     recomendacionIA = 'Excelente rendimiento. Mantener operación actual.';
-  } else if (tasaExito >= 70) {
+  } else if (tasaExito >= 65) {
     semaforo = 'AMARILLO';
-    recomendacionIA = 'Buen rendimiento. Monitorear para identificar oportunidades de mejora.';
+    recomendacionIA = 'Buen rendimiento. Monitorear para identificar mejoras.';
   } else if (tasaExito >= 50) {
     semaforo = 'NARANJA';
-    recomendacionIA = 'Alerta. Confirmar datos del cliente antes de enviar. Considerar contacto previo.';
+    recomendacionIA = 'Alerta. Confirmar datos del cliente antes de enviar.';
   } else {
     semaforo = 'ROJO';
-    recomendacionIA = 'CRÍTICO. Exigir prepago obligatorio o considerar otra transportadora para esta zona.';
+    recomendacionIA = 'Crítico. Exigir PREPAGO obligatorio o cambiar transportadora.';
   }
 
   // Adjust recommendation based on delivery time
   if (tiempoPromedio > 7) {
-    recomendacionIA += ' Tiempo de entrega muy alto (>' + tiempoPromedio + ' días). Informar al cliente.';
+    recomendacionIA += ` Tiempo promedio alto (${tiempoPromedio.toFixed(1)} días).`;
   }
 
   return {

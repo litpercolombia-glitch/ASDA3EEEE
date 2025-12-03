@@ -50,18 +50,50 @@ export interface SemaforoExcelData {
   tiempoPromedio: TiempoPromedioRow[];
 }
 
+/**
+ * HOJA 1: "tasa de entregas"
+ * Estructura de Tabla Pivote:
+ * - Filas: CIUDAD y TRANSPORTADORA (anidadas)
+ * - Columnas: DEVOLUCION (cant/%), ENTREGADO (cant/%), Total
+ */
 export interface TasaEntregaRow {
   ciudad: string;
   transportadora: string;
   devoluciones: number;
+  devolucionesPct: number;  // Percentage of returns
   entregas: number;
+  entregasPct: number;      // Percentage of deliveries
   total: number;
 }
 
+/**
+ * HOJA 2: "Tiempo promedio"
+ * Registros detallados de cada envío histórico
+ */
 export interface TiempoPromedioRow {
   ciudad: string;
   transportadora: string;
   dias: number;
+  // Extended fields for detailed records
+  ciudadDestino?: string;
+  fecha?: Date;
+  fechaUltimoMov?: Date;
+  estatus?: string;
+  tiempoEntrega?: number;
+  usuario?: string;
+}
+
+/**
+ * Raw data from pivot table Excel format
+ * Used during Excel parsing before normalization
+ */
+export interface PivotTableRawRow {
+  etiqueta: string;              // "CIUDAD" or "  TRANSPORTADORA"
+  devolucionesCant?: number;     // DEVOLUCION count
+  devolucionesPct?: number;      // DEVOLUCION percentage
+  entregasCant?: number;         // ENTREGADO count
+  entregasPct?: number;          // ENTREGADO percentage
+  total?: number;
 }
 
 // ============================================

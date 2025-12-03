@@ -145,7 +145,7 @@ ${guiasRetrasadas
 `;
   }, [shipments]);
 
-  // Generate AI response (simulated - in production would call Claude API)
+  // Generate AI response with organized, clear, and dynamic responses
   const generateResponse = async (userMessage: string): Promise<string> => {
     // Simulate processing time
     await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -154,69 +154,108 @@ ${guiasRetrasadas
     const guiasRetrasadas = detectarGuiasRetrasadas(shipments);
     const patrones = detectarPatrones(shipments);
 
+    const total = shipments.length;
+    const entregadas = shipments.filter((s) => s.status === ShipmentStatus.DELIVERED).length;
+    const enTransito = shipments.filter((s) => s.status === ShipmentStatus.IN_TRANSIT).length;
+    const enOficina = shipments.filter((s) => s.status === ShipmentStatus.IN_OFFICE).length;
+    const conNovedad = shipments.filter((s) => s.status === ShipmentStatus.ISSUE).length;
+    const criticas = guiasRetrasadas.filter((g) => g.nivelAlerta === 'CRITICO');
+    const altas = guiasRetrasadas.filter((g) => g.nivelAlerta === 'ALTO');
+    const rate = total > 0 ? ((entregadas / total) * 100).toFixed(0) : 0;
+
     // Check for specific queries
-    if (lowerMessage.includes('resumen') || lowerMessage.includes('estado')) {
-      const total = shipments.length;
-      const entregadas = shipments.filter((s) => s.status === ShipmentStatus.DELIVERED).length;
-      const rate = total > 0 ? ((entregadas / total) * 100).toFixed(0) : 0;
+    if (lowerMessage.includes('resumen') || lowerMessage.includes('estado') || lowerMessage.includes('dia') || lowerMessage.includes('día')) {
+      let response = `📊 **RESUMEN DEL DÍA**\n\n`;
+      response += `**Estado General:** ${total} guías activas\n\n`;
 
-      return `📊 **Resumen del día:**
+      response += `📦 **DISTRIBUCIÓN POR ESTADO:**\n`;
+      response += `• ✅ Entregadas: ${entregadas} (${rate}%)\n`;
+      response += `• 🚚 En tránsito: ${enTransito}\n`;
+      response += `• 📍 En oficina: ${enOficina}\n`;
+      response += `• ⚠️ Con novedad: ${conNovedad}\n\n`;
 
-De ${total} guías activas:
-• ✅ ${entregadas} entregadas (${rate}%)
-• 🚚 ${shipments.filter((s) => s.status === ShipmentStatus.IN_TRANSIT).length} en tránsito
-• 📦 ${shipments.filter((s) => s.status === ShipmentStatus.IN_OFFICE).length} en oficina
-• ⚠️ ${shipments.filter((s) => s.status === ShipmentStatus.ISSUE).length} con novedad
-
-${guiasRetrasadas.length > 0 ? `\n⏰ **Alertas:** ${guiasRetrasadas.filter((g) => g.nivelAlerta === 'CRITICO').length} guías críticas que requieren atención inmediata.` : ''}
-
-💡 **Recomendación:** ${guiasRetrasadas.length > 0 ? 'Prioriza las guías críticas antes de que cumplan más días sin movimiento.' : '¡Todo está bajo control! Continúa el monitoreo regular.'}`;
-    }
-
-    if (lowerMessage.includes('urgente') || lowerMessage.includes('atender') || lowerMessage.includes('alerta')) {
-      const criticas = guiasRetrasadas.filter((g) => g.nivelAlerta === 'CRITICO');
-      const altas = guiasRetrasadas.filter((g) => g.nivelAlerta === 'ALTO');
-
-      if (criticas.length === 0 && altas.length === 0) {
-        return `✅ **¡Todo en orden!**
-
-No hay guías urgentes que requieran atención inmediata. Las guías están fluyendo con normalidad.
-
-💡 **Recomendación:** Aprovecha para revisar las guías en oficina y enviar recordatorios a los clientes.`;
+      if (guiasRetrasadas.length > 0) {
+        response += `⏰ **ALERTAS ACTIVAS:**\n`;
+        response += `• 🔴 Críticas (+5 días): ${criticas.length}\n`;
+        response += `• 🟠 Alta prioridad (3-4 días): ${altas.length}\n`;
+        response += `• 🟡 Seguimiento (2 días): ${guiasRetrasadas.filter((g) => g.nivelAlerta === 'MEDIO').length}\n\n`;
       }
 
-      let response = '🔴 **Guías más urgentes:**\n\n';
-
+      response += `💡 **RECOMENDACIÓN:**\n`;
       if (criticas.length > 0) {
-        response += '**CRÍTICAS (Acción inmediata):**\n';
-        criticas.slice(0, 3).forEach((g, idx) => {
-          response += `${idx + 1}. **${g.guia.id}** - ${g.ultimoEstado} (${g.diasSinMovimiento} días)\n`;
-          response += `   → ${g.recomendacionIA}\n\n`;
-        });
+        response += `Tienes ${criticas.length} guía(s) crítica(s) que requieren atención INMEDIATA.\n`;
+        response += `Prioridad: ${criticas.slice(0, 2).map(g => g.guia.id).join(', ')}`;
+      } else if (altas.length > 0) {
+        response += `Hay ${altas.length} guía(s) en alerta que debes atender hoy para evitar que pasen a críticas.`;
+      } else if (guiasRetrasadas.length > 0) {
+        response += `Las guías están fluyendo bien. Mantén monitoreo de las ${guiasRetrasadas.length} con retraso leve.`;
+      } else {
+        response += `¡Todo bajo control! No hay guías con retraso. Continúa el monitoreo regular.`;
       }
-
-      if (altas.length > 0) {
-        response += '**🟠 ALERTA (Atender hoy):**\n';
-        altas.slice(0, 3).forEach((g, idx) => {
-          response += `${idx + 1}. **${g.guia.id}** - ${g.ultimoEstado} (${g.diasSinMovimiento} días)\n`;
-        });
-      }
-
-      response += `\n💡 **Recomendación:** Resuelve primero las ${criticas.length} críticas. Tienen 80% de probabilidad de devolución si no actúas hoy.`;
 
       return response;
     }
 
-    if (lowerMessage.includes('transportadora') || lowerMessage.includes('mejor')) {
+    if (lowerMessage.includes('urgente') || lowerMessage.includes('atender') || lowerMessage.includes('alerta') || lowerMessage.includes('critica') || lowerMessage.includes('crítica')) {
+      if (criticas.length === 0 && altas.length === 0) {
+        return `✅ **¡TODO EN ORDEN!**
+
+No hay guías urgentes que requieran atención inmediata.
+
+**Estado actual:**
+• ${guiasRetrasadas.length} guías en seguimiento (retraso leve)
+• ${total - guiasRetrasadas.length} guías fluyendo normalmente
+
+💡 **Recomendación:**
+Aprovecha para revisar las guías en oficina (${enOficina}) y enviar recordatorios a clientes que deben retirar.`;
+      }
+
+      let response = `🔴 **GUÍAS URGENTES**\n\n`;
+
+      if (criticas.length > 0) {
+        response += `**CRÍTICAS - Acción inmediata (${criticas.length}):**\n`;
+        criticas.slice(0, 5).forEach((g, idx) => {
+          const ciudad = g.guia.detailedInfo?.destination || 'N/A';
+          response += `\n${idx + 1}. **${g.guia.id}** - ${g.ultimoEstado}\n`;
+          response += `   • ${g.diasSinMovimiento} días sin movimiento | ${ciudad}\n`;
+          response += `   • Acción: ${g.recomendacionIA}\n`;
+          response += `   • Riesgo: ${g.diasSinMovimiento >= 7 ? '90%' : '80%'} probabilidad de devolución\n`;
+        });
+        if (criticas.length > 5) {
+          response += `\n   + ${criticas.length - 5} guías críticas más...\n`;
+        }
+      }
+
+      if (altas.length > 0) {
+        response += `\n**🟠 ALERTA - Atender hoy (${altas.length}):**\n`;
+        altas.slice(0, 3).forEach((g, idx) => {
+          response += `${idx + 1}. ${g.guia.id} - ${g.ultimoEstado} (${g.diasSinMovimiento}d)\n`;
+        });
+        if (altas.length > 3) {
+          response += `   + ${altas.length - 3} más en alerta...\n`;
+        }
+      }
+
+      response += `\n💡 **PRIORIZACIÓN:**\n`;
+      response += `1. Resuelve primero las ${criticas.length} críticas\n`;
+      response += `2. Luego atiende las ${altas.length} en alerta\n`;
+      response += `3. Las críticas +5 días se devuelven automáticamente`;
+
+      return response;
+    }
+
+    if (lowerMessage.includes('transportadora') || lowerMessage.includes('mejor') || lowerMessage.includes('carrier') || lowerMessage.includes('rendimiento')) {
       const carrierStats = Object.values(CarrierName)
         .filter((c) => c !== CarrierName.UNKNOWN)
         .map((carrier) => {
           const cs = shipments.filter((s) => s.carrier === carrier);
           const delivered = cs.filter((s) => s.status === ShipmentStatus.DELIVERED).length;
+          const issues = cs.filter((s) => s.status === ShipmentStatus.ISSUE).length;
           return {
             name: carrier,
             total: cs.length,
             delivered,
+            issues,
             rate: cs.length > 0 ? (delivered / cs.length) * 100 : 0,
           };
         })
@@ -224,56 +263,135 @@ No hay guías urgentes que requieran atención inmediata. Las guías están fluy
         .sort((a, b) => b.rate - a.rate);
 
       if (carrierStats.length === 0) {
-        return 'No hay datos suficientes de transportadoras para analizar.';
+        return '📊 No hay datos suficientes de transportadoras para analizar.\n\nCarga guías para ver el rendimiento por transportadora.';
       }
 
       const best = carrierStats[0];
       const worst = carrierStats[carrierStats.length - 1];
 
-      return `📊 **Rendimiento por transportadora:**
+      let response = `📊 **RENDIMIENTO DE TRANSPORTADORAS**\n\n`;
 
-🥇 **Mejor:** ${best.name}
-   • ${best.total} guías | ${best.rate.toFixed(0)}% éxito
+      response += `🥇 **MEJOR RENDIMIENTO:**\n`;
+      response += `${best.name} - ${best.rate.toFixed(0)}% éxito\n`;
+      response += `• ${best.delivered}/${best.total} entregas | ${best.issues} novedades\n\n`;
 
-🥈 **Ranking completo:**
-${carrierStats.map((c, i) => `   ${i + 1}. ${c.name}: ${c.rate.toFixed(0)}% (${c.delivered}/${c.total})`).join('\n')}
-
-${worst.rate < 70 ? `\n⚠️ **Atención:** ${worst.name} tiene bajo rendimiento (${worst.rate.toFixed(0)}%). Considera evaluar alternativas.` : ''}
-
-💡 **Recomendación:** Prioriza envíos con ${best.name} para zonas importantes.`;
-    }
-
-    if (lowerMessage.includes('patron') || lowerMessage.includes('problema')) {
-      if (patrones.length === 0) {
-        return '✅ No se han detectado patrones problemáticos significativos en tus envíos actuales.';
-      }
-
-      let response = `🔍 **Patrones detectados (${patrones.length}):**\n\n`;
-
-      patrones.slice(0, 4).forEach((p, idx) => {
-        const icon = p.impacto === 'CRITICO' ? '🔴' : p.impacto === 'ALTO' ? '🟠' : '🟡';
-        response += `${icon} **${p.titulo}**\n`;
-        response += `   ${p.descripcion}\n`;
-        response += `   → ${p.recomendacion}\n\n`;
+      response += `📋 **RANKING COMPLETO:**\n`;
+      carrierStats.forEach((c, i) => {
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '  ';
+        const status = c.rate >= 75 ? '🟢' : c.rate >= 65 ? '🟡' : c.rate >= 50 ? '🟠' : '🔴';
+        response += `${medal} ${c.name}: ${status} ${c.rate.toFixed(0)}% (${c.delivered}/${c.total})\n`;
       });
 
-      response += '💡 **Acción recomendada:** Enfócate primero en los patrones críticos para evitar más devoluciones.';
+      if (worst.rate < 65) {
+        response += `\n⚠️ **ALERTA:**\n`;
+        response += `${worst.name} tiene rendimiento crítico (${worst.rate.toFixed(0)}%).\n`;
+        response += `Considera evaluar alternativas para esta transportadora.`;
+      }
+
+      response += `\n\n💡 **RECOMENDACIÓN:**\n`;
+      response += `Prioriza envíos con ${best.name} para zonas importantes y clientes VIP.`;
 
       return response;
     }
 
-    // Default response
-    return `Basándome en tu pregunta y los datos actuales:
+    if (lowerMessage.includes('patron') || lowerMessage.includes('problema') || lowerMessage.includes('detecta')) {
+      if (patrones.length === 0) {
+        return `✅ **SIN PATRONES PROBLEMÁTICOS**
 
-${contexto.split('\n').slice(0, 8).join('\n')}
+No se han detectado patrones significativos en tus envíos actuales.
 
-¿Puedes ser más específico? Puedo ayudarte con:
-• Estado y resumen de guías
-• Guías urgentes que atender
-• Rendimiento de transportadoras
-• Patrones y problemas detectados
+**Indicadores saludables:**
+• No hay acumulación de retrasos por zona
+• Las transportadoras mantienen rendimiento aceptable
+• No hay bloqueos sistemáticos
 
-Escribe tu pregunta o usa los botones de sugerencias rápidas.`;
+💡 Continúa el monitoreo regular para mantener estos buenos indicadores.`;
+      }
+
+      let response = `🔍 **PATRONES DETECTADOS (${patrones.length})**\n\n`;
+
+      const criticos = patrones.filter(p => p.impacto === 'CRITICO');
+      const altos = patrones.filter(p => p.impacto === 'ALTO');
+      const otros = patrones.filter(p => p.impacto === 'MEDIO' || p.impacto === 'BAJO');
+
+      if (criticos.length > 0) {
+        response += `**🔴 CRÍTICOS (${criticos.length}):**\n`;
+        criticos.forEach((p) => {
+          response += `\n• **${p.titulo}**\n`;
+          response += `  ${p.descripcion}\n`;
+          response += `  → Acción: ${p.recomendacion}\n`;
+          response += `  → Afecta: ${p.datosApoyo.cantidad} guías (${p.datosApoyo.porcentaje.toFixed(1)}%)\n`;
+        });
+      }
+
+      if (altos.length > 0) {
+        response += `\n**🟠 ALERTA (${altos.length}):**\n`;
+        altos.forEach((p) => {
+          response += `• ${p.titulo} - ${p.datosApoyo.cantidad} guías\n`;
+          response += `  → ${p.recomendacion}\n`;
+        });
+      }
+
+      if (otros.length > 0) {
+        response += `\n**🟡 SEGUIMIENTO (${otros.length}):**\n`;
+        otros.slice(0, 2).forEach((p) => {
+          response += `• ${p.titulo}\n`;
+        });
+      }
+
+      response += `\n💡 **PLAN DE ACCIÓN:**\n`;
+      response += `1. Resuelve patrones críticos primero\n`;
+      response += `2. Implementa las recomendaciones de cada patrón\n`;
+      response += `3. Los patrones críticos pueden causar +40% devoluciones`;
+
+      return response;
+    }
+
+    // Query about specific shipment
+    if (lowerMessage.match(/[a-z]{2,4}[-\s]?\d{5,}/i)) {
+      const guiaMatch = lowerMessage.match(/[a-z]{2,4}[-\s]?\d{5,}/i);
+      if (guiaMatch) {
+        const guiaId = guiaMatch[0].toUpperCase().replace(/\s/g, '-');
+        const guia = shipments.find(s => s.id.toUpperCase().includes(guiaId) || guiaId.includes(s.id.toUpperCase()));
+
+        if (guia) {
+          const retrasada = guiasRetrasadas.find(g => g.guia.id === guia.id);
+          let response = `📦 **GUÍA ${guia.id}**\n\n`;
+          response += `**Estado:** ${guia.status}\n`;
+          response += `**Transportadora:** ${guia.carrier}\n`;
+          if (guia.detailedInfo?.destination) response += `**Destino:** ${guia.detailedInfo.destination}\n`;
+          if (guia.phone) response += `**Teléfono:** ${guia.phone}\n`;
+
+          if (retrasada) {
+            response += `\n⚠️ **ALERTA:** ${retrasada.diasSinMovimiento} días sin movimiento\n`;
+            response += `**Nivel:** ${retrasada.nivelAlerta}\n`;
+            response += `**Recomendación:** ${retrasada.recomendacionIA}`;
+          } else {
+            response += `\n✅ Esta guía está fluyendo normalmente.`;
+          }
+
+          return response;
+        }
+      }
+    }
+
+    // Default response with context
+    let response = `Basándome en el contexto actual:\n\n`;
+    response += `**📊 Resumen rápido:**\n`;
+    response += `• ${total} guías activas | ${rate}% éxito\n`;
+    response += `• ${criticas.length + altas.length} requieren atención urgente\n`;
+    response += `• ${patrones.length} patrones detectados\n\n`;
+
+    response += `**¿En qué puedo ayudarte?**\n`;
+    response += `• "Resumen del día" - Ver estado general\n`;
+    response += `• "Guías urgentes" - Ver críticas y alertas\n`;
+    response += `• "Mejor transportadora" - Ranking de rendimiento\n`;
+    response += `• "Patrones detectados" - Análisis de problemas\n`;
+    response += `• Escribe un número de guía para ver su estado\n\n`;
+
+    response += `💡 Usa los botones de sugerencias rápidas o escribe tu pregunta.`;
+
+    return response;
   };
 
   // Handle send message
