@@ -66,23 +66,36 @@ def create_engine_instance():
     """
     Crea una instancia del engine de SQLAlchemy.
     Usa singleton pattern para reutilizar la misma conexión.
+    Soporta SQLite para desarrollo y PostgreSQL para producción.
     """
     global _engine
 
     if _engine is None:
         database_url = get_database_url()
-        logger.info(f"Conectando a base de datos: {database_url.split('@')[-1]}")
 
-        _engine = create_engine(
-            database_url,
-            poolclass=QueuePool,
-            pool_size=DatabaseConfig.POOL_SIZE,
-            max_overflow=DatabaseConfig.MAX_OVERFLOW,
-            pool_timeout=DatabaseConfig.POOL_TIMEOUT,
-            pool_recycle=DatabaseConfig.POOL_RECYCLE,
-            pool_pre_ping=True,  # Verificar conexiones antes de usarlas
-            echo=DatabaseConfig.ECHO_SQL,
-        )
+        # Determinar si es SQLite o PostgreSQL
+        is_sqlite = database_url.startswith('sqlite')
+
+        if is_sqlite:
+            logger.info(f"Conectando a SQLite: {database_url}")
+            # SQLite no usa pool, configuración simplificada
+            _engine = create_engine(
+                database_url,
+                connect_args={"check_same_thread": False},  # Necesario para SQLite con FastAPI
+                echo=DatabaseConfig.ECHO_SQL,
+            )
+        else:
+            logger.info(f"Conectando a PostgreSQL: {database_url.split('@')[-1]}")
+            _engine = create_engine(
+                database_url,
+                poolclass=QueuePool,
+                pool_size=DatabaseConfig.POOL_SIZE,
+                max_overflow=DatabaseConfig.MAX_OVERFLOW,
+                pool_timeout=DatabaseConfig.POOL_TIMEOUT,
+                pool_recycle=DatabaseConfig.POOL_RECYCLE,
+                pool_pre_ping=True,
+                echo=DatabaseConfig.ECHO_SQL,
+            )
 
         # Event listener para logging de conexiones
         @event.listens_for(_engine, 'connect')
