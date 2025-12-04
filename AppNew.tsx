@@ -159,9 +159,10 @@ const AppNew: React.FC = () => {
           const filteredPrev = prev.filter((s) => !ids.has(s.id));
           return [...filteredPrev, ...newShipments];
         });
-        setNotification(`Carga exitosa: ${newShipments.length} guías añadidas y vinculadas.`);
+        setNotification(`✅ ${newShipments.length} guías cargadas. Revisa el resumen para validar.`);
         setInputText('');
-        setShowDataInput(false);
+        // Pasar al paso 3 (SUMMARY) para validar las guías cargadas
+        setActiveInputTab('SUMMARY');
       } else {
         alert('No se detectaron guías en el reporte. Verifique el formato.');
       }
