@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, Activity, Target, FileBarChart, Bot } from 'lucide-react';
+import { Package, Activity, Target, FileBarChart, Bot, Brain } from 'lucide-react';
 import { MainTabNew } from '../../types/logistics';
 
 interface TabNavigationNewProps {
@@ -11,6 +11,7 @@ interface TabNavigationNewProps {
     predicciones?: number;
     reporte?: number;
     asistente?: number;
+    ml?: number;
   };
 }
 
@@ -63,6 +64,14 @@ const tabs: TabConfig[] = [
     shortLabel: 'IA',
     color: 'text-pink-500',
     activeColor: 'bg-pink-500',
+  },
+  {
+    id: 'ml',
+    icon: Brain,
+    label: 'Sistema ML',
+    shortLabel: 'ML',
+    color: 'text-cyan-500',
+    activeColor: 'bg-cyan-500',
   },
 ];
 

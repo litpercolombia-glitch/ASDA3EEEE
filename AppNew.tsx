@@ -21,6 +21,7 @@ import {
   PrediccionesTab,
   ReporteIATab,
   AsistenteTab,
+  MLSystemTab,
 } from './components/tabs';
 import { detectarGuiasRetrasadas } from './utils/patternDetection';
 import {
@@ -117,6 +118,7 @@ const AppNew: React.FC = () => {
     predicciones: 0,
     reporte: 0,
     asistente: 0,
+    ml: 0,
   };
 
   const handleProcessInput = () => {
@@ -550,6 +552,8 @@ const AppNew: React.FC = () => {
           {currentTab === 'reporte' && <ReporteIATab shipments={shipments} />}
 
           {currentTab === 'asistente' && <AsistenteTab shipments={shipments} />}
+
+          {currentTab === 'ml' && <MLSystemTab />}
         </div>
       </main>
 
