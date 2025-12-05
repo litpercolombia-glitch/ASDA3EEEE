@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Shipment, ShipmentStatus, CarrierName, AITrackingResult } from './types';
 import { MainTabNew, SemaforoExcelData } from './types/logistics';
+import { Country } from './types/country';
 import {
   detectCarrier,
   saveShipments,
@@ -13,6 +14,8 @@ import {
   parseSummaryInput,
   parsePhoneRegistry,
 } from './services/logisticsService';
+import { getSelectedCountry, hasSelectedCountry } from './services/countryService';
+import { getUserProfile } from './services/gamificationService';
 import { useShipmentExcelParser } from './hooks/useShipmentExcelParser';
 import {
   TabNavigationNew,
@@ -22,7 +25,11 @@ import {
   ReporteIATab,
   AsistenteTab,
   MLSystemTab,
+  FlashTab,
+  DemandTab,
+  GamificationTab,
 } from './components/tabs';
+import CountrySelector from './components/CountrySelector';
 import { detectarGuiasRetrasadas } from './utils/patternDetection';
 import {
   Crown,
@@ -44,11 +51,17 @@ import {
   CheckCircle,
   X,
   Home,
+  Globe,
+  Trophy,
 } from 'lucide-react';
 
 const AppNew: React.FC = () => {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [phoneRegistry, setPhoneRegistry] = useState<Record<string, string>>({});
+
+  // Country selection
+  const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
+  const [showCountrySelector, setShowCountrySelector] = useState(false);
 
   // Main tab navigation
   const [currentTab, setCurrentTab] = useState<MainTabNew>('seguimiento');
@@ -74,6 +87,14 @@ const AppNew: React.FC = () => {
 
   // Load data on mount
   useEffect(() => {
+    // Check for saved country
+    const savedCountry = getSelectedCountry();
+    if (savedCountry) {
+      setSelectedCountry(savedCountry);
+    } else {
+      setShowCountrySelector(true);
+    }
+
     const data = loadShipments();
     if (data.length > 0) {
       setShipments(data);
@@ -111,9 +132,21 @@ const AppNew: React.FC = () => {
     }
   }, [notification]);
 
+  // Handle country selection
+  const handleCountrySelected = (country: Country) => {
+    setSelectedCountry(country);
+    setShowCountrySelector(false);
+  };
+
+  // Get gamification profile for XP display
+  const userProfile = getUserProfile();
+
   // Calculate notifications for tabs
   const tabNotifications = {
     seguimiento: detectarGuiasRetrasadas(shipments).filter((g) => g.nivelAlerta === 'CRITICO').length,
+    flash: 0,
+    demanda: 0,
+    gamificacion: userProfile.activeChallenges.filter(c => !c.completed).length,
     semaforo: 0,
     predicciones: 0,
     reporte: 0,
@@ -234,6 +267,11 @@ const AppNew: React.FC = () => {
     setNotification('Datos del semáforo cargados exitosamente');
   };
 
+  // Show country selector if no country is selected
+  if (showCountrySelector || !selectedCountry) {
+    return <CountrySelector onCountrySelected={handleCountrySelected} />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-navy-950 text-slate-900 dark:text-slate-100 font-sans pb-8 transition-colors duration-300 relative">
       {/* Header */}
@@ -261,6 +299,28 @@ const AppNew: React.FC = () => {
 
           {/* Header actions */}
           <div className="flex items-center gap-2 md:gap-4">
+            {/* Country Selector */}
+            <button
+              onClick={() => setShowCountrySelector(true)}
+              className="flex items-center gap-2 px-3 py-2 bg-navy-800 hover:bg-navy-700 rounded-lg text-sm border border-navy-700 transition-all"
+              title="Cambiar país"
+            >
+              <Globe className="w-4 h-4 text-gold-500" />
+              <span className="hidden md:inline text-slate-300">
+                {selectedCountry === 'COLOMBIA' ? '🇨🇴' : selectedCountry === 'ECUADOR' ? '🇪🇨' : '🇨🇱'}
+              </span>
+            </button>
+
+            {/* XP Badge */}
+            <button
+              onClick={() => setCurrentTab('gamificacion')}
+              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-lg text-sm font-bold transition-all shadow-lg"
+              title="Ver logros"
+            >
+              <Trophy className="w-4 h-4 text-yellow-400" />
+              <span className="text-white">{userProfile.totalXP} XP</span>
+            </button>
+
             {/* Data Input Toggle */}
             <button
               onClick={() => setShowDataInput(!showDataInput)}
@@ -542,6 +602,12 @@ const AppNew: React.FC = () => {
         {/* Tab Content */}
         <div className="min-h-[500px]">
           {currentTab === 'seguimiento' && <SeguimientoTab shipments={shipments} />}
+
+          {currentTab === 'flash' && <FlashTab country={selectedCountry} />}
+
+          {currentTab === 'demanda' && <DemandTab country={selectedCountry} />}
+
+          {currentTab === 'gamificacion' && <GamificationTab />}
 
           {currentTab === 'semaforo' && (
             <SemaforoTabNew onDataLoaded={handleSemaforoDataLoaded} />
