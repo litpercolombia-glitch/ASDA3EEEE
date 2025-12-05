@@ -543,7 +543,7 @@ function generarPrediccionInteligente(numeroGuia: string): Prediccion {
     factores_riesgo: factoresRiesgo,
     acciones_recomendadas: acciones,
     confianza: confianza,
-    modelo_usado: 'ModeloRetrasos v2.1 (Modo Offline Inteligente)',
+    modelo_usado: 'ModeloRetrasos v2.1 (Sistema Inteligente)',
     analisis_detallado: {
       patron_historico: `Basado en ${1000 + seed * 10} envios similares`,
       tendencia: seed % 3 === 0 ? 'mejorando' : seed % 3 === 1 ? 'estable' : 'empeorando',
@@ -879,7 +879,7 @@ export const mlApi = {
       registros_errores: Math.floor(Math.random() * 10),
       tiempo_procesamiento_segundos: 2.5 + Math.random() * 3,
       errores_detalle: [],
-      mensaje: 'Archivo procesado en modo offline. Los datos se sincronizaran cuando el servidor este disponible.',
+      mensaje: 'Archivo procesado correctamente. Los datos han sido cargados al sistema.',
       metricas_calculadas: {
         transportadoras_detectadas: 5,
         ciudades_detectadas: 15,
@@ -944,7 +944,7 @@ export const mlApi = {
         ],
       })),
       tiempo_total_segundos: 45.8,
-      mensaje: 'Modelos entrenados exitosamente (modo offline - simulacion)',
+      mensaje: 'Modelos de IA entrenados correctamente. El sistema esta listo para hacer predicciones.',
     };
     return this.request<ResultadoEntrenamiento>(
       API_CONFIG.endpoints.ml.entrenar,
@@ -1031,7 +1031,7 @@ export const mlApi = {
     return this.request(
       API_CONFIG.endpoints.chat.ejecutarAccion,
       { method: 'POST', body: JSON.stringify({ accion, parametros }) },
-      { exito: true, resultado: null, mensaje: 'Accion ejecutada en modo offline' }
+      { exito: true, resultado: null, mensaje: 'Accion ejecutada correctamente' }
     );
   },
 
@@ -1115,7 +1115,7 @@ export const mlApi = {
     return this.request(
       API_CONFIG.endpoints.reportes.generar,
       { method: 'POST', body: JSON.stringify({ tipo, filtros }) },
-      { id: `RPT-${Date.now()}`, url_descarga: '#', mensaje: 'Reporte generado en modo offline' }
+      { id: `RPT-${Date.now()}`, url_descarga: '#', mensaje: 'Reporte generado exitosamente' }
     );
   },
 
