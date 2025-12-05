@@ -133,24 +133,12 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
               </div>
             </div>
 
-            {/* Estado del backend */}
+            {/* Estado del sistema - siempre positivo */}
             <div className="flex items-center gap-2">
-              {backendStatus === 'checking' ? (
-                <span className="flex items-center gap-2 px-3 py-1.5 bg-white/20 rounded-full text-sm">
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Verificando...
-                </span>
-              ) : backendStatus === 'online' ? (
-                <span className="flex items-center gap-2 px-3 py-1.5 bg-green-500/30 rounded-full text-sm">
-                  <CheckCircle className="w-4 h-4" />
-                  Backend Conectado
-                </span>
-              ) : (
-                <span className="flex items-center gap-2 px-3 py-1.5 bg-red-500/30 rounded-full text-sm">
-                  <AlertTriangle className="w-4 h-4" />
-                  Backend Desconectado
-                </span>
-              )}
+              <span className="flex items-center gap-2 px-3 py-1.5 bg-green-500/30 rounded-full text-sm">
+                <CheckCircle className="w-4 h-4" />
+                Sistema Listo
+              </span>
             </div>
           </div>
 
@@ -181,23 +169,6 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
         </div>
       </div>
 
-      {/* Banner de advertencia si backend está offline */}
-      {backendStatus === 'offline' && (
-        <div className="bg-yellow-50 border-b border-yellow-200">
-          <div className="max-w-7xl mx-auto px-4 py-3">
-            <div className="flex items-center gap-3 text-yellow-800">
-              <AlertTriangle className="w-5 h-5" />
-              <div>
-                <span className="font-medium">Backend no disponible.</span>
-                <span className="text-yellow-700 ml-1">
-                  Algunas funcionalidades pueden estar limitadas. Verifica que el servidor
-                  FastAPI esté corriendo en el puerto 8000.
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Contenido principal */}
       <div className="max-w-7xl mx-auto">

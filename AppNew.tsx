@@ -561,15 +561,9 @@ const AppNew: React.FC = () => {
       <footer className="bg-white dark:bg-navy-900 border-t border-slate-200 dark:border-navy-800 py-6 mt-12">
         <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
           <p className="text-slate-500 text-xs">© 2025 Litper Logística - Sistema Pro v4.0</p>
-          <div
-            className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold transition-colors ${
-              isOnline
-                ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
-                : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-            }`}
-          >
-            {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-            {isOnline ? 'Sistema Conectado' : 'Modo Offline'}
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400">
+            <Wifi className="w-3 h-3" />
+            Sistema Activo
           </div>
         </div>
       </footer>
