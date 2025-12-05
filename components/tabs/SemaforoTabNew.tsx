@@ -31,6 +31,14 @@ import {
   FileText,
   Sparkles,
   Info,
+  ArrowRight,
+  Award,
+  Navigation,
+  Route,
+  Star,
+  Brain,
+  Repeat,
+  DollarSign,
 } from 'lucide-react';
 import { ExcelUploader } from '../excel/ExcelUploader';
 import {
@@ -381,6 +389,544 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({ ciudades }) => {
       </div>
     </div>
   );
+};
+
+// Route Optimization Panel - New Component
+interface RouteOptimizationPanelProps {
+  ciudades: (CiudadSemaforo & { score: number; factors: SemaforoScoreResult['factors'] })[];
+}
+
+interface RouteOptimization {
+  ciudad: string;
+  currentCarrier: string;
+  currentScore: number;
+  currentTime: number;
+  currentSuccessRate: number;
+  recommendedCarrier: string;
+  recommendedScore: number;
+  recommendedTime: number;
+  recommendedSuccessRate: number;
+  improvement: number;
+  timeImprovement: number;
+  recommendation: string;
+  priority: 'ALTA' | 'MEDIA' | 'BAJA';
+}
+
+interface CarrierCityComparison {
+  city: string;
+  carriers: {
+    name: string;
+    score: number;
+    successRate: number;
+    time: number;
+    total: number;
+  }[];
+  bestCarrier: string;
+  worstCarrier: string;
+  speedDifference: number;
+  successDifference: number;
+}
+
+const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudades }) => {
+  const [expandedSection, setExpandedSection] = useState<'optimizations' | 'comparisons' | 'report' | null>('optimizations');
+
+  // Generate route optimizations
+  const optimizations = useMemo((): RouteOptimization[] => {
+    const result: RouteOptimization[] = [];
+
+    // Group by city
+    const cityGroups: Record<string, typeof ciudades> = {};
+    ciudades.forEach(c => {
+      const city = c.ciudad.toUpperCase();
+      if (!cityGroups[city]) cityGroups[city] = [];
+      cityGroups[city].push(c);
+    });
+
+    // For cities with multiple carriers, find optimization opportunities
+    Object.entries(cityGroups).forEach(([city, carriers]) => {
+      if (carriers.length < 2) return;
+
+      // Sort by score to find best and worst
+      const sorted = [...carriers].sort((a, b) => b.score - a.score);
+      const best = sorted[0];
+      const worst = sorted[sorted.length - 1];
+
+      // Only suggest if there's significant difference
+      const scoreDiff = best.score - worst.score;
+      const timeDiff = worst.tiempoPromedio - best.tiempoPromedio;
+
+      if (scoreDiff >= 10 || timeDiff >= 1.5) {
+        result.push({
+          ciudad: city,
+          currentCarrier: worst.transportadora,
+          currentScore: worst.score,
+          currentTime: worst.tiempoPromedio,
+          currentSuccessRate: worst.tasaExito,
+          recommendedCarrier: best.transportadora,
+          recommendedScore: best.score,
+          recommendedTime: best.tiempoPromedio,
+          recommendedSuccessRate: best.tasaExito,
+          improvement: scoreDiff,
+          timeImprovement: timeDiff,
+          recommendation: generateOptimizationRecommendation(city, worst, best),
+          priority: scoreDiff >= 25 ? 'ALTA' : scoreDiff >= 15 ? 'MEDIA' : 'BAJA',
+        });
+      }
+    });
+
+    return result.sort((a, b) => b.improvement - a.improvement);
+  }, [ciudades]);
+
+  // Generate carrier comparisons by city
+  const carrierComparisons = useMemo((): CarrierCityComparison[] => {
+    const cityGroups: Record<string, typeof ciudades> = {};
+    ciudades.forEach(c => {
+      const city = c.ciudad.toUpperCase();
+      if (!cityGroups[city]) cityGroups[city] = [];
+      cityGroups[city].push(c);
+    });
+
+    return Object.entries(cityGroups)
+      .filter(([_, carriers]) => carriers.length >= 2)
+      .map(([city, carriers]) => {
+        const sorted = [...carriers].sort((a, b) => b.score - a.score);
+        const best = sorted[0];
+        const worst = sorted[sorted.length - 1];
+
+        return {
+          city,
+          carriers: carriers.map(c => ({
+            name: c.transportadora,
+            score: c.score,
+            successRate: c.tasaExito,
+            time: c.tiempoPromedio,
+            total: c.total,
+          })).sort((a, b) => b.score - a.score),
+          bestCarrier: best.transportadora,
+          worstCarrier: worst.transportadora,
+          speedDifference: worst.tiempoPromedio - best.tiempoPromedio,
+          successDifference: best.tasaExito - worst.tasaExito,
+        };
+      })
+      .sort((a, b) => b.successDifference - a.successDifference)
+      .slice(0, 10);
+  }, [ciudades]);
+
+  // Generate optimization report summary
+  const reportSummary = useMemo(() => {
+    const highPriority = optimizations.filter(o => o.priority === 'ALTA');
+    const mediumPriority = optimizations.filter(o => o.priority === 'MEDIA');
+
+    const totalTimeReduction = optimizations.reduce((sum, o) => sum + o.timeImprovement, 0);
+    const avgSuccessImprovement = optimizations.length > 0
+      ? optimizations.reduce((sum, o) => sum + (o.recommendedSuccessRate - o.currentSuccessRate), 0) / optimizations.length
+      : 0;
+
+    // Carrier rankings
+    const carrierScores: Record<string, { wins: number; losses: number; avgScore: number; count: number }> = {};
+    ciudades.forEach(c => {
+      const key = c.transportadora.toUpperCase();
+      if (!carrierScores[key]) carrierScores[key] = { wins: 0, losses: 0, avgScore: 0, count: 0 };
+      carrierScores[key].avgScore += c.score;
+      carrierScores[key].count++;
+    });
+
+    Object.keys(carrierScores).forEach(k => {
+      carrierScores[k].avgScore = carrierScores[k].avgScore / carrierScores[k].count;
+    });
+
+    optimizations.forEach(o => {
+      const recKey = o.recommendedCarrier.toUpperCase();
+      const currKey = o.currentCarrier.toUpperCase();
+      if (carrierScores[recKey]) carrierScores[recKey].wins++;
+      if (carrierScores[currKey]) carrierScores[currKey].losses++;
+    });
+
+    const carrierRanking = Object.entries(carrierScores)
+      .map(([name, stats]) => ({ name, ...stats }))
+      .sort((a, b) => b.avgScore - a.avgScore);
+
+    return {
+      totalOptimizations: optimizations.length,
+      highPriority: highPriority.length,
+      mediumPriority: mediumPriority.length,
+      totalTimeReduction,
+      avgSuccessImprovement,
+      carrierRanking,
+    };
+  }, [optimizations, ciudades]);
+
+  const priorityColors = {
+    ALTA: { bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-200 dark:border-red-800', text: 'text-red-700 dark:text-red-400', badge: 'bg-red-500' },
+    MEDIA: { bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800', text: 'text-amber-700 dark:text-amber-400', badge: 'bg-amber-500' },
+    BAJA: { bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800', text: 'text-blue-700 dark:text-blue-400', badge: 'bg-blue-500' },
+  };
+
+  if (optimizations.length === 0 && carrierComparisons.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 overflow-hidden">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 py-4 text-white">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-white/20 rounded-lg">
+            <Route className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold flex items-center gap-2">
+              Optimización de Rutas Sugeridas
+              <Brain className="w-5 h-5 text-yellow-300" />
+            </h3>
+            <p className="text-blue-100 text-sm">
+              Análisis comparativo de transportadoras por ciudad basado en rendimiento histórico
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="flex border-b border-slate-200 dark:border-navy-700">
+        <button
+          onClick={() => setExpandedSection(expandedSection === 'optimizations' ? null : 'optimizations')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+            expandedSection === 'optimizations'
+              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-b-2 border-blue-500'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'
+          }`}
+        >
+          <Lightbulb className="w-4 h-4" />
+          Sugerencias ({optimizations.length})
+        </button>
+        <button
+          onClick={() => setExpandedSection(expandedSection === 'comparisons' ? null : 'comparisons')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+            expandedSection === 'comparisons'
+              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-b-2 border-blue-500'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'
+          }`}
+        >
+          <BarChart3 className="w-4 h-4" />
+          Comparativa
+        </button>
+        <button
+          onClick={() => setExpandedSection(expandedSection === 'report' ? null : 'report')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+            expandedSection === 'report'
+              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-b-2 border-blue-500'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-navy-800'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          Reporte
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="p-4">
+        {/* Optimizations List */}
+        {expandedSection === 'optimizations' && (
+          <div className="space-y-4">
+            {optimizations.length === 0 ? (
+              <div className="text-center py-8">
+                <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
+                <p className="text-slate-600 dark:text-slate-400 font-medium">
+                  ¡Tus rutas están optimizadas!
+                </p>
+                <p className="text-sm text-slate-400">
+                  No se detectaron oportunidades significativas de mejora
+                </p>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-slate-500 mb-4">
+                  Se detectaron <span className="font-bold text-blue-600">{optimizations.length}</span> oportunidades de optimización basadas en el rendimiento histórico de transportadoras
+                </p>
+
+                {optimizations.map((opt, idx) => {
+                  const colors = priorityColors[opt.priority];
+                  return (
+                    <div
+                      key={`${opt.ciudad}-${idx}`}
+                      className={`${colors.bg} ${colors.border} border rounded-xl p-4`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-5 h-5 text-slate-500" />
+                          <h4 className="font-bold text-slate-800 dark:text-white">{opt.ciudad}</h4>
+                          <span className={`${colors.badge} text-white text-xs font-bold px-2 py-0.5 rounded-full`}>
+                            {opt.priority}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-emerald-600 font-bold text-lg">+{opt.improvement}pts</p>
+                          <p className="text-xs text-slate-500">mejora score</p>
+                        </div>
+                      </div>
+
+                      {/* Current vs Recommended */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                        <div className="bg-red-50 dark:bg-red-900/10 rounded-lg p-3 border border-red-200 dark:border-red-800">
+                          <div className="flex items-center gap-2 mb-2">
+                            <XCircle className="w-4 h-4 text-red-500" />
+                            <span className="text-xs font-bold text-red-700 dark:text-red-400">ACTUAL</span>
+                          </div>
+                          <p className="font-bold text-slate-800 dark:text-white">{opt.currentCarrier}</p>
+                          <div className="flex items-center gap-3 mt-2 text-sm">
+                            <span className="text-red-600">Score: {opt.currentScore}</span>
+                            <span className="text-slate-500">|</span>
+                            <span className="text-slate-600">{opt.currentSuccessRate.toFixed(0)}% éxito</span>
+                            <span className="text-slate-500">|</span>
+                            <span className="text-slate-600">{opt.currentTime}d</span>
+                          </div>
+                        </div>
+
+                        <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-lg p-3 border border-emerald-200 dark:border-emerald-800">
+                          <div className="flex items-center gap-2 mb-2">
+                            <CheckCircle className="w-4 h-4 text-emerald-500" />
+                            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">RECOMENDADO</span>
+                          </div>
+                          <p className="font-bold text-slate-800 dark:text-white">{opt.recommendedCarrier}</p>
+                          <div className="flex items-center gap-3 mt-2 text-sm">
+                            <span className="text-emerald-600 font-bold">Score: {opt.recommendedScore}</span>
+                            <span className="text-slate-500">|</span>
+                            <span className="text-slate-600">{opt.recommendedSuccessRate.toFixed(0)}% éxito</span>
+                            <span className="text-slate-500">|</span>
+                            <span className="text-slate-600">{opt.recommendedTime}d</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Benefits */}
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {opt.timeImprovement > 0 && (
+                          <span className="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-medium">
+                            <Clock className="w-3 h-3" />
+                            {opt.timeImprovement.toFixed(1)} días más rápido
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1 px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-lg text-xs font-medium">
+                          <TrendingUp className="w-3 h-3" />
+                          +{(opt.recommendedSuccessRate - opt.currentSuccessRate).toFixed(0)}% efectividad
+                        </span>
+                      </div>
+
+                      {/* AI Recommendation */}
+                      <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
+                        <div className="flex items-start gap-2">
+                          <Brain className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                          <p className="text-sm text-purple-800 dark:text-purple-200">{opt.recommendation}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Carrier Comparisons */}
+        {expandedSection === 'comparisons' && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-500 mb-4">
+              Comparativa de rendimiento entre transportadoras para las mismas ciudades
+            </p>
+
+            {carrierComparisons.map((comp, idx) => (
+              <div key={`${comp.city}-${idx}`} className="bg-slate-50 dark:bg-navy-950 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-blue-500" />
+                    {comp.city}
+                  </h4>
+                  <span className="text-xs text-slate-500">
+                    {comp.carriers.length} transportadoras
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {comp.carriers.map((carrier, cIdx) => {
+                    const isFirst = cIdx === 0;
+                    const isLast = cIdx === comp.carriers.length - 1;
+
+                    return (
+                      <div
+                        key={carrier.name}
+                        className={`flex items-center justify-between p-2 rounded-lg ${
+                          isFirst
+                            ? 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800'
+                            : isLast
+                              ? 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                              : 'bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {isFirst && <Award className="w-4 h-4 text-emerald-600" />}
+                          {isLast && <AlertTriangle className="w-4 h-4 text-red-500" />}
+                          {!isFirst && !isLast && <Truck className="w-4 h-4 text-slate-400" />}
+                          <div>
+                            <p className={`font-bold text-sm ${isFirst ? 'text-emerald-700' : isLast ? 'text-red-700' : 'text-slate-700'} dark:text-white`}>
+                              {carrier.name}
+                            </p>
+                            <p className="text-xs text-slate-500">{carrier.total} envíos</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="text-center">
+                            <p className={`font-bold ${carrier.score >= 70 ? 'text-emerald-600' : carrier.score >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                              {carrier.score}
+                            </p>
+                            <p className="text-[10px] text-slate-400">Score</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="font-medium text-slate-700 dark:text-slate-300">{carrier.successRate.toFixed(0)}%</p>
+                            <p className="text-[10px] text-slate-400">Éxito</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="font-medium text-slate-700 dark:text-slate-300">{carrier.time}d</p>
+                            <p className="text-[10px] text-slate-400">Tiempo</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Summary */}
+                <div className="mt-3 pt-3 border-t border-slate-200 dark:border-navy-700 flex items-center justify-between text-xs text-slate-500">
+                  <span>
+                    <strong className="text-emerald-600">{comp.bestCarrier}</strong> es {comp.speedDifference.toFixed(1)}d más rápido y {comp.successDifference.toFixed(0)}% más efectivo
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Summary Report */}
+        {expandedSection === 'report' && (
+          <div className="space-y-4">
+            <div className="text-center py-4">
+              <h4 className="font-bold text-lg text-slate-800 dark:text-white mb-2">
+                Reporte de Optimización Logística
+              </h4>
+              <p className="text-sm text-slate-500">
+                Generado automáticamente basado en {ciudades.length} rutas analizadas
+              </p>
+            </div>
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-center">
+                <p className="text-3xl font-bold text-blue-600">{reportSummary.totalOptimizations}</p>
+                <p className="text-xs text-slate-500">Optimizaciones</p>
+              </div>
+              <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 text-center">
+                <p className="text-3xl font-bold text-red-600">{reportSummary.highPriority}</p>
+                <p className="text-xs text-slate-500">Prioridad Alta</p>
+              </div>
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 text-center">
+                <p className="text-3xl font-bold text-emerald-600">+{reportSummary.avgSuccessImprovement.toFixed(1)}%</p>
+                <p className="text-xs text-slate-500">Mejora Promedio</p>
+              </div>
+              <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 text-center">
+                <p className="text-3xl font-bold text-purple-600">-{reportSummary.totalTimeReduction.toFixed(1)}d</p>
+                <p className="text-xs text-slate-500">Tiempo Total</p>
+              </div>
+            </div>
+
+            {/* Carrier Ranking */}
+            <div className="bg-slate-50 dark:bg-navy-950 rounded-xl p-4">
+              <h5 className="font-bold text-slate-700 dark:text-white mb-3 flex items-center gap-2">
+                <Star className="w-4 h-4 text-yellow-500" />
+                Ranking de Transportadoras por Desempeño
+              </h5>
+              <div className="space-y-2">
+                {reportSummary.carrierRanking.map((carrier, idx) => (
+                  <div key={carrier.name} className="flex items-center justify-between p-2 bg-white dark:bg-navy-900 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <span className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                        idx === 0 ? 'bg-yellow-500' :
+                        idx === 1 ? 'bg-slate-400' :
+                        idx === 2 ? 'bg-amber-600' :
+                        'bg-slate-300'
+                      }`}>
+                        {idx + 1}
+                      </span>
+                      <div>
+                        <p className="font-bold text-slate-800 dark:text-white">{carrier.name}</p>
+                        <p className="text-xs text-slate-500">{carrier.count} rutas analizadas</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-center">
+                        <p className={`font-bold ${carrier.avgScore >= 70 ? 'text-emerald-600' : carrier.avgScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                          {carrier.avgScore.toFixed(0)}
+                        </p>
+                        <p className="text-[10px] text-slate-400">Score Prom.</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="font-bold text-emerald-600">{carrier.wins}</p>
+                        <p className="text-[10px] text-slate-400">Recomendada</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="font-bold text-red-600">{carrier.losses}</p>
+                        <p className="text-[10px] text-slate-400">A mejorar</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* AI Summary */}
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
+              <div className="flex items-start gap-3">
+                <Brain className="w-6 h-6 text-purple-600 mt-0.5" />
+                <div>
+                  <h5 className="font-bold text-purple-700 dark:text-purple-300 mb-2">Resumen IA</h5>
+                  <p className="text-sm text-purple-800 dark:text-purple-200">
+                    {reportSummary.totalOptimizations > 0
+                      ? `Se identificaron ${reportSummary.totalOptimizations} oportunidades de optimización. Implementando estas sugerencias podrías mejorar la tasa de éxito promedio en un ${reportSummary.avgSuccessImprovement.toFixed(1)}% y reducir el tiempo de entrega total en ${reportSummary.totalTimeReduction.toFixed(1)} días. ${reportSummary.highPriority > 0 ? `Las ${reportSummary.highPriority} optimizaciones de alta prioridad deberían implementarse primero para maximizar el impacto.` : ''}`
+                      : 'Tu distribución de transportadoras por ruta está bien optimizada. Continúa monitoreando para detectar cambios en el rendimiento.'
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Helper function to generate optimization recommendation
+const generateOptimizationRecommendation = (
+  city: string,
+  current: CiudadSemaforo & { score: number },
+  recommended: CiudadSemaforo & { score: number }
+): string => {
+  const timeDiff = current.tiempoPromedio - recommended.tiempoPromedio;
+  const successDiff = recommended.tasaExito - current.tasaExito;
+
+  let rec = `Para envíos a ${city}, considera usar ${recommended.transportadora} en lugar de ${current.transportadora}. `;
+
+  if (timeDiff > 0 && successDiff > 0) {
+    rec += `Esto reduciría el tiempo de entrega en ${timeDiff.toFixed(1)} días y aumentaría la efectividad en ${successDiff.toFixed(0)}%. `;
+  } else if (timeDiff > 0) {
+    rec += `Esto reduciría el tiempo de entrega en ${timeDiff.toFixed(1)} días. `;
+  } else if (successDiff > 0) {
+    rec += `Esto aumentaría la efectividad en ${successDiff.toFixed(0)}%. `;
+  }
+
+  if (current.tasaDevolucion > 20) {
+    rec += `Actualmente ${current.transportadora} tiene una tasa de devolución del ${current.tasaDevolucion.toFixed(0)}% en esta ruta.`;
+  }
+
+  return rec;
 };
 
 // Main component
@@ -841,6 +1387,9 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
 
       {/* AI Insights Panel */}
       {ciudades.length > 0 && <InsightsPanel ciudades={ciudades} />}
+
+      {/* Route Optimization Panel - NEW */}
+      {ciudades.length > 0 && <RouteOptimizationPanel ciudades={ciudades} />}
 
       {/* City Detail Modal */}
       {selectedCiudad && (

@@ -41,6 +41,16 @@ import {
   Settings,
   Sparkles,
   X,
+  Phone,
+  User,
+  Hash,
+  FileText,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  Info,
+  Star,
+  TrendingUp as TrendUp,
 } from 'lucide-react';
 import { Shipment, ShipmentStatus, CarrierName } from '../../types';
 import {
@@ -77,13 +87,13 @@ const FESTIVOS_COLOMBIA = [
 // Season impacts for Colombia
 const getSeasonImpact = (date: Date): { season: string; impact: number; icon: React.ReactNode } => {
   const month = date.getMonth();
-  if (month >= 10 || month <= 1) { // Nov-Feb (temporada alta navidad)
+  if (month >= 10 || month <= 1) {
     return { season: 'Alta (Navidad)', impact: -15, icon: <Snowflake className="w-4 h-4 text-blue-400" /> };
   }
-  if (month >= 3 && month <= 5) { // Abr-Jun (temporada de lluvias)
+  if (month >= 3 && month <= 5) {
     return { season: 'Lluvias', impact: -10, icon: <Cloud className="w-4 h-4 text-slate-400" /> };
   }
-  if (month >= 6 && month <= 8) { // Jul-Sep (temporada seca)
+  if (month >= 6 && month <= 8) {
     return { season: 'Seca', impact: 5, icon: <Sun className="w-4 h-4 text-yellow-400" /> };
   }
   return { season: 'Normal', impact: 0, icon: <Sun className="w-4 h-4 text-amber-400" /> };
@@ -92,10 +102,10 @@ const getSeasonImpact = (date: Date): { season: string; impact: number; icon: Re
 // Day of week impact
 const getDayImpact = (date: Date): { day: string; impact: number } => {
   const dayOfWeek = date.getDay();
-  if (dayOfWeek === 0) return { day: 'Domingo', impact: -20 }; // No hay operación
-  if (dayOfWeek === 6) return { day: 'Sábado', impact: -10 }; // Operación reducida
-  if (dayOfWeek === 1) return { day: 'Lunes', impact: -5 }; // Alta demanda
-  if (dayOfWeek === 5) return { day: 'Viernes', impact: -5 }; // Cierre de semana
+  if (dayOfWeek === 0) return { day: 'Domingo', impact: -20 };
+  if (dayOfWeek === 6) return { day: 'Sábado', impact: -10 };
+  if (dayOfWeek === 1) return { day: 'Lunes', impact: -5 };
+  if (dayOfWeek === 5) return { day: 'Viernes', impact: -5 };
   return { day: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][dayOfWeek], impact: 0 };
 };
 
@@ -125,42 +135,36 @@ const calculateMLScore = (
 
   const today = new Date();
 
-  // Season factor
   const season = getSeasonImpact(today);
   factors.push({ name: 'Temporada', impact: season.impact, description: season.season });
   score += season.impact;
 
-  // Day factor
   const day = getDayImpact(today);
   factors.push({ name: 'Día de semana', impact: day.impact, description: day.day });
   score += day.impact;
 
-  // Holiday factor
   if (isNearHoliday(today)) {
     factors.push({ name: 'Festivo cercano', impact: -15, description: 'Próximo a día festivo' });
     score -= 15;
   }
 
-  // Carrier performance factor (simulated)
   const carrierScores: Record<string, number> = {
     [CarrierName.COORDINADORA]: 8,
     [CarrierName.INTER_RAPIDISIMO]: 5,
     [CarrierName.ENVIA]: 3,
     [CarrierName.TCC]: 6,
-    [CarrierName.SERVIENTREGA]: 4,
+    [CarrierName.VELOCES]: 4,
   };
   const carrierBonus = carrierScores[carrier] || 0;
   factors.push({ name: 'Transportadora', impact: carrierBonus, description: `${carrier} (histórico)` });
   score += carrierBonus;
 
-  // Historical data factor
   if (historicalData) {
     const historyBonus = Math.round((historicalData.tasaExito - 70) / 2);
     factors.push({ name: 'Histórico ruta', impact: historyBonus, description: `${historicalData.tasaExito.toFixed(0)}% éxito` });
     score += historyBonus;
   }
 
-  // Zone factor (simulated - certain cities have known issues)
   const problematicCities = ['TUMACO', 'QUIBDO', 'LETICIA', 'MITÚ', 'PUERTO CARREÑO'];
   if (problematicCities.includes(city.toUpperCase())) {
     factors.push({ name: 'Zona de riesgo', impact: -20, description: 'Ciudad con alta tasa de devolución' });
@@ -170,7 +174,7 @@ const calculateMLScore = (
   return { score: Math.min(100, Math.max(0, score)), factors };
 };
 
-// Anomaly detection
+// Enhanced Anomaly detection with full shipment info
 interface Anomaly {
   shipment: Shipment;
   type: 'NO_UPDATE' | 'STUCK_IN_TRANSIT' | 'OFFICE_TOO_LONG' | 'UNUSUAL_PATTERN';
@@ -178,6 +182,7 @@ interface Anomaly {
   description: string;
   expectedBehavior: string;
   recommendation: string;
+  aiRecommendation: string;
 }
 
 const detectAnomalies = (shipments: Shipment[]): Anomaly[] => {
@@ -189,7 +194,6 @@ const detectAnomalies = (shipments: Shipment[]): Anomaly[] => {
     const daysSinceUpdate = calcularDiasSinMovimiento(s);
     const daysInTransit = s.detailedInfo?.daysInTransit || 0;
 
-    // No update anomaly
     if (daysSinceUpdate >= 3 && s.status === ShipmentStatus.IN_TRANSIT) {
       anomalies.push({
         shipment: s,
@@ -198,10 +202,10 @@ const detectAnomalies = (shipments: Shipment[]): Anomaly[] => {
         description: `${daysSinceUpdate} días sin actualización en tránsito`,
         expectedBehavior: 'Actualización cada 24-48h máximo',
         recommendation: 'Contactar transportadora URGENTE. Posible pérdida.',
+        aiRecommendation: generateAIRecommendation(s, 'NO_UPDATE', daysSinceUpdate),
       });
     }
 
-    // Stuck in transit too long
     if (daysInTransit > 7 && s.status !== ShipmentStatus.DELIVERED) {
       anomalies.push({
         shipment: s,
@@ -210,10 +214,10 @@ const detectAnomalies = (shipments: Shipment[]): Anomaly[] => {
         description: `${daysInTransit} días en tránsito sin entrega`,
         expectedBehavior: 'Entrega normal: 3-5 días',
         recommendation: 'Iniciar proceso de reclamación. Alta probabilidad de pérdida.',
+        aiRecommendation: generateAIRecommendation(s, 'STUCK_IN_TRANSIT', daysInTransit),
       });
     }
 
-    // Office too long
     if (s.status === ShipmentStatus.IN_OFFICE && daysSinceUpdate >= 3) {
       anomalies.push({
         shipment: s,
@@ -222,10 +226,10 @@ const detectAnomalies = (shipments: Shipment[]): Anomaly[] => {
         description: `${daysSinceUpdate} días en oficina sin retiro`,
         expectedBehavior: 'Retiro en 1-2 días después de llegada a oficina',
         recommendation: 'Llamar al cliente urgente. Se devolverá automáticamente en 5 días.',
+        aiRecommendation: generateAIRecommendation(s, 'OFFICE_TOO_LONG', daysSinceUpdate),
       });
     }
 
-    // Issue status without recent activity
     if (s.status === ShipmentStatus.ISSUE && daysSinceUpdate >= 2) {
       anomalies.push({
         shipment: s,
@@ -234,13 +238,54 @@ const detectAnomalies = (shipments: Shipment[]): Anomaly[] => {
         description: 'Guía con novedad sin gestión reciente',
         expectedBehavior: 'Novedades deben resolverse en 24-48h',
         recommendation: 'Verificar tipo de novedad y coordinar solución.',
+        aiRecommendation: generateAIRecommendation(s, 'UNUSUAL_PATTERN', daysSinceUpdate),
       });
     }
   });
 
-  // Sort by severity
   const severityOrder = { CRITICAL: 0, HIGH: 1, MEDIUM: 2 };
   return anomalies.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+};
+
+// Generate AI recommendation based on shipment data
+const generateAIRecommendation = (shipment: Shipment, type: string, days: number): string => {
+  const carrier = shipment.carrier;
+  const destination = shipment.detailedInfo?.destination || 'destino desconocido';
+
+  switch (type) {
+    case 'NO_UPDATE':
+      return `Esta guía de ${carrier} hacia ${destination} lleva ${days} días sin movimiento. Recomiendo: 1) Llamar a ${carrier} con el número de guía ${shipment.id}. 2) Si no hay respuesta en 24h, escalar a supervisor. 3) Preparar documentación para posible reclamación.`;
+    case 'STUCK_IN_TRANSIT':
+      return `Envío atascado por ${days} días. Para ${carrier}: 1) Verificar en sistema si hay novedad no reportada. 2) Contactar al cliente ${shipment.phone || ''} para confirmar disponibilidad. 3) Considerar cambio de transportadora para futuros envíos a ${destination}.`;
+    case 'OFFICE_TOO_LONG':
+      return `Paquete esperando en oficina de ${carrier} por ${days} días. Acción urgente: 1) Llamar al cliente ${shipment.phone || ''} inmediatamente. 2) Ofrecer reprogramación de entrega. 3) Si no contesta en 48h, preparar devolución controlada.`;
+    case 'UNUSUAL_PATTERN':
+      return `Novedad sin resolver en guía ${shipment.id}. Verificar: 1) Tipo de novedad en portal de ${carrier}. 2) Contactar cliente para resolver. 3) Documentar para análisis de patrones.`;
+    default:
+      return 'Revisar guía manualmente y contactar transportadora.';
+  }
+};
+
+// Get top cities by shipment volume
+const getTopCities = (shipments: Shipment[], semaforoData: CiudadSemaforo[]): string[] => {
+  const cityCount: Record<string, number> = {};
+
+  shipments.forEach(s => {
+    const city = s.detailedInfo?.destination?.toUpperCase();
+    if (city) {
+      cityCount[city] = (cityCount[city] || 0) + 1;
+    }
+  });
+
+  semaforoData.forEach(s => {
+    const city = s.ciudad.toUpperCase();
+    cityCount[city] = (cityCount[city] || 0) + s.total;
+  });
+
+  return Object.entries(cityCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([city]) => city);
 };
 
 // Smart carrier recommendation
@@ -250,7 +295,7 @@ interface CarrierRecommendation {
   reasons: string[];
   avgDeliveryTime: number;
   successRate: number;
-  priceIndex: number; // 1-5, where 1 is cheapest
+  priceIndex: number;
 }
 
 const getSmartCarrierRecommendation = (
@@ -260,38 +305,32 @@ const getSmartCarrierRecommendation = (
 ): CarrierRecommendation[] => {
   const recommendations: CarrierRecommendation[] = [];
 
-  // Get historical data for this city
   const cityData = historicalData.filter(d =>
     d.ciudad.toUpperCase().includes(city.toUpperCase())
   );
 
-  // Simulated price index (in real scenario, this would come from API)
   const priceIndex: Record<string, number> = {
     [CarrierName.COORDINADORA]: 3,
     [CarrierName.INTER_RAPIDISIMO]: 2,
     [CarrierName.ENVIA]: 4,
     [CarrierName.TCC]: 3,
-    [CarrierName.SERVIENTREGA]: 2,
+    [CarrierName.VELOCES]: 2,
   };
 
-  // Calculate recommendation for each carrier
-  const carriers = [CarrierName.COORDINADORA, CarrierName.INTER_RAPIDISIMO, CarrierName.ENVIA, CarrierName.TCC, CarrierName.SERVIENTREGA];
+  const carriers = [CarrierName.COORDINADORA, CarrierName.INTER_RAPIDISIMO, CarrierName.ENVIA, CarrierName.TCC, CarrierName.VELOCES];
 
   carriers.forEach(carrier => {
     const carrierHistorical = cityData.find(d => d.transportadora.toUpperCase().includes(carrier.toUpperCase()));
-    const carrierCurrent = currentShipments.filter(s => s.carrier === carrier);
 
     const reasons: string[] = [];
-    let score = 50; // Base score
+    let score = 50;
 
-    // Historical success rate
     if (carrierHistorical) {
       const successRate = carrierHistorical.tasaExito;
       score += (successRate - 70) * 0.5;
       if (successRate >= 80) reasons.push(`Alta tasa de éxito (${successRate.toFixed(0)}%)`);
       if (successRate < 60) reasons.push(`⚠️ Baja tasa de éxito (${successRate.toFixed(0)}%)`);
 
-      // Delivery time
       const avgTime = carrierHistorical.tiempoPromedio;
       if (avgTime <= 3) {
         score += 10;
@@ -311,7 +350,6 @@ const getSmartCarrierRecommendation = (
         priceIndex: priceIndex[carrier] || 3,
       });
     } else {
-      // No historical data
       recommendations.push({
         carrier,
         score: 50,
@@ -335,6 +373,329 @@ interface ChatMessage {
   data?: any;
 }
 
+// Shipment Detail Modal Component
+interface ShipmentDetailModalProps {
+  shipment: Shipment;
+  onClose: () => void;
+  aiRecommendation?: string;
+}
+
+const ShipmentDetailModal: React.FC<ShipmentDetailModalProps> = ({ shipment, onClose, aiRecommendation }) => {
+  const statusColors: Record<ShipmentStatus, string> = {
+    [ShipmentStatus.DELIVERED]: 'bg-emerald-500',
+    [ShipmentStatus.IN_TRANSIT]: 'bg-blue-500',
+    [ShipmentStatus.IN_OFFICE]: 'bg-amber-500',
+    [ShipmentStatus.ISSUE]: 'bg-red-500',
+    [ShipmentStatus.PENDING]: 'bg-slate-500',
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white dark:bg-navy-900 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className={`${statusColors[shipment.status]} px-6 py-4 text-white`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                Guía: {shipment.id}
+              </h3>
+              <p className="text-white/80 text-sm flex items-center gap-2 mt-1">
+                <Truck className="w-4 h-4" />
+                {shipment.carrier} • {shipment.status}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Basic Info Grid */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-slate-50 dark:bg-navy-950 rounded-xl p-4">
+              <div className="flex items-center gap-2 text-slate-500 text-sm mb-1">
+                <Hash className="w-4 h-4" />
+                Número de Guía
+              </div>
+              <p className="font-bold text-slate-800 dark:text-white text-lg">{shipment.id}</p>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-navy-950 rounded-xl p-4">
+              <div className="flex items-center gap-2 text-slate-500 text-sm mb-1">
+                <Phone className="w-4 h-4" />
+                Teléfono Cliente
+              </div>
+              <p className="font-bold text-slate-800 dark:text-white text-lg">
+                {shipment.phone || 'No disponible'}
+              </p>
+              {shipment.phone && (
+                <a
+                  href={`https://wa.me/57${shipment.phone.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-green-600 hover:underline flex items-center gap-1 mt-1"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  Abrir WhatsApp
+                </a>
+              )}
+            </div>
+
+            <div className="bg-slate-50 dark:bg-navy-950 rounded-xl p-4">
+              <div className="flex items-center gap-2 text-slate-500 text-sm mb-1">
+                <MapPin className="w-4 h-4" />
+                Origen
+              </div>
+              <p className="font-bold text-slate-800 dark:text-white">
+                {shipment.detailedInfo?.origin || 'No disponible'}
+              </p>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-navy-950 rounded-xl p-4">
+              <div className="flex items-center gap-2 text-slate-500 text-sm mb-1">
+                <MapPin className="w-4 h-4" />
+                Destino
+              </div>
+              <p className="font-bold text-slate-800 dark:text-white">
+                {shipment.detailedInfo?.destination || 'No disponible'}
+              </p>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-navy-950 rounded-xl p-4">
+              <div className="flex items-center gap-2 text-slate-500 text-sm mb-1">
+                <Clock className="w-4 h-4" />
+                Días en Tránsito
+              </div>
+              <p className="font-bold text-slate-800 dark:text-white text-lg">
+                {shipment.detailedInfo?.daysInTransit || 0} días
+              </p>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-navy-950 rounded-xl p-4">
+              <div className="flex items-center gap-2 text-slate-500 text-sm mb-1">
+                <Calendar className="w-4 h-4" />
+                Fecha Estimada
+              </div>
+              <p className="font-bold text-slate-800 dark:text-white">
+                {shipment.detailedInfo?.estimatedDelivery || 'No disponible'}
+              </p>
+            </div>
+          </div>
+
+          {/* Status History */}
+          {shipment.detailedInfo?.events && shipment.detailedInfo.events.length > 0 && (
+            <div className="bg-slate-50 dark:bg-navy-950 rounded-xl p-4">
+              <h4 className="font-bold text-slate-700 dark:text-white mb-3 flex items-center gap-2">
+                <History className="w-4 h-4" />
+                Historial de Estados
+              </h4>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {shipment.detailedInfo.events.map((event, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex items-start gap-3 p-2 rounded-lg ${
+                      event.isRecent ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                    }`}
+                  >
+                    <div className={`w-2 h-2 rounded-full mt-2 ${
+                      event.isRecent ? 'bg-blue-500' : 'bg-slate-300'
+                    }`} />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-slate-700 dark:text-white">
+                        {event.description}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {event.date} • {event.location}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Raw Status */}
+          {shipment.detailedInfo?.rawStatus && (
+            <div className="bg-slate-50 dark:bg-navy-950 rounded-xl p-4">
+              <h4 className="font-bold text-slate-700 dark:text-white mb-2 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Estado Completo
+              </h4>
+              <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
+                {shipment.detailedInfo.rawStatus}
+              </p>
+            </div>
+          )}
+
+          {/* AI Recommendation */}
+          {aiRecommendation && (
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
+                  <Brain className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-purple-700 dark:text-purple-300 mb-2">
+                    Recomendación IA Personalizada
+                  </h4>
+                  <p className="text-sm text-purple-800 dark:text-purple-200">
+                    {aiRecommendation}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Notes */}
+          {shipment.notes && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
+              <h4 className="font-bold text-amber-700 dark:text-amber-300 mb-2 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Notas
+              </h4>
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                {shipment.notes}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="border-t border-slate-200 dark:border-navy-700 px-6 py-4 flex gap-3">
+          {shipment.phone && (
+            <a
+              href={`tel:${shipment.phone}`}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+            >
+              <Phone className="w-4 h-4" />
+              Llamar Cliente
+            </a>
+          )}
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-navy-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-navy-700 transition-colors font-medium"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Pattern Detail Modal
+interface PatternDetailModalProps {
+  pattern: PatronDetectado;
+  onClose: () => void;
+  onSelectShipment: (shipment: Shipment) => void;
+}
+
+const PatternDetailModal: React.FC<PatternDetailModalProps> = ({ pattern, onClose, onSelectShipment }) => {
+  const impactColors = {
+    CRITICO: 'bg-red-500',
+    ALTO: 'bg-orange-500',
+    MEDIO: 'bg-yellow-500',
+    BAJO: 'bg-green-500',
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white dark:bg-navy-900 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className={`${impactColors[pattern.impacto]} px-6 py-4 text-white`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold">{pattern.titulo}</h3>
+              <p className="text-white/80 text-sm mt-1">
+                Impacto: {pattern.impacto} • {pattern.datosApoyo.cantidad} guías afectadas
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Description */}
+          <div className="bg-slate-50 dark:bg-navy-950 rounded-xl p-4">
+            <h4 className="font-bold text-slate-700 dark:text-white mb-2">Descripción del Patrón</h4>
+            <p className="text-slate-600 dark:text-slate-300">{pattern.descripcion}</p>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-center">
+              <p className="text-3xl font-bold text-blue-600">{pattern.datosApoyo.cantidad}</p>
+              <p className="text-sm text-slate-500">Guías Afectadas</p>
+            </div>
+            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 text-center">
+              <p className="text-3xl font-bold text-purple-600">{pattern.datosApoyo.porcentaje.toFixed(1)}%</p>
+              <p className="text-sm text-slate-500">Del Total</p>
+            </div>
+          </div>
+
+          {/* AI Recommendation */}
+          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
+            <div className="flex items-start gap-3">
+              <Brain className="w-5 h-5 text-purple-600 mt-0.5" />
+              <div>
+                <h4 className="font-bold text-purple-700 dark:text-purple-300 mb-1">Recomendación IA</h4>
+                <p className="text-sm text-purple-800 dark:text-purple-200">{pattern.recomendacion}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Affected Shipments */}
+          <div>
+            <h4 className="font-bold text-slate-700 dark:text-white mb-3 flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              Guías Afectadas ({pattern.guiasAfectadas.length})
+            </h4>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {pattern.guiasAfectadas.map((shipment, idx) => (
+                <button
+                  key={shipment.id}
+                  onClick={() => onSelectShipment(shipment)}
+                  className="w-full flex items-center justify-between p-3 bg-slate-50 dark:bg-navy-950 rounded-lg hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-sm font-bold text-slate-700 dark:text-white">
+                      {shipment.id}
+                    </span>
+                    <span className="text-xs px-2 py-1 bg-slate-200 dark:bg-navy-700 rounded text-slate-600 dark:text-slate-300">
+                      {shipment.carrier}
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      {shipment.detailedInfo?.destination || 'Sin destino'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {shipment.phone && (
+                      <span className="text-xs text-slate-400">{shipment.phone}</span>
+                    )}
+                    <Eye className="w-4 h-4 text-blue-500" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Main component
 export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) => {
   const [activeSection, setActiveSection] = useState<'overview' | 'predictions' | 'anomalies' | 'recommendations' | 'chat'>('overview');
@@ -345,10 +706,19 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
   const [currentPrediction, setCurrentPrediction] = useState<AnalisisPrediccion | null>(null);
   const [mlFactors, setMlFactors] = useState<{ name: string; impact: number; description: string }[]>([]);
 
+  // Modal states
+  const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
+  const [selectedShipmentAIRec, setSelectedShipmentAIRec] = useState<string | undefined>();
+  const [selectedPattern, setSelectedPattern] = useState<PatronDetectado | null>(null);
+  const [expandedAnomalyId, setExpandedAnomalyId] = useState<string | null>(null);
+
   // Chat state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+
+  // Top cities for quick predictions
+  const topCities = useMemo(() => getTopCities(shipments, semaforoData), [shipments, semaforoData]);
 
   // Load historical data
   useEffect(() => {
@@ -364,7 +734,6 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
       setHasHistoricalData(true);
     }
 
-    // Load chat history
     const chatHistory = loadTabData<ChatMessage[]>('litper_predictions_chat', []);
     if (chatHistory.length > 0) {
       setChatMessages(chatHistory);
@@ -408,31 +777,50 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
   }, [shipments, semaforoData]);
 
   // Handle prediction
-  const handlePredict = () => {
-    if (!searchCity || !searchCarrier) return;
+  const handlePredict = (city?: string, carrier?: CarrierName) => {
+    const targetCity = city || searchCity;
+    const targetCarrier = carrier || searchCarrier;
+
+    if (!targetCity || !targetCarrier) return;
+
+    setSearchCity(targetCity);
+    setSearchCarrier(targetCarrier);
 
     const historico = semaforoData.find(
       (c) =>
-        c.ciudad.toUpperCase() === searchCity.toUpperCase() &&
-        c.transportadora.toUpperCase() === searchCarrier.toUpperCase()
+        c.ciudad.toUpperCase() === targetCity.toUpperCase() &&
+        c.transportadora.toUpperCase() === targetCarrier.toUpperCase()
     );
 
-    const prediction = generarPrediccion(searchCity, searchCarrier, shipments, historico);
+    const prediction = generarPrediccion(targetCity, targetCarrier, shipments, historico);
 
-    // Calculate ML score
     const { score, factors } = calculateMLScore(
       prediction.probabilidadExito,
-      searchCarrier as CarrierName,
-      searchCity,
+      targetCarrier as CarrierName,
+      targetCity,
       historico
     );
 
     prediction.probabilidadExito = score;
     setCurrentPrediction(prediction);
     setMlFactors(factors);
+    setActiveSection('predictions');
   };
 
-  // Smart chat response (simulated AI)
+  // Handle opening shipment detail from anomaly
+  const handleOpenShipmentFromAnomaly = (anomaly: Anomaly) => {
+    setSelectedShipment(anomaly.shipment);
+    setSelectedShipmentAIRec(anomaly.aiRecommendation);
+  };
+
+  // Handle opening shipment from pattern
+  const handleOpenShipmentFromPattern = (shipment: Shipment) => {
+    setSelectedPattern(null);
+    setSelectedShipment(shipment);
+    setSelectedShipmentAIRec(undefined);
+  };
+
+  // Smart chat response
   const handleChatSubmit = useCallback(async () => {
     if (!chatInput.trim()) return;
 
@@ -447,13 +835,11 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
     setChatInput('');
     setIsTyping(true);
 
-    // Simulate AI response based on context
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     let response = '';
     const input = chatInput.toLowerCase();
 
-    // Contextual responses based on actual data
     if (input.includes('resumen') || input.includes('estado') || input.includes('general')) {
       const delivered = shipments.filter(s => s.status === ShipmentStatus.DELIVERED).length;
       const inTransit = shipments.filter(s => s.status === ShipmentStatus.IN_TRANSIT).length;
@@ -492,16 +878,8 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
         `- **${p.titulo}** (${p.impacto}): ${p.descripcion}`
       ).join('\n\n') : 'No se han detectado patrones significativos con los datos actuales.'}`;
     }
-    else if (input.includes('predic') && (input.includes('bogota') || input.includes('bogotá'))) {
-      const bogotaData = semaforoData.find(d => d.ciudad.toUpperCase().includes('BOGOTA'));
-      if (bogotaData) {
-        response = `📍 **Predicción para BOGOTÁ:**\n\n- Transportadora recomendada: ${bogotaData.transportadora}\n- Tasa de éxito histórica: ${bogotaData.tasaExito.toFixed(0)}%\n- Tiempo promedio: ${bogotaData.tiempoPromedio} días\n- Estado: ${bogotaData.semaforo === 'VERDE' ? '🟢 Óptimo' : bogotaData.semaforo === 'AMARILLO' ? '🟡 Bueno' : '🔴 Riesgo'}\n\n💡 ${bogotaData.recomendacionIA}`;
-      } else {
-        response = 'No hay datos históricos disponibles para Bogotá. Carga un Excel con datos en la pestaña Semáforo.';
-      }
-    }
     else if (input.includes('ayuda') || input.includes('help') || input.includes('qué puedes')) {
-      response = `🤖 **Soy tu Asistente de Predicciones Logísticas**\n\nPuedo ayudarte con:\n\n📊 **Análisis:**\n- "Dame un resumen general"\n- "¿Cuáles son las alertas actuales?"\n- "¿Qué patrones has detectado?"\n\n🚚 **Transportadoras:**\n- "¿Cuál es la mejor transportadora?"\n- "Predicción para Bogotá"\n\n⏰ **Seguimiento:**\n- "¿Hay guías retrasadas?"\n- "¿Cuántas anomalías hay?"\n\n💡 Mis respuestas se basan en tus datos reales de ${shipments.length} guías${hasHistoricalData ? ` y ${semaforoData.length} rutas históricas` : ''}.`;
+      response = `🤖 **Soy tu Asistente de Predicciones Logísticas**\n\nPuedo ayudarte con:\n\n📊 **Análisis:**\n- "Dame un resumen general"\n- "¿Cuáles son las alertas actuales?"\n- "¿Qué patrones has detectado?"\n\n🚚 **Transportadoras:**\n- "¿Cuál es la mejor transportadora?"\n\n⏰ **Seguimiento:**\n- "¿Hay guías retrasadas?"\n- "¿Cuántas anomalías hay?"\n\n💡 Mis respuestas se basan en tus datos reales de ${shipments.length} guías${hasHistoricalData ? ` y ${semaforoData.length} rutas históricas` : ''}.`;
     }
     else {
       response = `Entiendo tu consulta sobre "${chatInput.substring(0, 50)}..."\n\nBasándome en los datos actuales:\n- ${shipments.length} guías activas\n- ${anomalies.length} anomalías detectadas\n- ${patrones.length} patrones identificados\n\n¿Podrías ser más específico? Prueba con:\n- "Resumen general"\n- "Mejor transportadora"\n- "Guías retrasadas"\n- "Alertas"`;
@@ -579,7 +957,7 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
                 <Sparkles className="w-5 h-5 text-yellow-300" />
               </h2>
               <p className="text-purple-100 text-sm">
-                Análisis predictivo basado en Machine Learning • {shipments.length} guías • {semaforoData.length} rutas históricas
+                Análisis predictivo con datos locales • {shipments.length} guías • {semaforoData.length} rutas históricas
               </p>
             </div>
           </div>
@@ -660,73 +1038,106 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
             </div>
           </div>
 
+          {/* Quick Predictions - Top Cities */}
+          {topCities.length > 0 && (
+            <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
+              <h3 className="font-bold text-slate-700 dark:text-white text-sm mb-3 flex items-center gap-2">
+                <Star className="w-4 h-4 text-yellow-500" />
+                CIUDADES MÁS UTILIZADAS - PREDICCIÓN RÁPIDA
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {topCities.slice(0, 8).map(city => (
+                  <button
+                    key={city}
+                    onClick={() => handlePredict(city, carriers[0] || CarrierName.COORDINADORA)}
+                    className="px-3 py-2 bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30 text-purple-700 dark:text-purple-300 rounded-lg text-sm font-medium hover:from-purple-200 hover:to-indigo-200 dark:hover:from-purple-900/50 dark:hover:to-indigo-900/50 transition-all flex items-center gap-2"
+                  >
+                    <MapPin className="w-3 h-3" />
+                    {city}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Data Sources */}
           <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
             <h3 className="font-bold text-slate-700 dark:text-white text-sm mb-3 flex items-center gap-2">
               <Database className="w-4 h-4" />
-              FUENTES DE DATOS DEL MODELO ML
+              FUENTES DE DATOS (MODO LOCAL - SIN BACKEND)
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="flex items-center gap-3 bg-slate-50 dark:bg-navy-950 rounded-lg p-3">
-                {shipments.length > 0 ? (
-                  <CheckCircle className="w-5 h-5 text-emerald-500" />
-                ) : (
-                  <XCircle className="w-5 h-5 text-slate-400" />
-                )}
+              <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 border border-emerald-200 dark:border-emerald-800">
+                <CheckCircle className="w-5 h-5 text-emerald-500" />
                 <div>
                   <p className="text-sm font-medium text-slate-700 dark:text-white">
-                    {shipments.length} guías en tiempo real
+                    {shipments.length} guías cargadas localmente
                   </p>
-                  <p className="text-xs text-slate-500">Datos de Seguimiento</p>
+                  <p className="text-xs text-slate-500">Datos de Seguimiento (sin necesidad de backend)</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 bg-slate-50 dark:bg-navy-950 rounded-lg p-3">
                 {hasHistoricalData ? (
                   <CheckCircle className="w-5 h-5 text-emerald-500" />
                 ) : (
-                  <XCircle className="w-5 h-5 text-slate-400" />
+                  <Info className="w-5 h-5 text-amber-500" />
                 )}
                 <div>
                   <p className="text-sm font-medium text-slate-700 dark:text-white">
                     {hasHistoricalData ? `${semaforoData.length} rutas históricas` : 'Sin datos históricos'}
                   </p>
-                  <p className="text-xs text-slate-500">Datos de Semáforo</p>
+                  <p className="text-xs text-slate-500">Carga Excel en Semáforo para más precisión</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Top Patterns */}
+          {/* Top Patterns - DYNAMIC */}
           {patrones.length > 0 && (
             <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
               <h3 className="font-bold text-slate-700 dark:text-white text-sm mb-3 flex items-center gap-2">
                 <Activity className="w-4 h-4" />
-                PATRONES DETECTADOS (TOP 3)
+                PATRONES DETECTADOS (Click para ver guías)
               </h3>
               <div className="space-y-3">
-                {patrones.slice(0, 3).map((patron, idx) => (
-                  <div
+                {patrones.slice(0, 5).map((patron) => (
+                  <button
                     key={patron.id}
-                    className={`rounded-lg p-3 border-l-4 ${
-                      patron.impacto === 'CRITICO' ? 'bg-red-50 dark:bg-red-900/10 border-l-red-500' :
-                      patron.impacto === 'ALTO' ? 'bg-orange-50 dark:bg-orange-900/10 border-l-orange-500' :
-                      'bg-yellow-50 dark:bg-yellow-900/10 border-l-yellow-500'
+                    onClick={() => setSelectedPattern(patron)}
+                    className={`w-full rounded-lg p-3 border-l-4 text-left transition-all hover:shadow-md ${
+                      patron.impacto === 'CRITICO' ? 'bg-red-50 dark:bg-red-900/10 border-l-red-500 hover:bg-red-100' :
+                      patron.impacto === 'ALTO' ? 'bg-orange-50 dark:bg-orange-900/10 border-l-orange-500 hover:bg-orange-100' :
+                      patron.impacto === 'MEDIO' ? 'bg-yellow-50 dark:bg-yellow-900/10 border-l-yellow-500 hover:bg-yellow-100' :
+                      'bg-green-50 dark:bg-green-900/10 border-l-green-500 hover:bg-green-100'
                     }`}
                   >
                     <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-bold text-slate-800 dark:text-white text-sm">{patron.titulo}</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-slate-800 dark:text-white text-sm">{patron.titulo}</p>
+                          <span className="text-xs bg-slate-200 dark:bg-navy-700 px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-300">
+                            {patron.datosApoyo.cantidad} guías
+                          </span>
+                        </div>
                         <p className="text-xs text-slate-500 mt-1">{patron.descripcion}</p>
+                        <p className="text-xs text-purple-600 dark:text-purple-400 mt-2 flex items-center gap-1">
+                          <Brain className="w-3 h-3" />
+                          {patron.recomendacion.substring(0, 80)}...
+                        </p>
                       </div>
-                      <span className={`text-xs font-bold px-2 py-1 rounded ${
-                        patron.impacto === 'CRITICO' ? 'bg-red-100 text-red-700' :
-                        patron.impacto === 'ALTO' ? 'bg-orange-100 text-orange-700' :
-                        'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        {patron.impacto}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-bold px-2 py-1 rounded ${
+                          patron.impacto === 'CRITICO' ? 'bg-red-100 text-red-700' :
+                          patron.impacto === 'ALTO' ? 'bg-orange-100 text-orange-700' :
+                          patron.impacto === 'MEDIO' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-green-100 text-green-700'
+                        }`}>
+                          {patron.impacto}
+                        </span>
+                        <Eye className="w-4 h-4 text-slate-400" />
+                      </div>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -737,6 +1148,33 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
       {/* Predictions Section */}
       {activeSection === 'predictions' && (
         <div className="space-y-6">
+          {/* Quick City Buttons */}
+          <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
+            <h3 className="font-bold text-slate-700 dark:text-white text-sm mb-3 flex items-center gap-2">
+              <Star className="w-4 h-4 text-yellow-500" />
+              CIUDADES MÁS UTILIZADAS
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {topCities.slice(0, 10).map(city => (
+                <button
+                  key={city}
+                  onClick={() => {
+                    setSearchCity(city);
+                    if (searchCarrier) handlePredict(city, searchCarrier);
+                  }}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                    searchCity === city
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-100 dark:bg-navy-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-navy-700'
+                  }`}
+                >
+                  <MapPin className="w-3 h-3" />
+                  {city}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Prediction Form */}
           <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl border border-purple-200 dark:border-purple-800 p-6">
             <h3 className="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
@@ -747,16 +1185,22 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
             <div className="flex flex-col md:flex-row gap-3">
               <div className="flex-1">
                 <label className="text-xs text-slate-500 mb-1 block">Ciudad Destino</label>
-                <select
-                  value={searchCity}
-                  onChange={(e) => setSearchCity(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="">Seleccionar ciudad...</option>
-                  {cities.map((city) => (
-                    <option key={city} value={city}>{city}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    list="cities-list"
+                    value={searchCity}
+                    onChange={(e) => setSearchCity(e.target.value.toUpperCase())}
+                    placeholder="Buscar ciudad..."
+                    className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                  <datalist id="cities-list">
+                    {cities.map((city) => (
+                      <option key={city} value={city} />
+                    ))}
+                  </datalist>
+                </div>
               </div>
 
               <div className="flex-1">
@@ -767,7 +1211,7 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
                   className="w-full px-4 py-2.5 bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="">Seleccionar transportadora...</option>
-                  {[CarrierName.COORDINADORA, CarrierName.INTER_RAPIDISIMO, CarrierName.ENVIA, CarrierName.TCC, CarrierName.SERVIENTREGA].map((carrier) => (
+                  {[CarrierName.COORDINADORA, CarrierName.INTER_RAPIDISIMO, CarrierName.ENVIA, CarrierName.TCC, CarrierName.VELOCES].map((carrier) => (
                     <option key={carrier} value={carrier}>{carrier}</option>
                   ))}
                 </select>
@@ -775,12 +1219,12 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
 
               <div className="flex items-end">
                 <button
-                  onClick={handlePredict}
+                  onClick={() => handlePredict()}
                   disabled={!searchCity || !searchCarrier}
                   className="px-6 py-2.5 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                 >
                   <Cpu className="w-4 h-4" />
-                  Calcular Predicción
+                  Calcular
                 </button>
               </div>
             </div>
@@ -859,7 +1303,7 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
                   <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-100 dark:border-blue-800">
                     <p className="text-sm font-bold text-blue-700 dark:text-blue-300 mb-2 flex items-center gap-1">
                       <Lightbulb className="w-4 h-4" />
-                      Recomendaciones
+                      Recomendaciones IA
                     </p>
                     <ul className="space-y-1">
                       {currentPrediction.recomendaciones.map((rec, idx) => (
@@ -882,23 +1326,25 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
                   Ranking de Transportadoras para {searchCity}
                 </h4>
                 <div className="space-y-2">
-                  {carrierRecommendations.slice(0, 3).map((rec, idx) => (
-                    <div
+                  {carrierRecommendations.slice(0, 5).map((rec, idx) => (
+                    <button
                       key={rec.carrier}
-                      className={`flex items-center justify-between p-3 rounded-lg ${
+                      onClick={() => handlePredict(searchCity, rec.carrier)}
+                      className={`w-full flex items-center justify-between p-3 rounded-lg transition-all ${
                         idx === 0 ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800' :
-                        'bg-slate-50 dark:bg-navy-950'
+                        'bg-slate-50 dark:bg-navy-950 hover:bg-slate-100 dark:hover:bg-navy-800'
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                           idx === 0 ? 'bg-emerald-500 text-white' :
                           idx === 1 ? 'bg-slate-400 text-white' :
-                          'bg-amber-600 text-white'
+                          idx === 2 ? 'bg-amber-600 text-white' :
+                          'bg-slate-300 text-slate-600'
                         }`}>
                           {idx + 1}
                         </span>
-                        <div>
+                        <div className="text-left">
                           <p className="font-bold text-slate-800 dark:text-white">{rec.carrier}</p>
                           <p className="text-xs text-slate-500">{rec.reasons.slice(0, 2).join(' • ')}</p>
                         </div>
@@ -909,7 +1355,7 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
                         </p>
                         <p className="text-xs text-slate-400">Score</p>
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -918,7 +1364,7 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
         </div>
       )}
 
-      {/* Anomalies Section */}
+      {/* Anomalies Section - DYNAMIC */}
       {activeSection === 'anomalies' && (
         <div className="space-y-4">
           <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
@@ -938,48 +1384,128 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
               </div>
             ) : (
               <div className="space-y-3">
-                {anomalies.map((anomaly, idx) => (
-                  <div
-                    key={`${anomaly.shipment.id}-${idx}`}
-                    className={`rounded-xl p-4 border-l-4 ${
-                      anomaly.severity === 'CRITICAL' ? 'bg-red-50 dark:bg-red-900/10 border-l-red-500' :
-                      anomaly.severity === 'HIGH' ? 'bg-orange-50 dark:bg-orange-900/10 border-l-orange-500' :
-                      'bg-yellow-50 dark:bg-yellow-900/10 border-l-yellow-500'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-bold px-2 py-1 rounded ${
-                          anomaly.severity === 'CRITICAL' ? 'bg-red-100 text-red-700' :
-                          anomaly.severity === 'HIGH' ? 'bg-orange-100 text-orange-700' :
-                          'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {anomaly.severity === 'CRITICAL' ? '🔴 CRÍTICO' :
-                           anomaly.severity === 'HIGH' ? '🟠 ALTO' : '🟡 MEDIO'}
-                        </span>
-                        <span className="text-xs text-slate-500 bg-slate-100 dark:bg-navy-800 px-2 py-1 rounded">
-                          {anomaly.type.replace('_', ' ')}
-                        </span>
-                      </div>
-                      <span className="font-mono text-sm text-slate-600 dark:text-slate-400">
-                        {anomaly.shipment.id}
-                      </span>
-                    </div>
+                {anomalies.map((anomaly, idx) => {
+                  const isExpanded = expandedAnomalyId === `${anomaly.shipment.id}-${idx}`;
+                  return (
+                    <div
+                      key={`${anomaly.shipment.id}-${idx}`}
+                      className={`rounded-xl border-l-4 overflow-hidden ${
+                        anomaly.severity === 'CRITICAL' ? 'bg-red-50 dark:bg-red-900/10 border-l-red-500' :
+                        anomaly.severity === 'HIGH' ? 'bg-orange-50 dark:bg-orange-900/10 border-l-orange-500' :
+                        'bg-yellow-50 dark:bg-yellow-900/10 border-l-yellow-500'
+                      }`}
+                    >
+                      {/* Header - Clickable */}
+                      <button
+                        onClick={() => setExpandedAnomalyId(isExpanded ? null : `${anomaly.shipment.id}-${idx}`)}
+                        className="w-full p-4 text-left"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-bold px-2 py-1 rounded ${
+                              anomaly.severity === 'CRITICAL' ? 'bg-red-100 text-red-700' :
+                              anomaly.severity === 'HIGH' ? 'bg-orange-100 text-orange-700' :
+                              'bg-yellow-100 text-yellow-700'
+                            }`}>
+                              {anomaly.severity === 'CRITICAL' ? '🔴 CRÍTICO' :
+                               anomaly.severity === 'HIGH' ? '🟠 ALTO' : '🟡 MEDIO'}
+                            </span>
+                            <span className="text-xs text-slate-500 bg-slate-100 dark:bg-navy-800 px-2 py-1 rounded">
+                              {anomaly.type.replace('_', ' ')}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-sm text-slate-600 dark:text-slate-400">
+                              {anomaly.shipment.id}
+                            </span>
+                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </div>
+                        </div>
 
-                    <p className="font-bold text-slate-800 dark:text-white mb-1">{anomaly.description}</p>
+                        <p className="font-bold text-slate-800 dark:text-white mb-1">{anomaly.description}</p>
+                        <p className="text-xs text-slate-500">{anomaly.shipment.carrier} • {anomaly.shipment.detailedInfo?.destination || 'Sin destino'}</p>
+                      </button>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3 text-xs">
-                      <div className="bg-white/50 dark:bg-navy-900/50 rounded-lg p-2">
-                        <p className="text-slate-500">Comportamiento esperado:</p>
-                        <p className="text-slate-700 dark:text-slate-300">{anomaly.expectedBehavior}</p>
-                      </div>
-                      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2">
-                        <p className="text-blue-600 dark:text-blue-400 font-bold">💡 Acción recomendada:</p>
-                        <p className="text-blue-800 dark:text-blue-200">{anomaly.recommendation}</p>
-                      </div>
+                      {/* Expanded Content */}
+                      {isExpanded && (
+                        <div className="px-4 pb-4 space-y-3">
+                          {/* Quick Info */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <div className="bg-white/50 dark:bg-navy-900/50 rounded-lg p-2 text-center">
+                              <p className="text-xs text-slate-500">Teléfono</p>
+                              <p className="font-bold text-slate-700 dark:text-white text-sm">
+                                {anomaly.shipment.phone || 'N/A'}
+                              </p>
+                            </div>
+                            <div className="bg-white/50 dark:bg-navy-900/50 rounded-lg p-2 text-center">
+                              <p className="text-xs text-slate-500">Días en tránsito</p>
+                              <p className="font-bold text-slate-700 dark:text-white text-sm">
+                                {anomaly.shipment.detailedInfo?.daysInTransit || 0}
+                              </p>
+                            </div>
+                            <div className="bg-white/50 dark:bg-navy-900/50 rounded-lg p-2 text-center">
+                              <p className="text-xs text-slate-500">Origen</p>
+                              <p className="font-bold text-slate-700 dark:text-white text-sm truncate">
+                                {anomaly.shipment.detailedInfo?.origin || 'N/A'}
+                              </p>
+                            </div>
+                            <div className="bg-white/50 dark:bg-navy-900/50 rounded-lg p-2 text-center">
+                              <p className="text-xs text-slate-500">Destino</p>
+                              <p className="font-bold text-slate-700 dark:text-white text-sm truncate">
+                                {anomaly.shipment.detailedInfo?.destination || 'N/A'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Behavior & Recommendation */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <div className="bg-white/50 dark:bg-navy-900/50 rounded-lg p-3">
+                              <p className="text-xs text-slate-500 mb-1">Comportamiento esperado:</p>
+                              <p className="text-sm text-slate-700 dark:text-slate-300">{anomaly.expectedBehavior}</p>
+                            </div>
+                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
+                              <p className="text-xs text-blue-600 dark:text-blue-400 font-bold mb-1">💡 Acción recomendada:</p>
+                              <p className="text-sm text-blue-800 dark:text-blue-200">{anomaly.recommendation}</p>
+                            </div>
+                          </div>
+
+                          {/* AI Recommendation */}
+                          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
+                            <div className="flex items-start gap-2">
+                              <Brain className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="text-xs font-bold text-purple-700 dark:text-purple-300 mb-1">Recomendación IA Personalizada:</p>
+                                <p className="text-sm text-purple-800 dark:text-purple-200">{anomaly.aiRecommendation}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex gap-2 pt-2">
+                            <button
+                              onClick={() => handleOpenShipmentFromAnomaly(anomaly)}
+                              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                            >
+                              <Eye className="w-4 h-4" />
+                              Ver Guía Completa
+                            </button>
+                            {anomaly.shipment.phone && (
+                              <a
+                                href={`https://wa.me/57${anomaly.shipment.phone.replace(/\D/g, '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                              >
+                                <Phone className="w-4 h-4" />
+                                WhatsApp
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1000,7 +1526,6 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
                   Recomendaciones Inteligentes del Sistema
                 </h3>
                 <div className="space-y-3">
-                  {/* Critical alerts */}
                   {stats.criticalAnomalies > 0 && (
                     <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 border border-red-200 dark:border-red-800">
                       <p className="text-sm font-bold text-red-700 dark:text-red-400 flex items-center gap-2">
@@ -1010,15 +1535,27 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
                     </div>
                   )}
 
-                  {/* Pattern-based recommendations */}
-                  {patrones.filter(p => p.impacto === 'CRITICO' || p.impacto === 'ALTO').slice(0, 3).map((patron, idx) => (
-                    <div key={patron.id} className="bg-white dark:bg-navy-900 rounded-lg p-3 border border-slate-200 dark:border-navy-700">
-                      <p className="text-sm font-bold text-slate-700 dark:text-white mb-1">{patron.titulo}</p>
-                      <p className="text-xs text-slate-500">{patron.recomendacion}</p>
-                    </div>
+                  {patrones.filter(p => p.impacto === 'CRITICO' || p.impacto === 'ALTO').slice(0, 3).map((patron) => (
+                    <button
+                      key={patron.id}
+                      onClick={() => setSelectedPattern(patron)}
+                      className="w-full text-left bg-white dark:bg-navy-900 rounded-lg p-3 border border-slate-200 dark:border-navy-700 hover:shadow-md transition-all"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-sm font-bold text-slate-700 dark:text-white mb-1 flex items-center gap-2">
+                            {patron.titulo}
+                            <span className="text-xs bg-slate-100 dark:bg-navy-800 px-2 py-0.5 rounded">
+                              {patron.datosApoyo.cantidad} guías
+                            </span>
+                          </p>
+                          <p className="text-xs text-slate-500">{patron.recomendacion}</p>
+                        </div>
+                        <Eye className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                      </div>
+                    </button>
                   ))}
 
-                  {/* Generic recommendations based on data */}
                   <div className="bg-white dark:bg-navy-900 rounded-lg p-3 border border-slate-200 dark:border-navy-700">
                     <p className="text-sm font-bold text-slate-700 dark:text-white mb-1">📅 Optimización de despachos</p>
                     <p className="text-xs text-slate-500">
@@ -1042,7 +1579,6 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
 
           {/* Best and worst routes */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Best routes */}
             {semaforoData.filter(c => c.semaforo === 'VERDE').length > 0 && (
               <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
                 <h4 className="font-bold text-emerald-700 dark:text-emerald-400 mb-3 flex items-center gap-2">
@@ -1054,22 +1590,22 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
                     .sort((a, b) => b.tasaExito - a.tasaExito)
                     .slice(0, 5)
                     .map((ruta, idx) => (
-                      <div
+                      <button
                         key={`${ruta.ciudad}-${ruta.transportadora}-${idx}`}
-                        className="flex items-center justify-between bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-2"
+                        onClick={() => handlePredict(ruta.ciudad, ruta.transportadora as CarrierName)}
+                        className="w-full flex items-center justify-between bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-2 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all"
                       >
-                        <div>
+                        <div className="text-left">
                           <p className="font-bold text-sm text-slate-800 dark:text-white">{ruta.ciudad}</p>
                           <p className="text-xs text-slate-500">{ruta.transportadora}</p>
                         </div>
                         <span className="text-emerald-600 font-bold">{ruta.tasaExito.toFixed(0)}%</span>
-                      </div>
+                      </button>
                     ))}
                 </div>
               </div>
             )}
 
-            {/* Worst routes */}
             {semaforoData.filter(c => c.semaforo === 'ROJO').length > 0 && (
               <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
                 <h4 className="font-bold text-red-700 dark:text-red-400 mb-3 flex items-center gap-2">
@@ -1081,16 +1617,17 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
                     .sort((a, b) => a.tasaExito - b.tasaExito)
                     .slice(0, 5)
                     .map((ruta, idx) => (
-                      <div
+                      <button
                         key={`${ruta.ciudad}-${ruta.transportadora}-${idx}`}
-                        className="flex items-center justify-between bg-red-50 dark:bg-red-900/20 rounded-lg p-2"
+                        onClick={() => handlePredict(ruta.ciudad, ruta.transportadora as CarrierName)}
+                        className="w-full flex items-center justify-between bg-red-50 dark:bg-red-900/20 rounded-lg p-2 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all"
                       >
-                        <div>
+                        <div className="text-left">
                           <p className="font-bold text-sm text-slate-800 dark:text-white">{ruta.ciudad}</p>
                           <p className="text-xs text-slate-500">{ruta.transportadora} • {ruta.tasaDevolucion.toFixed(0)}% devolución</p>
                         </div>
                         <span className="text-red-600 font-bold">{ruta.tasaExito.toFixed(0)}%</span>
-                      </div>
+                      </button>
                     ))}
                 </div>
               </div>
@@ -1105,7 +1642,7 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
           <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2 text-white">
               <Bot className="w-5 h-5" />
-              <span className="font-bold">Asistente de Predicciones IA</span>
+              <span className="font-bold">Asistente de Predicciones IA (Modo Local)</span>
             </div>
             <button
               onClick={() => setChatMessages([])}
@@ -1131,7 +1668,7 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
                       key={q}
                       onClick={() => {
                         setChatInput(q);
-                        handleChatSubmit();
+                        setTimeout(() => handleChatSubmit(), 100);
                       }}
                       className="px-3 py-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-xs hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
                     >
@@ -1202,6 +1739,26 @@ export const PrediccionesTab: React.FC<PrediccionesTabProps> = ({ shipments }) =
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modals */}
+      {selectedShipment && (
+        <ShipmentDetailModal
+          shipment={selectedShipment}
+          onClose={() => {
+            setSelectedShipment(null);
+            setSelectedShipmentAIRec(undefined);
+          }}
+          aiRecommendation={selectedShipmentAIRec}
+        />
+      )}
+
+      {selectedPattern && (
+        <PatternDetailModal
+          pattern={selectedPattern}
+          onClose={() => setSelectedPattern(null)}
+          onSelectShipment={handleOpenShipmentFromPattern}
+        />
       )}
     </div>
   );
