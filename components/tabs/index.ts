@@ -5,3 +5,6 @@ export { PrediccionesTab } from './PrediccionesTab';
 export { ReporteIATab } from './ReporteIATab';
 export { AsistenteTab } from './AsistenteTab';
 export { MLSystemTab } from './MLSystemTab';
+export { default as FlashTab } from './FlashTab';
+export { default as DemandTab } from './DemandTab';
+export { default as GamificationTab } from './GamificationTab';

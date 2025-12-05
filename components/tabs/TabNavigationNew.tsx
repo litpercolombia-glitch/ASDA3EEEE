@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, Activity, Target, FileBarChart, Bot, Brain } from 'lucide-react';
+import { Package, Activity, Target, FileBarChart, Bot, Brain, Zap, TrendingUp, Trophy } from 'lucide-react';
 import { MainTabNew } from '../../types/logistics';
 
 interface TabNavigationNewProps {
@@ -7,6 +7,9 @@ interface TabNavigationNewProps {
   onTabChange: (tab: MainTabNew) => void;
   notifications?: {
     seguimiento?: number;
+    flash?: number;
+    demanda?: number;
+    gamificacion?: number;
     semaforo?: number;
     predicciones?: number;
     reporte?: number;
@@ -22,6 +25,7 @@ interface TabConfig {
   shortLabel: string;
   color: string;
   activeColor: string;
+  isNew?: boolean;
 }
 
 const tabs: TabConfig[] = [
@@ -34,6 +38,33 @@ const tabs: TabConfig[] = [
     activeColor: 'bg-emerald-500',
   },
   {
+    id: 'flash',
+    icon: Zap,
+    label: 'Litper Flash',
+    shortLabel: 'Flash',
+    color: 'text-orange-500',
+    activeColor: 'bg-gradient-to-r from-orange-500 to-red-500',
+    isNew: true,
+  },
+  {
+    id: 'demanda',
+    icon: TrendingUp,
+    label: 'Predicción',
+    shortLabel: 'Pred.',
+    color: 'text-purple-500',
+    activeColor: 'bg-gradient-to-r from-purple-500 to-violet-500',
+    isNew: true,
+  },
+  {
+    id: 'gamificacion',
+    icon: Trophy,
+    label: 'Logros',
+    shortLabel: 'XP',
+    color: 'text-gold-500',
+    activeColor: 'bg-gradient-to-r from-indigo-500 to-purple-500',
+    isNew: true,
+  },
+  {
     id: 'semaforo',
     icon: Activity,
     label: 'Semáforo',
@@ -44,10 +75,10 @@ const tabs: TabConfig[] = [
   {
     id: 'predicciones',
     icon: Target,
-    label: 'Predicciones',
-    shortLabel: 'Pred.',
-    color: 'text-purple-500',
-    activeColor: 'bg-purple-500',
+    label: 'Análisis',
+    shortLabel: 'Análi.',
+    color: 'text-teal-500',
+    activeColor: 'bg-teal-500',
   },
   {
     id: 'reporte',
@@ -60,7 +91,7 @@ const tabs: TabConfig[] = [
   {
     id: 'asistente',
     icon: Bot,
-    label: 'Asistente IA',
+    label: 'Asistente',
     shortLabel: 'IA',
     color: 'text-pink-500',
     activeColor: 'bg-pink-500',
@@ -110,6 +141,11 @@ export const TabNavigationNew: React.FC<TabNavigationNewProps> = ({
               >
                 <Icon className={`w-5 h-5 ${isActive ? '' : tab.color}`} />
                 <span className="truncate">{tab.label}</span>
+                {tab.isNew && !isActive && (
+                  <span className="px-1.5 py-0.5 text-[9px] font-bold bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-full">
+                    NEW
+                  </span>
+                )}
 
                 {notificationCount && notificationCount > 0 && (
                   <span
