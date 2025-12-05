@@ -1,7 +1,7 @@
 /**
  * ChatInteligente.tsx
  * Componente de chat conversacional con IA para consultas de logística.
- * Usa Claude API a través del backend para responder preguntas.
+ * Usa Claude API a través del backend con modo offline inteligente.
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
@@ -11,7 +11,6 @@ import {
   User,
   Loader2,
   Sparkles,
-  MessageSquare,
   RefreshCw,
   Lightbulb,
   Package,
@@ -19,6 +18,18 @@ import {
   MapPin,
   AlertTriangle,
   BarChart3,
+  Truck,
+  Clock,
+  DollarSign,
+  Target,
+  Download,
+  Copy,
+  Check,
+  Wifi,
+  WifiOff,
+  Brain,
+  Zap,
+  HelpCircle,
 } from 'lucide-react';
 import { mlApi, type ChatResponse } from '@/lib/api-config';
 
@@ -30,35 +41,71 @@ interface Mensaje {
   timestamp: Date;
   datos?: Record<string, unknown>;
   sugerencias?: string[];
+  confianza?: number;
+  fuentes?: string[];
+  tiempoRespuesta?: number;
 }
 
-// Preguntas sugeridas iniciales
-const PREGUNTAS_SUGERIDAS = [
+// Categorías de preguntas sugeridas
+const CATEGORIAS_PREGUNTAS = [
   {
-    texto: '¿Cuántas guías tengo en total?',
-    icon: Package,
+    categoria: 'Estadísticas',
+    icon: BarChart3,
     color: 'blue',
+    preguntas: [
+      '¿Cuántas guías tengo en total?',
+      '¿Cuál es la tasa de entrega del mes?',
+      'Dame el resumen de entregas de hoy',
+    ],
   },
   {
-    texto: '¿Qué transportadora tiene mejor rendimiento?',
-    icon: TrendingUp,
+    categoria: 'Transportadoras',
+    icon: Truck,
     color: 'green',
+    preguntas: [
+      '¿Qué transportadora tiene mejor rendimiento?',
+      'Compara Coordinadora vs Servientrega',
+      '¿Cuál transportadora es más económica?',
+    ],
   },
   {
-    texto: '¿Cuántas guías llegaron tarde esta semana?',
+    categoria: 'Retrasos',
     icon: AlertTriangle,
     color: 'orange',
+    preguntas: [
+      '¿Cuántas guías llegaron tarde esta semana?',
+      '¿Qué ciudades tienen más retrasos?',
+      'Predicción de retrasos para mañana',
+    ],
   },
   {
-    texto: 'Dame estadísticas de Bogotá',
+    categoria: 'Ciudades',
     icon: MapPin,
     color: 'purple',
+    preguntas: [
+      'Dame estadísticas de Bogotá',
+      '¿Cuáles son las top 5 ciudades?',
+      'Tiempo promedio de entrega a Medellín',
+    ],
   },
   {
-    texto: 'Compara Interrapidisimo vs Coordinadora',
-    icon: BarChart3,
+    categoria: 'Sistema ML',
+    icon: Brain,
     color: 'indigo',
+    preguntas: [
+      '¿Cómo están los modelos de ML?',
+      '¿Cuántas predicciones se han hecho hoy?',
+      '¿Cuál es la precisión del sistema?',
+    ],
   },
+];
+
+// Preguntas rápidas para mostrar al inicio
+const PREGUNTAS_RAPIDAS = [
+  { texto: '¿Cuántas guías tengo?', icon: Package, color: 'blue' },
+  { texto: '¿Mejor transportadora?', icon: TrendingUp, color: 'green' },
+  { texto: 'Retrasos de hoy', icon: AlertTriangle, color: 'orange' },
+  { texto: 'Estado del sistema', icon: Brain, color: 'indigo' },
 ];
 
 /**
@@ -88,17 +135,29 @@ export function ChatInteligente() {
       id: generarId(),
       tipo: 'ia',
       texto:
-        '¡Hola! Soy tu asistente de logística con IA. Puedo ayudarte a analizar datos de envíos, transportadoras, ciudades y más. ¿En qué puedo ayudarte hoy?',
+        '¡Hola! Soy tu asistente de logística con IA. Puedo ayudarte a analizar datos de envíos, transportadoras, ciudades y más. Pregúntame lo que necesites sobre tu operación logística.',
       timestamp: new Date(),
-      sugerencias: PREGUNTAS_SUGERIDAS.map((p) => p.texto),
+      sugerencias: PREGUNTAS_RAPIDAS.map((p) => p.texto),
     },
   ]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
+  const [showCategorias, setShowCategorias] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Verificar estado del backend
+  useEffect(() => {
+    const checkOnline = async () => {
+      const health = await mlApi.healthCheck();
+      setIsOnline(health.status !== 'offline');
+    };
+    checkOnline();
+  }, []);
 
   // Scroll automático al último mensaje
   const scrollToBottom = useCallback(() => {
@@ -108,6 +167,13 @@ export function ChatInteligente() {
   useEffect(() => {
     scrollToBottom();
   }, [mensajes, scrollToBottom]);
+
+  // Copiar mensaje al portapapeles
+  const handleCopiar = useCallback((id: string, texto: string) => {
+    navigator.clipboard.writeText(texto);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  }, []);
 
   // Handler para enviar mensaje
   const handleEnviarMensaje = useCallback(
@@ -127,6 +193,9 @@ export function ChatInteligente() {
       setMensajes((prev) => [...prev, mensajeUsuario]);
       setInputText('');
       setLoading(true);
+      setShowCategorias(false);
+
+      const startTime = Date.now();
 
       try {
         // Llamar a la API
@@ -140,9 +209,13 @@ export function ChatInteligente() {
           timestamp: new Date(),
           datos: respuesta.datos_consultados,
           sugerencias: respuesta.sugerencias,
+          confianza: respuesta.confianza_respuesta,
+          fuentes: respuesta.fuentes,
+          tiempoRespuesta: Date.now() - startTime,
         };
 
         setMensajes((prev) => [...prev, mensajeIA]);
+        setIsOnline(mlApi.isOnline());
       } catch (error) {
         // Mensaje de error
         const mensajeError: Mensaje = {
@@ -158,7 +231,6 @@ export function ChatInteligente() {
         setMensajes((prev) => [...prev, mensajeError]);
       } finally {
         setLoading(false);
-        // Focus en el input
         setTimeout(() => inputRef.current?.focus(), 100);
       }
     },
@@ -184,54 +256,84 @@ export function ChatInteligente() {
     [handleEnviarMensaje]
   );
 
+  // Limpiar chat
+  const handleLimpiarChat = useCallback(() => {
+    setMensajes([
+      {
+        id: generarId(),
+        tipo: 'ia',
+        texto:
+          '¡Chat reiniciado! ¿En qué puedo ayudarte con tu logística?',
+        timestamp: new Date(),
+        sugerencias: PREGUNTAS_RAPIDAS.map((p) => p.texto),
+      },
+    ]);
+  }, []);
+
   return (
-    <div className="w-full h-[600px] max-w-4xl mx-auto flex flex-col bg-white rounded-xl shadow-lg overflow-hidden">
+    <div className="w-full h-[700px] max-w-4xl mx-auto flex flex-col bg-white rounded-2xl shadow-xl overflow-hidden">
       {/* Header del chat */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-white/20 rounded-lg">
-            <Bot className="w-6 h-6 text-white" />
+      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 px-6 py-4 flex-shrink-0">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+            <Bot className="w-7 h-7 text-white" />
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              Asistente de Logística
-              <Sparkles className="w-4 h-4 text-yellow-300" />
+          <div className="flex-1">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              Asistente de Logística IA
+              <Sparkles className="w-5 h-5 text-yellow-300" />
             </h2>
             <p className="text-indigo-200 text-sm">
-              Powered by Claude AI
+              Powered by Machine Learning
             </p>
           </div>
-          <div className="ml-auto">
-            <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium
-              ${loading ? 'bg-yellow-400/20 text-yellow-200' : 'bg-green-400/20 text-green-200'}`}>
-              <span className={`w-2 h-2 rounded-full ${loading ? 'bg-yellow-400 animate-pulse' : 'bg-green-400'}`} />
-              {loading ? 'Pensando...' : 'En línea'}
+          <div className="flex items-center gap-3">
+            {/* Indicador de estado */}
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
+              ${isOnline
+                ? 'bg-green-400/20 text-green-200'
+                : 'bg-yellow-400/20 text-yellow-200'}`}
+            >
+              {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+              {isOnline ? 'Conectado' : 'Offline'}
             </span>
+            {/* Estado de procesamiento */}
+            {loading && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-purple-400/20 text-purple-200">
+                <Zap className="w-3 h-3 animate-pulse" />
+                Pensando...
+              </span>
+            )}
           </div>
         </div>
       </div>
 
       {/* Área de mensajes */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-50 to-white">
         {mensajes.map((mensaje) => (
           <MensajeItem
             key={mensaje.id}
             mensaje={mensaje}
             onSugerenciaClick={handleSugerenciaClick}
+            onCopiar={handleCopiar}
+            isCopied={copiedId === mensaje.id}
           />
         ))}
 
         {/* Indicador de escritura */}
         {loading && (
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-              <Bot className="w-5 h-5 text-indigo-600" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center flex-shrink-0 shadow-sm">
+              <Bot className="w-6 h-6 text-indigo-600" />
             </div>
-            <div className="bg-white rounded-2xl rounded-tl-none px-4 py-3 shadow-sm border">
-              <div className="flex items-center gap-1">
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            <div className="bg-white rounded-2xl rounded-tl-none px-5 py-4 shadow-sm border border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+                <span className="text-sm text-gray-500 ml-2">Analizando datos...</span>
               </div>
             </div>
           </div>
@@ -242,56 +344,116 @@ export function ChatInteligente() {
 
       {/* Preguntas sugeridas iniciales */}
       {mensajes.length === 1 && !loading && (
-        <div className="px-4 py-3 bg-white border-t">
-          <div className="flex items-center gap-2 mb-3">
-            <Lightbulb className="w-4 h-4 text-yellow-500" />
-            <span className="text-sm font-medium text-gray-600">
-              Preguntas sugeridas
-            </span>
+        <div className="px-4 py-4 bg-white border-t">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Lightbulb className="w-4 h-4 text-yellow-500" />
+              <span className="text-sm font-semibold text-gray-700">
+                Preguntas Rápidas
+              </span>
+            </div>
+            <button
+              onClick={() => setShowCategorias(!showCategorias)}
+              className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+            >
+              <HelpCircle className="w-3 h-3" />
+              {showCategorias ? 'Ocultar categorías' : 'Ver más categorías'}
+            </button>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {PREGUNTAS_SUGERIDAS.map((pregunta, idx) => {
+
+          {/* Preguntas rápidas */}
+          <div className="flex flex-wrap gap-2 mb-3">
+            {PREGUNTAS_RAPIDAS.map((pregunta, idx) => {
               const Icon = pregunta.icon;
+              const colorClasses: Record<string, string> = {
+                blue: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100',
+                green: 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100',
+                orange: 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100',
+                indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100',
+              };
               return (
                 <button
                   key={idx}
                   onClick={() => handleSugerenciaClick(pregunta.texto)}
-                  className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm
-                    border border-gray-200 bg-white hover:bg-gray-50
-                    transition-all duration-200 hover:shadow-sm`}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm
+                    border transition-all duration-200 ${colorClasses[pregunta.color]}`}
                 >
-                  <Icon className={`w-4 h-4 text-${pregunta.color}-500`} />
-                  <span className="text-gray-700">{pregunta.texto}</span>
+                  <Icon className="w-4 h-4" />
+                  {pregunta.texto}
                 </button>
               );
             })}
           </div>
+
+          {/* Categorías expandibles */}
+          {showCategorias && (
+            <div className="space-y-3 pt-3 border-t">
+              {CATEGORIAS_PREGUNTAS.map((cat, idx) => {
+                const Icon = cat.icon;
+                const colorClasses: Record<string, { bg: string; text: string }> = {
+                  blue: { bg: 'bg-blue-100', text: 'text-blue-600' },
+                  green: { bg: 'bg-green-100', text: 'text-green-600' },
+                  orange: { bg: 'bg-orange-100', text: 'text-orange-600' },
+                  purple: { bg: 'bg-purple-100', text: 'text-purple-600' },
+                  indigo: { bg: 'bg-indigo-100', text: 'text-indigo-600' },
+                };
+                const colors = colorClasses[cat.color] || colorClasses.blue;
+                return (
+                  <div key={idx}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`p-1.5 rounded-lg ${colors.bg}`}>
+                        <Icon className={`w-4 h-4 ${colors.text}`} />
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">{cat.categoria}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 ml-8">
+                      {cat.preguntas.map((preg, pidx) => (
+                        <button
+                          key={pidx}
+                          onClick={() => handleSugerenciaClick(preg)}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600
+                            hover:bg-gray-200 transition-colors"
+                        >
+                          {preg}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
       {/* Input de mensaje */}
-      <div className="px-4 py-3 bg-white border-t flex-shrink-0">
+      <div className="px-4 py-4 bg-white border-t flex-shrink-0">
         <div className="flex items-center gap-3">
-          <input
-            ref={inputRef}
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Escribe tu pregunta aquí..."
-            className="flex-1 px-4 py-3 rounded-xl border border-gray-200
-              focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-              transition-all duration-200"
-            disabled={loading}
-          />
+          <div className="flex-1 relative">
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Escribe tu pregunta aquí..."
+              className="w-full px-5 py-3.5 pr-12 rounded-xl border-2 border-gray-200
+                focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500
+                transition-all duration-200 text-gray-800"
+              disabled={loading}
+            />
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+              {inputText.length}/500
+            </span>
+          </div>
           <button
             onClick={() => handleEnviarMensaje()}
             disabled={loading || !inputText.trim()}
-            className={`p-3 rounded-xl transition-all duration-200
+            className={`p-3.5 rounded-xl transition-all duration-200
               ${
                 loading || !inputText.trim()
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'
+                  : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 active:scale-95 shadow-lg'
               }`}
           >
             {loading ? (
@@ -299,6 +461,13 @@ export function ChatInteligente() {
             ) : (
               <Send className="w-5 h-5" />
             )}
+          </button>
+          <button
+            onClick={handleLimpiarChat}
+            className="p-3.5 rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+            title="Limpiar chat"
+          >
+            <RefreshCw className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -312,16 +481,19 @@ export function ChatInteligente() {
 interface MensajeItemProps {
   mensaje: Mensaje;
   onSugerenciaClick: (sugerencia: string) => void;
+  onCopiar: (id: string, texto: string) => void;
+  isCopied: boolean;
 }
 
-function MensajeItem({ mensaje, onSugerenciaClick }: MensajeItemProps) {
+function MensajeItem({ mensaje, onSugerenciaClick, onCopiar, isCopied }: MensajeItemProps) {
   const esUsuario = mensaje.tipo === 'usuario';
   const esSistema = mensaje.tipo === 'sistema';
 
   if (esSistema) {
     return (
       <div className="flex justify-center">
-        <div className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm border border-red-100">
+        <div className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-sm border border-red-100 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" />
           {mensaje.texto}
         </div>
       </div>
@@ -332,55 +504,114 @@ function MensajeItem({ mensaje, onSugerenciaClick }: MensajeItemProps) {
     <div className={`flex items-start gap-3 ${esUsuario ? 'flex-row-reverse' : ''}`}>
       {/* Avatar */}
       <div
-        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0
-          ${esUsuario ? 'bg-blue-100' : 'bg-indigo-100'}`}
+        className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm
+          ${esUsuario
+            ? 'bg-gradient-to-br from-blue-500 to-indigo-600'
+            : 'bg-gradient-to-br from-indigo-100 to-purple-100'
+          }`}
       >
         {esUsuario ? (
-          <User className="w-5 h-5 text-blue-600" />
+          <User className="w-5 h-5 text-white" />
         ) : (
           <Bot className="w-5 h-5 text-indigo-600" />
         )}
       </div>
 
       {/* Contenido del mensaje */}
-      <div
-        className={`max-w-[75%] ${
-          esUsuario
-            ? 'bg-blue-600 text-white rounded-2xl rounded-tr-none'
-            : 'bg-white border rounded-2xl rounded-tl-none shadow-sm'
-        } px-4 py-3`}
-      >
-        {/* Texto del mensaje */}
-        <div className={`text-sm whitespace-pre-wrap ${esUsuario ? '' : 'text-gray-800'}`}>
-          {mensaje.texto}
+      <div className={`max-w-[80%] ${esUsuario ? 'items-end' : 'items-start'}`}>
+        <div
+          className={`${
+            esUsuario
+              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl rounded-tr-none'
+              : 'bg-white border border-gray-100 rounded-2xl rounded-tl-none shadow-sm'
+          } px-5 py-4`}
+        >
+          {/* Texto del mensaje con formato markdown básico */}
+          <div className={`text-sm whitespace-pre-wrap leading-relaxed ${esUsuario ? '' : 'text-gray-800'}`}>
+            {mensaje.texto.split('\n').map((linea, i) => {
+              // Detectar encabezados con **
+              if (linea.includes('**')) {
+                return (
+                  <p key={i} dangerouslySetInnerHTML={{
+                    __html: linea.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                  }} />
+                );
+              }
+              return <p key={i}>{linea}</p>;
+            })}
+          </div>
+
+          {/* Timestamp y acciones */}
+          <div className={`flex items-center justify-between mt-3 pt-2 border-t
+            ${esUsuario ? 'border-white/20' : 'border-gray-100'}`}
+          >
+            <span className={`text-xs ${esUsuario ? 'text-blue-200' : 'text-gray-400'}`}>
+              {formatearHora(mensaje.timestamp)}
+            </span>
+
+            {!esUsuario && (
+              <div className="flex items-center gap-2">
+                {mensaje.confianza && (
+                  <span className="text-xs text-indigo-500 flex items-center gap-1">
+                    <Target className="w-3 h-3" />
+                    {Math.round(mensaje.confianza * 100)}% confianza
+                  </span>
+                )}
+                <button
+                  onClick={() => onCopiar(mensaje.id, mensaje.texto)}
+                  className="p-1 rounded hover:bg-gray-100 transition-colors"
+                  title="Copiar respuesta"
+                >
+                  {isCopied ? (
+                    <Check className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <Copy className="w-4 h-4 text-gray-400" />
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Timestamp */}
-        <div
-          className={`text-xs mt-2 ${esUsuario ? 'text-blue-200' : 'text-gray-400'}`}
-        >
-          {formatearHora(mensaje.timestamp)}
-        </div>
+        {/* Fuentes */}
+        {!esUsuario && mensaje.fuentes && mensaje.fuentes.length > 0 && (
+          <div className="mt-2 flex items-center gap-1 text-xs text-gray-400">
+            <span>Fuentes:</span>
+            {mensaje.fuentes.map((fuente, idx) => (
+              <span key={idx} className="px-2 py-0.5 bg-gray-100 rounded-full">
+                {fuente}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Sugerencias de seguimiento */}
         {!esUsuario && mensaje.sugerencias && mensaje.sugerencias.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
+          <div className="mt-3">
             <div className="flex items-center gap-1 text-xs text-gray-500 mb-2">
-              <RefreshCw className="w-3 h-3" />
-              Preguntas relacionadas
+              <Lightbulb className="w-3 h-3" />
+              Continúa preguntando
             </div>
             <div className="flex flex-wrap gap-2">
               {mensaje.sugerencias.slice(0, 3).map((sug, idx) => (
                 <button
                   key={idx}
                   onClick={() => onSugerenciaClick(sug)}
-                  className="text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-600
-                    hover:bg-indigo-100 transition-colors duration-200"
+                  className="text-xs px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-600
+                    hover:bg-indigo-100 transition-colors border border-indigo-100"
                 >
                   {sug}
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Tiempo de respuesta */}
+        {!esUsuario && mensaje.tiempoRespuesta && (
+          <div className="mt-1 text-xs text-gray-400 flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            Respondido en {mensaje.tiempoRespuesta}ms
           </div>
         )}
       </div>
