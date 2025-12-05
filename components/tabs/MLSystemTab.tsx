@@ -146,9 +146,9 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
                   Backend Conectado
                 </span>
               ) : (
-                <span className="flex items-center gap-2 px-3 py-1.5 bg-red-500/30 rounded-full text-sm">
-                  <AlertTriangle className="w-4 h-4" />
-                  Backend Desconectado
+                <span className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/30 rounded-full text-sm">
+                  <Brain className="w-4 h-4" />
+                  Modo Demo
                 </span>
               )}
             </div>
@@ -181,19 +181,25 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
         </div>
       </div>
 
-      {/* Banner de advertencia si backend está offline */}
+      {/* Banner informativo si backend está offline - ahora en modo demo */}
       {backendStatus === 'offline' && (
-        <div className="bg-yellow-50 border-b border-yellow-200">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
           <div className="max-w-7xl mx-auto px-4 py-3">
-            <div className="flex items-center gap-3 text-yellow-800">
-              <AlertTriangle className="w-5 h-5" />
-              <div>
-                <span className="font-medium">Backend no disponible.</span>
-                <span className="text-yellow-700 ml-1">
-                  Algunas funcionalidades pueden estar limitadas. Verifica que el servidor
-                  FastAPI esté corriendo en el puerto 8000.
-                </span>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 text-blue-800">
+                <div className="p-1.5 bg-blue-100 rounded-lg">
+                  <Brain className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-medium">Modo Demostración Activo</span>
+                  <span className="text-blue-700 ml-1">
+                    - El sistema funciona con datos simulados. Todas las visualizaciones están disponibles.
+                  </span>
+                </div>
               </div>
+              <span className="px-2 py-1 bg-blue-200 text-blue-800 text-xs rounded-full font-medium whitespace-nowrap">
+                DEMO
+              </span>
             </div>
           </div>
         </div>

@@ -17,7 +17,7 @@ import {
   Target,
   Zap,
 } from 'lucide-react';
-import { mlApi, type Prediccion, getRiskLevelColor } from '@/lib/api-config';
+import { getPredictionWithFallback, type Prediccion } from '@/lib/api-config';
 
 // Tipos para el estado del componente
 interface PredictorState {
@@ -25,6 +25,7 @@ interface PredictorState {
   prediccion: Prediccion | null;
   loading: boolean;
   error: string | null;
+  isDemoMode: boolean;
 }
 
 // Colores y configuración por nivel de riesgo
@@ -81,6 +82,7 @@ export function PredictorRetrasos() {
     prediccion: null,
     loading: false,
     error: null,
+    isDemoMode: false,
   });
 
   // Handler para cambio de input
@@ -93,7 +95,7 @@ export function PredictorRetrasos() {
     }));
   }, []);
 
-  // Handler para ejecutar predicción
+  // Handler para ejecutar predicción (con fallback a modo demo)
   const handlePrediccion = useCallback(async () => {
     const { numeroGuia } = state;
 
@@ -108,11 +110,12 @@ export function PredictorRetrasos() {
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      const resultado = await mlApi.predecir(numeroGuia);
+      const { data: resultado, isDemo } = await getPredictionWithFallback(numeroGuia);
       setState((prev) => ({
         ...prev,
         prediccion: resultado,
         loading: false,
+        isDemoMode: isDemo,
       }));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error al realizar predicción';
@@ -131,6 +134,7 @@ export function PredictorRetrasos() {
       prediccion: null,
       loading: false,
       error: null,
+      isDemoMode: false,
     });
   }, []);
 
@@ -144,7 +148,7 @@ export function PredictorRetrasos() {
     [handlePrediccion, state.loading]
   );
 
-  const { numeroGuia, prediccion, loading, error } = state;
+  const { numeroGuia, prediccion, loading, error, isDemoMode } = state;
 
   return (
     <div className="w-full max-w-2xl mx-auto">
@@ -156,14 +160,33 @@ export function PredictorRetrasos() {
             <div className="p-2 bg-white/20 rounded-lg">
               <Target className="w-6 h-6 text-white" />
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-white">Predictor de Retrasos ML</h2>
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                Predictor de Retrasos ML
+                {isDemoMode && (
+                  <span className="px-2 py-0.5 bg-blue-400/30 text-blue-100 text-xs rounded-full">
+                    Demo
+                  </span>
+                )}
+              </h2>
               <p className="text-blue-100 text-sm">
                 Análisis predictivo con Machine Learning
               </p>
             </div>
           </div>
         </div>
+
+        {/* Banner modo demo */}
+        {isDemoMode && prediccion && (
+          <div className="bg-blue-50 border-b border-blue-200 px-6 py-3">
+            <div className="flex items-center gap-2 text-blue-700 text-sm">
+              <Zap className="w-4 h-4" />
+              <span>
+                <strong>Modo Demo:</strong> Esta predicción es simulada porque el backend no está disponible.
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Contenido */}
         <div className="p-6">

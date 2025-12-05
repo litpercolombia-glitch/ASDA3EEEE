@@ -20,7 +20,7 @@ import {
   AlertTriangle,
   BarChart3,
 } from 'lucide-react';
-import { mlApi, type ChatResponse } from '@/lib/api-config';
+import { getChatResponseWithFallback, type ChatResponse } from '@/lib/api-config';
 
 // Tipos para los mensajes
 interface Mensaje {
@@ -129,14 +129,16 @@ export function ChatInteligente() {
       setLoading(true);
 
       try {
-        // Llamar a la API
-        const respuesta = await mlApi.chatPreguntar(texto, true);
+        // Llamar a la API (con fallback a modo demo)
+        const { data: respuesta, isDemo } = await getChatResponseWithFallback(texto);
 
         // Agregar respuesta de la IA
         const mensajeIA: Mensaje = {
           id: generarId(),
           tipo: 'ia',
-          texto: respuesta.respuesta,
+          texto: isDemo
+            ? `${respuesta.respuesta}\n\n---\n_Respuesta en modo demostración_`
+            : respuesta.respuesta,
           timestamp: new Date(),
           datos: respuesta.datos_consultados,
           sugerencias: respuesta.sugerencias,

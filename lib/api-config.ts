@@ -570,6 +570,128 @@ export const mlApi = {
   },
 };
 
+// ==================== DATOS DE DEMOSTRACIÓN (MODO OFFLINE) ====================
+
+/**
+ * Estado global del modo offline
+ */
+let isOfflineMode = false;
+
+export function setOfflineMode(offline: boolean) {
+  isOfflineMode = offline;
+}
+
+export function getOfflineMode(): boolean {
+  return isOfflineMode;
+}
+
+/**
+ * Datos de demostración para el dashboard cuando el backend no está disponible
+ */
+export const DEMO_DASHBOARD_DATA: DashboardData = {
+  estadisticas_generales: {
+    total_guias: 15847,
+    guias_entregadas: 13562,
+    guias_en_retraso: 1285,
+    guias_con_novedad: 892,
+    tasa_entrega: 85.6,
+    tasa_retraso: 8.1,
+  },
+  rendimiento_transportadoras: [
+    {
+      nombre: 'Servientrega',
+      total_guias: 5234,
+      entregas_exitosas: 4708,
+      retrasos: 312,
+      tasa_retraso: 5.96,
+      tiempo_promedio_dias: 2.3,
+      calificacion: 'EXCELENTE',
+    },
+    {
+      nombre: 'Coordinadora',
+      total_guias: 4521,
+      entregas_exitosas: 3892,
+      retrasos: 425,
+      tasa_retraso: 9.4,
+      tiempo_promedio_dias: 3.1,
+      calificacion: 'BUENO',
+    },
+    {
+      nombre: 'Interrapidísimo',
+      total_guias: 3287,
+      entregas_exitosas: 2692,
+      retrasos: 398,
+      tasa_retraso: 12.11,
+      tiempo_promedio_dias: 3.5,
+      calificacion: 'REGULAR',
+    },
+    {
+      nombre: 'Envia',
+      total_guias: 2805,
+      entregas_exitosas: 2270,
+      retrasos: 350,
+      tasa_retraso: 12.48,
+      tiempo_promedio_dias: 4.2,
+      calificacion: 'REGULAR',
+    },
+  ],
+  top_ciudades: [
+    { ciudad: 'Bogotá D.C.', total_guias: 4250, porcentaje_del_total: 26.8 },
+    { ciudad: 'Medellín', total_guias: 2890, porcentaje_del_total: 18.2 },
+    { ciudad: 'Cali', total_guias: 1985, porcentaje_del_total: 12.5 },
+    { ciudad: 'Barranquilla', total_guias: 1420, porcentaje_del_total: 9.0 },
+    { ciudad: 'Cartagena', total_guias: 1102, porcentaje_del_total: 7.0 },
+  ],
+  modelos_activos: [
+    {
+      nombre: 'Predictor de Retrasos',
+      version: '2.1.0',
+      accuracy: 0.923,
+      fecha_entrenamiento: new Date().toISOString(),
+      estado: 'ACTIVO',
+    },
+    {
+      nombre: 'Clasificador de Novedades',
+      version: '1.5.2',
+      accuracy: 0.891,
+      fecha_entrenamiento: new Date().toISOString(),
+      estado: 'ACTIVO',
+    },
+  ],
+  alertas_pendientes: 3,
+};
+
+/**
+ * Datos de demostración para predicción
+ */
+export const DEMO_PREDICCION: Prediccion = {
+  numero_guia: 'DEMO-001',
+  probabilidad_retraso: 0.23,
+  nivel_riesgo: 'BAJO',
+  dias_estimados_entrega: 3,
+  fecha_estimada_entrega: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+  factores_riesgo: ['Distancia media', 'Temporada alta de envíos'],
+  acciones_recomendadas: ['Monitorear seguimiento', 'Verificar dirección de entrega'],
+  confianza: 0.89,
+  modelo_usado: 'XGBoost v2.1',
+};
+
+/**
+ * Respuesta de demostración para el chat
+ */
+export const DEMO_CHAT_RESPONSE: ChatResponse = {
+  respuesta: '🔧 **Modo Demo Activo**\n\nEl sistema está funcionando en modo demostración porque el backend no está disponible.\n\nEn modo normal, puedo ayudarte con:\n- 📊 Análisis de estadísticas de envíos\n- 🔍 Búsqueda de guías específicas\n- 📈 Comparación de transportadoras\n- 🚚 Predicción de retrasos\n- 📋 Generación de reportes\n\n**Para activar todas las funcionalidades**, asegúrate de que el servidor FastAPI esté corriendo en el puerto 8000.',
+  tipo_consulta: 'informacion_sistema',
+  datos_consultados: {},
+  sugerencias: [
+    'Ver estadísticas del dashboard',
+    'Conocer el estado del sistema',
+    'Información sobre transportadoras',
+  ],
+  tokens_usados: 0,
+  tiempo_respuesta_ms: 100,
+};
+
 // ==================== UTILIDADES ====================
 
 /**
@@ -578,9 +700,57 @@ export const mlApi = {
 export async function checkBackendHealth(): Promise<boolean> {
   try {
     const health = await mlApi.healthCheck();
-    return health.status === 'healthy';
+    const isHealthy = health.status === 'healthy';
+    setOfflineMode(!isHealthy);
+    return isHealthy;
   } catch {
+    setOfflineMode(true);
     return false;
+  }
+}
+
+/**
+ * Obtiene datos del dashboard (con fallback a modo demo)
+ */
+export async function getDashboardWithFallback(): Promise<{ data: DashboardData; isDemo: boolean }> {
+  try {
+    const data = await mlApi.getDashboard();
+    setOfflineMode(false);
+    return { data, isDemo: false };
+  } catch {
+    setOfflineMode(true);
+    return { data: DEMO_DASHBOARD_DATA, isDemo: true };
+  }
+}
+
+/**
+ * Obtiene predicción (con fallback a modo demo)
+ */
+export async function getPredictionWithFallback(numeroGuia: string): Promise<{ data: Prediccion; isDemo: boolean }> {
+  try {
+    const data = await mlApi.predecir(numeroGuia);
+    return { data, isDemo: false };
+  } catch {
+    // Generar predicción demo personalizada
+    const demoData: Prediccion = {
+      ...DEMO_PREDICCION,
+      numero_guia: numeroGuia,
+      probabilidad_retraso: Math.random() * 0.5,
+      nivel_riesgo: Math.random() > 0.7 ? 'MEDIO' : 'BAJO',
+    };
+    return { data: demoData, isDemo: true };
+  }
+}
+
+/**
+ * Obtiene respuesta del chat (con fallback a modo demo)
+ */
+export async function getChatResponseWithFallback(pregunta: string): Promise<{ data: ChatResponse; isDemo: boolean }> {
+  try {
+    const data = await mlApi.chatPreguntar(pregunta);
+    return { data, isDemo: false };
+  } catch {
+    return { data: DEMO_CHAT_RESPONSE, isDemo: true };
   }
 }
 
