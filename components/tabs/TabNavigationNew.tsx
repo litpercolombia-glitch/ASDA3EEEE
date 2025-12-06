@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, Activity, Target, FileBarChart, Bot, Brain, Zap, TrendingUp, Trophy, Building2 } from 'lucide-react';
+import { Package, Activity, Target, FileBarChart, Bot, Brain, Zap, TrendingUp, Trophy, Building2, GraduationCap } from 'lucide-react';
 import { MainTabNew } from '../../types/logistics';
 
 interface TabNavigationNewProps {
@@ -16,6 +16,8 @@ interface TabNavigationNewProps {
     asistente?: number;
     ml?: number;
     'procesos-litper'?: number;
+    'ciudad-agentes'?: number;
+    'aprendizaje-ia'?: number;
   };
 }
 
@@ -109,9 +111,26 @@ const tabs: TabConfig[] = [
     id: 'procesos-litper',
     icon: Building2,
     label: 'Procesos Litper',
-    shortLabel: 'Agentes',
+    shortLabel: 'Procesos',
     color: 'text-indigo-500',
     activeColor: 'bg-gradient-to-r from-indigo-600 to-purple-600',
+  },
+  {
+    id: 'ciudad-agentes',
+    icon: Building2,
+    label: 'Ciudad Agentes',
+    shortLabel: 'Ciudad',
+    color: 'text-purple-500',
+    activeColor: 'bg-gradient-to-r from-purple-600 to-pink-600',
+    isNew: true,
+  },
+  {
+    id: 'aprendizaje-ia',
+    icon: GraduationCap,
+    label: 'Aprendizaje IA',
+    shortLabel: 'Aprende',
+    color: 'text-emerald-500',
+    activeColor: 'bg-gradient-to-r from-emerald-600 to-teal-600',
     isNew: true,
   },
 ];
