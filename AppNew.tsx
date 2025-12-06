@@ -28,6 +28,7 @@ import {
   FlashTab,
   DemandTab,
   GamificationTab,
+  ProcesosLitperTab,
 } from './components/tabs';
 import CountrySelector from './components/CountrySelector';
 import { detectarGuiasRetrasadas } from './utils/patternDetection';
@@ -890,6 +891,7 @@ const AppNew: React.FC = () => {
           {currentTab === 'reporte' && <ReporteIATab shipments={shipments} />}
           {currentTab === 'asistente' && <AsistenteTab shipments={shipments} />}
           {currentTab === 'ml' && <MLSystemTab />}
+          {currentTab === 'procesos-litper' && <ProcesosLitperTab selectedCountry={selectedCountry} />}
         </div>
       </main>
 

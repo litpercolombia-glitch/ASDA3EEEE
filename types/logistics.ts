@@ -9,7 +9,7 @@ import { Shipment, ShipmentStatus, CarrierName } from '../types';
 // TAB NAVIGATION TYPES
 // ============================================
 
-export type MainTabNew = 'seguimiento' | 'flash' | 'demanda' | 'gamificacion' | 'semaforo' | 'predicciones' | 'reporte' | 'asistente' | 'ml';
+export type MainTabNew = 'seguimiento' | 'flash' | 'demanda' | 'gamificacion' | 'semaforo' | 'predicciones' | 'reporte' | 'asistente' | 'ml' | 'procesos-litper';
 
 // ============================================
 // GUIA RETRASADA (DELAYED SHIPMENT)
