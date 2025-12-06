@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, Activity, Target, FileBarChart, Bot, Brain, Zap, TrendingUp, Trophy } from 'lucide-react';
+import { Package, Activity, Target, FileBarChart, Bot, Brain, Zap, TrendingUp, Trophy, Building2 } from 'lucide-react';
 import { MainTabNew } from '../../types/logistics';
 
 interface TabNavigationNewProps {
@@ -15,6 +15,7 @@ interface TabNavigationNewProps {
     reporte?: number;
     asistente?: number;
     ml?: number;
+    'procesos-litper'?: number;
   };
 }
 
@@ -103,6 +104,15 @@ const tabs: TabConfig[] = [
     shortLabel: 'ML',
     color: 'text-cyan-500',
     activeColor: 'bg-cyan-500',
+  },
+  {
+    id: 'procesos-litper',
+    icon: Building2,
+    label: 'Procesos Litper',
+    shortLabel: 'Agentes',
+    color: 'text-indigo-500',
+    activeColor: 'bg-gradient-to-r from-indigo-600 to-purple-600',
+    isNew: true,
   },
 ];
 
