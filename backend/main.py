@@ -49,6 +49,15 @@ from chat_inteligente import chat_inteligente
 from ml_models import gestor_modelos
 from reentrenamiento import sistema_reentrenamiento
 
+# Sistema de Conocimiento Multi-Fuente
+try:
+    from knowledge_system.knowledge_routes import router as knowledge_router
+    KNOWLEDGE_SYSTEM_AVAILABLE = True
+    logger.info("📚 Sistema de Conocimiento cargado")
+except ImportError as e:
+    KNOWLEDGE_SYSTEM_AVAILABLE = False
+    logger.warning(f"Sistema de Conocimiento no disponible: {e}")
+
 
 # ==================== CONFIGURACIÓN ====================
 
@@ -151,6 +160,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Incluir router del Sistema de Conocimiento
+if KNOWLEDGE_SYSTEM_AVAILABLE:
+    app.include_router(knowledge_router, prefix="/api")
+    logger.success("📚 Rutas de conocimiento registradas en /api/knowledge")
 
 
 # ==================== ENDPOINTS DE SISTEMA ====================

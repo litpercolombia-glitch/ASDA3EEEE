@@ -39,7 +39,10 @@ import {
   Brain,
   Repeat,
   DollarSign,
+  HelpCircle,
 } from 'lucide-react';
+import { HelpTooltip } from '../HelpSystem/HelpTooltip';
+import { semaforoHelp } from '../HelpSystem/helpContent';
 import { ExcelUploader } from '../excel/ExcelUploader';
 import {
   CiudadSemaforo,
@@ -369,6 +372,19 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({ ciudades }) => {
         <Zap className="w-5 h-5 text-purple-500" />
         Análisis Predictivo IA
         <Sparkles className="w-4 h-4 text-yellow-500" />
+        <HelpTooltip
+          title="Análisis con Inteligencia Artificial"
+          content="El sistema analiza automáticamente tus datos para generar insights y recomendaciones."
+          tips={[
+            'Detecta rutas problemáticas antes de enviar',
+            'Identifica las mejores transportadoras por ciudad',
+            'Sugiere estrategias de optimización',
+            'Calcula el impacto financiero de cambios'
+          ]}
+          position="right"
+        >
+          <HelpCircle className="w-3.5 h-3.5 text-slate-400 hover:text-purple-500 cursor-help" />
+        </HelpTooltip>
       </h3>
       <div className="space-y-3">
         {insights.map((insight, idx) => {
@@ -1135,7 +1151,7 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
   // Data loaded view
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header con ayuda contextual */}
       <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 rounded-2xl p-6 text-white">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -1146,6 +1162,14 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
               <h2 className="text-2xl font-bold flex items-center gap-2">
                 Semáforo de Ciudades
                 <Sparkles className="w-5 h-5 text-yellow-300" />
+                <HelpTooltip
+                  title={semaforoHelp.general.title}
+                  content={semaforoHelp.general.content}
+                  tips={semaforoHelp.general.tips}
+                  position="bottom"
+                >
+                  <HelpCircle className="w-4 h-4 text-white/70 hover:text-white cursor-help transition-colors" />
+                </HelpTooltip>
               </h2>
               <div className="flex items-center gap-3 text-amber-100 text-sm mt-1">
                 <span className="flex items-center gap-1">
@@ -1211,10 +1235,25 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
         })}
       </div>
 
-      {/* Legend */}
+      {/* Legend con ayuda */}
       <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
         <div className="flex flex-wrap items-center gap-4 text-sm">
-          <span className="font-bold text-slate-700 dark:text-white">LEYENDA:</span>
+          <span className="font-bold text-slate-700 dark:text-white flex items-center gap-2">
+            LEYENDA:
+            <HelpTooltip
+              title="Sistema de Puntuación Semáforo"
+              content="El Score se calcula considerando múltiples factores de rendimiento logístico."
+              tips={[
+                'Tasa de Entrega (40%): Porcentaje de entregas exitosas',
+                'Velocidad (30%): Tiempo promedio de entrega',
+                'Volumen (20%): Cantidad de envíos históricos',
+                'Consistencia (10%): Estabilidad del rendimiento'
+              ]}
+              position="right"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-slate-400 hover:text-amber-500 cursor-help" />
+            </HelpTooltip>
+          </span>
           <span className="flex items-center gap-1.5">🟢 <span className="text-slate-600 dark:text-slate-300">Score ≥75 (Excelente)</span></span>
           <span className="flex items-center gap-1.5">🟡 <span className="text-slate-600 dark:text-slate-300">Score 65-74 (Bueno)</span></span>
           <span className="flex items-center gap-1.5">🟠 <span className="text-slate-600 dark:text-slate-300">Score 50-64 (Alerta)</span></span>

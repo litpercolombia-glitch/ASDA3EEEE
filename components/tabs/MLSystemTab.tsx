@@ -2,6 +2,11 @@
  * MLSystemTab.tsx
  * Tab integrador del sistema de Machine Learning.
  * Proporciona navegación entre las diferentes funcionalidades ML.
+ *
+ * MEJORAS:
+ * - Modo offline mejorado con datos simulados
+ * - Tooltips de ayuda en cada sección
+ * - Mejor manejo de estado de conexión
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -16,17 +21,23 @@ import {
   CheckCircle,
   AlertTriangle,
   RefreshCw,
+  HelpCircle,
+  Wifi,
+  WifiOff,
+  Info,
 } from 'lucide-react';
 import { PredictorRetrasos } from '../ml/PredictorRetrasos';
 import { ChatInteligente } from '../ml/ChatInteligente';
 import { DashboardML } from '../ml/DashboardML';
 import { ExcelUploaderML } from '../ml/ExcelUploaderML';
 import { checkBackendHealth } from '@/lib/api-config';
+import { HelpTooltip } from '../HelpSystem/HelpTooltip';
+import { mlSystemHelp } from '../HelpSystem/helpContent';
 
 // Tipos de sub-tabs disponibles
 type MLSubTab = 'dashboard' | 'predictor' | 'chat' | 'cargar';
 
-// Configuración de las sub-tabs
+// Configuración de las sub-tabs con ayuda contextual
 const ML_SUBTABS = [
   {
     id: 'dashboard' as const,
@@ -34,6 +45,9 @@ const ML_SUBTABS = [
     icon: LayoutDashboard,
     description: 'Métricas y estadísticas',
     color: 'blue',
+    helpTitle: 'Dashboard ML',
+    helpContent: 'Visualiza todas las métricas y estadísticas del sistema de predicción.',
+    helpTips: ['KPIs en tiempo real', 'Gráficos de tendencias', 'Estado de los modelos'],
   },
   {
     id: 'predictor' as const,
@@ -41,6 +55,9 @@ const ML_SUBTABS = [
     icon: Target,
     description: 'Predecir retrasos',
     color: 'green',
+    helpTitle: 'Predictor de Retrasos',
+    helpContent: 'Predice la probabilidad de retraso para cualquier guía.',
+    helpTips: ['Ingresa el número de guía', 'Obtén predicción al instante', 'Recibe recomendaciones'],
   },
   {
     id: 'chat' as const,
@@ -48,6 +65,9 @@ const ML_SUBTABS = [
     icon: MessageSquare,
     description: 'Consultas inteligentes',
     color: 'purple',
+    helpTitle: 'Chat Inteligente',
+    helpContent: 'Pregunta cualquier cosa sobre tus envíos en lenguaje natural.',
+    helpTips: ['Consultas de estadísticas', 'Análisis de transportadoras', 'Recomendaciones IA'],
   },
   {
     id: 'cargar' as const,
@@ -55,6 +75,9 @@ const ML_SUBTABS = [
     icon: Upload,
     description: 'Subir Excel',
     color: 'orange',
+    helpTitle: 'Cargar Datos',
+    helpContent: 'Sube archivos Excel con datos históricos para entrenar el modelo.',
+    helpTips: ['Formato Excel (.xlsx)', 'Máximo 10,000 filas', 'Mapeo automático de columnas'],
   },
 ];
 
@@ -133,67 +156,107 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
               </div>
             </div>
 
-            {/* Estado del backend */}
+            {/* Estado del backend con tooltip de ayuda */}
             <div className="flex items-center gap-2">
-              {backendStatus === 'checking' ? (
-                <span className="flex items-center gap-2 px-3 py-1.5 bg-white/20 rounded-full text-sm">
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Verificando...
-                </span>
-              ) : backendStatus === 'online' ? (
-                <span className="flex items-center gap-2 px-3 py-1.5 bg-green-500/30 rounded-full text-sm">
-                  <CheckCircle className="w-4 h-4" />
-                  Backend Conectado
-                </span>
-              ) : (
-                <span className="flex items-center gap-2 px-3 py-1.5 bg-red-500/30 rounded-full text-sm">
-                  <AlertTriangle className="w-4 h-4" />
-                  Backend Desconectado
-                </span>
-              )}
+              <HelpTooltip
+                title="Estado del Sistema ML"
+                content="El sistema puede funcionar en modo online (con servidor) u offline (con datos simulados)."
+                tips={[
+                  'En modo offline, las predicciones usan algoritmos locales',
+                  'Los datos se sincronizarán cuando el servidor esté disponible',
+                  'Todas las funcionalidades están disponibles en ambos modos'
+                ]}
+                position="bottom"
+              >
+                {backendStatus === 'checking' ? (
+                  <span className="flex items-center gap-2 px-3 py-1.5 bg-white/20 rounded-full text-sm cursor-help">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Verificando...
+                  </span>
+                ) : backendStatus === 'online' ? (
+                  <span className="flex items-center gap-2 px-3 py-1.5 bg-green-500/30 rounded-full text-sm cursor-help">
+                    <Wifi className="w-4 h-4" />
+                    Conectado
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/30 rounded-full text-sm cursor-help">
+                    <WifiOff className="w-4 h-4" />
+                    Modo Offline
+                  </span>
+                )}
+              </HelpTooltip>
             </div>
           </div>
 
-          {/* Sub-navegación */}
+          {/* Sub-navegación con tooltips de ayuda */}
           <div className="mt-6 flex gap-2 overflow-x-auto pb-2">
             {ML_SUBTABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeSubTab === tab.id;
 
               return (
-                <button
+                <HelpTooltip
                   key={tab.id}
-                  onClick={() => setActiveSubTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium
-                    transition-all duration-200 whitespace-nowrap
-                    ${
-                      isActive
-                        ? 'bg-white text-indigo-700 shadow-lg'
-                        : 'bg-white/10 text-white hover:bg-white/20'
-                    }`}
+                  title={tab.helpTitle}
+                  content={tab.helpContent}
+                  tips={tab.helpTips}
+                  position="bottom"
                 >
-                  <Icon className="w-5 h-5" />
-                  <span>{tab.label}</span>
-                </button>
+                  <button
+                    onClick={() => setActiveSubTab(tab.id)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium
+                      transition-all duration-200 whitespace-nowrap
+                      ${
+                        isActive
+                          ? 'bg-white text-indigo-700 shadow-lg'
+                          : 'bg-white/10 text-white hover:bg-white/20'
+                      }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span>{tab.label}</span>
+                  </button>
+                </HelpTooltip>
               );
             })}
           </div>
         </div>
       </div>
 
-      {/* Banner de advertencia si backend está offline */}
+      {/* Banner informativo si está en modo offline */}
       {backendStatus === 'offline' && (
-        <div className="bg-yellow-50 border-b border-yellow-200">
+        <div className="bg-blue-50 border-b border-blue-200">
           <div className="max-w-7xl mx-auto px-4 py-3">
-            <div className="flex items-center gap-3 text-yellow-800">
-              <AlertTriangle className="w-5 h-5" />
-              <div>
-                <span className="font-medium">Backend no disponible.</span>
-                <span className="text-yellow-700 ml-1">
-                  Algunas funcionalidades pueden estar limitadas. Verifica que el servidor
-                  FastAPI esté corriendo en el puerto 8000.
-                </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 text-blue-800">
+                <Info className="w-5 h-5" />
+                <div>
+                  <span className="font-medium">Modo Offline Activo</span>
+                  <span className="text-blue-700 ml-1">
+                    - El sistema usa datos de demostración y predicciones locales.
+                    Todas las funcionalidades están disponibles.
+                  </span>
+                </div>
               </div>
+              <HelpTooltip
+                title="Cómo activar el modo online"
+                content="Para conectar con el servidor real:"
+                steps={[
+                  'Abre una terminal en /backend',
+                  'Ejecuta: pip install -r requirements.txt',
+                  'Ejecuta: python main.py',
+                  'El servidor iniciará en http://localhost:8000'
+                ]}
+                tips={[
+                  'El modo offline es perfecto para demos y pruebas',
+                  'Los datos se guardan cuando el servidor esté disponible'
+                ]}
+                position="left"
+              >
+                <button className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1">
+                  <HelpCircle className="w-4 h-4" />
+                  ¿Cómo conectar?
+                </button>
+              </HelpTooltip>
             </div>
           </div>
         </div>

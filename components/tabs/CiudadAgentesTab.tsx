@@ -49,8 +49,11 @@ import {
   Radio,
   Wifi,
   Server,
-  HardDrive
+  HardDrive,
+  HelpCircle
 } from 'lucide-react';
+import { HelpTooltip } from '../HelpSystem/HelpTooltip';
+import { agentesHelp } from '../HelpSystem/helpContent';
 
 import {
   getEstadoCiudad,
@@ -208,6 +211,14 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
                 <h1 className="text-3xl font-black text-white">
                   Ciudad de Agentes
                 </h1>
+                <HelpTooltip
+                  title={agentesHelp.general.title}
+                  content={agentesHelp.general.content}
+                  tips={agentesHelp.general.tips}
+                  position="bottom"
+                >
+                  <HelpCircle className="w-5 h-5 text-white/60 hover:text-white cursor-help transition-colors" />
+                </HelpTooltip>
                 <span className="px-3 py-1 bg-gradient-to-r from-green-400 to-emerald-500 text-white text-sm font-bold rounded-full shadow-lg animate-pulse">
                   {estado?.estado || 'OPERATIVO'}
                 </span>
@@ -315,36 +326,47 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
   // RENDER NAVEGACIÓN SECUNDARIA
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const renderNavegacion = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2 mb-6 flex flex-wrap gap-2">
-      {[
-        { id: 'mapa', label: 'Mapa de la Ciudad', icon: Map },
-        { id: 'distritos', label: 'Los 7 Distritos', icon: Layers },
-        { id: 'agentes', label: 'Agentes IA', icon: Users },
-        { id: 'metricas', label: 'Métricas en Vivo', icon: BarChart3 },
-        { id: 'alertas', label: 'Centro de Alertas', icon: AlertTriangle },
-        { id: 'memoria', label: 'Memoria Colectiva', icon: Brain },
-        { id: 'configuracion', label: 'Configuración', icon: Settings }
-      ].map(item => {
-        const Icon = item.icon;
-        const isActive = vistaActiva === item.id;
-        return (
-          <button
-            key={item.id}
-            onClick={() => setVistaActiva(item.id as VistaActiva)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
-              isActive
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
-                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >
-            <Icon className="w-4 h-4" />
-            <span className="hidden md:inline">{item.label}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
+  const renderNavegacion = () => {
+    const navItems = [
+      { id: 'mapa', label: 'Mapa de la Ciudad', icon: Map, helpTitle: 'Mapa de la Ciudad', helpContent: 'Vista general de todos los distritos y su estado operativo', helpTips: ['Los 7 distritos se organizan alrededor de la Alcaldía central', 'Haz clic en un distrito para ver sus agentes'] },
+      { id: 'distritos', label: 'Los 7 Distritos', icon: Layers, helpTitle: agentesHelp.distritos.title, helpContent: agentesHelp.distritos.content, helpTips: agentesHelp.distritos.tips },
+      { id: 'agentes', label: 'Agentes IA', icon: Users, helpTitle: 'Agentes de IA', helpContent: 'Lista de todos los agentes inteligentes del sistema', helpTips: ['Cada distrito tiene agentes especializados', 'Los agentes procesan tareas automáticamente'] },
+      { id: 'metricas', label: 'Métricas en Vivo', icon: BarChart3, helpTitle: 'Métricas en Tiempo Real', helpContent: 'Monitorea el rendimiento del sistema en tiempo real', helpTips: ['KPIs de rendimiento', 'Estadísticas por distrito', 'Tendencias de tareas'] },
+      { id: 'alertas', label: 'Centro de Alertas', icon: AlertTriangle, helpTitle: 'Centro de Alertas', helpContent: 'Visualiza y gestiona alertas del sistema', helpTips: ['Alertas críticas requieren acción inmediata', 'Las alertas se resuelven automáticamente o manualmente'] },
+      { id: 'memoria', label: 'Memoria Colectiva', icon: Brain, helpTitle: 'Memoria Colectiva', helpContent: 'Conocimiento aprendido por los agentes de todas sus interacciones', helpTips: ['Los agentes aprenden de cada tarea', 'El conocimiento se comparte entre distritos'] },
+      { id: 'configuracion', label: 'Configuración', icon: Settings, helpTitle: 'Configuración', helpContent: 'Configura el comportamiento del sistema de agentes', helpTips: ['Ajusta parámetros de los agentes', 'Configura umbrales de alertas'] }
+    ];
+
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2 mb-6 flex flex-wrap gap-2">
+        {navItems.map(item => {
+          const Icon = item.icon;
+          const isActive = vistaActiva === item.id;
+          return (
+            <HelpTooltip
+              key={item.id}
+              title={item.helpTitle}
+              content={item.helpContent}
+              tips={item.helpTips}
+              position="bottom"
+            >
+              <button
+                onClick={() => setVistaActiva(item.id as VistaActiva)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
+                  isActive
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span className="hidden md:inline">{item.label}</span>
+              </button>
+            </HelpTooltip>
+          );
+        })}
+      </div>
+    );
+  };
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER MAPA DE LA CIUDAD

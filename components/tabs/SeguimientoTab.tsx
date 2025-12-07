@@ -30,7 +30,10 @@ import {
   BarChart3,
   FileWarning,
   ArrowRight,
+  HelpCircle,
 } from 'lucide-react';
+import { HelpTooltip } from '../HelpSystem/HelpTooltip';
+import { seguimientoHelp } from '../HelpSystem/helpContent';
 import { Shipment, ShipmentStatus, CarrierName } from '../../types';
 import { GuiaRetrasada, AlertLevel } from '../../types/logistics';
 import {
@@ -135,6 +138,19 @@ const SummaryCards: React.FC<{
       <div className="flex items-center gap-2 mb-4">
         <BarChart3 className="w-5 h-5 text-emerald-500" />
         <h3 className="font-bold text-slate-800 dark:text-white">Resumen de Carga</h3>
+        <HelpTooltip
+          title="Resumen de Carga"
+          content="Vista rápida del estado de tus guías. Click en cualquier tarjeta para filtrar."
+          tips={[
+            'Total Guías: Todas las guías cargadas',
+            'Sin Tracking: Guías sin información de seguimiento',
+            'Promedio Días: Tiempo promedio de entrega de guías entregadas',
+            'Con Tracking: Guías con información de seguimiento activo'
+          ]}
+          position="right"
+        >
+          <HelpCircle className="w-3.5 h-3.5 text-slate-400 hover:text-emerald-500 cursor-help" />
+        </HelpTooltip>
       </div>
 
       {/* Stats Cards */}
@@ -847,12 +863,20 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
 
   return (
     <div className="space-y-4">
-      {/* Header */}
+      {/* Header con ayuda contextual */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
             <Package className="w-6 h-6 text-emerald-500" />
             Seguimiento de Guías
+            <HelpTooltip
+              title={seguimientoHelp.general.title}
+              content={seguimientoHelp.general.content}
+              tips={seguimientoHelp.general.tips}
+              position="bottom"
+            >
+              <HelpCircle className="w-4 h-4 text-slate-400 hover:text-emerald-500 cursor-help transition-colors" />
+            </HelpTooltip>
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
             {shipments.length} guías totales • {guiasProcesadas.filter(g => g.tieneTracking).length} con tracking
@@ -860,13 +884,20 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
         </div>
         <div className="flex items-center gap-2">
           {onRefresh && (
-            <button
-              onClick={onRefresh}
-              className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-navy-800 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-navy-700 transition-colors text-sm"
+            <HelpTooltip
+              title="Actualizar Tracking"
+              content="Refresca la información de todas las guías consultando las APIs de las transportadoras."
+              tips={['Puede tomar unos segundos', 'Solo actualiza guías con tracking activo']}
+              position="bottom"
             >
-              <RefreshCw className="w-4 h-4" />
-              Actualizar
-            </button>
+              <button
+                onClick={onRefresh}
+                className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-navy-800 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-navy-700 transition-colors text-sm"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Actualizar
+              </button>
+            </HelpTooltip>
           )}
         </div>
       </div>
@@ -885,19 +916,26 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
         activeFilter={filterStatus}
       />
 
-      {/* Filtros de Búsqueda */}
+      {/* Filtros de Búsqueda con ayuda */}
       <div className="bg-white dark:bg-navy-900 rounded-lg border border-slate-200 dark:border-navy-700 p-3">
         <div className="flex flex-col md:flex-row gap-3">
-          {/* Search */}
+          {/* Search con tooltip */}
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Buscar guía, teléfono, ciudad..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
+            <HelpTooltip
+              title={seguimientoHelp.filtros.title}
+              content={seguimientoHelp.filtros.content}
+              tips={seguimientoHelp.filtros.tips}
+              position="bottom"
+            >
+              <input
+                type="text"
+                placeholder="Buscar guía, teléfono, ciudad..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </HelpTooltip>
           </div>
 
           {/* Carrier filter */}
