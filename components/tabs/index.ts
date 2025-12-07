@@ -9,3 +9,5 @@ export { default as FlashTab } from './FlashTab';
 export { default as DemandTab } from './DemandTab';
 export { default as GamificationTab } from './GamificationTab';
 export { ProcesosLitperTab } from './ProcesosLitperTab';
+export { CiudadAgentesTab } from './CiudadAgentesTab';
+export { AprendizajeIATab } from './AprendizajeIATab';

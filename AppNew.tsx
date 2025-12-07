@@ -30,6 +30,8 @@ import {
   GamificationTab,
   ProcesosLitperTab,
 } from './components/tabs';
+import { CiudadAgentesTab } from './components/tabs/CiudadAgentesTab';
+import { AprendizajeIATab } from './components/tabs/AprendizajeIATab';
 import CountrySelector from './components/CountrySelector';
 import { detectarGuiasRetrasadas } from './utils/patternDetection';
 import {
@@ -414,6 +416,9 @@ const AppNew: React.FC = () => {
     reporte: 0,
     asistente: 0,
     ml: 0,
+    'procesos-litper': 0,
+    'ciudad-agentes': 0,
+    'aprendizaje-ia': 0,
   };
 
   const handleProcessInput = () => {
@@ -661,6 +666,9 @@ const AppNew: React.FC = () => {
                 { id: 'reporte', icon: BarChart3, label: '📊 Reporte IA' },
                 { id: 'asistente', icon: Bot, label: '🤖 Asistente' },
                 { id: 'ml', icon: Brain, label: '🧠 Sistema ML' },
+                { id: 'procesos-litper', icon: Layers, label: '🏢 Procesos' },
+                { id: 'ciudad-agentes', icon: Globe, label: '🌆 Ciudad IA', isNew: true },
+                { id: 'aprendizaje-ia', icon: Brain, label: '🎓 Aprendizaje', isNew: true },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -892,6 +900,8 @@ const AppNew: React.FC = () => {
           {currentTab === 'asistente' && <AsistenteTab shipments={shipments} />}
           {currentTab === 'ml' && <MLSystemTab />}
           {currentTab === 'procesos-litper' && <ProcesosLitperTab selectedCountry={selectedCountry} />}
+          {currentTab === 'ciudad-agentes' && <CiudadAgentesTab selectedCountry={selectedCountry} />}
+          {currentTab === 'aprendizaje-ia' && <AprendizajeIATab />}
         </div>
       </main>
 
