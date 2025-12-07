@@ -1,0 +1,73 @@
+# dbt_project.yml
+# Configuración del proyecto dbt para Litper Data Warehouse
+# ==========================================================
+
+name: 'litper_analytics'
+version: '1.0.0'
+config-version: 2
+
+# Directorio raíz del proyecto
+profile: 'litper'
+
+# Directorios de modelos
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+# Directorio de salida
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Configuración de modelos
+models:
+  litper_analytics:
+    # Staging - Limpieza de datos crudos
+    staging:
+      +materialized: view
+      +schema: staging
+
+    # Marts - Modelos de negocio
+    marts:
+      +materialized: table
+      +schema: marts
+
+      # Particionado por fecha donde aplique
+      sales:
+        +partition_by:
+          field: date
+          data_type: date
+          granularity: day
+
+      logistics:
+        +partition_by:
+          field: date
+          data_type: date
+          granularity: day
+
+# Variables del proyecto
+vars:
+  # Países soportados
+  supported_countries: ['CO', 'CL', 'EC']
+
+  # Transportadoras
+  carriers:
+    - coordinadora
+    - interrapidisimo
+    - envia
+    - tcc
+    - veloces
+
+  # Umbrales de negocio
+  delay_threshold_days: 5
+  incident_resolution_sla_hours: 24
+  delivery_sla_days: 3
+
+# Seeds
+seeds:
+  litper_analytics:
+    +schema: seeds

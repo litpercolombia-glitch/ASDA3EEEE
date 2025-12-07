@@ -1,0 +1,186 @@
+# alertmanager.yml
+# Configuración de Alertmanager para Litper
+# ==========================================
+
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'alertas@litper.co'
+  smtp_auth_username: '${SMTP_USERNAME}'
+  smtp_auth_password: '${SMTP_PASSWORD}'
+
+  # Slack (opcional)
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+
+# Inhibiciones - Evitar alertas duplicadas
+inhibit_rules:
+  # Si la API está caída, no alertar sobre servicios individuales
+  - source_match:
+      alertname: 'LitperAPIDown'
+    target_match_re:
+      alertname: '.+'
+    equal: ['instance']
+
+  # Si la BD está caída, no alertar sobre otros problemas de datos
+  - source_match:
+      alertname: 'DatabaseDown'
+    target_match_re:
+      alertname: 'HighLatency|SlowChatResponse'
+    equal: []
+
+route:
+  group_by: ['alertname', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'default'
+
+  routes:
+    # ═══════════════════════════════════════════
+    # CRÍTICAS -> WhatsApp + Llamada + Email
+    # ═══════════════════════════════════════════
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      repeat_interval: 5m
+      continue: true
+
+    # ═══════════════════════════════════════════
+    # ALTAS -> WhatsApp + Email
+    # ═══════════════════════════════════════════
+    - match:
+        severity: high
+      receiver: 'high-alerts'
+      repeat_interval: 30m
+      continue: true
+
+    # ═══════════════════════════════════════════
+    # MEDIAS -> Solo Email
+    # ═══════════════════════════════════════════
+    - match:
+        severity: medium
+      receiver: 'medium-alerts'
+      repeat_interval: 4h
+
+    # ═══════════════════════════════════════════
+    # NEGOCIO -> Email a gerencia
+    # ═══════════════════════════════════════════
+    - match:
+        team: business
+      receiver: 'business-alerts'
+      repeat_interval: 4h
+
+    # ═══════════════════════════════════════════
+    # AI/ML -> Email a equipo de IA
+    # ═══════════════════════════════════════════
+    - match:
+        team: ai
+      receiver: 'ai-team-alerts'
+      repeat_interval: 2h
+
+receivers:
+  # ═══════════════════════════════════════════
+  # DEFAULT - Solo email
+  # ═══════════════════════════════════════════
+  - name: 'default'
+    email_configs:
+      - to: 'tech@litper.co'
+        send_resolved: true
+
+  # ═══════════════════════════════════════════
+  # CRÍTICAS - Todo canal disponible
+  # ═══════════════════════════════════════════
+  - name: 'critical-alerts'
+    email_configs:
+      - to: 'tech@litper.co,ceo@litper.co,cto@litper.co'
+        send_resolved: true
+        html: '{{ template "email.html" . }}'
+
+    webhook_configs:
+      # WhatsApp vía API interna
+      - url: 'http://notification-service:8006/internal/alerts/whatsapp'
+        send_resolved: true
+        http_config:
+          bearer_token: '${INTERNAL_API_TOKEN}'
+
+      # PagerDuty para llamadas (opcional)
+      # - url: 'https://events.pagerduty.com/v2/enqueue'
+      #   send_resolved: true
+
+    slack_configs:
+      - channel: '#alerts-critical'
+        send_resolved: true
+        title: '{{ if eq .Status "firing" }}🔴{{ else }}✅{{ end }} {{ .CommonAnnotations.summary }}'
+        text: '{{ .CommonAnnotations.description }}'
+        actions:
+          - type: button
+            text: 'Runbook'
+            url: '{{ .CommonAnnotations.runbook }}'
+          - type: button
+            text: 'Silence'
+            url: '{{ template "__alertmanagerURL" . }}/#/silences/new?filter=%7Balertname%3D%22{{ .CommonLabels.alertname }}%22%7D'
+
+  # ═══════════════════════════════════════════
+  # ALTAS - WhatsApp + Email
+  # ═══════════════════════════════════════════
+  - name: 'high-alerts'
+    email_configs:
+      - to: 'tech@litper.co'
+        send_resolved: true
+
+    webhook_configs:
+      - url: 'http://notification-service:8006/internal/alerts/whatsapp'
+        send_resolved: true
+        http_config:
+          bearer_token: '${INTERNAL_API_TOKEN}'
+
+    slack_configs:
+      - channel: '#alerts-high'
+        send_resolved: true
+        title: '{{ if eq .Status "firing" }}🟠{{ else }}✅{{ end }} {{ .CommonAnnotations.summary }}'
+        text: '{{ .CommonAnnotations.description }}'
+
+  # ═══════════════════════════════════════════
+  # MEDIAS - Solo email
+  # ═══════════════════════════════════════════
+  - name: 'medium-alerts'
+    email_configs:
+      - to: 'tech@litper.co'
+        send_resolved: true
+
+    slack_configs:
+      - channel: '#alerts-medium'
+        send_resolved: true
+        title: '{{ if eq .Status "firing" }}🟡{{ else }}✅{{ end }} {{ .CommonAnnotations.summary }}'
+
+  # ═══════════════════════════════════════════
+  # NEGOCIO - Email a gerencia
+  # ═══════════════════════════════════════════
+  - name: 'business-alerts'
+    email_configs:
+      - to: 'gerencia@litper.co,tech@litper.co'
+        send_resolved: true
+        html: '{{ template "business_email.html" . }}'
+
+    slack_configs:
+      - channel: '#business-metrics'
+        send_resolved: true
+        title: '📊 {{ .CommonAnnotations.summary }}'
+        text: '{{ .CommonAnnotations.description }}'
+
+  # ═══════════════════════════════════════════
+  # AI TEAM - Alertas específicas de IA
+  # ═══════════════════════════════════════════
+  - name: 'ai-team-alerts'
+    email_configs:
+      - to: 'ai-team@litper.co'
+        send_resolved: true
+
+    slack_configs:
+      - channel: '#ai-alerts'
+        send_resolved: true
+        title: '🤖 {{ .CommonAnnotations.summary }}'
+        text: '{{ .CommonAnnotations.description }}'
+
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
