@@ -1,0 +1,177 @@
+# prometheus.yml
+# Configuración de Prometheus para Litper
+# ========================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'litper-monitor'
+    environment: 'production'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+rule_files:
+  - "litper_alerts.yml"
+  - "litper_recording_rules.yml"
+
+scrape_configs:
+  # ═══════════════════════════════════════════
+  # SERVICIOS LITPER
+  # ═══════════════════════════════════════════
+
+  # API Principal
+  - job_name: 'litper-api'
+    static_configs:
+      - targets: ['api-service:8000']
+    metrics_path: /metrics
+    scrape_interval: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'litper-api'
+
+  # Orquestador de Agentes
+  - job_name: 'agent-orchestrator'
+    static_configs:
+      - targets: ['orchestrator:8001']
+    metrics_path: /metrics
+
+  # Servicios individuales
+  - job_name: 'tracking-service'
+    static_configs:
+      - targets: ['tracking:8002']
+
+  - job_name: 'orders-service'
+    static_configs:
+      - targets: ['orders:8003']
+
+  - job_name: 'chat-service'
+    static_configs:
+      - targets: ['chat:8004']
+
+  - job_name: 'voice-service'
+    static_configs:
+      - targets: ['voice:8005']
+
+  - job_name: 'notification-service'
+    static_configs:
+      - targets: ['notification:8006']
+
+  - job_name: 'learning-service'
+    static_configs:
+      - targets: ['learning:8007']
+
+  # ═══════════════════════════════════════════
+  # BASES DE DATOS
+  # ═══════════════════════════════════════════
+
+  # PostgreSQL
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: database
+        replacement: 'litper-main'
+
+  # Redis
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  # MongoDB (si se usa)
+  - job_name: 'mongodb'
+    static_configs:
+      - targets: ['mongodb-exporter:9216']
+
+  # ═══════════════════════════════════════════
+  # KUBERNETES
+  # ═══════════════════════════════════════════
+
+  # Kubernetes API Server
+  - job_name: 'kubernetes-apiservers'
+    kubernetes_sd_configs:
+      - role: endpoints
+    scheme: https
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+        action: keep
+        regex: default;kubernetes;https
+
+  # Kubernetes Nodes
+  - job_name: 'kubernetes-nodes'
+    scheme: https
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    kubernetes_sd_configs:
+      - role: node
+    relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      - target_label: __address__
+        replacement: kubernetes.default.svc:443
+      - source_labels: [__meta_kubernetes_node_name]
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/nodes/${1}/proxy/metrics
+
+  # Kubernetes Pods
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: kubernetes_pod_name
+
+  # ═══════════════════════════════════════════
+  # NODE EXPORTER (Métricas del sistema)
+  # ═══════════════════════════════════════════
+
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # ═══════════════════════════════════════════
+  # PROMETHEUS SELF-MONITORING
+  # ═══════════════════════════════════════════
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+# ═══════════════════════════════════════════
+# REMOTE WRITE (opcional - para Grafana Cloud)
+# ═══════════════════════════════════════════
+
+# remote_write:
+#   - url: https://prometheus-prod-us-central-0.grafana.net/api/prom/push
+#     basic_auth:
+#       username: <your-grafana-cloud-id>
+#       password: <your-grafana-cloud-api-key>

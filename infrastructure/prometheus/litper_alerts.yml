@@ -1,0 +1,358 @@
+# litper_alerts.yml
+# Reglas de alertas para Prometheus/Alertmanager
+# ===============================================
+
+groups:
+  # ═══════════════════════════════════════════
+  # ALERTAS CRÍTICAS (P1) - Responder en 5 minutos
+  # ═══════════════════════════════════════════
+
+  - name: litper_critical
+    rules:
+      # Sistema completamente caído
+      - alert: LitperAPIDown
+        expr: up{job="litper-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "🔴 CRÍTICO: API de Litper caída"
+          description: "La API principal no responde hace más de 1 minuto"
+          runbook: "https://docs.litper.co/runbooks/api-down"
+
+      # Base de datos caída
+      - alert: DatabaseDown
+        expr: up{job="postgresql"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "🔴 CRÍTICO: Base de datos PostgreSQL caída"
+          description: "No hay conexión con la base de datos principal"
+
+      # Error rate > 10%
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(litper_api_requests_total{status_code=~"5.."}[5m])) /
+          sum(rate(litper_api_requests_total[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "🔴 CRÍTICO: Tasa de errores > 10%"
+          description: "{{ $value | humanizePercentage }} de requests están fallando"
+
+      # Claude API fallando
+      - alert: ClaudeAPIErrors
+        expr: |
+          sum(rate(litper_claude_api_calls_total{status="error"}[5m])) /
+          sum(rate(litper_claude_api_calls_total[5m])) > 0.2
+        for: 3m
+        labels:
+          severity: critical
+          team: ai
+        annotations:
+          summary: "🔴 CRÍTICO: Claude API fallando > 20%"
+          description: "Los agentes IA no pueden funcionar correctamente"
+
+      # Sin agentes activos
+      - alert: NoActiveAgents
+        expr: sum(litper_agents_active) == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: ai
+        annotations:
+          summary: "🔴 CRÍTICO: No hay agentes IA activos"
+          description: "Todos los agentes están caídos"
+
+      # Redis caído
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "🔴 CRÍTICO: Redis caído"
+          description: "Sistema de caché y colas no disponible"
+
+  # ═══════════════════════════════════════════
+  # ALERTAS ALTAS (P2) - Responder en 30 minutos
+  # ═══════════════════════════════════════════
+
+  - name: litper_high
+    rules:
+      # Latencia alta
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(litper_api_latency_seconds_bucket[5m])) by (le)
+          ) > 2
+        for: 5m
+        labels:
+          severity: high
+          team: backend
+        annotations:
+          summary: "🟠 ALTA: Latencia p95 > 2 segundos"
+          description: "El 5% de requests tardan más de 2 segundos"
+
+      # Muchas novedades sin resolver
+      - alert: HighIncidentBacklog
+        expr: sum(litper_incidents_active) > 50
+        for: 30m
+        labels:
+          severity: high
+          team: operations
+        annotations:
+          summary: "🟠 ALTA: {{ $value }} novedades sin resolver"
+          description: "Hay acumulación de novedades pendientes"
+
+      # Cola de mensajes creciendo
+      - alert: MessageQueueBacklog
+        expr: redis_list_length{list="task_queue"} > 1000
+        for: 10m
+        labels:
+          severity: high
+          team: backend
+        annotations:
+          summary: "🟠 ALTA: Cola de tareas acumulada"
+          description: "{{ $value }} tareas en cola esperando procesamiento"
+
+      # API externa lenta - Dropi
+      - alert: ExternalAPISlowDropi
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(litper_external_api_latency_seconds_bucket{service="dropi"}[5m])) by (le)
+          ) > 5
+        for: 5m
+        labels:
+          severity: high
+          team: integrations
+        annotations:
+          summary: "🟠 ALTA: API de Dropi muy lenta"
+          description: "Dropi respondiendo en más de 5 segundos (p95)"
+
+      # API externa lenta - Transportadoras
+      - alert: ExternalAPISlowCarrier
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(litper_external_api_latency_seconds_bucket{service=~"coordinadora|interrapidisimo|envia|tcc"}[5m])) by (le, service)
+          ) > 10
+        for: 5m
+        labels:
+          severity: high
+          team: integrations
+        annotations:
+          summary: "🟠 ALTA: API de transportadora {{ $labels.service }} muy lenta"
+          description: "Transportadora respondiendo en más de 10 segundos"
+
+      # Disco lleno
+      - alert: DiskSpaceLow
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/"} /
+           node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 10m
+        labels:
+          severity: high
+          team: platform
+        annotations:
+          summary: "🟠 ALTA: Disco casi lleno"
+          description: "Menos del 10% de espacio disponible"
+
+      # Memoria alta
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.9
+        for: 5m
+        labels:
+          severity: high
+          team: platform
+        annotations:
+          summary: "🟠 ALTA: Uso de memoria > 90%"
+          description: "Considerar escalar o investigar memory leaks"
+
+      # CPU alta
+      - alert: HighCPUUsage
+        expr: |
+          100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 10m
+        labels:
+          severity: high
+          team: platform
+        annotations:
+          summary: "🟠 ALTA: Uso de CPU > 90%"
+          description: "CPU en {{ $value }}%"
+
+  # ═══════════════════════════════════════════
+  # ALERTAS MEDIAS (P3) - Responder en 4 horas
+  # ═══════════════════════════════════════════
+
+  - name: litper_medium
+    rules:
+      # Memoria alta (warning)
+      - alert: MemoryUsageWarning
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.85
+        for: 15m
+        labels:
+          severity: medium
+          team: platform
+        annotations:
+          summary: "🟡 MEDIA: Uso de memoria > 85%"
+          description: "Considerar escalar o investigar memory leaks"
+
+      # Agente con bajo rendimiento
+      - alert: AgentLowPerformance
+        expr: |
+          avg(rate(litper_agent_tasks_total{status="success"}[1h])) by (agent_type) /
+          avg(rate(litper_agent_tasks_total[1h])) by (agent_type) < 0.9
+        for: 1h
+        labels:
+          severity: medium
+          team: ai
+        annotations:
+          summary: "🟡 MEDIA: Agente {{ $labels.agent_type }} con bajo rendimiento"
+          description: "Tasa de éxito menor al 90%"
+
+      # Tasa de resolución de novedades baja
+      - alert: LowIncidentResolutionRate
+        expr: |
+          sum(rate(litper_incidents_total{resolution="resolved"}[24h])) /
+          sum(rate(litper_incidents_total[24h])) < 0.85
+        for: 2h
+        labels:
+          severity: medium
+          team: operations
+        annotations:
+          summary: "🟡 MEDIA: Tasa de resolución de novedades < 85%"
+          description: "Revisar procesos de solución de novedades"
+
+      # Chat response time alto
+      - alert: SlowChatResponse
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(litper_chat_response_seconds_bucket[1h])) by (le)
+          ) > 30
+        for: 30m
+        labels:
+          severity: medium
+          team: chat
+        annotations:
+          summary: "🟡 MEDIA: Respuesta de chat > 30 segundos"
+          description: "Los clientes esperan mucho por respuestas"
+
+      # SSL Certificate expiring
+      - alert: SSLCertificateExpiring
+        expr: |
+          (probe_ssl_earliest_cert_expiry - time()) / 86400 < 14
+        for: 1h
+        labels:
+          severity: medium
+          team: platform
+        annotations:
+          summary: "🟡 MEDIA: Certificado SSL expira en menos de 14 días"
+          description: "Renovar certificado SSL"
+
+  # ═══════════════════════════════════════════
+  # ALERTAS DE NEGOCIO
+  # ═══════════════════════════════════════════
+
+  - name: litper_business
+    rules:
+      # Caída en volumen de pedidos
+      - alert: OrderVolumeDrop
+        expr: |
+          sum(rate(litper_orders_total[1h])) <
+          sum(rate(litper_orders_total[1h] offset 1d)) * 0.5
+        for: 2h
+        labels:
+          severity: high
+          team: business
+        annotations:
+          summary: "🟠 NEGOCIO: Volumen de pedidos cayó 50%"
+          description: "Comparado con ayer a la misma hora"
+
+      # Transportadora con muchos problemas
+      - alert: CarrierHighIncidents
+        expr: |
+          sum(rate(litper_incidents_total[24h])) by (carrier) /
+          sum(rate(litper_guides_total[24h])) by (carrier) > 0.15
+        for: 4h
+        labels:
+          severity: medium
+          team: operations
+        annotations:
+          summary: "🟡 NEGOCIO: {{ $labels.carrier }} con >15% novedades"
+          description: "Considerar reducir uso de esta transportadora"
+
+      # Costos de Claude altos
+      - alert: HighClaudeCosts
+        expr: |
+          sum(increase(litper_claude_api_tokens_total[24h])) > 1000000
+        for: 1h
+        labels:
+          severity: medium
+          team: ai
+        annotations:
+          summary: "🟡 NEGOCIO: Consumo alto de tokens Claude"
+          description: "Más de 1M tokens en 24h, revisar optimización"
+
+      # Tasa de entrega baja
+      - alert: LowDeliveryRate
+        expr: |
+          sum(rate(litper_guides_total{status="delivered"}[24h])) /
+          sum(rate(litper_guides_total[24h])) < 0.9
+        for: 4h
+        labels:
+          severity: medium
+          team: operations
+        annotations:
+          summary: "🟡 NEGOCIO: Tasa de entrega < 90%"
+          description: "Revisar problemas con entregas"
+
+      # Tiempo de entrega muy alto
+      - alert: SlowDeliveryTime
+        expr: |
+          avg(litper_guides_delivery_time_hours) > 72
+        for: 4h
+        labels:
+          severity: medium
+          team: operations
+        annotations:
+          summary: "🟡 NEGOCIO: Tiempo promedio de entrega > 72 horas"
+          description: "Las entregas están tardando más de lo normal"
+
+  # ═══════════════════════════════════════════
+  # ALERTAS DE ML
+  # ═══════════════════════════════════════════
+
+  - name: litper_ml
+    rules:
+      # Accuracy de modelo cayendo
+      - alert: MLModelAccuracyDrop
+        expr: |
+          litper_ml_model_accuracy < 0.75
+        for: 1h
+        labels:
+          severity: medium
+          team: ai
+        annotations:
+          summary: "🟡 ML: Accuracy del modelo {{ $labels.model }} cayó < 75%"
+          description: "Considerar reentrenamiento del modelo"
+
+      # Predicciones fallando
+      - alert: MLPredictionErrors
+        expr: |
+          sum(rate(litper_ml_predictions_total{outcome="error"}[1h])) /
+          sum(rate(litper_ml_predictions_total[1h])) > 0.05
+        for: 30m
+        labels:
+          severity: medium
+          team: ai
+        annotations:
+          summary: "🟡 ML: Más del 5% de predicciones fallando"
+          description: "Revisar modelo ML"
