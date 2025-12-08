@@ -35,15 +35,17 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
       <header className="bg-gradient-to-r from-navy-900/80 to-navy-800/80 backdrop-blur-lg border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-accent-500 to-accent-600 p-2 rounded-xl shadow-lg">
-              <Crown className="w-5 h-5 text-white" />
+            <div className="relative bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 p-2 rounded-xl shadow-lg shadow-yellow-500/30">
+              <Crown className="w-5 h-5 text-white drop-shadow" />
+              <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+              <div className="absolute -bottom-0.5 -left-0.5 w-1 h-1 bg-yellow-200 rounded-full animate-pulse" />
             </div>
             <div>
               <h1 className="text-lg font-bold text-white tracking-tight">
-                LITPER<span className="text-accent-400">.io</span>
+                LITPER<span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent"> PRO</span>
               </h1>
               <p className="text-[9px] text-slate-400 font-medium tracking-widest uppercase -mt-0.5">
-                Logistics Platform
+                👑 Enterprise Logistics
               </p>
             </div>
           </div>
@@ -51,8 +53,8 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
             <span className="text-xs px-3 py-1 bg-emerald-600/20 text-emerald-400 rounded-full font-bold border border-emerald-600/30">
               🔒 Conexión Segura
             </span>
-            <span className="text-xs px-3 py-1 bg-accent-600 text-white rounded-full font-bold">
-              PREMIUM
+            <span className="text-xs px-3 py-1 bg-gradient-to-r from-yellow-500 to-amber-500 text-white rounded-full font-bold flex items-center gap-1">
+              👑 ENTERPRISE
             </span>
           </div>
         </div>
@@ -70,13 +72,14 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
 
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 leading-tight">
               Bienvenido a{' '}
-              <span className="bg-gradient-to-r from-accent-400 to-accent-600 bg-clip-text text-transparent">
-                LITPER
+              <span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent">
+                LITPER PRO
               </span>
+              <span className="inline-block ml-2 text-3xl md:text-4xl animate-pulse">👑</span>
             </h1>
             <p className="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
-              La plataforma más avanzada de gestión logística con inteligencia artificial.
-              Selecciona tu país para comenzar.
+              La plataforma enterprise más avanzada de gestión logística con inteligencia artificial.
+              <span className="block mt-2 text-yellow-400/80 font-medium">Selecciona tu país para comenzar 🌎</span>
             </p>
 
             {/* Trust Badges */}
@@ -113,13 +116,20 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
                   <div className="absolute inset-0 bg-gradient-to-br from-accent-500/0 to-accent-600/0 group-hover:from-accent-500/5 group-hover:to-accent-600/10 rounded-3xl transition-all duration-500" />
 
                   <div className="relative z-10">
-                    {/* Flag with animation */}
-                    <div className="text-7xl mb-5 transform group-hover:scale-110 transition-transform duration-300">
-                      {config.flag}
+                    {/* Flag with animation - Más grande y llamativa */}
+                    <div className="relative inline-block mb-5">
+                      <div className="text-8xl transform group-hover:scale-125 transition-transform duration-500 drop-shadow-2xl filter group-hover:brightness-110">
+                        {config.flag}
+                      </div>
+                      {/* Efecto de brillo detrás de la bandera */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full blur-xl scale-150 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      {/* Destellos */}
+                      <div className="absolute -top-2 -right-2 w-3 h-3 bg-yellow-400 rounded-full opacity-0 group-hover:opacity-100 animate-ping" />
+                      <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-white rounded-full opacity-0 group-hover:opacity-100 animate-pulse delay-150" />
                     </div>
 
                     {/* Country Name */}
-                    <h3 className="text-2xl font-bold text-white mb-3">{config.name}</h3>
+                    <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-yellow-400 transition-colors">{config.name}</h3>
 
                     {/* Info Cards */}
                     <div className="space-y-2">
@@ -273,7 +283,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
           {/* Bottom info */}
           <div className="text-center mt-8">
             <p className="text-slate-500 text-sm">
-              💎 Sistema Premium v4.0 • Tecnología de clase mundial
+              👑 Sistema Enterprise v5.0 • Tecnología de clase mundial
             </p>
           </div>
         </div>
@@ -283,7 +293,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
       <footer className="bg-navy-900/50 border-t border-white/5 py-4">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-slate-500 text-xs">
-            © 2025 LITPER Logistics Platform. Todos los derechos reservados.
+            © 2025 LITPER PRO Enterprise Logistics. Todos los derechos reservados.
           </p>
         </div>
       </footer>

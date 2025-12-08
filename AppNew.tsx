@@ -134,12 +134,12 @@ const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, cou
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <span className="text-4xl">👋</span>
+              <span className="text-4xl">👑</span>
               <div>
                 <h1 className="text-3xl lg:text-4xl font-bold">
-                  Bienvenido a <span className="text-accent-400">LITPER</span>
+                  Bienvenido a <span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent">LITPER PRO</span>
                 </h1>
-                <p className="text-slate-300 text-lg">Plataforma Global de Logística Inteligente</p>
+                <p className="text-slate-300 text-lg">Plataforma Enterprise de Logística con IA</p>
               </div>
             </div>
             <div className="flex items-center gap-4 mt-4">
@@ -524,20 +524,26 @@ const AppNew: React.FC = () => {
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => setCurrentTab('home')}
-                  className="flex items-center gap-3 hover:opacity-90 transition-opacity"
+                  className="flex items-center gap-3 hover:opacity-90 transition-opacity group"
                 >
                   <div className="relative">
-                    <div className="bg-gradient-to-br from-accent-500 to-accent-600 p-2.5 rounded-xl shadow-lg">
-                      <Crown className="w-6 h-6 text-white" />
+                    <div className="bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 p-2.5 rounded-xl shadow-lg shadow-yellow-500/30 group-hover:shadow-yellow-500/50 transition-all">
+                      <Crown className="w-6 h-6 text-white drop-shadow-lg" />
+                      {/* Destellos del logo */}
+                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-white rounded-full animate-ping opacity-75" />
+                      <div className="absolute -top-0.5 -left-0.5 w-1.5 h-1.5 bg-yellow-200 rounded-full animate-pulse" />
+                      <div className="absolute -bottom-0.5 -right-0.5 w-1 h-1 bg-yellow-300 rounded-full animate-pulse delay-150" />
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-navy-900" />
+                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-navy-900 animate-pulse" />
+                    {/* Brillos adicionales */}
+                    <div className="absolute top-0 left-1/2 w-8 h-8 bg-gradient-to-b from-yellow-300/30 to-transparent rounded-full blur-sm -translate-x-1/2 -translate-y-1/2" />
                   </div>
                   <div className="hidden sm:block">
                     <h1 className="text-xl font-bold tracking-tight">
-                      LITPER<span className="text-accent-400">.io</span>
+                      LITPER<span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent"> PRO</span>
                     </h1>
                     <p className="text-[10px] text-slate-400 font-medium tracking-widest uppercase -mt-0.5">
-                      Logistics Platform
+                      👑 Enterprise Logistics
                     </p>
                   </div>
                 </button>
@@ -914,16 +920,17 @@ const AppNew: React.FC = () => {
             {/* Brand */}
             <div className="md:col-span-1">
               <div className="flex items-center gap-3 mb-4">
-                <div className="bg-gradient-to-br from-accent-500 to-accent-600 p-2.5 rounded-xl">
-                  <Crown className="w-6 h-6 text-white" />
+                <div className="relative bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 p-2.5 rounded-xl shadow-lg shadow-yellow-500/20">
+                  <Crown className="w-6 h-6 text-white drop-shadow" />
+                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-white rounded-full animate-pulse" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold">LITPER<span className="text-accent-400">.io</span></h3>
-                  <p className="text-xs text-slate-400">Logistics Platform</p>
+                  <h3 className="text-xl font-bold">LITPER<span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent"> PRO</span></h3>
+                  <p className="text-xs text-slate-400">👑 Enterprise Logistics</p>
                 </div>
               </div>
               <p className="text-sm text-slate-400 mb-4">
-                Plataforma líder en gestión logística inteligente con IA para empresas de alto rendimiento.
+                Plataforma enterprise de gestión logística inteligente con IA para empresas de alto rendimiento.
               </p>
               <div className="flex items-center gap-2">
                 <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold ${
@@ -982,11 +989,13 @@ const AppNew: React.FC = () => {
           {/* Bottom Bar */}
           <div className="pt-8 border-t border-navy-700 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-slate-500">
-              © 2025 LITPER Logistics Platform. Todos los derechos reservados.
+              © 2025 LITPER PRO Enterprise Logistics. Todos los derechos reservados.
             </p>
             <div className="flex items-center gap-4">
-              <span className="text-xs text-slate-500">Sistema Pro v4.0</span>
-              <span className="text-xs px-2 py-1 bg-accent-600 text-white rounded-full font-bold">PREMIUM</span>
+              <span className="text-xs text-slate-500">Sistema Enterprise v5.0</span>
+              <span className="text-xs px-2 py-1 bg-gradient-to-r from-yellow-500 to-amber-500 text-white rounded-full font-bold flex items-center gap-1">
+                👑 ENTERPRISE
+              </span>
             </div>
           </div>
         </div>

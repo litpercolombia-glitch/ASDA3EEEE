@@ -469,7 +469,7 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // RENDER AGREGAR CONTENIDO
+  // RENDER AGREGAR CONTENIDO - MEJORADO PARA MÚLTIPLES TIPOS
   // ═══════════════════════════════════════════════════════════════════════════
 
   const renderAgregarContenido = () => {
@@ -477,14 +477,17 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
     const [titulo, setTitulo] = useState('');
     const [tipo, setTipo] = useState<TipoContenido>(TipoContenido.CURSO);
     const [procesando, setProcesando] = useState(false);
+    const [archivoSeleccionado, setArchivoSeleccionado] = useState<File | null>(null);
+    const [modoEntrada, setModoEntrada] = useState<'url' | 'archivo'>('url');
 
     const handleAgregar = async () => {
-      if (!url.trim()) return;
+      if (!url.trim() && !archivoSeleccionado) return;
       setProcesando(true);
       try {
-        await agregarContenido(url, tipo, titulo || undefined);
+        await agregarContenido(url || archivoSeleccionado?.name || '', tipo, titulo || undefined);
         setUrl('');
         setTitulo('');
+        setArchivoSeleccionado(null);
         cargarDatos();
       } catch (error) {
         console.error('Error agregando contenido:', error);
@@ -493,6 +496,23 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
       }
     };
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files[0]) {
+        setArchivoSeleccionado(e.target.files[0]);
+        setTitulo(e.target.files[0].name.replace(/\.[^/.]+$/, ''));
+      }
+    };
+
+    // Tipos de contenido soportados
+    const tiposContenido = [
+      { tipo: TipoContenido.CURSO, icono: Video, label: 'Video/Curso', desc: 'YouTube, Udemy, Platzi', color: 'from-blue-500 to-indigo-500', ext: '.mp4, .webm' },
+      { tipo: TipoContenido.PDF, icono: FileText, label: 'PDF/Documento', desc: 'PDFs, Word, Excel, PPT', color: 'from-red-500 to-pink-500', ext: '.pdf, .docx, .xlsx, .pptx' },
+      { tipo: TipoContenido.AUDIO, icono: Headphones, label: 'Audio/Podcast', desc: 'MP3, podcasts, grabaciones', color: 'from-purple-500 to-violet-500', ext: '.mp3, .wav, .m4a' },
+      { tipo: TipoContenido.ARTICULO, icono: BookOpen, label: 'Artículo/Web', desc: 'Blogs, artículos, wikis', color: 'from-green-500 to-emerald-500', ext: 'URL web' },
+      { tipo: TipoContenido.IMAGEN, icono: Eye, label: 'Imagen/Diagrama', desc: 'Infografías, diagramas', color: 'from-amber-500 to-orange-500', ext: '.png, .jpg, .svg' },
+      { tipo: TipoContenido.PRESENTACION, icono: Layers, label: 'Presentación', desc: 'PowerPoint, Google Slides', color: 'from-cyan-500 to-blue-500', ext: '.pptx, .key' },
+    ];
+
     return (
       <div className="space-y-6">
         <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
@@ -500,55 +520,142 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
           Agregar Nuevo Contenido
         </h2>
 
+        {/* Explicación de cómo funciona */}
+        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/30 rounded-xl p-5 border border-emerald-200 dark:border-emerald-700">
+          <h3 className="font-bold text-emerald-900 dark:text-emerald-100 mb-3 flex items-center gap-2">
+            <Brain className="w-5 h-5" />
+            ¿Cómo funciona el Aprendizaje IA?
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-emerald-800 dark:text-emerald-200">
+            <div className="flex items-start gap-2">
+              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+              <p><strong>Carga cualquier contenido:</strong> Videos, PDFs, enlaces web, audios, presentaciones</p>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+              <p><strong>IA analiza y extrae:</strong> Conceptos clave, mejores prácticas, metodologías</p>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+              <p><strong>Genera recomendaciones:</strong> Aplicables a tu operación logística</p>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+              <p><strong>Mejora continua:</strong> Los agentes aprenden y mejoran automáticamente</p>
+            </div>
+          </div>
+        </div>
+
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {[
-              { tipo: TipoContenido.CURSO, icono: Video, label: 'Video/Curso', color: 'from-blue-500 to-indigo-500' },
-              { tipo: TipoContenido.PDF, icono: FileText, label: 'Documento', color: 'from-red-500 to-pink-500' },
-              { tipo: TipoContenido.AUDIO, icono: Headphones, label: 'Audio', color: 'from-purple-500 to-violet-500' }
-            ].map(item => {
+          {/* Selector de tipo de contenido */}
+          <h3 className="font-semibold text-gray-800 dark:text-white mb-4">1. Selecciona el tipo de contenido</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+            {tiposContenido.map(item => {
               const Icon = item.icono;
               const isSelected = tipo === item.tipo;
               return (
                 <button
                   key={item.tipo}
                   onClick={() => setTipo(item.tipo)}
-                  className={`p-6 rounded-xl border-2 transition-all ${
+                  className={`p-4 rounded-xl border-2 transition-all text-left ${
                     isSelected
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 shadow-lg'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
                 >
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center mx-auto mb-3`}>
-                    <Icon className="w-6 h-6 text-white" />
+                  <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center mb-2`}>
+                    <Icon className="w-5 h-5 text-white" />
                   </div>
-                  <h3 className="font-bold text-gray-800 dark:text-white text-center">{item.label}</h3>
+                  <h4 className="font-bold text-gray-800 dark:text-white text-sm">{item.label}</h4>
+                  <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
+                  {isSelected && (
+                    <span className="text-[10px] text-emerald-600 font-medium mt-1 block">{item.ext}</span>
+                  )}
                 </button>
               );
             })}
           </div>
 
+          {/* Selector de modo de entrada */}
+          <h3 className="font-semibold text-gray-800 dark:text-white mb-4 mt-6">2. Proporciona el contenido</h3>
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setModoEntrada('url')}
+              className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                modoEntrada === 'url'
+                  ? 'bg-emerald-100 text-emerald-700 border-2 border-emerald-500'
+                  : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
+              }`}
+            >
+              <Link className="w-5 h-5" />
+              URL / Enlace
+            </button>
+            <button
+              onClick={() => setModoEntrada('archivo')}
+              className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                modoEntrada === 'archivo'
+                  ? 'bg-emerald-100 text-emerald-700 border-2 border-emerald-500'
+                  : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
+              }`}
+            >
+              <Upload className="w-5 h-5" />
+              Subir Archivo
+            </button>
+          </div>
+
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                URL del contenido
-              </label>
-              <div className="flex gap-2">
-                <div className="flex-1 relative">
-                  <Link className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            {modoEntrada === 'url' ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  URL del contenido
+                </label>
+                <div className="flex gap-2">
+                  <div className="flex-1 relative">
+                    <Link className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="text"
+                      value={url}
+                      onChange={(e) => setUrl(e.target.value)}
+                      placeholder="https://www.udemy.com/course/... o cualquier URL"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  ✓ Udemy, Platzi, Coursera, YouTube, Domestika, LinkedIn Learning, Blogs, Wikis, cualquier página web
+                </p>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Subir archivo
+                </label>
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-emerald-500 transition-colors">
                   <input
-                    type="text"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    placeholder="https://www.udemy.com/course/..."
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:border-emerald-500"
+                    type="file"
+                    onChange={handleFileChange}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.mp3,.mp4,.wav,.m4a,.png,.jpg,.jpeg,.svg,.webp"
+                    className="hidden"
+                    id="file-upload"
                   />
+                  <label htmlFor="file-upload" className="cursor-pointer">
+                    {archivoSeleccionado ? (
+                      <div className="space-y-2">
+                        <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
+                        <p className="font-medium text-gray-800 dark:text-white">{archivoSeleccionado.name}</p>
+                        <p className="text-sm text-gray-500">{(archivoSeleccionado.size / 1024 / 1024).toFixed(2)} MB</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Upload className="w-12 h-12 text-gray-400 mx-auto" />
+                        <p className="text-gray-600 dark:text-gray-300">Arrastra un archivo o haz clic para seleccionar</p>
+                        <p className="text-xs text-gray-500">PDF, Word, Excel, PowerPoint, Audio, Video, Imágenes (máx. 50MB)</p>
+                      </div>
+                    )}
+                  </label>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Soportamos: Udemy, Platzi, Coursera, YouTube, Domestika, LinkedIn Learning
-              </p>
-            </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -565,13 +672,13 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
 
             <button
               onClick={handleAgregar}
-              disabled={!url.trim() || procesando}
-              className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-xl hover:from-emerald-500 hover:to-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              disabled={(!url.trim() && !archivoSeleccionado) || procesando}
+              className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-xl hover:from-emerald-500 hover:to-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
             >
               {procesando ? (
                 <>
                   <RefreshCw className="w-5 h-5 animate-spin" />
-                  Procesando...
+                  Procesando con IA...
                 </>
               ) : (
                 <>
@@ -583,28 +690,28 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
           </div>
         </div>
 
-        {/* Instrucciones */}
-        <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-6 border border-emerald-200 dark:border-emerald-800">
-          <h3 className="font-bold text-emerald-800 dark:text-emerald-200 mb-3 flex items-center gap-2">
-            <Sparkles className="w-5 h-5" />
-            ¿Cómo funciona?
+        {/* Formatos soportados */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+          <h3 className="font-bold text-blue-800 dark:text-blue-200 mb-4 flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            Formatos Soportados
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-            <div className="flex items-start gap-2">
-              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs">1</span>
-              <p className="text-gray-600 dark:text-gray-300">Pega la URL del curso o contenido</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
+              <p className="font-semibold text-gray-800 dark:text-white mb-1">📄 Documentos</p>
+              <p className="text-gray-600 dark:text-gray-400 text-xs">PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx)</p>
             </div>
-            <div className="flex items-start gap-2">
-              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs">2</span>
-              <p className="text-gray-600 dark:text-gray-300">El sistema explora y descarga el contenido</p>
+            <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
+              <p className="font-semibold text-gray-800 dark:text-white mb-1">🎬 Video</p>
+              <p className="text-gray-600 dark:text-gray-400 text-xs">MP4, WebM, YouTube, Vimeo, cursos online</p>
             </div>
-            <div className="flex items-start gap-2">
-              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs">3</span>
-              <p className="text-gray-600 dark:text-gray-300">Claude analiza y extrae conocimiento</p>
+            <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
+              <p className="font-semibold text-gray-800 dark:text-white mb-1">🎧 Audio</p>
+              <p className="text-gray-600 dark:text-gray-400 text-xs">MP3, WAV, M4A, podcasts, grabaciones</p>
             </div>
-            <div className="flex items-start gap-2">
-              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs">4</span>
-              <p className="text-gray-600 dark:text-gray-300">Genera recomendaciones para Litper</p>
+            <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
+              <p className="font-semibold text-gray-800 dark:text-white mb-1">🌐 Web</p>
+              <p className="text-gray-600 dark:text-gray-400 text-xs">Cualquier URL: blogs, artículos, wikis, documentación</p>
             </div>
           </div>
         </div>
