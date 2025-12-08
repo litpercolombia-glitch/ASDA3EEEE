@@ -204,6 +204,8 @@ export interface DistritoConfig {
   agentesMinimos: number;
   agentesMaximos: number;
   tiposAgente: TipoAgente[];
+  caracteristicas?: string[]; // Lista de características del distrito en español
+  tareas?: string[]; // Lista de tareas que realizan los agentes del distrito
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -706,80 +708,164 @@ export interface EstadoPais {
 export const DISTRITOS_CONFIG: DistritoConfig[] = [
   {
     id: DistritoId.TRACKING,
-    nombre: 'Tracking & Monitoring',
-    descripcion: 'Rastreo en tiempo real de guías con validación de estatus',
+    nombre: '🎯 Distrito de Rastreo',
+    descripcion: 'Monitoreo en tiempo real de todas las guías con validación triple de estados',
     icono: '🎯',
     color: 'text-blue-500',
     colorBg: 'bg-blue-500/10',
     agentesMinimos: 10,
     agentesMaximos: 30,
-    tiposAgente: [TipoAgente.RASTREADOR, TipoAgente.ANALISTA]
+    tiposAgente: [TipoAgente.RASTREADOR, TipoAgente.ANALISTA],
+    caracteristicas: [
+      '✓ Rastreo automático cada 30 minutos',
+      '✓ Validación triple: API + GPS + Confirmación cliente',
+      '✓ Alertas instantáneas de retrasos',
+      '✓ Historial completo de movimientos'
+    ],
+    tareas: [
+      'Actualizar estados de guías',
+      'Detectar guías estancadas',
+      'Generar alertas de retraso',
+      'Validar entregas exitosas'
+    ]
   },
   {
     id: DistritoId.ORDERS,
-    nombre: 'Order Processing',
-    descripcion: 'Procesamiento de pedidos desde Chatea Pro, Shopify y web',
+    nombre: '📦 Distrito de Pedidos',
+    descripcion: 'Procesamiento automático de pedidos desde Chatea Pro, Shopify y otras fuentes',
     icono: '📦',
     color: 'text-green-500',
     colorBg: 'bg-green-500/10',
     agentesMinimos: 8,
     agentesMaximos: 25,
-    tiposAgente: [TipoAgente.PROCESADOR, TipoAgente.COORDINADOR]
+    tiposAgente: [TipoAgente.PROCESADOR, TipoAgente.COORDINADOR],
+    caracteristicas: [
+      '✓ Integración con Chatea Pro y Shopify',
+      '✓ Validación automática de direcciones',
+      '✓ Asignación inteligente de transportadora',
+      '✓ Generación automática de guías'
+    ],
+    tareas: [
+      'Capturar pedidos nuevos',
+      'Validar información del cliente',
+      'Asignar transportadora óptima',
+      'Generar guía y notificar'
+    ]
   },
   {
     id: DistritoId.CRISIS,
-    nombre: 'Crisis Management',
-    descripcion: 'Solución de novedades, reintentos y recuperación de paquetes',
+    nombre: '🚨 Distrito de Crisis',
+    descripcion: 'Gestión de novedades, reintentos inteligentes y recuperación de entregas',
     icono: '🚨',
     color: 'text-red-500',
     colorBg: 'bg-red-500/10',
     agentesMinimos: 15,
     agentesMaximos: 40,
-    tiposAgente: [TipoAgente.SOLUCIONADOR, TipoAgente.COMUNICADOR]
+    tiposAgente: [TipoAgente.SOLUCIONADOR, TipoAgente.COMUNICADOR],
+    caracteristicas: [
+      '✓ Hasta 3 reintentos automáticos',
+      '✓ Contacto multicanal: WhatsApp, llamada, SMS',
+      '✓ Escalamiento inteligente por prioridad',
+      '✓ Tasa de resolución del 91%'
+    ],
+    tareas: [
+      'Detectar guías con novedad',
+      'Contactar al cliente automáticamente',
+      'Coordinar reintentos de entrega',
+      'Escalar casos críticos'
+    ]
   },
   {
     id: DistritoId.COMMUNICATIONS,
-    nombre: 'Communication Center',
-    descripcion: 'Chat en vivo, llamadas y atención multicanal',
+    nombre: '📞 Distrito de Comunicaciones',
+    descripcion: 'Centro de atención multicanal: WhatsApp, llamadas, email y chat web',
     icono: '📞',
     color: 'text-purple-500',
     colorBg: 'bg-purple-500/10',
     agentesMinimos: 20,
     agentesMaximos: 50,
-    tiposAgente: [TipoAgente.COMUNICADOR, TipoAgente.PROCESADOR]
+    tiposAgente: [TipoAgente.COMUNICADOR, TipoAgente.PROCESADOR],
+    caracteristicas: [
+      '✓ Respuestas automáticas en WhatsApp',
+      '✓ Llamadas salientes programadas',
+      '✓ Notificaciones proactivas al cliente',
+      '✓ Chat web con IA conversacional'
+    ],
+    tareas: [
+      'Responder consultas de clientes',
+      'Enviar actualizaciones de estado',
+      'Coordinar entregas por teléfono',
+      'Gestionar chat en tiempo real'
+    ]
   },
   {
     id: DistritoId.QUALITY,
-    nombre: 'Quality Assurance',
-    descripcion: 'Supervisión y control de calidad de todos los procesos',
+    nombre: '🔍 Distrito de Calidad',
+    descripcion: 'Supervisión continua y control de calidad de todos los procesos',
     icono: '🔍',
     color: 'text-yellow-500',
     colorBg: 'bg-yellow-500/10',
     agentesMinimos: 5,
     agentesMaximos: 15,
-    tiposAgente: [TipoAgente.CALIDAD, TipoAgente.ANALISTA]
+    tiposAgente: [TipoAgente.CALIDAD, TipoAgente.ANALISTA],
+    caracteristicas: [
+      '✓ Auditoría automática de procesos',
+      '✓ Detección de anomalías en tiempo real',
+      '✓ Métricas de satisfacción del cliente',
+      '✓ Reportes de calidad diarios'
+    ],
+    tareas: [
+      'Auditar entregas completadas',
+      'Evaluar calidad de atención',
+      'Detectar errores en procesos',
+      'Generar reportes de mejora'
+    ]
   },
   {
     id: DistritoId.INTELLIGENCE,
-    nombre: 'Intelligence & Learning',
-    descripcion: 'Aprendizaje automático, detección de patrones y memoria colectiva',
+    nombre: '🧠 Distrito de Inteligencia',
+    descripcion: 'Aprendizaje automático, detección de patrones y memoria colectiva de la IA',
     icono: '🧠',
     color: 'text-indigo-500',
     colorBg: 'bg-indigo-500/10',
     agentesMinimos: 8,
     agentesMaximos: 20,
-    tiposAgente: [TipoAgente.ANALISTA, TipoAgente.ENTRENADOR]
+    tiposAgente: [TipoAgente.ANALISTA, TipoAgente.ENTRENADOR],
+    caracteristicas: [
+      '✓ Detección de patrones de retraso',
+      '✓ Predicción de riesgo con ML',
+      '✓ Memoria colectiva compartida',
+      '✓ Mejora continua de algoritmos'
+    ],
+    tareas: [
+      'Analizar patrones históricos',
+      'Entrenar modelos predictivos',
+      'Compartir aprendizajes entre agentes',
+      'Optimizar estrategias de entrega'
+    ]
   },
   {
     id: DistritoId.AUTOMATION,
-    nombre: 'Automation & Innovation',
-    descripcion: 'Creación de agentes, optimización y mejora continua',
+    nombre: '⚡ Distrito de Automatización',
+    descripcion: 'Creación de nuevos agentes, optimización de procesos y mejora continua',
     icono: '⚡',
     color: 'text-orange-500',
     colorBg: 'bg-orange-500/10',
     agentesMinimos: 5,
     agentesMaximos: 15,
-    tiposAgente: [TipoAgente.CREADOR, TipoAgente.OPTIMIZADOR]
+    tiposAgente: [TipoAgente.CREADOR, TipoAgente.OPTIMIZADOR],
+    caracteristicas: [
+      '✓ Creación dinámica de agentes',
+      '✓ Optimización de flujos de trabajo',
+      '✓ A/B testing de estrategias',
+      '✓ Integración con nuevas APIs'
+    ],
+    tareas: [
+      'Crear agentes especializados',
+      'Optimizar tiempos de proceso',
+      'Probar nuevas estrategias',
+      'Automatizar tareas manuales'
+    ]
   }
 ];
 

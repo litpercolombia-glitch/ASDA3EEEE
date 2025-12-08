@@ -1001,31 +1001,72 @@ const DistritoCard: React.FC<{
       </button>
 
       {expandido && (
-        <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white/50 dark:bg-gray-800/50">
-          <h4 className="font-medium text-gray-800 dark:text-white mb-2 text-sm">Agentes del distrito:</h4>
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {agentes.slice(0, 5).map(agente => (
-              <div key={agente.id} className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <Bot className={`w-4 h-4 ${
-                    agente.estado === EstadoAgente.TRABAJANDO ? 'text-green-500' :
-                    agente.estado === EstadoAgente.ACTIVO ? 'text-blue-500' :
-                    'text-gray-400'
-                  }`} />
-                  <span className="text-gray-800 dark:text-white">{agente.nombre}</span>
-                </div>
-                <span className={`text-xs ${
-                  agente.estado === EstadoAgente.TRABAJANDO ? 'text-green-600' :
-                  agente.estado === EstadoAgente.ACTIVO ? 'text-blue-600' :
-                  'text-gray-500'
-                }`}>
-                  {agente.estado}
-                </span>
+        <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white/50 dark:bg-gray-800/50 space-y-4">
+          {/* Características del distrito */}
+          {config.caracteristicas && config.caracteristicas.length > 0 && (
+            <div>
+              <h4 className="font-semibold text-gray-800 dark:text-white mb-2 text-sm flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-indigo-500" />
+                Características del Distrito
+              </h4>
+              <div className="grid grid-cols-1 gap-1.5">
+                {config.caracteristicas.map((caracteristica, idx) => (
+                  <div key={idx} className="text-xs text-gray-600 dark:text-gray-300 bg-indigo-50 dark:bg-indigo-900/30 rounded px-2 py-1.5">
+                    {caracteristica}
+                  </div>
+                ))}
               </div>
-            ))}
-            {agentes.length > 5 && (
-              <p className="text-xs text-gray-500 text-center">+{agentes.length - 5} más</p>
-            )}
+            </div>
+          )}
+
+          {/* Tareas del distrito */}
+          {config.tareas && config.tareas.length > 0 && (
+            <div>
+              <h4 className="font-semibold text-gray-800 dark:text-white mb-2 text-sm flex items-center gap-2">
+                <Target className="w-4 h-4 text-green-500" />
+                Tareas Principales
+              </h4>
+              <div className="grid grid-cols-2 gap-2">
+                {config.tareas.map((tarea, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
+                    <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0" />
+                    <span>{tarea}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Agentes del distrito */}
+          <div>
+            <h4 className="font-semibold text-gray-800 dark:text-white mb-2 text-sm flex items-center gap-2">
+              <Users className="w-4 h-4 text-blue-500" />
+              Agentes del Distrito ({agentes.length})
+            </h4>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {agentes.slice(0, 5).map(agente => (
+                <div key={agente.id} className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Bot className={`w-4 h-4 ${
+                      agente.estado === EstadoAgente.TRABAJANDO ? 'text-green-500' :
+                      agente.estado === EstadoAgente.ACTIVO ? 'text-blue-500' :
+                      'text-gray-400'
+                    }`} />
+                    <span className="text-gray-800 dark:text-white">{agente.nombre}</span>
+                  </div>
+                  <span className={`text-xs ${
+                    agente.estado === EstadoAgente.TRABAJANDO ? 'text-green-600' :
+                    agente.estado === EstadoAgente.ACTIVO ? 'text-blue-600' :
+                    'text-gray-500'
+                  }`}>
+                    {agente.estado}
+                  </span>
+                </div>
+              ))}
+              {agentes.length > 5 && (
+                <p className="text-xs text-gray-500 text-center">+{agentes.length - 5} más</p>
+              )}
+            </div>
           </div>
         </div>
       )}

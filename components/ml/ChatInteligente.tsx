@@ -46,8 +46,30 @@ interface Mensaje {
   tiempoRespuesta?: number;
 }
 
-// Categorías de preguntas sugeridas
+// Categorías de preguntas sugeridas - Ampliado con búsqueda de guías
 const CATEGORIAS_PREGUNTAS = [
+  {
+    categoria: 'Búsqueda de Guías',
+    icon: Package,
+    color: 'emerald',
+    preguntas: [
+      '¿Cuáles guías están pendientes?',
+      'Dame la lista de guías retrasadas',
+      'Muéstrame las guías en tránsito',
+      '¿Cuáles guías tienen novedad?',
+    ],
+  },
+  {
+    categoria: 'Estados de Guías',
+    icon: Clock,
+    color: 'cyan',
+    preguntas: [
+      '¿Qué guías están en "En oficina"?',
+      'Lista de guías entregadas hoy',
+      '¿Cuáles guías están programadas para mañana?',
+      'Guías que llevan más de 3 días',
+    ],
+  },
   {
     categoria: 'Estadísticas',
     icon: BarChart3,
@@ -100,11 +122,13 @@ const CATEGORIAS_PREGUNTAS = [
   },
 ];
 
-// Preguntas rápidas para mostrar al inicio
+// Preguntas rápidas para mostrar al inicio - Incluye búsqueda de guías
 const PREGUNTAS_RAPIDAS = [
-  { texto: '¿Cuántas guías tengo?', icon: Package, color: 'blue' },
-  { texto: '¿Mejor transportadora?', icon: TrendingUp, color: 'green' },
-  { texto: 'Retrasos de hoy', icon: AlertTriangle, color: 'orange' },
+  { texto: 'Guías pendientes', icon: Package, color: 'emerald' },
+  { texto: 'Guías con novedad', icon: AlertTriangle, color: 'orange' },
+  { texto: 'Estadísticas de hoy', icon: BarChart3, color: 'blue' },
+  { texto: 'Mejor transportadora', icon: TrendingUp, color: 'green' },
+  { texto: 'Guías retrasadas', icon: Clock, color: 'red' },
   { texto: 'Estado del sistema', icon: Brain, color: 'indigo' },
 ];
 
@@ -129,13 +153,17 @@ function formatearHora(fecha: Date): string {
  * Componente principal del Chat Inteligente
  */
 export function ChatInteligente() {
-  // Estado del chat
+  // Estado del chat - Mensaje de bienvenida mejorado
   const [mensajes, setMensajes] = useState<Mensaje[]>([
     {
       id: generarId(),
       tipo: 'ia',
       texto:
-        '¡Hola! Soy tu asistente de logística con IA. Puedo ayudarte a analizar datos de envíos, transportadoras, ciudades y más. Pregúntame lo que necesites sobre tu operación logística.',
+        '👋 ¡Hola! Soy el Asistente IA de LITPER PRO.\n\n' +
+        '🔍 **Búsqueda de guías**: Pregúntame por guías pendientes, retrasadas, en tránsito o con novedad.\n' +
+        '📊 **Estadísticas**: Puedo darte reportes de entregas, transportadoras y ciudades.\n' +
+        '🎯 **Predicciones**: Te ayudo a predecir retrasos y optimizar rutas.\n\n' +
+        'Ejemplo: "Dame la lista de guías pendientes" o "¿Cuáles guías llevan más de 3 días?"',
       timestamp: new Date(),
       sugerencias: PREGUNTAS_RAPIDAS.map((p) => p.texto),
     },
