@@ -116,13 +116,13 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
                   <div className="absolute inset-0 bg-gradient-to-br from-accent-500/0 to-accent-600/0 group-hover:from-accent-500/5 group-hover:to-accent-600/10 rounded-3xl transition-all duration-500" />
 
                   <div className="relative z-10">
-                    {/* Flag with animation - Más grande y llamativa */}
+                    {/* Country Icon - Con animación */}
                     <div className="relative inline-block mb-5">
-                      <div className="text-8xl transform group-hover:scale-125 transition-transform duration-500 drop-shadow-2xl filter group-hover:brightness-110">
-                        {config.flag}
+                      <div className="w-20 h-20 bg-gradient-to-br from-accent-400 to-accent-600 rounded-2xl flex items-center justify-center transform group-hover:scale-110 transition-transform duration-500 shadow-xl group-hover:shadow-accent-500/30">
+                        <Globe className="w-10 h-10 text-white" />
                       </div>
-                      {/* Efecto de brillo detrás de la bandera */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full blur-xl scale-150 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      {/* Efecto de brillo */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl blur-xl scale-150 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                       {/* Destellos */}
                       <div className="absolute -top-2 -right-2 w-3 h-3 bg-yellow-400 rounded-full opacity-0 group-hover:opacity-100 animate-ping" />
                       <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-white rounded-full opacity-0 group-hover:opacity-100 animate-pulse delay-150" />
@@ -176,10 +176,12 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
             <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 p-8 mb-8 animate-fade-in">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-4">
-                  <div className="text-5xl">{selectedConfig.flag}</div>
+                  <div className="w-14 h-14 bg-gradient-to-br from-accent-400 to-accent-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <MapPin className="w-7 h-7 text-white" />
+                  </div>
                   <div>
                     <h2 className="text-3xl font-bold text-white">{selectedConfig.name}</h2>
-                    <p className="text-slate-400">🚚 {selectedConfig.carriers.length} transportadoras disponibles</p>
+                    <p className="text-slate-400">{selectedConfig.carriers.length} transportadoras disponibles</p>
                   </div>
                 </div>
                 <button

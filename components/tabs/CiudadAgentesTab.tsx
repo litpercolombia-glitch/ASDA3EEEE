@@ -257,8 +257,8 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
                       : 'text-white hover:bg-white/10'
                   }`}
                 >
-                  {pais === Pais.COLOMBIA ? '🇨🇴 Colombia' :
-                   pais === Pais.CHILE ? '🇨🇱 Chile' : '🇪🇨 Ecuador'}
+                  {pais === Pais.COLOMBIA ? 'Colombia' :
+                   pais === Pais.CHILE ? 'Chile' : 'Ecuador'}
                 </button>
               ))}
             </div>
@@ -1131,7 +1131,7 @@ const AgenteCard: React.FC<{
         <div className="flex justify-between text-sm">
           <span className="text-gray-500">País:</span>
           <span className="text-gray-800 dark:text-white">
-            {agente.pais === Pais.COLOMBIA ? '🇨🇴' : agente.pais === Pais.CHILE ? '🇨🇱' : '🇪🇨'}
+            {agente.pais === Pais.COLOMBIA ? 'Colombia' : agente.pais === Pais.CHILE ? 'Chile' : 'Ecuador'}
           </span>
         </div>
       </div>

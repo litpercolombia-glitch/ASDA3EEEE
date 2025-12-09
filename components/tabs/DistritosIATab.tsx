@@ -234,8 +234,8 @@ export const DistritosIATab: React.FC<DistritosIATabProps> = ({ selectedCountry 
               <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-xl">
                 <Globe className="w-4 h-4" />
                 <span className="font-medium">
-                  {selectedCountry === 'COLOMBIA' ? '🇨🇴 Colombia' :
-                   selectedCountry === 'CHILE' ? '🇨🇱 Chile' : '🇪🇨 Ecuador'}
+                  {selectedCountry === 'COLOMBIA' ? 'Colombia' :
+                   selectedCountry === 'CHILE' ? 'Chile' : 'Ecuador'}
                 </span>
               </div>
             </div>

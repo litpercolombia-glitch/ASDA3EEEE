@@ -42,7 +42,7 @@ export const COUNTRY_CONFIGS: Record<Country, CountryConfig> = {
   COLOMBIA: {
     code: 'COLOMBIA',
     name: 'Colombia',
-    flag: '🇨🇴',
+    flag: '',
     currency: 'COP',
     currencySymbol: '$',
     phonePrefix: '+57',
@@ -127,7 +127,7 @@ export const COUNTRY_CONFIGS: Record<Country, CountryConfig> = {
   ECUADOR: {
     code: 'ECUADOR',
     name: 'Ecuador',
-    flag: '🇪🇨',
+    flag: '',
     currency: 'USD',
     currencySymbol: '$',
     phonePrefix: '+593',
@@ -199,7 +199,7 @@ export const COUNTRY_CONFIGS: Record<Country, CountryConfig> = {
   CHILE: {
     code: 'CHILE',
     name: 'Chile',
-    flag: '🇨🇱',
+    flag: '',
     currency: 'CLP',
     currencySymbol: '$',
     phonePrefix: '+56',

@@ -753,8 +753,8 @@ ${config.capacidades.map(c => `• ${c}`).join('\n')}
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
-                {paisSeleccionado === 'colombia' ? '🇨🇴' : paisSeleccionado === 'chile' ? '🇨🇱' : '🇪🇨'}
+              <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-medium capitalize">
+                {paisSeleccionado}
               </span>
               <span className="px-3 py-1 bg-green-400/30 rounded-full text-sm font-medium flex items-center gap-1">
                 <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
