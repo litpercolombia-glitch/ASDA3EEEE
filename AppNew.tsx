@@ -85,6 +85,9 @@ import {
   PieChart,
   LineChart,
   Calendar,
+  History,
+  Trash2,
+  RotateCcw,
 } from 'lucide-react';
 
 // ============================================
@@ -322,9 +325,22 @@ const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, cou
 // ============================================
 // MAIN APP COMPONENT
 // ============================================
+// Interface para historial de cargas
+interface LoadHistory {
+  id: string;
+  fecha: string;
+  tipo: string;
+  cantidad: number;
+  datos: Shipment[];
+}
+
+const LOAD_HISTORY_KEY = 'litper_load_history';
+
 const AppNew: React.FC = () => {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [phoneRegistry, setPhoneRegistry] = useState<Record<string, string>>({});
+  const [loadHistory, setLoadHistory] = useState<LoadHistory[]>([]);
+  const [showLoadHistory, setShowLoadHistory] = useState(false);
 
   // Country selection
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
@@ -366,6 +382,17 @@ const AppNew: React.FC = () => {
     if (data.length > 0) {
       setShipments(data);
     }
+
+    // Cargar historial de cargas
+    const savedHistory = localStorage.getItem(LOAD_HISTORY_KEY);
+    if (savedHistory) {
+      try {
+        setLoadHistory(JSON.parse(savedHistory));
+      } catch {
+        setLoadHistory([]);
+      }
+    }
+
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
       setDarkMode(true);
     }
@@ -379,6 +406,43 @@ const AppNew: React.FC = () => {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Guardar historial de cargas
+  useEffect(() => {
+    localStorage.setItem(LOAD_HISTORY_KEY, JSON.stringify(loadHistory.slice(0, 20)));
+  }, [loadHistory]);
+
+  // Agregar nueva carga al historial
+  const addToLoadHistory = (tipo: string, datos: Shipment[]) => {
+    const newEntry: LoadHistory = {
+      id: Date.now().toString(),
+      fecha: new Date().toISOString(),
+      tipo,
+      cantidad: datos.length,
+      datos: datos.slice(0, 500) // Limitar para no saturar localStorage
+    };
+    setLoadHistory(prev => [newEntry, ...prev].slice(0, 20));
+  };
+
+  // Cargar historial específico
+  const loadFromHistory = (entry: LoadHistory) => {
+    setShipments(entry.datos);
+    setShowLoadHistory(false);
+    setNotification(`Cargados ${entry.cantidad} registros del ${new Date(entry.fecha).toLocaleDateString('es-CO')}`);
+  };
+
+  // Borrar entrada del historial
+  const deleteFromHistory = (id: string) => {
+    setLoadHistory(prev => prev.filter(h => h.id !== id));
+  };
+
+  // Limpiar todo el historial
+  const clearAllHistory = () => {
+    if (confirm('¿Borrar todo el historial de cargas?')) {
+      setLoadHistory([]);
+      localStorage.removeItem(LOAD_HISTORY_KEY);
+    }
+  };
 
   useEffect(() => {
     if (darkMode) {
@@ -448,6 +512,7 @@ const AppNew: React.FC = () => {
           const ids = new Set(newShipments.map((s) => s.id));
           return [...prev.filter((s) => !ids.has(s.id)), ...newShipments];
         });
+        addToLoadHistory('Reporte', newShipments);
         setNotification(`✅ ${newShipments.length} guías cargadas exitosamente`);
         setInputText('');
         setActiveInputTab('SUMMARY');
@@ -458,6 +523,7 @@ const AppNew: React.FC = () => {
       const { shipments: newSummaryShipments } = parseSummaryInput(inputText, phoneRegistry, shipments, forcedCarrier);
       if (newSummaryShipments.length > 0) {
         setShipments((prev) => [...prev, ...newSummaryShipments]);
+        addToLoadHistory('Resumen', newSummaryShipments);
         setNotification(`✅ ${newSummaryShipments.length} guías nuevas añadidas`);
         setInputText('');
         setShowDataInput(false);
@@ -479,6 +545,7 @@ const AppNew: React.FC = () => {
         const ids = new Set(result.shipments.map((s) => s.id));
         return [...prev.filter((s) => !ids.has(s.id)), ...result.shipments];
       });
+      addToLoadHistory(`Excel: ${file.name}`, result.shipments);
       setNotification(`✅ ${result.shipments.length} guías cargadas desde Excel`);
       setShowDataInput(false);
     } else if (result.error) {
@@ -601,6 +668,24 @@ const AppNew: React.FC = () => {
                 >
                   <Upload className="w-4 h-4" />
                   <span className="hidden lg:inline">{showDataInput ? 'Cerrar' : 'Cargar'}</span>
+                </button>
+
+                {/* Load History Button */}
+                <button
+                  onClick={() => setShowLoadHistory(!showLoadHistory)}
+                  className={`relative flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all ${
+                    showLoadHistory
+                      ? 'bg-indigo-500 text-white'
+                      : 'bg-white/10 text-white border border-white/20 hover:bg-white/15'
+                  }`}
+                  title="Historial de cargas"
+                >
+                  <History className="w-4 h-4" />
+                  {loadHistory.length > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold bg-purple-500 text-white rounded-full">
+                      {loadHistory.length}
+                    </span>
+                  )}
                 </button>
 
                 {/* Session Controls */}
@@ -881,6 +966,107 @@ const AppNew: React.FC = () => {
                 </div>
               </div>
             )}
+          </section>
+        )}
+
+        {/* Load History Panel */}
+        {showLoadHistory && (
+          <section className="mb-8 bg-white dark:bg-navy-900 rounded-2xl shadow-xl border border-slate-200 dark:border-navy-800 overflow-hidden animate-slide-up">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-navy-800 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+                  <History className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-lg text-slate-800 dark:text-white">📜 Historial de Cargas</h2>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Últimas {loadHistory.length} cargas de datos</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {loadHistory.length > 0 && (
+                  <button
+                    onClick={clearAllHistory}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Borrar Todo
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowLoadHistory(false)}
+                  className="p-2 hover:bg-slate-200 dark:hover:bg-navy-800 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {loadHistory.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-20 h-20 mx-auto mb-4 bg-slate-100 dark:bg-navy-800 rounded-full flex items-center justify-center">
+                    <History className="w-10 h-10 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-600 dark:text-slate-300 mb-2">Sin historial</h3>
+                  <p className="text-slate-400 dark:text-slate-500">Las cargas que realices aparecerán aquí</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                  {loadHistory.map((entry) => {
+                    const fecha = new Date(entry.fecha);
+                    const fechaStr = fecha.toLocaleDateString('es-CO', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    });
+
+                    return (
+                      <div
+                        key={entry.id}
+                        className="flex items-center justify-between p-4 bg-slate-50 dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all group"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50 rounded-xl">
+                            {entry.tipo.includes('Excel') ? (
+                              <FileSpreadsheet className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                            ) : entry.tipo.includes('Reporte') ? (
+                              <FileText className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                            ) : (
+                              <LayoutList className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-slate-800 dark:text-white">{entry.tipo}</h4>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              📦 {entry.cantidad} guías • 📅 {fechaStr}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => loadFromHistory(entry)}
+                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg text-sm font-medium hover:from-indigo-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                            Restaurar
+                          </button>
+                          <button
+                            onClick={() => deleteFromHistory(entry.id)}
+                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                            title="Borrar esta entrada"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </section>
         )}
 
