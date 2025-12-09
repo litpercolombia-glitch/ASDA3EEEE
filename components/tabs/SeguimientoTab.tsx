@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import {
   Package,
   Search,
@@ -31,7 +31,15 @@ import {
   FileWarning,
   ArrowRight,
   HelpCircle,
+  Siren,
+  Bell,
+  Trash2,
+  Save,
+  History,
+  FileSpreadsheet,
+  X,
 } from 'lucide-react';
+import { AlertDashboard } from '../AlertDashboard';
 import { HelpTooltip } from '../HelpSystem/HelpTooltip';
 import { seguimientoHelp } from '../HelpSystem/helpContent';
 import { Shipment, ShipmentStatus, CarrierName } from '../../types';
@@ -737,11 +745,81 @@ const UntrackedGuidesTable: React.FC<{
 // =====================================
 // COMPONENTE PRINCIPAL
 // =====================================
+// Interface para historial de cargas
+interface CargaHistorial {
+  id: string;
+  fecha: Date;
+  nombreArchivo: string;
+  cantidadGuias: number;
+  guias: Shipment[];
+}
+
+// Constante para storage key
+const STORAGE_KEY_HISTORIAL = 'litper_seguimiento_historial';
+
 export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRefresh }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [filterTransportadora, setFilterTransportadora] = useState<string | null>(null);
   const [expandedGuia, setExpandedGuia] = useState<string | null>(null);
+
+  // Estados para Tablero de Alertas
+  const [showAlertDashboard, setShowAlertDashboard] = useState(false);
+
+  // Estados para Historial de Cargas
+  const [historialCargas, setHistorialCargas] = useState<CargaHistorial[]>([]);
+  const [showHistorial, setShowHistorial] = useState(false);
+
+  // Cargar historial desde localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_HISTORIAL);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setHistorialCargas(parsed.map((item: any) => ({
+          ...item,
+          fecha: new Date(item.fecha),
+        })));
+      }
+    } catch (e) {
+      console.error('Error cargando historial:', e);
+    }
+  }, []);
+
+  // Guardar carga actual en historial
+  const guardarEnHistorial = useCallback(() => {
+    if (shipments.length === 0) return;
+
+    const nuevaCarga: CargaHistorial = {
+      id: `carga_${Date.now()}`,
+      fecha: new Date(),
+      nombreArchivo: `Carga ${new Date().toLocaleDateString('es-CO')}`,
+      cantidadGuias: shipments.length,
+      guias: shipments,
+    };
+
+    const nuevoHistorial = [nuevaCarga, ...historialCargas].slice(0, 10); // Mantener solo las últimas 10
+    setHistorialCargas(nuevoHistorial);
+
+    // Guardar en localStorage
+    localStorage.setItem(STORAGE_KEY_HISTORIAL, JSON.stringify(nuevoHistorial));
+  }, [shipments, historialCargas]);
+
+  // Eliminar carga del historial
+  const eliminarDelHistorial = useCallback((id: string) => {
+    const nuevoHistorial = historialCargas.filter(c => c.id !== id);
+    setHistorialCargas(nuevoHistorial);
+    localStorage.setItem(STORAGE_KEY_HISTORIAL, JSON.stringify(nuevoHistorial));
+  }, [historialCargas]);
+
+  // Contar guías con alertas
+  const guiasConAlertas = useMemo(() => {
+    return shipments.filter(s =>
+      s.riskAnalysis?.level === 'URGENTE' ||
+      s.riskAnalysis?.level === 'ATENCIÓN' ||
+      s.status === ShipmentStatus.ISSUE
+    ).length;
+  }, [shipments]);
 
   // Procesar TODAS las guías
   const guiasProcesadas: GuiaProcesada[] = useMemo(() => {
@@ -883,6 +961,58 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Botón Tablero de Alertas */}
+          <button
+            onClick={() => setShowAlertDashboard(!showAlertDashboard)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              showAlertDashboard
+                ? 'bg-red-500 text-white'
+                : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50'
+            }`}
+          >
+            <Siren className="w-4 h-4" />
+            Alertas
+            {guiasConAlertas > 0 && (
+              <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                showAlertDashboard ? 'bg-white/20 text-white' : 'bg-red-500 text-white'
+              }`}>
+                {guiasConAlertas}
+              </span>
+            )}
+          </button>
+
+          {/* Botón Historial */}
+          <button
+            onClick={() => setShowHistorial(!showHistorial)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              showHistorial
+                ? 'bg-purple-500 text-white'
+                : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50'
+            }`}
+          >
+            <History className="w-4 h-4" />
+            Historial
+            {historialCargas.length > 0 && (
+              <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                showHistorial ? 'bg-white/20 text-white' : 'bg-purple-500 text-white'
+              }`}>
+                {historialCargas.length}
+              </span>
+            )}
+          </button>
+
+          {/* Botón Guardar Carga */}
+          {shipments.length > 0 && (
+            <button
+              onClick={guardarEnHistorial}
+              className="flex items-center gap-2 px-3 py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors text-sm font-medium"
+              title="Guardar carga actual en historial"
+            >
+              <Save className="w-4 h-4" />
+              Guardar
+            </button>
+          )}
+
           {onRefresh && (
             <HelpTooltip
               title="Actualizar Tracking"
@@ -901,6 +1031,97 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
           )}
         </div>
       </div>
+
+      {/* Panel del Tablero de Alertas */}
+      {showAlertDashboard && (
+        <div className="bg-white dark:bg-navy-900 rounded-xl border border-red-200 dark:border-red-800 shadow-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-red-500 to-orange-500 px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-white">
+              <Siren className="w-5 h-5" />
+              <h3 className="font-bold">Tablero de Alertas - Guías que requieren gestión</h3>
+            </div>
+            <button
+              onClick={() => setShowAlertDashboard(false)}
+              className="p-1 hover:bg-white/20 rounded transition-colors"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+          </div>
+          <AlertDashboard shipments={shipments} />
+        </div>
+      )}
+
+      {/* Panel de Historial de Cargas */}
+      {showHistorial && (
+        <div className="bg-white dark:bg-navy-900 rounded-xl border border-purple-200 dark:border-purple-800 shadow-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-purple-500 to-indigo-500 px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-white">
+              <History className="w-5 h-5" />
+              <h3 className="font-bold">Historial de Cargas</h3>
+            </div>
+            <button
+              onClick={() => setShowHistorial(false)}
+              className="p-1 hover:bg-white/20 rounded transition-colors"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+          </div>
+
+          <div className="p-4">
+            {historialCargas.length === 0 ? (
+              <div className="text-center py-8">
+                <FileSpreadsheet className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500 dark:text-slate-400">
+                  No hay cargas guardadas. Haz clic en "Guardar" para guardar la carga actual.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {historialCargas.map((carga) => (
+                  <div
+                    key={carga.id}
+                    className="bg-slate-50 dark:bg-navy-800 rounded-lg p-4 border border-slate-200 dark:border-navy-700"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                          <FileSpreadsheet className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-800 dark:text-white">
+                            {carga.nombreArchivo}
+                          </h4>
+                          <p className="text-xs text-slate-500">
+                            {carga.fecha.toLocaleDateString('es-CO', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full text-xs font-bold">
+                          {carga.cantidadGuias} guías
+                        </span>
+                        <button
+                          onClick={() => eliminarDelHistorial(carga.id)}
+                          className="p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Tarjetas de Resumen Dinámico */}
       <SummaryCards
