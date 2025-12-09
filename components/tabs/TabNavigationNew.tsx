@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, Activity, Target, FileBarChart, Bot, Brain, Zap, TrendingUp, Trophy, Building2, GraduationCap } from 'lucide-react';
+import { Package, Activity, Target, FileBarChart, Bot, Brain, Zap, TrendingUp, Trophy, Building2, GraduationCap, Plug } from 'lucide-react';
 import { MainTabNew } from '../../types/logistics';
 
 interface TabNavigationNewProps {
@@ -18,6 +18,7 @@ interface TabNavigationNewProps {
     'procesos-litper'?: number;
     'ciudad-agentes'?: number;
     'aprendizaje-ia'?: number;
+    'mcp-connections'?: number;
   };
 }
 
@@ -131,6 +132,15 @@ const tabs: TabConfig[] = [
     shortLabel: 'Aprende',
     color: 'text-emerald-500',
     activeColor: 'bg-gradient-to-r from-emerald-600 to-teal-600',
+    isNew: true,
+  },
+  {
+    id: 'mcp-connections',
+    icon: Plug,
+    label: 'Conexiones MCP',
+    shortLabel: 'MCP',
+    color: 'text-orange-500',
+    activeColor: 'bg-gradient-to-r from-orange-500 to-amber-500',
     isNew: true,
   },
 ];
