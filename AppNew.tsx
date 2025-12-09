@@ -22,8 +22,6 @@ import {
   SeguimientoTab,
   SemaforoTabNew,
   PrediccionesTab,
-  ReporteIATab,
-  AsistenteTab,
   MLSystemTab,
   FlashTab,
   DemandTab,
@@ -31,7 +29,7 @@ import {
   ProcesosLitperTab,
 } from './components/tabs';
 import { CiudadAgentesTab } from './components/tabs/CiudadAgentesTab';
-import { AprendizajeIATab } from './components/tabs/AprendizajeIATab';
+import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
 import CountrySelector from './components/CountrySelector';
 import { detectarGuiasRetrasadas } from './utils/patternDetection';
 import {
@@ -669,12 +667,10 @@ const AppNew: React.FC = () => {
                 { id: 'gamificacion', icon: Trophy, label: '🏆 Logros' },
                 { id: 'semaforo', icon: Activity, label: '🚦 Semáforo' },
                 { id: 'predicciones', icon: Target, label: '🎯 Análisis' },
-                { id: 'reporte', icon: BarChart3, label: '📊 Reporte IA' },
-                { id: 'asistente', icon: Bot, label: '🤖 Asistente' },
+                { id: 'asistente', icon: Bot, label: '🤖 Asistente IA', isNew: true },
                 { id: 'ml', icon: Brain, label: '🧠 Sistema ML' },
                 { id: 'procesos-litper', icon: Layers, label: '🏢 Procesos' },
                 { id: 'ciudad-agentes', icon: Globe, label: '🌆 Ciudad IA', isNew: true },
-                { id: 'aprendizaje-ia', icon: Brain, label: '🎓 Aprendizaje', isNew: true },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -902,12 +898,10 @@ const AppNew: React.FC = () => {
           {currentTab === 'gamificacion' && <GamificationTab />}
           {currentTab === 'semaforo' && <SemaforoTabNew onDataLoaded={handleSemaforoDataLoaded} />}
           {currentTab === 'predicciones' && <PrediccionesTab shipments={shipments} />}
-          {currentTab === 'reporte' && <ReporteIATab shipments={shipments} />}
-          {currentTab === 'asistente' && <AsistenteTab shipments={shipments} />}
+          {currentTab === 'asistente' && <AsistenteIAUnificado shipments={shipments} />}
           {currentTab === 'ml' && <MLSystemTab />}
           {currentTab === 'procesos-litper' && <ProcesosLitperTab selectedCountry={selectedCountry} />}
           {currentTab === 'ciudad-agentes' && <CiudadAgentesTab selectedCountry={selectedCountry} />}
-          {currentTab === 'aprendizaje-ia' && <AprendizajeIATab />}
         </div>
       </main>
 
@@ -961,8 +955,7 @@ const AppNew: React.FC = () => {
               <ul className="space-y-2 text-sm text-slate-400">
                 <li><button onClick={() => setCurrentTab('semaforo')} className="hover:text-accent-400 transition-colors">🚦 Semáforo</button></li>
                 <li><button onClick={() => setCurrentTab('predicciones')} className="hover:text-accent-400 transition-colors">🎯 Análisis</button></li>
-                <li><button onClick={() => setCurrentTab('reporte')} className="hover:text-accent-400 transition-colors">📊 Reporte IA</button></li>
-                <li><button onClick={() => setCurrentTab('asistente')} className="hover:text-accent-400 transition-colors">🤖 Asistente</button></li>
+                <li><button onClick={() => setCurrentTab('asistente')} className="hover:text-accent-400 transition-colors">🤖 Asistente IA</button></li>
               </ul>
             </div>
 
