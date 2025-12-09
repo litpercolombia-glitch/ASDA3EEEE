@@ -28,6 +28,7 @@ import {
   ProcesosLitperTab,
   InfoLogisticaTab,
   ModoAdminTab,
+  ConexionesTab,
 } from './components/tabs';
 import { CiudadAgentesTab } from './components/tabs/CiudadAgentesTab';
 import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
@@ -85,6 +86,7 @@ import {
   PieChart,
   LineChart,
   Calendar,
+  Plug,
 } from 'lucide-react';
 
 // ============================================
@@ -410,6 +412,7 @@ const AppNew: React.FC = () => {
     seguimiento: detectarGuiasRetrasadas(shipments).filter((g) => g.nivelAlerta === 'CRITICO').length,
     'info-logistica': 0,
     'modo-admin': 0,
+    conexiones: 0,
     demanda: 0,
     gamificacion: userProfile.activeChallenges.filter(c => !c.completed).length,
     semaforo: 0,
@@ -666,6 +669,7 @@ const AppNew: React.FC = () => {
               {[
                 { id: 'seguimiento', icon: Package, label: '📦 Seguimiento' },
                 { id: 'info-logistica', icon: Truck, label: '📋 Info Logística', isNew: true },
+                { id: 'conexiones', icon: Plug, label: '🔌 Conexiones', isNew: true },
                 { id: 'demanda', icon: TrendingUp, label: '📈 Predicción', isNew: true },
                 { id: 'gamificacion', icon: Trophy, label: '🏆 Logros' },
                 { id: 'semaforo', icon: Activity, label: '🚦 Semáforo' },
@@ -898,6 +902,7 @@ const AppNew: React.FC = () => {
 
           {currentTab === 'seguimiento' && <SeguimientoTab shipments={shipments} />}
           {currentTab === 'info-logistica' && <InfoLogisticaTab shipments={shipments} />}
+          {currentTab === 'conexiones' && <ConexionesTab />}
           {currentTab === 'modo-admin' && <ModoAdminTab />}
           {currentTab === 'demanda' && <DemandTab country={selectedCountry} />}
           {currentTab === 'gamificacion' && <GamificationTab />}

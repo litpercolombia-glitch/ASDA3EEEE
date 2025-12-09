@@ -13,3 +13,4 @@ export { AprendizajeIATab } from './AprendizajeIATab';
 export { DistritosIATab } from './DistritosIATab';
 export { InfoLogisticaTab } from './InfoLogisticaTab';
 export { ModoAdminTab } from './ModoAdminTab';
+export { ConexionesTab } from './ConexionesTab';
