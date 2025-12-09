@@ -735,6 +735,215 @@ const UntrackedGuidesTable: React.FC<{
 };
 
 // =====================================
+// TABLERO DE ALERTAS - Dashboard IA
+// =====================================
+interface AlertDashboardProps {
+  guias: GuiaProcesada[];
+  onClose: () => void;
+}
+
+const AlertDashboard: React.FC<AlertDashboardProps> = ({ guias, onClose }) => {
+  // Clasificar guías por nivel de alerta
+  const alertas = useMemo(() => {
+    const criticas: GuiaProcesada[] = [];
+    const altas: GuiaProcesada[] = [];
+    const medias: GuiaProcesada[] = [];
+
+    guias.forEach(g => {
+      if (g.estadoGeneral === 'Entregado') return;
+
+      if (g.dias >= 5 || g.estadoGeneral === 'Novedad') {
+        criticas.push(g);
+      } else if (g.dias >= 3) {
+        altas.push(g);
+      } else if (g.dias >= 2 && !g.tieneTracking) {
+        medias.push(g);
+      }
+    });
+
+    return { criticas, altas, medias };
+  }, [guias]);
+
+  const totalAlertas = alertas.criticas.length + alertas.altas.length + alertas.medias.length;
+
+  const getRecomendacionIA = (guia: GuiaProcesada): string => {
+    if (guia.estadoGeneral === 'Novedad') {
+      return 'Contactar cliente inmediatamente para coordinar solución. Considerar reprogramar entrega o cambiar dirección.';
+    }
+    if (guia.dias >= 5) {
+      return 'Escalar a transportadora urgente. Solicitar rastreo manual y posible compensación.';
+    }
+    if (guia.dias >= 3) {
+      return 'Llamar a transportadora para verificar estado. Contactar cliente para confirmar disponibilidad.';
+    }
+    if (!guia.tieneTracking) {
+      return 'Verificar que la guía fue generada correctamente. Contactar transportadora para confirmar recogida.';
+    }
+    return 'Monitorear estado en las próximas 24 horas.';
+  };
+
+  return (
+    <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-2xl border-2 border-red-200 dark:border-red-800 p-6 mb-6 animate-in slide-in-from-top">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl shadow-lg">
+            <AlertTriangle className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-bold text-slate-800 dark:text-white">Tablero de Alertas</h3>
+            <p className="text-sm text-slate-500">{totalAlertas} guías requieren atención</p>
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+        >
+          <XCircle className="w-5 h-5 text-slate-500" />
+        </button>
+      </div>
+
+      {/* Resumen */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="bg-red-100 dark:bg-red-900/30 rounded-xl p-4 border border-red-200 dark:border-red-800">
+          <p className="text-xs text-red-600 dark:text-red-400 font-medium mb-1">CRÍTICAS</p>
+          <p className="text-3xl font-bold text-red-700 dark:text-red-300">{alertas.criticas.length}</p>
+          <p className="text-xs text-red-500">5+ días o novedad</p>
+        </div>
+        <div className="bg-orange-100 dark:bg-orange-900/30 rounded-xl p-4 border border-orange-200 dark:border-orange-800">
+          <p className="text-xs text-orange-600 dark:text-orange-400 font-medium mb-1">ALTAS</p>
+          <p className="text-3xl font-bold text-orange-700 dark:text-orange-300">{alertas.altas.length}</p>
+          <p className="text-xs text-orange-500">3-4 días sin movimiento</p>
+        </div>
+        <div className="bg-yellow-100 dark:bg-yellow-900/30 rounded-xl p-4 border border-yellow-200 dark:border-yellow-800">
+          <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium mb-1">MEDIAS</p>
+          <p className="text-3xl font-bold text-yellow-700 dark:text-yellow-300">{alertas.medias.length}</p>
+          <p className="text-xs text-yellow-500">Sin tracking</p>
+        </div>
+      </div>
+
+      {/* Lista de alertas críticas */}
+      {alertas.criticas.length > 0 && (
+        <div className="mb-6">
+          <h4 className="font-bold text-red-700 dark:text-red-400 mb-3 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" />
+            Alertas Críticas - Acción Inmediata
+          </h4>
+          <div className="space-y-3">
+            {alertas.criticas.slice(0, 5).map((g, idx) => (
+              <div key={g.guia.id} className="bg-white dark:bg-navy-900 rounded-xl p-4 border border-red-200 dark:border-red-800 shadow-sm">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="font-mono font-bold text-slate-800 dark:text-white">{g.guia.id}</span>
+                      <StatusBadge status={g.estadoGeneral} />
+                      <span className="text-xs text-red-600 font-medium">{g.dias}d</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-slate-500 mb-2">
+                      <span className="flex items-center gap-1">
+                        <Truck className="w-3 h-3" />
+                        {g.transportadora}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {g.destino}
+                      </span>
+                      {g.celular && (
+                        <span className="flex items-center gap-1">
+                          <Phone className="w-3 h-3" />
+                          {g.celular}
+                        </span>
+                      )}
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 border border-red-100 dark:border-red-900">
+                      <p className="text-sm text-red-700 dark:text-red-300 flex items-start gap-2">
+                        <Bot className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                        <span><strong>Recomendación IA:</strong> {getRecomendacionIA(g)}</span>
+                      </p>
+                    </div>
+                  </div>
+                  {g.celular && (
+                    <button
+                      onClick={() => {
+                        const msg = encodeURIComponent(`Hola! Le escribo de Litper sobre su pedido ${g.guia.id}. Necesitamos coordinar la entrega urgente.`);
+                        window.open(`https://wa.me/57${g.celular}?text=${msg}`, '_blank');
+                      }}
+                      className="ml-3 p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+            {alertas.criticas.length > 5 && (
+              <p className="text-center text-sm text-red-500">+{alertas.criticas.length - 5} alertas críticas más</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Lista de alertas altas */}
+      {alertas.altas.length > 0 && (
+        <div className="mb-6">
+          <h4 className="font-bold text-orange-700 dark:text-orange-400 mb-3 flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            Alertas Altas - Seguimiento Prioritario
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {alertas.altas.slice(0, 4).map((g, idx) => (
+              <div key={g.guia.id} className="bg-white dark:bg-navy-900 rounded-lg p-3 border border-orange-200 dark:border-orange-800">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-mono font-bold text-sm text-slate-800 dark:text-white">{g.guia.id}</span>
+                  <span className="text-xs text-orange-600 font-medium">{g.dias}d</span>
+                </div>
+                <div className="text-xs text-slate-500">
+                  {g.transportadora} • {g.destino}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Resumen de acciones */}
+      <div className="bg-slate-100 dark:bg-navy-800 rounded-xl p-4">
+        <h4 className="font-bold text-slate-700 dark:text-white mb-2 flex items-center gap-2">
+          <Bot className="w-4 h-4 text-purple-500" />
+          Resumen de Acciones Recomendadas
+        </h4>
+        <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-1">
+          {alertas.criticas.length > 0 && (
+            <li className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-red-500 rounded-full" />
+              Contactar {alertas.criticas.length} clientes con guías críticas
+            </li>
+          )}
+          {alertas.altas.length > 0 && (
+            <li className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-orange-500 rounded-full" />
+              Verificar estado de {alertas.altas.length} guías con transportadoras
+            </li>
+          )}
+          {alertas.medias.length > 0 && (
+            <li className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-yellow-500 rounded-full" />
+              Confirmar recogida de {alertas.medias.length} guías sin tracking
+            </li>
+          )}
+          {totalAlertas === 0 && (
+            <li className="flex items-center gap-2 text-green-600">
+              <CheckCircle2 className="w-4 h-4" />
+              Todas las guías están al día. Excelente gestión!
+            </li>
+          )}
+        </ul>
+      </div>
+    </div>
+  );
+};
+
+// =====================================
 // COMPONENTE PRINCIPAL
 // =====================================
 export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRefresh }) => {
@@ -742,6 +951,7 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [filterTransportadora, setFilterTransportadora] = useState<string | null>(null);
   const [expandedGuia, setExpandedGuia] = useState<string | null>(null);
+  const [showAlertDashboard, setShowAlertDashboard] = useState(false);
 
   // Procesar TODAS las guías
   const guiasProcesadas: GuiaProcesada[] = useMemo(() => {
@@ -883,6 +1093,23 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Botón Tablero de Alertas */}
+          <button
+            onClick={() => setShowAlertDashboard(!showAlertDashboard)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              showAlertDashboard
+                ? 'bg-red-500 text-white shadow-lg'
+                : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 hover:bg-red-100'
+            }`}
+          >
+            <AlertTriangle className="w-4 h-4" />
+            Tablero de Alertas
+            {guiasProcesadas.filter(g => g.dias >= 3 && g.estadoGeneral !== 'Entregado').length > 0 && (
+              <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-bold">
+                {guiasProcesadas.filter(g => g.dias >= 3 && g.estadoGeneral !== 'Entregado').length}
+              </span>
+            )}
+          </button>
           {onRefresh && (
             <HelpTooltip
               title="Actualizar Tracking"
@@ -901,6 +1128,14 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
           )}
         </div>
       </div>
+
+      {/* Tablero de Alertas */}
+      {showAlertDashboard && (
+        <AlertDashboard
+          guias={guiasProcesadas}
+          onClose={() => setShowAlertDashboard(false)}
+        />
+      )}
 
       {/* Tarjetas de Resumen Dinámico */}
       <SummaryCards
