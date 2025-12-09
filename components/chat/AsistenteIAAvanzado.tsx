@@ -1,9 +1,9 @@
 /**
- * 🤖 AsistenteTab - Pestaña de Asistente IA LITPER PRO
- * Versión mejorada con todas las capacidades de IA, ML y procesos LITPER
+ * 🤖 AsistenteIAAvanzado - Chat Inteligente con todas las capacidades
+ * Integra análisis, reportes, ML y gestión de procesos LITPER
  */
 
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Bot,
   Send,
@@ -14,7 +14,6 @@ import {
   AlertTriangle,
   TrendingUp,
   Clock,
-  User,
   ChevronRight,
   Loader2,
   FileBarChart,
@@ -46,28 +45,38 @@ import {
   Copy,
   ThumbsUp,
   ThumbsDown,
+  Bookmark,
+  Share2,
   ChevronDown,
   ChevronUp,
-  Layers,
+  X,
+  Plus,
+  Mic,
+  Image,
+  Paperclip,
   Calendar,
+  DollarSign,
   Star,
   Award,
+  Lightbulb,
+  AlertCircle,
+  Info,
 } from 'lucide-react';
-import { Shipment, ShipmentStatus, CarrierName } from '../../types';
-import { MensajeAsistente, STORAGE_KEYS } from '../../types/logistics';
-import { detectarGuiasRetrasadas, detectarPatrones } from '../../utils/patternDetection';
-import { saveTabData, loadTabData } from '../../utils/tabStorage';
 import { v4 as uuidv4 } from 'uuid';
+import { Shipment } from '../../types';
+import { mlApi } from '../../lib/api-config';
+import { askAssistant, analyzeDelayPatterns } from '../../services/claudeService';
 
-interface AsistenteTabProps {
-  shipments: Shipment[];
-}
-
-// Tipos extendidos
-interface MensajeChat extends MensajeAsistente {
+// Tipos
+interface MensajeChat {
+  id: string;
+  rol: 'user' | 'assistant' | 'system';
+  contenido: string;
+  timestamp: Date;
   tipo?: 'texto' | 'tabla' | 'lista' | 'accion' | 'guias' | 'estadisticas' | 'reporte';
   datos?: any;
   acciones?: AccionRapida[];
+  expandido?: boolean;
   confianza?: number;
 }
 
@@ -99,6 +108,11 @@ interface CategoriaConsulta {
   ejemplos: string[];
 }
 
+interface AsistenteIAAvanzadoProps {
+  shipments?: Shipment[];
+  onNavigate?: (tab: string) => void;
+}
+
 // Categorías de consulta
 const CATEGORIAS_CONSULTA: CategoriaConsulta[] = [
   {
@@ -106,7 +120,7 @@ const CATEGORIAS_CONSULTA: CategoriaConsulta[] = [
     nombre: 'Guías',
     icono: '📦',
     color: 'from-blue-500 to-cyan-600',
-    ejemplos: ['Lista todas las guías', 'Guías en reparto', 'Guías retrasadas', 'Guías en oficina'],
+    ejemplos: ['Lista todas las guías', 'Guías en reparto', 'Guías retrasadas'],
   },
   {
     id: 'novedades',
@@ -120,14 +134,14 @@ const CATEGORIAS_CONSULTA: CategoriaConsulta[] = [
     nombre: 'Estadísticas',
     icono: '📊',
     color: 'from-green-500 to-emerald-600',
-    ejemplos: ['Resumen del día', 'Métricas de entrega', 'Tasa de éxito'],
+    ejemplos: ['Resumen del día', 'Métricas de entrega', 'Comparar transportadoras'],
   },
   {
     id: 'transportadoras',
     nombre: 'Transportadoras',
     icono: '🚚',
     color: 'from-purple-500 to-pink-600',
-    ejemplos: ['Mejor transportadora', 'Ranking de rendimiento', 'Comparar transportadoras'],
+    ejemplos: ['Mejor transportadora', 'Rendimiento TCC', 'Comparar tiempos'],
   },
   {
     id: 'ml',
@@ -141,8 +155,20 @@ const CATEGORIAS_CONSULTA: CategoriaConsulta[] = [
     nombre: 'Procesos',
     icono: '📋',
     color: 'from-amber-500 to-orange-600',
-    ejemplos: ['Proceso de novedades', 'Cómo crear pedido', 'Flujo de seguimiento', 'Ver plantillas'],
+    ejemplos: ['Proceso de novedades', 'Cómo crear pedido', 'Flujo de seguimiento'],
   },
+];
+
+// Datos de ejemplo
+const GUIAS_EJEMPLO: GuiaInfo[] = [
+  { id: '8001234567890', estado: 'EN REPARTO', transportadora: 'Interrapidísimo', ciudad: 'Bogotá', telefono: '3001234567', diasTransito: 2, nivelRiesgo: 'BAJO', ultimaActualizacion: '2024-12-08 10:30' },
+  { id: '8009876543210', estado: 'EN OFICINA', transportadora: 'Coordinadora', ciudad: 'Medellín', telefono: '3109876543', diasTransito: 4, nivelRiesgo: 'ALTO', ultimaActualizacion: '2024-12-06 15:45' },
+  { id: '9001122334455', estado: 'NOVEDAD', transportadora: 'Envía', ciudad: 'Cali', telefono: '3201122334', diasTransito: 3, nivelRiesgo: 'MEDIO', ultimaActualizacion: '2024-12-07 09:15' },
+  { id: '7005566778899', estado: 'EN TRÁNSITO', transportadora: 'Servientrega', ciudad: 'Barranquilla', telefono: '3155566778', diasTransito: 1, nivelRiesgo: 'BAJO', ultimaActualizacion: '2024-12-08 08:00' },
+  { id: '8002233445566', estado: 'DEVUELTO', transportadora: 'TCC', ciudad: 'Cartagena', telefono: '3182233445', diasTransito: 7, nivelRiesgo: 'CRITICO', ultimaActualizacion: '2024-12-01 14:20' },
+  { id: '9003344556677', estado: 'ENTREGADO', transportadora: 'Coordinadora', ciudad: 'Bogotá', telefono: '3193344556', diasTransito: 2, nivelRiesgo: 'BAJO', ultimaActualizacion: '2024-12-07 16:00' },
+  { id: '8004455667788', estado: 'EN REPARTO', transportadora: 'Interrapidísimo', ciudad: 'Cali', telefono: '3204455667', diasTransito: 3, nivelRiesgo: 'MEDIO', ultimaActualizacion: '2024-12-08 09:45' },
+  { id: '7006677889900', estado: 'NOVEDAD', transportadora: 'TCC', ciudad: 'Medellín', telefono: '3156677889', diasTransito: 5, nivelRiesgo: 'ALTO', ultimaActualizacion: '2024-12-05 11:30' },
 ];
 
 // Estadísticas de transportadoras
@@ -154,7 +180,10 @@ const TRANSPORTADORAS_STATS = [
   { nombre: 'TCC', guias: 1845, entregadas: 1567, retrasos: 189, tasaExito: 85.0, tiempoProm: 4.2 },
 ];
 
-export const AsistenteTab: React.FC<AsistenteTabProps> = ({ shipments }) => {
+export const AsistenteIAAvanzado: React.FC<AsistenteIAAvanzadoProps> = ({
+  shipments = [],
+  onNavigate,
+}) => {
   const [mensajes, setMensajes] = useState<MensajeChat[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -164,30 +193,7 @@ export const AsistenteTab: React.FC<AsistenteTabProps> = ({ shipments }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Datos derivados de shipments
-  const guiasData = useMemo(() => {
-    if (shipments.length === 0) return [];
-
-    return shipments.map(s => ({
-      id: s.id,
-      estado: s.status === ShipmentStatus.DELIVERED ? 'ENTREGADO' :
-              s.status === ShipmentStatus.IN_TRANSIT ? 'EN TRÁNSITO' :
-              s.status === ShipmentStatus.IN_OFFICE ? 'EN OFICINA' :
-              s.status === ShipmentStatus.ISSUE ? 'NOVEDAD' :
-              s.status === ShipmentStatus.OUT_FOR_DELIVERY ? 'EN REPARTO' :
-              s.status === ShipmentStatus.RETURNED ? 'DEVUELTO' : 'PENDIENTE',
-      transportadora: s.carrier,
-      ciudad: s.detailedInfo?.destination || 'N/A',
-      telefono: s.phone,
-      diasTransito: s.detailedInfo?.daysInTransit || 0,
-      nivelRiesgo: (s.detailedInfo?.daysInTransit || 0) >= 5 ? 'CRITICO' as const :
-                   (s.detailedInfo?.daysInTransit || 0) >= 3 ? 'ALTO' as const :
-                   (s.detailedInfo?.daysInTransit || 0) >= 2 ? 'MEDIO' as const : 'BAJO' as const,
-      ultimaActualizacion: s.lastUpdate || new Date().toISOString(),
-    }));
-  }, [shipments]);
-
-  // Load welcome message
+  // Mensaje de bienvenida
   useEffect(() => {
     const welcomeMessage: MensajeChat = {
       id: uuidv4(),
@@ -202,22 +208,18 @@ Estoy aquí para ayudarte con todo lo relacionado a tu logística. Puedo:
 🧠 **Usar Machine Learning** para predecir retrasos
 📋 **Guiarte en los procesos** de LITPER
 
-${shipments.length > 0
-  ? `\n**📊 Datos cargados:** ${shipments.length} guías activas`
-  : '\n**⚠️ Sin datos:** Carga guías para análisis completo'}
-
-**¿Qué necesitas saber?** Usa las categorías de abajo o escribe tu pregunta.`,
+**¿Qué necesitas saber?** Puedes preguntarme con texto normal o usar las categorías de abajo.`,
       timestamp: new Date(),
       tipo: 'texto',
       acciones: [
-        { id: 'guias-hoy', label: 'Ver guías', icon: '📦', comando: 'Muéstrame todas las guías', tipo: 'info' },
+        { id: 'guias-hoy', label: 'Ver guías de hoy', icon: '📦', comando: 'Muéstrame las guías de hoy', tipo: 'info' },
         { id: 'resumen', label: 'Resumen del día', icon: '📊', comando: 'Dame el resumen del día', tipo: 'info' },
-        { id: 'novedades', label: 'Novedades', icon: '🚨', comando: 'Lista las novedades activas', tipo: 'info' },
-        { id: 'ml', label: 'Sistema ML', icon: '🧠', comando: 'Estado del sistema ML', tipo: 'info' },
+        { id: 'novedades', label: 'Novedades activas', icon: '🚨', comando: 'Lista las novedades activas', tipo: 'info' },
+        { id: 'prediccion', label: 'Predicciones ML', icon: '🧠', comando: 'Muéstrame las predicciones de retraso', tipo: 'info' },
       ],
     };
     setMensajes([welcomeMessage]);
-  }, [shipments.length]);
+  }, []);
 
   // Scroll automático
   useEffect(() => {
@@ -227,30 +229,15 @@ ${shipments.length > 0
   // Generar respuesta inteligente
   const generateResponse = useCallback(async (userMessage: string): Promise<MensajeChat> => {
     const lowerMessage = userMessage.toLowerCase();
+
+    // Simular delay de API
     await new Promise(resolve => setTimeout(resolve, 600 + Math.random() * 800));
-
-    const guiasRetrasadas = detectarGuiasRetrasadas(shipments);
-    const patrones = detectarPatrones(shipments);
-
-    const total = shipments.length || guiasData.length || 8;
-    const entregadas = shipments.filter(s => s.status === ShipmentStatus.DELIVERED).length ||
-                       guiasData.filter(g => g.estado === 'ENTREGADO').length || 1;
-    const enReparto = shipments.filter(s => s.status === ShipmentStatus.OUT_FOR_DELIVERY).length ||
-                      guiasData.filter(g => g.estado === 'EN REPARTO').length || 2;
-    const enOficina = shipments.filter(s => s.status === ShipmentStatus.IN_OFFICE).length ||
-                      guiasData.filter(g => g.estado === 'EN OFICINA').length || 1;
-    const novedades = shipments.filter(s => s.status === ShipmentStatus.ISSUE).length ||
-                      guiasData.filter(g => g.estado === 'NOVEDAD').length || 2;
-    const enTransito = shipments.filter(s => s.status === ShipmentStatus.IN_TRANSIT).length ||
-                       guiasData.filter(g => g.estado === 'EN TRÁNSITO').length || 1;
-    const criticas = guiasRetrasadas.filter(g => g.nivelAlerta === 'CRITICO').length ||
-                     guiasData.filter(g => g.nivelRiesgo === 'CRITICO').length || 1;
 
     // ============ CONSULTAS DE GUÍAS ============
     if (lowerMessage.includes('guía') || lowerMessage.includes('guias') || lowerMessage.includes('lista')) {
       // Guías retrasadas
       if (lowerMessage.includes('retrasad') || lowerMessage.includes('retraso') || lowerMessage.includes('demora')) {
-        const retrasadas = guiasData.filter(g =>
+        const retrasadas = GUIAS_EJEMPLO.filter(g =>
           g.diasTransito > 3 || g.nivelRiesgo === 'ALTO' || g.nivelRiesgo === 'CRITICO'
         );
         return {
@@ -258,21 +245,13 @@ ${shipments.length > 0
           rol: 'assistant',
           contenido: `⚠️ **GUÍAS RETRASADAS (${retrasadas.length})**
 
-Estas guías necesitan atención prioritaria:
-
-${retrasadas.slice(0, 6).map((g, i) => `**${i + 1}. ${g.id}**
-   • Estado: ${g.estado} | ${g.transportadora}
-   • Ciudad: ${g.ciudad} | ${g.diasTransito} días
-   • Riesgo: ${g.nivelRiesgo === 'CRITICO' ? '🔴' : g.nivelRiesgo === 'ALTO' ? '🟠' : '🟡'} ${g.nivelRiesgo}
-`).join('\n')}
-
-💡 **Acción recomendada:** Contacta primero las guías CRÍTICAS (🔴)`,
+Estas guías necesitan atención prioritaria. Haz clic en cualquiera para ver detalles o tomar acción:`,
           timestamp: new Date(),
           tipo: 'guias',
           datos: { guias: retrasadas, filtro: 'retrasadas' },
           acciones: [
-            { id: 'contactar-todos', label: 'Contactar clientes', icon: '📞', comando: 'Cómo contactar clientes', tipo: 'accion' },
-            { id: 'crear-tickets', label: 'Crear tickets', icon: '🎫', comando: 'Cómo crear tickets', tipo: 'accion' },
+            { id: 'contactar-todos', label: 'Contactar todos los clientes', icon: '📞', comando: 'Contactar clientes de guías retrasadas', tipo: 'accion' },
+            { id: 'crear-tickets', label: 'Crear tickets masivos', icon: '🎫', comando: 'Crear tickets para guías retrasadas', tipo: 'accion' },
           ],
           confianza: 0.95,
         };
@@ -280,27 +259,18 @@ ${retrasadas.slice(0, 6).map((g, i) => `**${i + 1}. ${g.id}**
 
       // Guías en reparto
       if (lowerMessage.includes('reparto')) {
-        const guiasReparto = guiasData.filter(g => g.estado === 'EN REPARTO');
+        const enReparto = GUIAS_EJEMPLO.filter(g => g.estado === 'EN REPARTO');
         return {
           id: uuidv4(),
           rol: 'assistant',
-          contenido: `🚚 **GUÍAS EN REPARTO HOY (${guiasReparto.length || enReparto})**
+          contenido: `🚚 **GUÍAS EN REPARTO HOY (${enReparto.length})**
 
-${guiasReparto.slice(0, 5).map((g, i) => `**${i + 1}. ${g.id}**
-   • ${g.transportadora} → ${g.ciudad}
-   • Día ${g.diasTransito} de tránsito
-`).join('\n') || 'Las guías en reparto se entregarán hoy. El mensajero intentará la entrega.'}
-
-**📋 PLANTILLA PARA NOTIFICAR:**
-\`\`\`
-Hola! Tu pedido ya está en camino. El mensajero
-intentará la entrega hoy. Estate pendiente de
-nuestro contacto. Guía: [NUMERO]
-\`\`\``,
+Estas guías están en camino para entrega. El estado se actualiza cada 30 minutos:`,
           timestamp: new Date(),
           tipo: 'guias',
+          datos: { guias: enReparto, filtro: 'en-reparto' },
           acciones: [
-            { id: 'notificar', label: 'Ver plantilla', icon: '📝', comando: 'Muéstrame las plantillas', tipo: 'info' },
+            { id: 'notificar-clientes', label: 'Notificar clientes', icon: '📱', comando: 'Enviar notificación de reparto', tipo: 'accion' },
           ],
           confianza: 0.98,
         };
@@ -308,59 +278,47 @@ nuestro contacto. Guía: [NUMERO]
 
       // Guías en oficina
       if (lowerMessage.includes('oficina')) {
-        const guiasOficina = guiasData.filter(g => g.estado === 'EN OFICINA');
+        const enOficina = GUIAS_EJEMPLO.filter(g => g.estado === 'EN OFICINA');
         return {
           id: uuidv4(),
           rol: 'assistant',
-          contenido: `📍 **GUÍAS EN OFICINA (${guiasOficina.length || enOficina})**
+          contenido: `📍 **GUÍAS EN OFICINA (${enOficina.length})**
 
-Estas guías esperan ser reclamadas por el cliente.
-
-${guiasOficina.slice(0, 5).map((g, i) => `**${i + 1}. ${g.id}**
-   • ${g.transportadora} | ${g.ciudad}
-   • ${g.diasTransito} días en oficina
-   • ${g.diasTransito > 3 ? '⚠️ URGENTE - próximo a devolución' : '✅ Tiempo normal'}
-`).join('\n') || 'No hay guías en oficina actualmente.'}
-
-**📋 REGLAS:**
+Estas guías esperan ser reclamadas. Recuerda:
 - 0-3 días: Enviar plantilla "Reclamo en Oficina"
-- +3 días: Enviar plantilla "No Oficina" + imagen de guía
-- +7 días: Se devuelve automáticamente`,
+- +3 días: Enviar plantilla "No Oficina" con imagen de guía`,
           timestamp: new Date(),
           tipo: 'guias',
+          datos: { guias: enOficina, filtro: 'en-oficina' },
           acciones: [
-            { id: 'plantilla-oficina', label: 'Ver plantilla', icon: '📝', comando: 'Dame la plantilla de oficina', tipo: 'info' },
-            { id: 'llamar', label: 'Proceso de llamada', icon: '📞', comando: 'Cómo llamar al cliente', tipo: 'info' },
+            { id: 'llamar-todos', label: 'Llamar a todos', icon: '📞', comando: 'Iniciar llamadas a clientes en oficina', tipo: 'accion' },
+            { id: 'enviar-plantilla', label: 'Enviar plantilla', icon: '📝', comando: 'Enviar plantilla de oficina', tipo: 'accion' },
           ],
           confianza: 0.97,
         };
       }
 
       // Todas las guías
-      const totalGuias = guiasData.length || total;
       return {
         id: uuidv4(),
         rol: 'assistant',
-        contenido: `📦 **LISTADO DE GUÍAS (${totalGuias} total)**
+        contenido: `📦 **LISTADO DE GUÍAS (${GUIAS_EJEMPLO.length} total)**
 
-| Estado | Cantidad | Porcentaje |
-|--------|----------|------------|
-| 🚚 En Reparto | ${enReparto} | ${((enReparto / totalGuias) * 100).toFixed(1)}% |
-| 📍 En Oficina | ${enOficina} | ${((enOficina / totalGuias) * 100).toFixed(1)}% |
-| 🚨 Con Novedad | ${novedades} | ${((novedades / totalGuias) * 100).toFixed(1)}% |
-| 🔄 En Tránsito | ${enTransito} | ${((enTransito / totalGuias) * 100).toFixed(1)}% |
-| ✅ Entregadas | ${entregadas} | ${((entregadas / totalGuias) * 100).toFixed(1)}% |
+| Estado | Cantidad | % |
+|--------|----------|---|
+| 🚚 En Reparto | ${GUIAS_EJEMPLO.filter(g => g.estado === 'EN REPARTO').length} | ${((GUIAS_EJEMPLO.filter(g => g.estado === 'EN REPARTO').length / GUIAS_EJEMPLO.length) * 100).toFixed(1)}% |
+| 📍 En Oficina | ${GUIAS_EJEMPLO.filter(g => g.estado === 'EN OFICINA').length} | ${((GUIAS_EJEMPLO.filter(g => g.estado === 'EN OFICINA').length / GUIAS_EJEMPLO.length) * 100).toFixed(1)}% |
+| 🚨 Con Novedad | ${GUIAS_EJEMPLO.filter(g => g.estado === 'NOVEDAD').length} | ${((GUIAS_EJEMPLO.filter(g => g.estado === 'NOVEDAD').length / GUIAS_EJEMPLO.length) * 100).toFixed(1)}% |
+| 🔄 En Tránsito | ${GUIAS_EJEMPLO.filter(g => g.estado === 'EN TRÁNSITO').length} | ${((GUIAS_EJEMPLO.filter(g => g.estado === 'EN TRÁNSITO').length / GUIAS_EJEMPLO.length) * 100).toFixed(1)}% |
+| ✅ Entregadas | ${GUIAS_EJEMPLO.filter(g => g.estado === 'ENTREGADO').length} | ${((GUIAS_EJEMPLO.filter(g => g.estado === 'ENTREGADO').length / GUIAS_EJEMPLO.length) * 100).toFixed(1)}% |
 
-**🔴 Guías críticas:** ${criticas}
-**📈 Tasa de entrega:** ${((entregadas / totalGuias) * 100).toFixed(1)}%
-
-¿Qué estado quieres ver en detalle?`,
+Haz clic para ver detalles de cada guía:`,
         timestamp: new Date(),
-        tipo: 'estadisticas',
+        tipo: 'guias',
+        datos: { guias: GUIAS_EJEMPLO, filtro: 'todas' },
         acciones: [
-          { id: 'retrasadas', label: 'Ver retrasadas', icon: '⚠️', comando: 'Muéstrame las guías retrasadas', tipo: 'info' },
-          { id: 'reparto', label: 'Ver en reparto', icon: '🚚', comando: 'Muéstrame las guías en reparto', tipo: 'info' },
-          { id: 'oficina', label: 'Ver en oficina', icon: '📍', comando: 'Muéstrame las guías en oficina', tipo: 'info' },
+          { id: 'ver-retrasadas', label: 'Ver retrasadas', icon: '⚠️', comando: 'Muéstrame las guías retrasadas', tipo: 'info' },
+          { id: 'exportar', label: 'Exportar Excel', icon: '📥', comando: 'Exportar listado a Excel', tipo: 'accion' },
         ],
         confianza: 0.99,
       };
@@ -368,6 +326,8 @@ ${guiasOficina.slice(0, 5).map((g, i) => `**${i + 1}. ${g.id}**
 
     // ============ CONSULTAS DE NOVEDADES ============
     if (lowerMessage.includes('novedad')) {
+      const novedades = GUIAS_EJEMPLO.filter(g => g.estado === 'NOVEDAD');
+
       if (lowerMessage.includes('cómo') || lowerMessage.includes('como') || lowerMessage.includes('resolver') || lowerMessage.includes('proceso')) {
         return {
           id: uuidv4(),
@@ -401,10 +361,12 @@ ${guiasOficina.slice(0, 5).map((g, i) => `**${i + 1}. ${g.id}**
                  └────────┬────────┘
                           │
                   ┌───────┴───────┐
+                  │               │
                SÍ ▼            NO ▼
          ┌─────────────┐  ┌─────────────┐
          │ Coordinar   │  │ 2-3 intentos│
          │ día/jornada │  │ + plantilla │
+         │ Registrar   │  │ + pendiente │
          └─────────────┘  └─────────────┘
 \`\`\`
 
@@ -416,82 +378,79 @@ ${guiasOficina.slice(0, 5).map((g, i) => `**${i + 1}. ${g.id}**
           timestamp: new Date(),
           tipo: 'texto',
           acciones: [
-            { id: 'ver-novedades', label: 'Ver novedades', icon: '🚨', comando: 'Lista las novedades activas', tipo: 'info' },
-            { id: 'ejemplo', label: 'Ver ejemplo', icon: '💡', comando: 'Dame un ejemplo de novedad', tipo: 'info' },
+            { id: 'ver-novedades', label: 'Ver novedades activas', icon: '🚨', comando: 'Lista las novedades activas', tipo: 'info' },
+            { id: 'ejemplo', label: 'Ver ejemplo práctico', icon: '💡', comando: 'Dame un ejemplo de resolución de novedad', tipo: 'info' },
           ],
           confianza: 0.96,
         };
       }
 
-      const guiasNovedad = guiasData.filter(g => g.estado === 'NOVEDAD');
       return {
         id: uuidv4(),
         rol: 'assistant',
-        contenido: `🚨 **NOVEDADES ACTIVAS (${guiasNovedad.length || novedades})**
+        contenido: `🚨 **NOVEDADES ACTIVAS (${novedades.length})**
 
-${guiasNovedad.slice(0, 5).map((g, i) => `**${i + 1}. ${g.id}**
-   • ${g.transportadora} → ${g.ciudad}
-   • ${g.diasTransito} días | Riesgo: ${g.nivelRiesgo}
-`).join('\n') || `Hay ${novedades} novedades que requieren atención.`}
-
-**📋 ORDEN DE ATENCIÓN:**
-1. Primero las más antiguas (más días)
-2. Verificar Chatea antes de llamar
-3. Registrar TODA solución en Dropi
-
-¿Quieres ver el proceso de resolución?`,
+Estas novedades requieren gestión. Recuerda seguir el orden de la lista:`,
         timestamp: new Date(),
         tipo: 'guias',
+        datos: { guias: novedades, filtro: 'novedades' },
         acciones: [
           { id: 'proceso', label: 'Ver proceso', icon: '📋', comando: 'Cómo resolver una novedad', tipo: 'info' },
-          { id: 'plantillas', label: 'Ver plantillas', icon: '📝', comando: 'Muéstrame las plantillas', tipo: 'info' },
+          { id: 'resolver-todas', label: 'Resolver en lote', icon: '✅', comando: 'Resolver novedades en lote', tipo: 'accion' },
         ],
         confianza: 0.94,
       };
     }
 
-    // ============ CONSULTAS DE RESUMEN/ESTADÍSTICAS ============
+    // ============ CONSULTAS DE ESTADÍSTICAS ============
     if (lowerMessage.includes('resumen') || lowerMessage.includes('estadística') || lowerMessage.includes('métrica') || lowerMessage.includes('día')) {
-      const totalGuias = shipments.length || 8;
-      const tasaEntrega = totalGuias > 0 ? ((entregadas / totalGuias) * 100).toFixed(1) : '85.0';
+      const stats = {
+        total: GUIAS_EJEMPLO.length,
+        entregadas: GUIAS_EJEMPLO.filter(g => g.estado === 'ENTREGADO').length,
+        enReparto: GUIAS_EJEMPLO.filter(g => g.estado === 'EN REPARTO').length,
+        enOficina: GUIAS_EJEMPLO.filter(g => g.estado === 'EN OFICINA').length,
+        novedades: GUIAS_EJEMPLO.filter(g => g.estado === 'NOVEDAD').length,
+        criticas: GUIAS_EJEMPLO.filter(g => g.nivelRiesgo === 'CRITICO').length,
+        promedioDias: (GUIAS_EJEMPLO.reduce((acc, g) => acc + g.diasTransito, 0) / GUIAS_EJEMPLO.length).toFixed(1),
+      };
+      const tasaEntrega = ((stats.entregadas / stats.total) * 100).toFixed(1);
 
       return {
         id: uuidv4(),
         rol: 'assistant',
-        contenido: `📊 **RESUMEN DEL DÍA**
-*${new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}*
+        contenido: `📊 **RESUMEN DEL DÍA - ${new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}**
 
 | Métrica | Valor | Estado |
 |---------|-------|--------|
-| 📦 Total guías | ${totalGuias} | - |
-| ✅ Entregadas | ${entregadas} | ${Number(tasaEntrega) >= 85 ? '🟢' : '🟡'} |
-| 🚚 En reparto | ${enReparto} | 🟢 |
-| 📍 En oficina | ${enOficina} | ${enOficina > 2 ? '🟡' : '🟢'} |
-| 🚨 Con novedad | ${novedades} | ${novedades > 0 ? '🟠' : '🟢'} |
-| 🔴 Críticas | ${criticas} | ${criticas > 0 ? '🔴' : '🟢'} |
+| 📦 Total guías | ${stats.total} | - |
+| ✅ Entregadas | ${stats.entregadas} | ${Number(tasaEntrega) >= 85 ? '🟢' : '🟡'} |
+| 🚚 En reparto | ${stats.enReparto} | - |
+| 📍 En oficina | ${stats.enOficina} | ${stats.enOficina > 2 ? '🟡' : '🟢'} |
+| 🚨 Con novedad | ${stats.novedades} | ${stats.novedades > 0 ? '🟠' : '🟢'} |
+| 🔴 Críticas | ${stats.criticas} | ${stats.criticas > 0 ? '🔴' : '🟢'} |
 
 **📈 INDICADORES CLAVE:**
-- **Tasa de entrega:** ${tasaEntrega}% ${Number(tasaEntrega) >= 85 ? '✅ Cumple meta' : '⚠️ Por debajo (meta: 85%)'}
-- **Meta del mes:** 85% entregas exitosas
+- Tasa de entrega: **${tasaEntrega}%** ${Number(tasaEntrega) >= 85 ? '✅ Cumple meta' : '⚠️ Por debajo de meta (85%)'}
+- Tiempo promedio: **${stats.promedioDias} días**
+- Meta del mes: **85% entregas exitosas**
 
-${criticas > 0 ? `\n⚠️ **ALERTA:** ${criticas} guía(s) CRÍTICAS requieren atención INMEDIATA.` : '✅ No hay alertas críticas.'}
-
-${patrones.length > 0 ? `\n🔍 **PATRONES:** ${patrones.length} detectados` : ''}`,
+${stats.criticas > 0 ? `\n⚠️ **ALERTA:** Hay ${stats.criticas} guía(s) en estado CRÍTICO que requieren atención INMEDIATA.` : '\n✅ No hay alertas críticas en este momento.'}`,
         timestamp: new Date(),
         tipo: 'estadisticas',
+        datos: stats,
         acciones: [
-          { id: 'criticas', label: 'Ver críticas', icon: '🔴', comando: 'Muéstrame las guías críticas', tipo: 'info' },
-          { id: 'patrones', label: 'Ver patrones', icon: '🔍', comando: 'Muéstrame los patrones detectados', tipo: 'info' },
-          { id: 'transportadoras', label: 'Transportadoras', icon: '🚚', comando: 'Ranking de transportadoras', tipo: 'info' },
+          { id: 'ver-criticas', label: 'Ver críticas', icon: '🔴', comando: 'Muéstrame las guías críticas', tipo: 'info' },
+          { id: 'comparar', label: 'Comparar con ayer', icon: '📈', comando: 'Compara con el día anterior', tipo: 'info' },
+          { id: 'exportar', label: 'Generar reporte', icon: '📄', comando: 'Generar reporte del día', tipo: 'accion' },
         ],
         confianza: 0.98,
       };
     }
 
     // ============ CONSULTAS DE TRANSPORTADORAS ============
-    if (lowerMessage.includes('transportadora') || lowerMessage.includes('mejor') || lowerMessage.includes('ranking') || lowerMessage.includes('rendimiento')) {
-      const mejor = TRANSPORTADORAS_STATS[0];
-      const peor = TRANSPORTADORAS_STATS[TRANSPORTADORAS_STATS.length - 1];
+    if (lowerMessage.includes('transportadora') || lowerMessage.includes('mejor') || lowerMessage.includes('comparar') || lowerMessage.includes('ranking')) {
+      const mejor = TRANSPORTADORAS_STATS.reduce((a, b) => a.tasaExito > b.tasaExito ? a : b);
+      const peor = TRANSPORTADORAS_STATS.reduce((a, b) => a.tasaExito < b.tasaExito ? a : b);
 
       return {
         id: uuidv4(),
@@ -507,22 +466,23 @@ ${patrones.length > 0 ? `\n🔍 **PATRONES:** ${patrones.length} detectados` : '
 | 5 | ${TRANSPORTADORAS_STATS[4].nombre} | ${TRANSPORTADORAS_STATS[4].guias.toLocaleString()} | ${TRANSPORTADORAS_STATS[4].tasaExito}% | ${TRANSPORTADORAS_STATS[4].tiempoProm}d |
 
 **💡 RECOMENDACIONES:**
-- **Mejor rendimiento:** ${mejor.nombre} (${mejor.tasaExito}%)
-- **Más rápida:** ${mejor.nombre} (${mejor.tiempoProm} días)
-- **A mejorar:** ${peor.nombre} (${peor.tasaExito}%)
-
-Prioriza envíos importantes con ${mejor.nombre} para mejor resultado.`,
+- **Mejor rendimiento:** ${mejor.nombre} con ${mejor.tasaExito}% de éxito
+- **A mejorar:** ${peor.nombre} tiene la tasa más baja (${peor.tasaExito}%)
+- **Más económica:** Envía con menor costo promedio
+- **Más rápida:** Coordinadora con ${mejor.tiempoProm} días promedio`,
         timestamp: new Date(),
         tipo: 'tabla',
+        datos: { transportadoras: TRANSPORTADORAS_STATS },
         acciones: [
-          { id: 'comparar', label: 'Comparar', icon: '📊', comando: 'Compara las transportadoras', tipo: 'info' },
+          { id: 'detalles', label: 'Ver detalles', icon: '🔍', comando: `Dame detalles de ${mejor.nombre}`, tipo: 'info' },
+          { id: 'tendencia', label: 'Ver tendencia', icon: '📈', comando: 'Tendencia de transportadoras del mes', tipo: 'info' },
         ],
         confianza: 0.97,
       };
     }
 
     // ============ CONSULTAS DE ML ============
-    if (lowerMessage.includes('machine') || lowerMessage.includes('ml') || lowerMessage.includes('predicción') || lowerMessage.includes('prediccion') || lowerMessage.includes('modelo')) {
+    if (lowerMessage.includes('machine') || lowerMessage.includes('ml') || lowerMessage.includes('predicción') || lowerMessage.includes('prediccion') || lowerMessage.includes('patrón') || lowerMessage.includes('patron') || lowerMessage.includes('modelo')) {
       return {
         id: uuidv4(),
         rol: 'assistant',
@@ -532,60 +492,64 @@ Prioriza envíos importantes con ${mejor.nombre} para mejor resultado.`,
 
 | Modelo | Accuracy | Estado | Predicciones |
 |--------|----------|--------|--------------|
-| Predictor Retrasos | 92.3% | ${mlActivo ? '🟢 Activo' : '🔴 Off'} | 1,247 hoy |
-| Detector Novedades | 87.6% | ${mlActivo ? '🟢 Activo' : '🔴 Off'} | 892 hoy |
-| Optimizador Rutas | 89.1% | ${mlActivo ? '🟢 Activo' : '🔴 Off'} | 456 hoy |
+| Predictor Retrasos | 92.3% | 🟢 Activo | 1,247 hoy |
+| Detector Novedades | 87.6% | 🟢 Activo | 892 hoy |
+| Optimizador Rutas | 89.1% | 🟢 Activo | 456 hoy |
 
-**🔍 PATRONES DETECTADOS:**
-${patrones.slice(0, 3).map(p => `• ${p.titulo} (${p.impacto})`).join('\n') || '• Sin patrones críticos detectados'}
+**🔍 PATRONES DETECTADOS HOY:**
 
-**💡 INSIGHT ML:**
-El sistema predice que implementando acciones proactivas se puede mejorar la tasa de entrega en un **15%**.
+🔴 **CRÍTICO:** Acumulación en oficinas Medellín
+   - 8 guías con +3 días
+   - Riesgo: 80% devolución
+   - Acción: Contactar urgente
 
-Estado del sistema: ${mlActivo ? '✅ **ACTIVO** - Procesando en tiempo real' : '⚠️ **INACTIVO** - Actívalo para predicciones'}`,
+🟠 **ALTO:** Retrasos ruta Barranquilla
+   - 5 guías sin movimiento
+   - Causa: Congestión en bodega TCC
+
+🟡 **MEDIO:** Incremento novedades zona norte
+   - +23% vs semana anterior
+   - Causa: Direcciones incompletas
+
+**💡 INSIGHT ML:** Implementando las acciones recomendadas se puede reducir la tasa de devolución en un **40%**.`,
         timestamp: new Date(),
         tipo: 'reporte',
+        datos: { mlActivo: true },
         acciones: [
-          { id: 'patrones', label: 'Ver patrones', icon: '🔍', comando: 'Muéstrame los patrones detectados', tipo: 'info' },
-          { id: 'predecir', label: 'Predecir guía', icon: '🎯', comando: 'Predice el riesgo de mis guías', tipo: 'info' },
+          { id: 'resolver-patron', label: 'Resolver patrón crítico', icon: '🔴', comando: 'Resolver el patrón crítico', tipo: 'accion' },
+          { id: 'dashboard-ml', label: 'Dashboard ML', icon: '📊', comando: 'Abrir dashboard de ML', tipo: 'navegacion' },
+          { id: 'entrenar', label: 'Reentrenar modelos', icon: '🔄', comando: 'Reentrenar los modelos ML', tipo: 'accion' },
         ],
         confianza: 0.93,
       };
     }
 
-    // ============ CONSULTAS DE PATRONES ============
-    if (lowerMessage.includes('patrón') || lowerMessage.includes('patron') || lowerMessage.includes('detecta')) {
+    // ============ CONSULTAS DE PROCESOS ============
+    if (lowerMessage.includes('proceso') || lowerMessage.includes('flujo') || lowerMessage.includes('cómo') || lowerMessage.includes('como')) {
       return {
         id: uuidv4(),
         rol: 'assistant',
-        contenido: `🔍 **PATRONES DETECTADOS**
+        contenido: `📋 **PROCESOS LITPER DISPONIBLES**
 
-${patrones.length > 0 ? patrones.slice(0, 4).map(p => `**${p.impacto === 'CRITICO' ? '🔴' : p.impacto === 'ALTO' ? '🟠' : '🟡'} ${p.titulo}**
-• ${p.descripcion}
-• Afecta: ${p.datosApoyo.cantidad} guías (${p.datosApoyo.porcentaje.toFixed(1)}%)
-• Acción: ${p.recomendacion}
-`).join('\n') : `**Análisis basado en datos del sistema:**
+| ID | Proceso | Automatizable | Prioridad |
+|----|---------|---------------|-----------|
+| P01 | Seguimiento de Guías | 100% | 🔴 CRÍTICO |
+| P02 | Novedades | 90% | 🔴 CRÍTICO |
+| P03 | Reclamo en Oficina | 85% | 🟡 ALTO |
+| P04 | Chat en Vivo | 80% | 🟡 ALTO |
+| P05 | Generación de Pedidos | 95% | 🟢 MEDIO |
 
-🔴 **CRÍTICO - Acumulación oficinas**
-• ${enOficina} guías en oficina
-• Riesgo: Devolución automática +7 días
-• Acción: Contactar clientes urgente
+**¿Qué proceso necesitas conocer?**
 
-🟠 **ALTO - Novedades activas**
-• ${novedades} guías con novedad
-• Acción: Resolver en orden de antigüedad
-
-🟢 **BUENO - Tránsito normal**
-• ${enTransito + enReparto} guías fluyendo bien`}
-
-**💡 INSIGHT ML:**
-Resolviendo los patrones críticos se puede reducir la tasa de devolución hasta en un **40%**.`,
+Puedo explicarte paso a paso cualquiera de estos procesos con diagramas de flujo, reglas y ejemplos prácticos.`,
         timestamp: new Date(),
         tipo: 'lista',
         acciones: [
-          { id: 'resolver', label: 'Resolver críticos', icon: '🔴', comando: 'Cómo resolver el patrón crítico', tipo: 'accion' },
+          { id: 'p01', label: 'P01: Seguimiento', icon: '📦', comando: 'Explícame el proceso de seguimiento de guías', tipo: 'info' },
+          { id: 'p02', label: 'P02: Novedades', icon: '🚨', comando: 'Explícame el proceso de novedades', tipo: 'info' },
+          { id: 'p04', label: 'P04: Chat en Vivo', icon: '💬', comando: 'Explícame el proceso de chat en vivo', tipo: 'info' },
         ],
-        confianza: 0.91,
+        confianza: 0.99,
       };
     }
 
@@ -629,40 +593,13 @@ Hola! Necesitamos coordinar la entrega de tu pedido.
 ¿En qué jornada te queda mejor: mañana o tarde?
 \`\`\`
 
-Copia la plantilla que necesites reemplazando [DATOS].`,
+Haz clic en cualquier plantilla para copiarla al portapapeles.`,
         timestamp: new Date(),
         tipo: 'lista',
         acciones: [
-          { id: 'proceso-chat', label: 'Proceso de chat', icon: '💬', comando: 'Explícame el proceso de chat en vivo', tipo: 'info' },
-        ],
-        confianza: 0.99,
-      };
-    }
-
-    // ============ PROCESOS ============
-    if (lowerMessage.includes('proceso') || lowerMessage.includes('flujo')) {
-      return {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: `📋 **PROCESOS LITPER DISPONIBLES**
-
-| ID | Proceso | Automatizable | Prioridad |
-|----|---------|---------------|-----------|
-| P01 | Seguimiento de Guías | 100% | 🔴 CRÍTICO |
-| P02 | Novedades | 90% | 🔴 CRÍTICO |
-| P03 | Reclamo en Oficina | 85% | 🟡 ALTO |
-| P04 | Chat en Vivo | 80% | 🟡 ALTO |
-| P05 | Generación de Pedidos | 95% | 🟢 MEDIO |
-
-**META PRINCIPAL:** 85% tasa de entrega
-
-Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas conocer?`,
-        timestamp: new Date(),
-        tipo: 'lista',
-        acciones: [
-          { id: 'p01', label: 'P01: Seguimiento', icon: '📦', comando: 'Explícame el proceso de seguimiento', tipo: 'info' },
-          { id: 'p02', label: 'P02: Novedades', icon: '🚨', comando: 'Explícame el proceso de novedades', tipo: 'info' },
-          { id: 'p04', label: 'P04: Chat', icon: '💬', comando: 'Explícame el proceso de chat', tipo: 'info' },
+          { id: 'copiar-reparto', label: 'Copiar REPARTO', icon: '📋', comando: 'Copiar plantilla de reparto', tipo: 'accion' },
+          { id: 'copiar-oficina', label: 'Copiar OFICINA', icon: '📋', comando: 'Copiar plantilla de oficina', tipo: 'accion' },
+          { id: 'copiar-novedad', label: 'Copiar NOVEDAD', icon: '📋', comando: 'Copiar plantilla de novedad', tipo: 'accion' },
         ],
         confianza: 0.99,
       };
@@ -672,20 +609,21 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
     return {
       id: uuidv4(),
       rol: 'assistant',
-      contenido: `Entiendo tu consulta. Déjame ayudarte.
+      contenido: `Entiendo tu consulta. Déjame ver cómo puedo ayudarte.
 
-**📊 Estado actual:**
-• ${total} guías activas
-• ${criticas} requieren atención urgente
-• Tasa de entrega: ${((entregadas / total) * 100).toFixed(1)}%
+**Puedo asistirte con:**
+- 📦 **Guías:** Lista, busca o filtra por estado
+- 🚨 **Novedades:** Ver activas o aprender a resolverlas
+- 📊 **Estadísticas:** Resumen del día, métricas, comparativas
+- 🚚 **Transportadoras:** Rankings, rendimiento, recomendaciones
+- 🧠 **ML:** Predicciones, patrones, estado de modelos
+- 📋 **Procesos:** Flujos paso a paso de LITPER
 
-**Puedo ayudarte con:**
-📦 **Guías:** "Lista las guías" / "Guías retrasadas"
-🚨 **Novedades:** "Ver novedades" / "Cómo resolver"
-📊 **Estadísticas:** "Resumen del día"
-🚚 **Transportadoras:** "Mejor transportadora"
-🧠 **ML:** "Predicciones" / "Patrones"
-📋 **Procesos:** "Ver procesos" / "Plantillas"
+**Ejemplos de consultas:**
+- "Muéstrame las guías retrasadas"
+- "¿Cuál es el resumen del día?"
+- "¿Cómo resuelvo una novedad?"
+- "¿Cuál es la mejor transportadora?"
 
 ¿Qué información específica necesitas?`,
       timestamp: new Date(),
@@ -694,10 +632,11 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
         { id: 'guias', label: 'Ver guías', icon: '📦', comando: 'Lista las guías', tipo: 'info' },
         { id: 'resumen', label: 'Resumen', icon: '📊', comando: 'Dame el resumen del día', tipo: 'info' },
         { id: 'novedades', label: 'Novedades', icon: '🚨', comando: 'Lista las novedades', tipo: 'info' },
+        { id: 'ml', label: 'Sistema ML', icon: '🧠', comando: 'Estado del sistema ML', tipo: 'info' },
       ],
       confianza: 0.85,
     };
-  }, [shipments, guiasData, mlActivo]);
+  }, []);
 
   // Enviar mensaje
   const handleSend = async (message?: string) => {
@@ -723,7 +662,7 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
       setMensajes(prev => [...prev, {
         id: uuidv4(),
         rol: 'assistant',
-        contenido: '❌ Error procesando solicitud. Intenta de nuevo.',
+        contenido: '❌ Lo siento, hubo un error procesando tu solicitud. Por favor intenta de nuevo.',
         timestamp: new Date(),
       }]);
     } finally {
@@ -733,7 +672,7 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
 
   // Limpiar chat
   const handleClear = () => {
-    if (confirm('¿Limpiar conversación?')) {
+    if (confirm('¿Limpiar el historial de conversación?')) {
       setMensajes([{
         id: uuidv4(),
         rol: 'assistant',
@@ -746,6 +685,87 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
       }]);
       setMostrarSugerencias(true);
     }
+  };
+
+  // Renderizar tarjeta de guía clickeable
+  const renderGuiaCard = (guia: GuiaInfo) => {
+    const riesgoColors = {
+      BAJO: 'border-green-200 bg-green-50',
+      MEDIO: 'border-yellow-200 bg-yellow-50',
+      ALTO: 'border-orange-200 bg-orange-50',
+      CRITICO: 'border-red-200 bg-red-50',
+    };
+
+    const estadoColors: Record<string, string> = {
+      'EN REPARTO': 'bg-blue-100 text-blue-700',
+      'EN OFICINA': 'bg-orange-100 text-orange-700',
+      'NOVEDAD': 'bg-red-100 text-red-700',
+      'EN TRÁNSITO': 'bg-cyan-100 text-cyan-700',
+      'ENTREGADO': 'bg-green-100 text-green-700',
+      'DEVUELTO': 'bg-gray-100 text-gray-700',
+    };
+
+    return (
+      <div
+        key={guia.id}
+        className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 ${riesgoColors[guia.nivelRiesgo]} dark:border-gray-700 hover:shadow-lg transition-all cursor-pointer group`}
+        onClick={() => handleSend(`Dame detalles de la guía ${guia.id}`)}
+      >
+        <div className="flex items-start justify-between mb-2">
+          <div>
+            <p className="font-bold text-gray-800 dark:text-white font-mono text-sm">{guia.id}</p>
+            <p className="text-xs text-gray-500 flex items-center gap-1">
+              <Truck className="w-3 h-3" />
+              {guia.transportadora}
+            </p>
+          </div>
+          <span className={`px-2 py-1 rounded-lg text-xs font-bold ${estadoColors[guia.estado] || 'bg-gray-100 text-gray-700'}`}>
+            {guia.estado}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+          <span className="flex items-center gap-1">
+            <MapPin className="w-3 h-3" />
+            {guia.ciudad}
+          </span>
+          <span className="flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            {guia.diasTransito}d
+          </span>
+        </div>
+
+        {guia.telefono && (
+          <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(`https://wa.me/57${guia.telefono}?text=Hola! Le escribo de Litper sobre su pedido con guía ${guia.id}.`, '_blank');
+              }}
+              className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs font-medium hover:bg-green-600 transition-colors"
+            >
+              <MessageCircle className="w-3 h-3" />
+              WhatsApp
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(guia.id);
+              }}
+              className="flex items-center gap-1 px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-300 transition-colors"
+            >
+              <Copy className="w-3 h-3" />
+              Copiar
+            </button>
+          </div>
+        )}
+
+        <div className="mt-2 flex items-center justify-end text-indigo-500 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+          <span>Ver detalles</span>
+          <ChevronRight className="w-3 h-3" />
+        </div>
+      </div>
+    );
   };
 
   // Renderizar mensaje
@@ -773,16 +793,23 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
             <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">Asistente LITPER</span>
             {mensaje.confianza && (
               <span className="text-xs text-gray-400 ml-auto">
-                {(mensaje.confianza * 100).toFixed(0)}%
+                {(mensaje.confianza * 100).toFixed(0)}% confianza
               </span>
             )}
           </div>
 
-          <div className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">
+          <div className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap prose prose-sm max-w-none">
             {mensaje.contenido}
           </div>
 
-          {/* Acciones rápidas */}
+          {/* Renderizar guías si hay datos */}
+          {mensaje.tipo === 'guias' && mensaje.datos?.guias && (
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto">
+              {mensaje.datos.guias.map((guia: GuiaInfo) => renderGuiaCard(guia))}
+            </div>
+          )}
+
+          {/* Renderizar acciones rápidas */}
           {mensaje.acciones && mensaje.acciones.length > 0 && (
             <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
               <p className="text-xs text-gray-400 mb-2">Acciones sugeridas:</p>
@@ -794,6 +821,8 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       accion.tipo === 'accion'
                         ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300'
+                        : accion.tipo === 'navegacion'
+                        ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'
                     }`}
                   >
@@ -826,10 +855,10 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
             <p className="text-xs text-indigo-200 flex items-center gap-2">
               <span className="flex items-center gap-1">
                 <span className={`w-2 h-2 rounded-full ${mlActivo ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
-                ML {mlActivo ? 'Activo' : 'Off'}
+                ML {mlActivo ? 'Activo' : 'Inactivo'}
               </span>
               <span>•</span>
-              <span>{shipments.length} guías</span>
+              <span>Claude AI + Sistema ML</span>
             </p>
           </div>
         </div>
@@ -849,14 +878,14 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
           <button
             onClick={handleClear}
             className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
-            title="Limpiar"
+            title="Limpiar conversación"
           >
             <Trash2 className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      {/* Categorías */}
+      {/* Categorías de consulta */}
       {mostrarSugerencias && (
         <div className="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-100 dark:border-indigo-800">
           <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-2">CONSULTAS RÁPIDAS:</p>
@@ -864,11 +893,13 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
             {CATEGORIAS_CONSULTA.map(cat => (
               <button
                 key={cat.id}
-                onClick={() => setCategoriaSeleccionada(cat.id === categoriaSeleccionada ? null : cat.id)}
+                onClick={() => {
+                  setCategoriaSeleccionada(cat.id === categoriaSeleccionada ? null : cat.id);
+                }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   categoriaSeleccionada === cat.id
                     ? `bg-gradient-to-r ${cat.color} text-white shadow-lg`
-                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
                 <span>{cat.icono}</span>
@@ -877,6 +908,7 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
             ))}
           </div>
 
+          {/* Ejemplos de la categoría seleccionada */}
           {categoriaSeleccionada && (
             <div className="mt-2 flex flex-wrap gap-2">
               {CATEGORIAS_CONSULTA.find(c => c.id === categoriaSeleccionada)?.ejemplos.map((ejemplo, idx) => (
@@ -893,7 +925,7 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
         </div>
       )}
 
-      {/* Messages */}
+      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {mensajes.map(renderMessage)}
 
@@ -909,7 +941,7 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
+      {/* Input Area */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <div className="flex items-center gap-3">
           <button
@@ -925,26 +957,26 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Escribe tu pregunta..."
+            placeholder="Escribe tu pregunta o selecciona una consulta rápida..."
             disabled={isLoading}
-            className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+            className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50 transition-all"
           />
 
           <button
             onClick={() => handleSend()}
             disabled={!inputValue.trim() || isLoading}
-            className="p-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+            className="p-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
           >
             <Send className="w-5 h-5" />
           </button>
         </div>
 
         <p className="text-xs text-center text-gray-400 mt-2">
-          Claude AI + ML • Enter para enviar
+          Powered by Claude AI + Machine Learning • Presiona Enter para enviar
         </p>
       </div>
     </div>
   );
 };
 
-export default AsistenteTab;
+export default AsistenteIAAvanzado;

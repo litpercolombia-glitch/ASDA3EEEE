@@ -11,3 +11,4 @@ export { default as GamificationTab } from './GamificationTab';
 export { ProcesosLitperTab } from './ProcesosLitperTab';
 export { CiudadAgentesTab } from './CiudadAgentesTab';
 export { AprendizajeIATab } from './AprendizajeIATab';
+export { DistritosIATab } from './DistritosIATab';
