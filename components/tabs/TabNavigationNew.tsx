@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, Activity, Target, FileBarChart, Bot, Brain, Zap, TrendingUp, Trophy, Building2, GraduationCap, Plug } from 'lucide-react';
+import { Package, Activity, Target, FileBarChart, Bot, Brain, Zap, TrendingUp, Trophy, Building2, GraduationCap, Plug, ShieldCheck } from 'lucide-react';
 import { MainTabNew } from '../../types/logistics';
 
 interface TabNavigationNewProps {
@@ -20,6 +20,8 @@ interface TabNavigationNewProps {
     'aprendizaje-ia'?: number;
     'mcp-connections'?: number;
     'conexiones'?: number;
+    'admin'?: number;
+    'reporte'?: number;
   };
 }
 
@@ -142,6 +144,15 @@ const tabs: TabConfig[] = [
     shortLabel: 'Conex.',
     color: 'text-orange-500',
     activeColor: 'bg-gradient-to-r from-orange-500 to-amber-500',
+    isNew: true,
+  },
+  {
+    id: 'admin',
+    icon: ShieldCheck,
+    label: 'Admin',
+    shortLabel: 'Admin',
+    color: 'text-rose-500',
+    activeColor: 'bg-gradient-to-r from-rose-500 to-pink-600',
     isNew: true,
   },
 ];

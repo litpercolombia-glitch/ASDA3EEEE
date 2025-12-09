@@ -154,7 +154,7 @@ export const AdminPanelPro: React.FC = () => {
 
   // Estados de UI
   const [filtroFecha, setFiltroFecha] = useState<FiltroFecha>('todo');
-  const [activeTab, setActiveTab] = useState<'procesamiento' | 'documentos' | 'financial' | 'conocimiento' | 'integraciones' | 'predicciones'>('procesamiento');
+  const [activeTab, setActiveTab] = useState<'procesamiento' | 'documentos' | 'financial' | 'conocimiento' | 'integraciones' | 'predicciones' | 'info-logistica'>('procesamiento');
 
   // Estados de documentos
   const [documentos, setDocumentos] = useState<DocumentoCargado[]>([]);
@@ -176,6 +176,12 @@ export const AdminPanelPro: React.FC = () => {
   // Notificaciones
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
+  // Info Logística
+  const [logisticsData, setLogisticsData] = useState<CiudadSemaforo[]>([]);
+  const [selectedLogisticItem, setSelectedLogisticItem] = useState<CiudadSemaforo | null>(null);
+  const [excelFiles, setExcelFiles] = useState<Array<{id: string, nombre: string, fecha: string, registros: number, tipo: string}>>([]);
+  const [isLoadingLogistics, setIsLoadingLogistics] = useState(false);
+
   // ============================================
   // EFECTOS
   // ============================================
@@ -194,6 +200,7 @@ export const AdminPanelPro: React.FC = () => {
     if (isAuthenticated) {
       loadProcessedDocuments();
       loadKnowledge();
+      loadLogisticsData();
     }
   }, [isAuthenticated]);
 
@@ -256,6 +263,59 @@ export const AdminPanelPro: React.FC = () => {
   const loadKnowledge = () => {
     const knowledge = documentProcessor.getKnowledge();
     setKnowledgeEntries(knowledge);
+  };
+
+  // Cargar datos logísticos desde localStorage
+  const loadLogisticsData = () => {
+    setIsLoadingLogistics(true);
+    try {
+      // Cargar datos del semáforo
+      const savedSemaforo = localStorage.getItem(STORAGE_KEYS.SEMAFORO);
+      if (savedSemaforo) {
+        const parsed = JSON.parse(savedSemaforo);
+        if (parsed.ciudadesSemaforo) {
+          setLogisticsData(parsed.ciudadesSemaforo);
+        }
+      }
+
+      // Cargar archivos Excel procesados
+      const files: Array<{id: string, nombre: string, fecha: string, registros: number, tipo: string}> = [];
+
+      // Buscar documentos tipo Excel
+      const docs = documentProcessor.getProcessedDocuments();
+      docs.filter(d => d.fileType === 'excel').forEach(doc => {
+        files.push({
+          id: doc.id,
+          nombre: doc.fileName,
+          fecha: new Date(doc.processedAt).toLocaleDateString('es-CO'),
+          registros: doc.rowCount || 0,
+          tipo: 'Excel'
+        });
+      });
+
+      // Agregar datos del semáforo si existen
+      if (savedSemaforo) {
+        const parsed = JSON.parse(savedSemaforo);
+        if (parsed.excelFileName) {
+          const existingFile = files.find(f => f.nombre === parsed.excelFileName);
+          if (!existingFile) {
+            files.unshift({
+              id: 'semaforo-excel',
+              nombre: parsed.excelFileName || 'Datos Semáforo',
+              fecha: parsed.lastUpdate ? new Date(parsed.lastUpdate).toLocaleDateString('es-CO') : 'N/A',
+              registros: parsed.ciudadesSemaforo?.length || 0,
+              tipo: 'Semáforo'
+            });
+          }
+        }
+      }
+
+      setExcelFiles(files);
+    } catch (err) {
+      console.error('Error cargando datos logísticos:', err);
+    } finally {
+      setIsLoadingLogistics(false);
+    }
   };
 
   // Procesar archivo Excel
@@ -548,6 +608,7 @@ export const AdminPanelPro: React.FC = () => {
             { id: 'conocimiento', label: 'Base de Conocimiento', icon: BookOpen, color: 'amber', badge: knowledgeEntries.length },
             { id: 'predicciones', label: 'Predicciones ML', icon: Activity, color: 'pink' },
             { id: 'integraciones', label: 'Integraciones', icon: Plug, color: 'orange' },
+            { id: 'info-logistica', label: 'Info Logística', icon: Truck, color: 'cyan', badge: logisticsData.length },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1021,7 +1082,371 @@ export const AdminPanelPro: React.FC = () => {
               <ConexionesTab />
             </div>
           )}
+
+          {/* ============================================ */}
+          {/* TAB: INFO LOGÍSTICA */}
+          {/* ============================================ */}
+          {activeTab === 'info-logistica' && (
+            <div className="p-6 space-y-8">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-2xl shadow-xl shadow-cyan-500/30">
+                    <Truck className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
+                      Info Logística
+                    </h2>
+                    <p className="text-slate-500 dark:text-slate-400">
+                      Documentos Excel e información de entregas en tiempo real
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={loadLogisticsData}
+                  className="flex items-center gap-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-xl font-medium transition-all"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isLoadingLogistics ? 'animate-spin' : ''}`} />
+                  Actualizar
+                </button>
+              </div>
+
+              {/* Archivos Excel Cargados */}
+              <div className="bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 rounded-2xl p-6 border border-cyan-200 dark:border-cyan-800">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                  <FileSpreadsheet className="w-5 h-5 text-cyan-500" />
+                  Documentos Excel Cargados
+                </h3>
+
+                {excelFiles.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FileSpreadsheet className="w-12 h-12 mx-auto text-slate-300 dark:text-navy-600 mb-3" />
+                    <p className="text-slate-500 dark:text-slate-400">No hay archivos Excel cargados</p>
+                    <p className="text-xs text-slate-400 mt-1">Sube archivos en "Procesamiento IA" o "Semáforo"</p>
+                  </div>
+                ) : (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {excelFiles.map((file) => (
+                      <div
+                        key={file.id}
+                        onClick={() => {
+                          if (file.tipo === 'Semáforo') {
+                            loadLogisticsData();
+                            showNotification('info', 'Datos del semáforo actualizados');
+                          } else {
+                            const doc = processedDocs.find(d => d.id === file.id);
+                            if (doc) setCurrentProcessingDoc(doc);
+                          }
+                        }}
+                        className="p-4 bg-white dark:bg-navy-800 rounded-xl border border-cyan-200 dark:border-cyan-700 hover:border-cyan-400 hover:shadow-lg cursor-pointer transition-all group"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                            <FileSpreadsheet className="w-5 h-5 text-cyan-600" />
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                            file.tipo === 'Semáforo'
+                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                              : 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400'
+                          }`}>
+                            {file.tipo}
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-slate-700 dark:text-white truncate group-hover:text-cyan-600 mb-1">
+                          {file.nombre}
+                        </h4>
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span>{file.fecha}</span>
+                          <span className="font-medium text-cyan-600">{file.registros} registros</span>
+                        </div>
+                        <div className="mt-3 flex items-center gap-1 text-cyan-500 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Eye className="w-3 h-3" />
+                          <span>Ver detalle</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Información Logística Dinámica */}
+              <div>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-emerald-500" />
+                  Semáforo de Entregas por Ciudad
+                  {logisticsData.length > 0 && (
+                    <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full text-xs font-bold">
+                      {logisticsData.length} ciudades
+                    </span>
+                  )}
+                </h3>
+
+                {logisticsData.length === 0 ? (
+                  <div className="text-center py-12 bg-slate-50 dark:bg-navy-800 rounded-2xl">
+                    <MapPin className="w-16 h-16 mx-auto text-slate-300 dark:text-navy-600 mb-4" />
+                    <p className="text-lg font-medium text-slate-500 mb-2">Sin datos logísticos</p>
+                    <p className="text-sm text-slate-400 max-w-md mx-auto mb-6">
+                      Carga un archivo Excel en la pestaña "Semáforo" para ver las métricas de entregas por ciudad y transportadora
+                    </p>
+                    <button
+                      onClick={() => setActiveTab('procesamiento')}
+                      className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-xl font-medium transition-all"
+                    >
+                      Cargar Datos
+                    </button>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b-2 border-slate-200 dark:border-navy-700">
+                          <th className="text-left py-4 px-4 text-xs font-bold uppercase text-slate-500">Ciudad</th>
+                          <th className="text-left py-4 px-4 text-xs font-bold uppercase text-slate-500">Transportadora</th>
+                          <th className="text-center py-4 px-4 text-xs font-bold uppercase text-slate-500">Entregas</th>
+                          <th className="text-center py-4 px-4 text-xs font-bold uppercase text-slate-500">Devoluciones</th>
+                          <th className="text-center py-4 px-4 text-xs font-bold uppercase text-slate-500">Tasa Éxito</th>
+                          <th className="text-center py-4 px-4 text-xs font-bold uppercase text-slate-500">Tiempo Prom.</th>
+                          <th className="text-center py-4 px-4 text-xs font-bold uppercase text-slate-500">Semáforo</th>
+                          <th className="text-right py-4 px-4 text-xs font-bold uppercase text-slate-500">Acción</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {logisticsData.map((item, idx) => (
+                          <tr
+                            key={idx}
+                            onClick={() => setSelectedLogisticItem(item)}
+                            className="border-b border-slate-100 dark:border-navy-700 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 cursor-pointer transition-colors"
+                          >
+                            <td className="py-4 px-4">
+                              <div className="flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-slate-400" />
+                                <span className="font-medium text-slate-700 dark:text-white">{item.ciudad}</span>
+                              </div>
+                            </td>
+                            <td className="py-4 px-4">
+                              <span className="px-2 py-1 bg-slate-100 dark:bg-navy-700 rounded text-sm font-medium">
+                                {item.transportadora}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4 text-center">
+                              <span className="font-bold text-emerald-600">{item.entregas}</span>
+                            </td>
+                            <td className="py-4 px-4 text-center">
+                              <span className="font-bold text-red-500">{item.devoluciones}</span>
+                            </td>
+                            <td className="py-4 px-4 text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <div className="w-16 h-2 bg-slate-200 dark:bg-navy-700 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full ${
+                                      item.tasaExito >= 90 ? 'bg-emerald-500' :
+                                      item.tasaExito >= 75 ? 'bg-amber-500' :
+                                      item.tasaExito >= 60 ? 'bg-orange-500' : 'bg-red-500'
+                                    }`}
+                                    style={{ width: `${item.tasaExito}%` }}
+                                  />
+                                </div>
+                                <span className="font-bold text-sm">{item.tasaExito.toFixed(1)}%</span>
+                              </div>
+                            </td>
+                            <td className="py-4 px-4 text-center">
+                              <span className="font-medium text-slate-600 dark:text-slate-300">{item.tiempoPromedio} días</span>
+                            </td>
+                            <td className="py-4 px-4 text-center">
+                              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
+                                item.semaforo === 'VERDE' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                item.semaforo === 'AMARILLO' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                item.semaforo === 'NARANJA' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                                'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                              }`}>
+                                <span className={`w-2 h-2 rounded-full ${
+                                  item.semaforo === 'VERDE' ? 'bg-emerald-500' :
+                                  item.semaforo === 'AMARILLO' ? 'bg-amber-500' :
+                                  item.semaforo === 'NARANJA' ? 'bg-orange-500' : 'bg-red-500'
+                                }`} />
+                                {item.semaforo}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4 text-right">
+                              <button className="p-2 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 rounded-lg text-cyan-500 transition-colors">
+                                <ChevronDown className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Resumen Estadístico */}
+              {logisticsData.length > 0 && (
+                <div className="grid md:grid-cols-4 gap-4">
+                  <div className="p-5 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl text-white">
+                    <div className="flex items-center justify-between mb-2">
+                      <CheckCircle className="w-6 h-6 text-white/70" />
+                      <span className="text-2xl font-bold">
+                        {logisticsData.reduce((sum, item) => sum + item.entregas, 0)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-white/80">Total Entregas</p>
+                  </div>
+                  <div className="p-5 bg-gradient-to-br from-red-500 to-pink-500 rounded-2xl text-white">
+                    <div className="flex items-center justify-between mb-2">
+                      <AlertTriangle className="w-6 h-6 text-white/70" />
+                      <span className="text-2xl font-bold">
+                        {logisticsData.reduce((sum, item) => sum + item.devoluciones, 0)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-white/80">Total Devoluciones</p>
+                  </div>
+                  <div className="p-5 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl text-white">
+                    <div className="flex items-center justify-between mb-2">
+                      <Target className="w-6 h-6 text-white/70" />
+                      <span className="text-2xl font-bold">
+                        {(logisticsData.reduce((sum, item) => sum + item.tasaExito, 0) / logisticsData.length).toFixed(1)}%
+                      </span>
+                    </div>
+                    <p className="text-sm text-white/80">Tasa Promedio</p>
+                  </div>
+                  <div className="p-5 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl text-white">
+                    <div className="flex items-center justify-between mb-2">
+                      <Clock className="w-6 h-6 text-white/70" />
+                      <span className="text-2xl font-bold">
+                        {(logisticsData.reduce((sum, item) => sum + item.tiempoPromedio, 0) / logisticsData.length).toFixed(1)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-white/80">Días Promedio</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
+
+        {/* Modal de Detalle Logístico */}
+        {selectedLogisticItem && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-navy-900 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden">
+              <div className="p-6 bg-gradient-to-r from-cyan-500 to-blue-500 text-white">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white/20 rounded-xl backdrop-blur">
+                      <MapPin className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold">{selectedLogisticItem.ciudad}</h3>
+                      <p className="text-cyan-100">{selectedLogisticItem.transportadora}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedLogisticItem(null)}
+                    className="p-2 hover:bg-white/20 rounded-xl transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Métricas principales */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="w-5 h-5 text-emerald-500" />
+                      <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Entregas</span>
+                    </div>
+                    <p className="text-3xl font-bold text-emerald-600">{selectedLogisticItem.entregas}</p>
+                  </div>
+                  <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="w-5 h-5 text-red-500" />
+                      <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Devoluciones</span>
+                    </div>
+                    <p className="text-3xl font-bold text-red-600">{selectedLogisticItem.devoluciones}</p>
+                  </div>
+                </div>
+
+                {/* Tasa de éxito */}
+                <div className="p-4 bg-slate-50 dark:bg-navy-800 rounded-xl">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Tasa de Éxito</span>
+                    <span className={`text-2xl font-bold ${
+                      selectedLogisticItem.tasaExito >= 90 ? 'text-emerald-600' :
+                      selectedLogisticItem.tasaExito >= 75 ? 'text-amber-600' :
+                      selectedLogisticItem.tasaExito >= 60 ? 'text-orange-600' : 'text-red-600'
+                    }`}>
+                      {selectedLogisticItem.tasaExito.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full h-4 bg-slate-200 dark:bg-navy-700 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        selectedLogisticItem.tasaExito >= 90 ? 'bg-emerald-500' :
+                        selectedLogisticItem.tasaExito >= 75 ? 'bg-amber-500' :
+                        selectedLogisticItem.tasaExito >= 60 ? 'bg-orange-500' : 'bg-red-500'
+                      }`}
+                      style={{ width: `${selectedLogisticItem.tasaExito}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Info adicional */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Clock className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm text-slate-500">Tiempo Promedio</span>
+                    </div>
+                    <p className="text-xl font-bold text-blue-600">{selectedLogisticItem.tiempoPromedio} días</p>
+                  </div>
+                  <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Package className="w-4 h-4 text-purple-500" />
+                      <span className="text-sm text-slate-500">Total Envíos</span>
+                    </div>
+                    <p className="text-xl font-bold text-purple-600">{selectedLogisticItem.total}</p>
+                  </div>
+                </div>
+
+                {/* Recomendación IA */}
+                {selectedLogisticItem.recomendacionIA && (
+                  <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                        <Sparkles className="w-5 h-5 text-purple-500" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-700 dark:text-white mb-1">Recomendación IA</h4>
+                        <p className="text-sm text-slate-600 dark:text-slate-300">{selectedLogisticItem.recomendacionIA}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Semáforo */}
+                <div className="flex items-center justify-center">
+                  <div className={`px-6 py-3 rounded-full font-bold flex items-center gap-2 ${
+                    selectedLogisticItem.semaforo === 'VERDE' ? 'bg-emerald-100 text-emerald-700' :
+                    selectedLogisticItem.semaforo === 'AMARILLO' ? 'bg-amber-100 text-amber-700' :
+                    selectedLogisticItem.semaforo === 'NARANJA' ? 'bg-orange-100 text-orange-700' :
+                    'bg-red-100 text-red-700'
+                  }`}>
+                    <span className={`w-4 h-4 rounded-full animate-pulse ${
+                      selectedLogisticItem.semaforo === 'VERDE' ? 'bg-emerald-500' :
+                      selectedLogisticItem.semaforo === 'AMARILLO' ? 'bg-amber-500' :
+                      selectedLogisticItem.semaforo === 'NARANJA' ? 'bg-orange-500' : 'bg-red-500'
+                    }`} />
+                    Estado: {selectedLogisticItem.semaforo}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal de análisis */}
         {currentProcessingDoc && activeTab !== 'procesamiento' && (

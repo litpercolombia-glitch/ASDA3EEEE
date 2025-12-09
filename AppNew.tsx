@@ -31,6 +31,7 @@ import {
 import { CiudadAgentesTab } from './components/tabs/CiudadAgentesTab';
 import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
 import { AssistantButton } from './components/Assistant';
+import { AdminPanelPro } from './components/Admin/AdminPanelPro';
 import CountrySelector from './components/CountrySelector';
 import { detectarGuiasRetrasadas } from './utils/patternDetection';
 import {
@@ -670,6 +671,7 @@ const AppNew: React.FC = () => {
                 { id: 'ml', icon: Brain, label: '🧠 Sistema ML' },
                 { id: 'procesos-litper', icon: Layers, label: '🏢 Procesos' },
                 { id: 'ciudad-agentes', icon: Globe, label: '🌆 Ciudad IA', isNew: true },
+                { id: 'admin', icon: Shield, label: '🔐 Admin', isNew: true },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -901,6 +903,7 @@ const AppNew: React.FC = () => {
           {currentTab === 'ml' && <MLSystemTab />}
           {currentTab === 'procesos-litper' && <ProcesosLitperTab selectedCountry={selectedCountry} />}
           {currentTab === 'ciudad-agentes' && <CiudadAgentesTab selectedCountry={selectedCountry} />}
+          {currentTab === 'admin' && <AdminPanelPro />}
         </div>
       </main>
 
