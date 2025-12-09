@@ -1,3 +1,4 @@
+// LITPER PRO v5.1 - Actualización completa con historial de cargas
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Shipment, ShipmentStatus, CarrierName, AITrackingResult } from './types';
 import { MainTabNew, SemaforoExcelData } from './types/logistics';
