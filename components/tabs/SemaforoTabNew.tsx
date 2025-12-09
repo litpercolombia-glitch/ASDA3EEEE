@@ -304,6 +304,179 @@ const CityDetailModal: React.FC<CityDetailModalProps> = ({ ciudad, onClose }) =>
   );
 };
 
+// ============================================
+// CITY SEARCH RESULTS - Muestra info completa de ciudad buscada
+// ============================================
+interface CitySearchResultsProps {
+  ciudad: string;
+  resultados: (CiudadSemaforo & { score: number; factors: SemaforoScoreResult['factors'] })[];
+  onClear: () => void;
+}
+
+const CitySearchResults: React.FC<CitySearchResultsProps> = ({ ciudad, resultados, onClear }) => {
+  if (resultados.length === 0) return null;
+
+  const totalEnvios = resultados.reduce((sum, r) => sum + r.total, 0);
+  const totalEntregas = resultados.reduce((sum, r) => sum + r.entregas, 0);
+  const totalDevoluciones = resultados.reduce((sum, r) => sum + r.devoluciones, 0);
+  const tasaPromedio = totalEnvios > 0 ? (totalEntregas / totalEnvios) * 100 : 0;
+  const mejorTransportadora = resultados.reduce((best, r) => r.score > best.score ? r : best, resultados[0]);
+
+  const semaforoConfig = {
+    VERDE: { emoji: '🟢', bg: 'bg-emerald-500', light: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-600', border: 'border-emerald-200 dark:border-emerald-800' },
+    AMARILLO: { emoji: '🟡', bg: 'bg-yellow-500', light: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-600', border: 'border-yellow-200 dark:border-yellow-800' },
+    NARANJA: { emoji: '🟠', bg: 'bg-orange-500', light: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-600', border: 'border-orange-200 dark:border-orange-800' },
+    ROJO: { emoji: '🔴', bg: 'bg-red-500', light: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-600', border: 'border-red-200 dark:border-red-800' },
+  };
+
+  return (
+    <div className="bg-gradient-to-br from-slate-50 to-amber-50 dark:from-navy-900 dark:to-navy-800 rounded-2xl border-2 border-amber-200 dark:border-amber-800 p-6 mb-6 animate-in slide-in-from-top">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl shadow-lg">
+            <MapPin className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-bold text-slate-800 dark:text-white">{ciudad}</h3>
+            <p className="text-sm text-slate-500">{resultados.length} transportadora{resultados.length > 1 ? 's' : ''} disponible{resultados.length > 1 ? 's' : ''}</p>
+          </div>
+        </div>
+        <button
+          onClick={onClear}
+          className="p-2 hover:bg-slate-200 dark:hover:bg-navy-700 rounded-lg transition-colors"
+        >
+          <X className="w-5 h-5 text-slate-500" />
+        </button>
+      </div>
+
+      {/* Resumen General */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white dark:bg-navy-900 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-navy-700">
+          <p className="text-xs text-slate-500 mb-1">Total Envíos</p>
+          <p className="text-2xl font-bold text-slate-800 dark:text-white">{totalEnvios}</p>
+        </div>
+        <div className="bg-white dark:bg-navy-900 rounded-xl p-4 shadow-sm border border-emerald-200 dark:border-emerald-800">
+          <p className="text-xs text-emerald-600 mb-1">Entregas Exitosas</p>
+          <p className="text-2xl font-bold text-emerald-600">{totalEntregas}</p>
+        </div>
+        <div className="bg-white dark:bg-navy-900 rounded-xl p-4 shadow-sm border border-red-200 dark:border-red-800">
+          <p className="text-xs text-red-500 mb-1">Devoluciones</p>
+          <p className="text-2xl font-bold text-red-500">{totalDevoluciones}</p>
+        </div>
+        <div className="bg-white dark:bg-navy-900 rounded-xl p-4 shadow-sm border border-blue-200 dark:border-blue-800">
+          <p className="text-xs text-blue-600 mb-1">Tasa de Éxito</p>
+          <p className="text-2xl font-bold text-blue-600">{tasaPromedio.toFixed(1)}%</p>
+        </div>
+      </div>
+
+      {/* Mejor Opción */}
+      <div className={`${semaforoConfig[mejorTransportadora.semaforo].light} ${semaforoConfig[mejorTransportadora.semaforo].border} border-2 rounded-xl p-4 mb-6`}>
+        <div className="flex items-center gap-2 mb-3">
+          <Award className="w-5 h-5 text-amber-500" />
+          <span className="font-bold text-slate-700 dark:text-white">Mejor Opción Recomendada</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`w-12 h-12 ${semaforoConfig[mejorTransportadora.semaforo].bg} rounded-xl flex items-center justify-center text-white font-bold`}>
+              {mejorTransportadora.score}
+            </div>
+            <div>
+              <p className="font-bold text-slate-800 dark:text-white text-lg">{mejorTransportadora.transportadora}</p>
+              <p className="text-sm text-slate-500">Score {mejorTransportadora.score}/100 • {mejorTransportadora.tasaExito.toFixed(0)}% éxito • {mejorTransportadora.tiempoPromedio}d promedio</p>
+            </div>
+          </div>
+          <span className="text-2xl">{semaforoConfig[mejorTransportadora.semaforo].emoji}</span>
+        </div>
+        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-navy-700">
+          <p className="text-sm text-slate-600 dark:text-slate-400 flex items-start gap-2">
+            <Bot className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+            {mejorTransportadora.recomendacionIA}
+          </p>
+        </div>
+      </div>
+
+      {/* Comparativa de Transportadoras */}
+      <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 overflow-hidden">
+        <div className="px-4 py-3 bg-slate-50 dark:bg-navy-950 border-b border-slate-200 dark:border-navy-700">
+          <h4 className="font-bold text-slate-700 dark:text-white flex items-center gap-2">
+            <Truck className="w-4 h-4 text-amber-500" />
+            Comparativa de Transportadoras en {ciudad}
+          </h4>
+        </div>
+        <div className="divide-y divide-slate-100 dark:divide-navy-800">
+          {resultados.sort((a, b) => b.score - a.score).map((t, idx) => {
+            const config = semaforoConfig[t.semaforo];
+            return (
+              <div key={`${t.transportadora}-${idx}`} className={`p-4 ${idx === 0 ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-bold text-slate-400 w-6">#{idx + 1}</span>
+                      <div className={`w-10 h-10 ${config.bg} rounded-lg flex items-center justify-center text-white font-bold text-sm`}>
+                        {t.score}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-800 dark:text-white">{t.transportadora}</p>
+                      <div className="flex items-center gap-3 text-xs text-slate-500">
+                        <span className="flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3 text-emerald-500" />
+                          {t.entregas} entregas
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <XCircle className="w-3 h-3 text-red-500" />
+                          {t.devoluciones} dev.
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-blue-500" />
+                          {t.tiempoPromedio}d
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-lg font-bold ${config.text}`}>{t.tasaExito.toFixed(0)}%</span>
+                      <span>{config.emoji}</span>
+                    </div>
+                    <p className="text-xs text-slate-400">{t.total} envíos</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Recomendaciones */}
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200 dark:border-emerald-800">
+          <p className="font-bold text-emerald-700 dark:text-emerald-400 text-sm mb-2 flex items-center gap-2">
+            <CheckCircle className="w-4 h-4" />
+            Para Contraentrega
+          </p>
+          <p className="text-sm text-emerald-600 dark:text-emerald-300">
+            {resultados.filter(r => r.semaforo === 'VERDE').length > 0
+              ? `Usa ${resultados.filter(r => r.semaforo === 'VERDE')[0]?.transportadora || mejorTransportadora.transportadora} para máxima seguridad.`
+              : 'Considera solicitar prepago en esta ciudad.'}
+          </p>
+        </div>
+        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+          <p className="font-bold text-blue-700 dark:text-blue-400 text-sm mb-2 flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            Tiempo de Entrega
+          </p>
+          <p className="text-sm text-blue-600 dark:text-blue-300">
+            Promedio en {ciudad}: {(resultados.reduce((sum, r) => sum + r.tiempoPromedio, 0) / resultados.length).toFixed(1)} días.
+            {resultados.some(r => r.tiempoPromedio <= 3) && ` La más rápida: ${resultados.reduce((best, r) => r.tiempoPromedio < best.tiempoPromedio ? r : best, resultados[0]).transportadora}.`}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Insights panel component
 interface InsightsPanelProps {
   ciudades: (CiudadSemaforo & { score: number })[];
@@ -960,6 +1133,7 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
 
   const [selectedCiudad, setSelectedCiudad] = useState<(CiudadSemaforo & { score: number; factors: SemaforoScoreResult['factors'] }) | null>(null);
   const [showTable, setShowTable] = useState(true);
+  const [searchedCity, setSearchedCity] = useState<string | null>(null);
 
   // Autocompletado de ciudades
   const [showSugerencias, setShowSugerencias] = useState(false);
@@ -970,7 +1144,19 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
 
   const handleSelectCiudadSugerencia = (ciudad: CiudadColombia) => {
     setSearchQuery(ciudad.nombre);
+    setSearchedCity(ciudad.nombre);
     setShowSugerencias(false);
+  };
+
+  // Resultados de búsqueda de ciudad específica
+  const citySearchResults = useMemo(() => {
+    if (!searchedCity) return [];
+    return ciudades.filter(c => c.ciudad.toLowerCase() === searchedCity.toLowerCase());
+  }, [ciudades, searchedCity]);
+
+  const clearCitySearch = () => {
+    setSearchedCity(null);
+    setSearchQuery('');
   };
 
   // Load saved data on mount
@@ -1373,7 +1559,17 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
         </div>
       </div>
 
-      {/* Results Table */}
+      {/* City Search Results - Mostrar cuando hay ciudad seleccionada */}
+      {searchedCity && citySearchResults.length > 0 && (
+        <CitySearchResults
+          ciudad={searchedCity}
+          resultados={citySearchResults}
+          onClear={clearCitySearch}
+        />
+      )}
+
+      {/* Results Table - Ocultar si hay búsqueda de ciudad activa */}
+      {!searchedCity && (
       <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -1490,12 +1686,13 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
           </div>
         )}
       </div>
+      )}
 
       {/* AI Insights Panel */}
-      {ciudades.length > 0 && <InsightsPanel ciudades={ciudades} />}
+      {ciudades.length > 0 && !searchedCity && <InsightsPanel ciudades={ciudades} />}
 
-      {/* Route Optimization Panel - NEW */}
-      {ciudades.length > 0 && <RouteOptimizationPanel ciudades={ciudades} />}
+      {/* Route Optimization Panel - Solo visible cuando no hay búsqueda */}
+      {ciudades.length > 0 && !searchedCity && <RouteOptimizationPanel ciudades={ciudades} />}
 
       {/* City Detail Modal */}
       {selectedCiudad && (
