@@ -27,6 +27,7 @@ import {
   DemandTab,
   GamificationTab,
   ProcesosLitperTab,
+  MCPConnectionsTab,
 } from './components/tabs';
 import { CiudadAgentesTab } from './components/tabs/CiudadAgentesTab';
 import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
@@ -903,6 +904,7 @@ const AppNew: React.FC = () => {
           {currentTab === 'ml' && <MLSystemTab />}
           {currentTab === 'procesos-litper' && <ProcesosLitperTab selectedCountry={selectedCountry} />}
           {currentTab === 'ciudad-agentes' && <CiudadAgentesTab selectedCountry={selectedCountry} />}
+          {currentTab === 'mcp-connections' && <MCPConnectionsTab />}
         </div>
       </main>
 
