@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Bot, User, Lightbulb, RefreshCw } from 'lucide-react';
+import { Send, Loader2, Bot, User, Lightbulb, RefreshCw, Package, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -13,8 +13,238 @@ interface ChatTabProps {
   shipmentsContext?: any[];
 }
 
-// API URL del backend
-const API_BASE = import.meta.env.VITE_ML_API_URL || 'http://localhost:8000';
+// Base de conocimiento local para respuestas inteligentes
+const KNOWLEDGE_BASE: Record<string, { keywords: string[]; response: string; sources: string[] }> = {
+  semaforo: {
+    keywords: ['semaforo', 'semáforo', 'colores', 'verde', 'amarillo', 'rojo', 'naranja'],
+    response: `El **Semáforo de Rutas** evalúa el rendimiento de cada ciudad/transportadora:
+
+🟢 **VERDE** (Score ≥75): Ruta excelente, priorizar envíos
+🟡 **AMARILLO** (Score 65-74): Ruta buena, monitorear
+🟠 **NARANJA** (Score 50-64): Ruta con alertas, revisar
+🔴 **ROJO** (Score <50): Ruta crítica, evitar o gestionar
+
+El score se calcula con:
+- 40% Tasa de entrega
+- 30% Tiempo promedio
+- 20% Volumen histórico
+- 10% Consistencia
+
+**Tip:** Sube un Excel con tus datos de entregas para ver el análisis completo.`,
+    sources: ['Manual de Semáforo', 'Guía de Rutas']
+  },
+  novedad: {
+    keywords: ['novedad', 'novedades', 'problema', 'devolución', 'devolucion', 'rechazado', 'no entregado'],
+    response: `Para gestionar una **novedad** sigue estos pasos:
+
+1. **Identificar el tipo:**
+   - 📦 Dirección incorrecta
+   - 📞 No contesta
+   - 🚫 Rechazado
+   - 💰 No tiene dinero
+   - 🔄 Reprogramar
+
+2. **Acciones recomendadas:**
+   - Contactar al cliente vía WhatsApp
+   - Verificar datos de entrega
+   - Coordinar nueva fecha
+   - Escalar a transportadora si es necesario
+
+3. **En el sistema:**
+   - Ve a Seguimiento → Busca la guía
+   - Revisa el historial de eventos
+   - Usa el botón de WhatsApp para contactar
+
+**Tip:** Las guías con más de 3 días sin movimiento requieren atención urgente.`,
+    sources: ['Proceso de Novedades', 'SLA Transportadoras']
+  },
+  seguimiento: {
+    keywords: ['seguimiento', 'tracking', 'rastreo', 'rastrear', 'guía', 'guia', 'donde está', 'donde esta'],
+    response: `Para hacer **seguimiento** de guías:
+
+1. **Carga tus guías:**
+   - Pestaña "Seguimiento"
+   - Carga Excel o pega los datos
+   - El sistema detecta automáticamente la transportadora
+
+2. **Información disponible:**
+   - 📍 Estado actual
+   - 📅 Días en tránsito
+   - 📱 Teléfono del cliente
+   - 🚚 Transportadora
+   - 📋 Historial de eventos
+
+3. **Acciones rápidas:**
+   - 📋 Copiar número de guía
+   - 💬 Enviar WhatsApp al cliente
+   - 📸 Capturar historial como imagen
+
+**Colores de estado:**
+- ✅ Verde: Entregado
+- 🔵 Azul: En tránsito
+- 🟣 Morado: En oficina
+- 🔴 Rojo: Novedad`,
+    sources: ['Guía de Seguimiento', 'Manual de Usuario']
+  },
+  prediccion: {
+    keywords: ['predicción', 'prediccion', 'análisis', 'analisis', 'ia', 'inteligencia', 'machine learning', 'ml'],
+    response: `El sistema de **Predicción IA** te ayuda a:
+
+1. **Análisis de patrones:**
+   - Detecta guías con riesgo de devolución
+   - Identifica ciudades problemáticas
+   - Sugiere mejores transportadoras
+
+2. **Tablero de Alertas:**
+   - Guías sin movimiento > 3 días
+   - Rutas con baja tasa de entrega
+   - Novedades recurrentes
+
+3. **Recomendaciones:**
+   - Qué transportadora usar por ciudad
+   - Horarios óptimos de entrega
+   - Clientes a contactar preventivamente
+
+**Para usar:** Carga tus datos en Seguimiento y el sistema generará insights automáticamente.`,
+    sources: ['Sistema ML', 'Análisis Predictivo']
+  },
+  proceso: {
+    keywords: ['proceso', 'procesos', 'flujo', 'pasos', 'como', 'cómo'],
+    response: `Los **procesos principales** de Litper son:
+
+1. **📦 Gestión de Pedidos:**
+   - Crear pedido → Asignar transportadora → Generar guía
+
+2. **🚚 Seguimiento:**
+   - Cargar guías → Monitorear estados → Gestionar novedades
+
+3. **📊 Análisis:**
+   - Subir Excel → Ver semáforo → Tomar decisiones
+
+4. **💬 Comunicación:**
+   - Chat en vivo → WhatsApp automático → Notificaciones
+
+5. **📈 Reportes:**
+   - Financiero → Rendimiento → Exportar
+
+¿Sobre cuál proceso necesitas más información?`,
+    sources: ['Manual de Procesos', 'Guía Operativa']
+  },
+  guias: {
+    keywords: ['lista de guías', 'lista de guias', 'mis guías', 'mis guias', 'mostrar guías', 'mostrar guias', 'ver guías', 'ver guias'],
+    response: `Para ver la **lista de guías** completa:
+
+1. Ve a la pestaña **Seguimiento**
+2. Ahí encontrarás todas las guías cargadas con:
+   - Número de guía
+   - Celular del cliente
+   - Estado actual
+   - Transportadora
+   - Días en tránsito
+   - Última actualización
+
+**Filtros disponibles:**
+- Por estado (Entregado, En tránsito, Novedad, etc.)
+- Por transportadora
+- Por búsqueda de texto
+
+**Acciones:**
+- Copiar datos
+- Enviar WhatsApp
+- Ver historial detallado
+- Exportar a Excel`,
+    sources: ['Sistema de Seguimiento']
+  },
+  transportadora: {
+    keywords: ['transportadora', 'coordinadora', 'servientrega', 'interrapidisimo', 'envia', 'tcc', '472'],
+    response: `**Transportadoras soportadas:**
+
+🚚 **Coordinadora** - Cobertura nacional
+🚚 **Servientrega** - Envíos express
+🚚 **Inter Rapidísimo** - Económico
+🚚 **Envía** - Buena cobertura urbana
+🚚 **TCC** - Carga pesada
+🚚 **472** - Envíos especiales
+
+**Para comparar:**
+- Ve al Semáforo y sube tu Excel
+- El sistema te mostrará:
+  - Tasa de entrega por transportadora
+  - Tiempo promedio
+  - Ciudades recomendadas
+
+**Tip:** Usa varias transportadoras según la ciudad para optimizar entregas.`,
+    sources: ['Directorio de Transportadoras', 'Análisis de Rendimiento']
+  },
+  conexiones: {
+    keywords: ['conexion', 'conexión', 'integración', 'integracion', 'n8n', 'webhook', 'api', 'dropi', 'chatea'],
+    response: `Las **Conexiones** permiten integrar Litper con:
+
+🔌 **N8N** - Automatización de flujos
+   - Configura tu URL de webhook
+   - Recibe eventos automáticos
+
+💬 **Chatea Pro** - WhatsApp Business
+   - API Key + Webhook URL
+   - Mensajes automáticos a clientes
+
+🛒 **Dropi** - Dropshipping
+   - API Key + Store ID
+   - Sincronización de pedidos
+
+**Webhooks de Litper:**
+- /api/webhook/orden-nueva
+- /api/webhook/estado-guia
+- /api/webhook/novedad
+- /api/webhook/chat-entrante
+
+**Para configurar:** Ve a la pestaña Conexiones en el panel Admin.`,
+    sources: ['Guía de Integraciones', 'API Documentation']
+  }
+};
+
+// Función para encontrar la mejor respuesta
+function findBestResponse(input: string, shipmentsContext?: any[]): { response: string; sources: string[] } {
+  const lowerInput = input.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  // Buscar en la base de conocimiento
+  for (const [key, data] of Object.entries(KNOWLEDGE_BASE)) {
+    for (const keyword of data.keywords) {
+      const normalizedKeyword = keyword.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (lowerInput.includes(normalizedKeyword)) {
+        // Si piden lista de guías y hay contexto, agregar info
+        if (key === 'guias' && shipmentsContext && shipmentsContext.length > 0) {
+          const guiasList = shipmentsContext.slice(0, 10).map((s: any) => {
+            const estado = s.status || 'Pendiente';
+            const telefono = s.phone || 'Sin teléfono';
+            return `• **${s.trackingNumber || s.id}** | ${telefono} | ${estado}`;
+          }).join('\n');
+
+          return {
+            response: `📦 **Tienes ${shipmentsContext.length} guías cargadas:**\n\n${guiasList}${shipmentsContext.length > 10 ? `\n\n...y ${shipmentsContext.length - 10} más. Ve a Seguimiento para ver todas.` : ''}\n\n${data.response}`,
+            sources: data.sources
+          };
+        }
+        return { response: data.response, sources: data.sources };
+      }
+    }
+  }
+
+  // Respuesta por defecto
+  return {
+    response: `Entiendo tu pregunta. Aquí hay algunas cosas que puedo ayudarte:
+
+📦 **Seguimiento** - "¿Cómo rastreo mis guías?"
+🚦 **Semáforo** - "¿Cómo funciona el semáforo?"
+📋 **Novedades** - "¿Cómo proceso una novedad?"
+📊 **Predicciones** - "¿Qué análisis puedo hacer?"
+🔌 **Conexiones** - "¿Cómo integro con N8N?"
+🚚 **Transportadoras** - "¿Qué transportadoras hay?"
+
+¿Sobre cuál tema necesitas información?`,
+    sources: ['Asistente Litper']
+  };
+}
 
 export const ChatTab: React.FC<ChatTabProps> = ({ shipmentsContext = [] }) => {
   const [input, setInput] = useState('');
@@ -22,16 +252,26 @@ export const ChatTab: React.FC<ChatTabProps> = ({ shipmentsContext = [] }) => {
     {
       id: '1',
       role: 'assistant',
-      content: 'Hola! Soy el asistente de Litper. Puedo ayudarte con:\n\n- Como usar la app\n- Procesos de logistica\n- Resolver tus dudas\n- Ejecutar acciones\n\nQue necesitas?',
+      content: `¡Hola! Soy el asistente de **Litper Logística** 🚀
+
+Puedo ayudarte con:
+• 📦 Seguimiento de guías
+• 🚦 Uso del semáforo
+• 📋 Gestión de novedades
+• 📊 Análisis y predicciones
+• 🔌 Configurar conexiones
+• 🚚 Info de transportadoras
+
+${shipmentsContext.length > 0 ? `\n📊 Tienes **${shipmentsContext.length} guías** cargadas. Pregúntame sobre ellas!\n` : ''}
+¿En qué puedo ayudarte?`,
       timestamp: new Date(),
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
-  const [conversationId, setConversationId] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([
-    'Como funciona el semaforo?',
-    'Como proceso una novedad?',
-    'Cuales son los procesos principales?',
+    '¿Cómo funciona el semáforo?',
+    '¿Cómo proceso una novedad?',
+    'Mostrar mis guías',
   ]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -39,16 +279,6 @@ export const ChatTab: React.FC<ChatTabProps> = ({ shipmentsContext = [] }) => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  const getCurrentScreen = (): string => {
-    // Detectar pantalla actual basado en URL o estado
-    const path = window.location.pathname;
-    if (path.includes('seguimiento')) return 'seguimiento';
-    if (path.includes('novedades')) return 'novedades';
-    if (path.includes('semaforo')) return 'semaforo';
-    if (path.includes('pedidos')) return 'pedidos';
-    return 'home';
-  };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -61,64 +291,43 @@ export const ChatTab: React.FC<ChatTabProps> = ({ shipmentsContext = [] }) => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
     setInput('');
     setIsLoading(true);
 
-    try {
-      // Preparar historial para la API
-      const historial = messages.slice(-10).map((m) => ({
-        rol: m.role === 'user' ? 'user' : 'assistant',
-        contenido: m.content,
-      }));
+    // Simular delay de "pensando"
+    await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
 
-      const response = await fetch(`${API_BASE}/api/assistant/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          mensaje: input,
-          conversacion_id: conversationId,
-          pantalla_actual: getCurrentScreen(),
-          historial,
-          usar_conocimiento: true,
-        }),
-      });
+    // Obtener respuesta local inteligente
+    const { response, sources } = findBestResponse(currentInput, shipmentsContext);
 
-      if (!response.ok) {
-        throw new Error('Error en la respuesta');
-      }
+    const assistantMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      role: 'assistant',
+      content: response,
+      timestamp: new Date(),
+      knowledgeUsed: sources,
+    };
 
-      const data = await response.json();
+    setMessages((prev) => [...prev, assistantMessage]);
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: data.respuesta,
-        timestamp: new Date(),
-        knowledgeUsed: data.conocimiento_usado,
-      };
+    // Actualizar sugerencias basadas en el contexto
+    updateSuggestions(currentInput);
 
-      setMessages((prev) => [...prev, assistantMessage]);
-      setConversationId(data.conversacion_id);
+    setIsLoading(false);
+  };
 
-      // Actualizar sugerencias si hay
-      if (data.sugerencias && data.sugerencias.length > 0) {
-        setSuggestions(data.sugerencias);
-      }
-    } catch (error) {
-      console.error('Error:', error);
+  const updateSuggestions = (lastInput: string) => {
+    const lowerInput = lastInput.toLowerCase();
 
-      // Fallback a respuesta local si el backend no esta disponible
-      const fallbackMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: 'Disculpa, hubo un problema conectando con el servidor. Por favor intenta de nuevo.',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, fallbackMessage]);
-    } finally {
-      setIsLoading(false);
+    if (lowerInput.includes('semaforo') || lowerInput.includes('semáforo')) {
+      setSuggestions(['¿Cómo interpreto los colores?', '¿Cómo subo un Excel?', '¿Qué es el score?']);
+    } else if (lowerInput.includes('novedad')) {
+      setSuggestions(['¿Cómo contacto al cliente?', '¿Cuándo escalar a transportadora?', 'Ver guías con novedad']);
+    } else if (lowerInput.includes('guia') || lowerInput.includes('guía')) {
+      setSuggestions(['¿Cómo exporto a Excel?', '¿Cómo envío WhatsApp?', 'Ver tablero de alertas']);
+    } else {
+      setSuggestions(['¿Cómo funciona el semáforo?', '¿Cómo proceso una novedad?', 'Ver mis guías']);
     }
   };
 
@@ -138,11 +347,25 @@ export const ChatTab: React.FC<ChatTabProps> = ({ shipmentsContext = [] }) => {
       {
         id: '1',
         role: 'assistant',
-        content: 'Chat reiniciado. En que puedo ayudarte?',
+        content: '¡Chat reiniciado! ¿En qué puedo ayudarte?',
         timestamp: new Date(),
       },
     ]);
-    setConversationId(null);
+    setSuggestions(['¿Cómo funciona el semáforo?', '¿Cómo proceso una novedad?', 'Ver mis guías']);
+  };
+
+  // Renderizar contenido con formato markdown básico
+  const renderContent = (content: string) => {
+    return content.split('\n').map((line, i) => {
+      // Negrita
+      let formattedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      // Código inline
+      formattedLine = formattedLine.replace(/`(.*?)`/g, '<code class="bg-slate-200 dark:bg-navy-700 px-1 rounded">$1</code>');
+
+      return (
+        <span key={i} className="block" dangerouslySetInnerHTML={{ __html: formattedLine || '&nbsp;' }} />
+      );
+    });
   };
 
   return (
@@ -164,7 +387,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({ shipmentsContext = [] }) => {
                 className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
                   message.role === 'user'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gradient-to-br from-purple-500 to-blue-600 text-white'
+                    : 'bg-gradient-to-br from-orange-500 to-amber-600 text-white'
                 }`}
               >
                 {message.role === 'user' ? (
@@ -182,14 +405,16 @@ export const ChatTab: React.FC<ChatTabProps> = ({ shipmentsContext = [] }) => {
                     : 'bg-slate-100 dark:bg-navy-800 text-slate-800 dark:text-slate-200 rounded-bl-md'
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                <div className="text-sm whitespace-pre-wrap">
+                  {renderContent(message.content)}
+                </div>
 
                 {/* Knowledge indicator */}
                 {message.knowledgeUsed && message.knowledgeUsed.length > 0 && (
                   <div className="mt-2 pt-2 border-t border-slate-200 dark:border-navy-600">
                     <p className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                      <BookIcon className="w-3 h-3" />
-                      Basado en {message.knowledgeUsed.length} fuentes
+                      <CheckCircle className="w-3 h-3 text-green-500" />
+                      Fuentes: {message.knowledgeUsed.join(', ')}
                     </p>
                   </div>
                 )}
@@ -201,12 +426,12 @@ export const ChatTab: React.FC<ChatTabProps> = ({ shipmentsContext = [] }) => {
         {isLoading && (
           <div className="flex justify-start">
             <div className="flex gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
                 <Bot className="w-4 h-4 text-white" />
               </div>
               <div className="bg-slate-100 dark:bg-navy-800 rounded-2xl rounded-bl-md p-3">
                 <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                  <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
                   <span className="text-sm text-slate-500">Pensando...</span>
                 </div>
               </div>
@@ -218,7 +443,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({ shipmentsContext = [] }) => {
       </div>
 
       {/* Suggestions */}
-      {suggestions.length > 0 && messages.length < 3 && (
+      {suggestions.length > 0 && messages.length < 4 && (
         <div className="px-4 pb-2">
           <div className="flex items-center gap-2 mb-2 text-xs text-slate-500 dark:text-slate-400">
             <Lightbulb className="w-3 h-3" />
@@ -229,7 +454,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({ shipmentsContext = [] }) => {
               <button
                 key={idx}
                 onClick={() => handleSuggestionClick(suggestion)}
-                className="px-3 py-1.5 text-xs bg-slate-100 dark:bg-navy-800 hover:bg-slate-200 dark:hover:bg-navy-700 text-slate-600 dark:text-slate-300 rounded-full transition-colors"
+                className="px-3 py-1.5 text-xs bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/40 text-orange-600 dark:text-orange-400 rounded-full transition-colors border border-orange-200 dark:border-orange-800"
               >
                 {suggestion}
               </button>
@@ -249,7 +474,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({ shipmentsContext = [] }) => {
             <RefreshCw className="w-4 h-4" />
           </button>
 
-          <div className="flex-1 flex items-center gap-2 bg-slate-100 dark:bg-navy-800 rounded-xl px-4 py-2 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
+          <div className="flex-1 flex items-center gap-2 bg-slate-100 dark:bg-navy-800 rounded-xl px-4 py-2 focus-within:ring-2 focus-within:ring-orange-500 transition-all">
             <input
               type="text"
               value={input}
@@ -264,7 +489,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({ shipmentsContext = [] }) => {
               disabled={!input.trim() || isLoading}
               className={`p-2 rounded-lg transition-all ${
                 input.trim() && !isLoading
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  ? 'bg-orange-500 text-white hover:bg-orange-600'
                   : 'text-slate-400 cursor-not-allowed'
               }`}
             >
@@ -276,19 +501,5 @@ export const ChatTab: React.FC<ChatTabProps> = ({ shipmentsContext = [] }) => {
     </div>
   );
 };
-
-// Mini icon component
-const BookIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
-    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-  </svg>
-);
 
 export default ChatTab;
