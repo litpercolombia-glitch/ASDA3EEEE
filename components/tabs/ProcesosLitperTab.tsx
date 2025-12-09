@@ -196,8 +196,8 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
                     : 'bg-white/10 text-white hover:bg-white/20'
                 }`}
               >
-                {pais === Pais.COLOMBIA ? '🇨🇴 Colombia' :
-                 pais === Pais.CHILE ? '🇨🇱 Chile' : '🇪🇨 Ecuador'}
+                {pais === Pais.COLOMBIA ? 'Colombia' :
+                 pais === Pais.CHILE ? 'Chile' : 'Ecuador'}
               </button>
             ))}
           </div>

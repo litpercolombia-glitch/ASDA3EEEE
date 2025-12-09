@@ -145,7 +145,7 @@ const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, cou
             <div className="flex items-center gap-4 mt-4">
               <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full backdrop-blur">
                 <MapPin className="w-4 h-4 text-accent-400" />
-                <span className="font-medium">{country === 'COLOMBIA' ? '🇨🇴 Colombia' : country === 'ECUADOR' ? '🇪🇨 Ecuador' : '🇨🇱 Chile'}</span>
+                <span className="font-medium">{country}</span>
               </div>
               <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full">
                 <Trophy className="w-4 h-4 text-yellow-400" />
@@ -573,9 +573,7 @@ const AppNew: React.FC = () => {
                   onClick={() => setShowCountrySelector(true)}
                   className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/15 rounded-lg text-sm transition-all border border-white/10"
                 >
-                  <span className="text-lg">
-                    {selectedCountry === 'COLOMBIA' ? '🇨🇴' : selectedCountry === 'ECUADOR' ? '🇪🇨' : '🇨🇱'}
-                  </span>
+                  <Globe className="w-4 h-4 text-accent-400" />
                   <span className="hidden lg:inline text-slate-300">{selectedCountry}</span>
                   <ChevronDown className="w-3 h-3 text-slate-400" />
                 </button>
