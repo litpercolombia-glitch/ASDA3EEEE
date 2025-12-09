@@ -23,10 +23,11 @@ import {
   SemaforoTabNew,
   PrediccionesTab,
   MLSystemTab,
-  FlashTab,
   DemandTab,
   GamificationTab,
   ProcesosLitperTab,
+  InfoLogisticaTab,
+  ModoAdminTab,
 } from './components/tabs';
 import { CiudadAgentesTab } from './components/tabs/CiudadAgentesTab';
 import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
@@ -110,17 +111,17 @@ const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, cou
 
   const quickActions = [
     { id: 'seguimiento', icon: Package, label: 'Seguimiento', desc: 'Rastrear envíos', color: 'from-emerald-500 to-teal-600', emoji: '📦' },
-    { id: 'flash', icon: Zap, label: 'Litper Flash', desc: 'Envíos express', color: 'from-orange-500 to-red-500', emoji: '⚡', isNew: true },
+    { id: 'info-logistica', icon: Truck, label: 'Info Logística', desc: 'Gestión de guías', color: 'from-indigo-500 to-purple-600', emoji: '📋', isNew: true },
     { id: 'demanda', icon: TrendingUp, label: 'Predicción IA', desc: 'Análisis predictivo', color: 'from-purple-500 to-violet-600', emoji: '📈', isNew: true },
-    { id: 'ml', icon: Brain, label: 'Sistema ML', desc: 'Machine Learning', color: 'from-cyan-500 to-blue-600', emoji: '🧠' },
+    { id: 'modo-admin', icon: Shield, label: 'Modo Admin', desc: 'Reportes financieros', color: 'from-pink-500 to-rose-600', emoji: '🔐', isNew: true },
   ];
 
   const features = [
     { id: 'semaforo', icon: Activity, label: 'Semáforo', desc: 'Control de entregas en tiempo real', color: 'bg-amber-500' },
     { id: 'predicciones', icon: Target, label: 'Análisis', desc: 'Estadísticas y métricas avanzadas', color: 'bg-teal-500' },
-    { id: 'reporte', icon: BarChart3, label: 'Reporte IA', desc: 'Informes inteligentes automatizados', color: 'bg-blue-500' },
     { id: 'asistente', icon: Bot, label: 'Asistente IA', desc: 'Soporte inteligente 24/7', color: 'bg-pink-500' },
     { id: 'gamificacion', icon: Trophy, label: 'Logros', desc: 'Sistema de recompensas', color: 'bg-indigo-500' },
+    { id: 'ml', icon: Brain, label: 'Sistema ML', desc: 'Machine Learning avanzado', color: 'bg-cyan-500' },
   ];
 
   return (
@@ -407,7 +408,8 @@ const AppNew: React.FC = () => {
 
   const tabNotifications = {
     seguimiento: detectarGuiasRetrasadas(shipments).filter((g) => g.nivelAlerta === 'CRITICO').length,
-    flash: 0,
+    'info-logistica': 0,
+    'modo-admin': 0,
     demanda: 0,
     gamificacion: userProfile.activeChallenges.filter(c => !c.completed).length,
     semaforo: 0,
@@ -663,7 +665,7 @@ const AppNew: React.FC = () => {
 
               {[
                 { id: 'seguimiento', icon: Package, label: '📦 Seguimiento' },
-                { id: 'flash', icon: Zap, label: '⚡ Flash', isNew: true },
+                { id: 'info-logistica', icon: Truck, label: '📋 Info Logística', isNew: true },
                 { id: 'demanda', icon: TrendingUp, label: '📈 Predicción', isNew: true },
                 { id: 'gamificacion', icon: Trophy, label: '🏆 Logros' },
                 { id: 'semaforo', icon: Activity, label: '🚦 Semáforo' },
@@ -672,6 +674,7 @@ const AppNew: React.FC = () => {
                 { id: 'ml', icon: Brain, label: '🧠 Sistema ML' },
                 { id: 'procesos-litper', icon: Layers, label: '🏢 Procesos' },
                 { id: 'ciudad-agentes', icon: Globe, label: '🌆 Ciudad IA', isNew: true },
+                { id: 'modo-admin', icon: Shield, label: '🔐 Admin', isNew: true },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -894,7 +897,8 @@ const AppNew: React.FC = () => {
           )}
 
           {currentTab === 'seguimiento' && <SeguimientoTab shipments={shipments} />}
-          {currentTab === 'flash' && <FlashTab country={selectedCountry} />}
+          {currentTab === 'info-logistica' && <InfoLogisticaTab shipments={shipments} />}
+          {currentTab === 'modo-admin' && <ModoAdminTab />}
           {currentTab === 'demanda' && <DemandTab country={selectedCountry} />}
           {currentTab === 'gamificacion' && <GamificationTab />}
           {currentTab === 'semaforo' && <SemaforoTabNew onDataLoaded={handleSemaforoDataLoaded} />}
@@ -944,7 +948,7 @@ const AppNew: React.FC = () => {
               <h4 className="font-bold text-white mb-4">🚀 Plataforma</h4>
               <ul className="space-y-2 text-sm text-slate-400">
                 <li><button onClick={() => setCurrentTab('seguimiento')} className="hover:text-accent-400 transition-colors">📦 Seguimiento</button></li>
-                <li><button onClick={() => setCurrentTab('flash')} className="hover:text-accent-400 transition-colors">⚡ Litper Flash</button></li>
+                <li><button onClick={() => setCurrentTab('info-logistica')} className="hover:text-accent-400 transition-colors">📋 Info Logística</button></li>
                 <li><button onClick={() => setCurrentTab('demanda')} className="hover:text-accent-400 transition-colors">📈 Predicción</button></li>
                 <li><button onClick={() => setCurrentTab('ml')} className="hover:text-accent-400 transition-colors">🧠 Sistema ML</button></li>
               </ul>
@@ -957,6 +961,7 @@ const AppNew: React.FC = () => {
                 <li><button onClick={() => setCurrentTab('semaforo')} className="hover:text-accent-400 transition-colors">🚦 Semáforo</button></li>
                 <li><button onClick={() => setCurrentTab('predicciones')} className="hover:text-accent-400 transition-colors">🎯 Análisis</button></li>
                 <li><button onClick={() => setCurrentTab('asistente')} className="hover:text-accent-400 transition-colors">🤖 Asistente IA</button></li>
+                <li><button onClick={() => setCurrentTab('modo-admin')} className="hover:text-accent-400 transition-colors">🔐 Modo Admin</button></li>
               </ul>
             </div>
 

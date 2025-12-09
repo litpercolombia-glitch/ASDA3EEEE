@@ -38,10 +38,36 @@ interface ProcessingResult {
 
 // API URL
 const API_BASE = import.meta.env.VITE_ML_API_URL || 'http://localhost:8000';
+const LOCAL_STORAGE_KEY = 'litper_knowledge_memory';
+
+// Helper para localStorage
+const getLocalKnowledge = (): KnowledgeItem[] => {
+  try {
+    const data = localStorage.getItem(LOCAL_STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveLocalKnowledge = (items: KnowledgeItem[]) => {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items));
+  } catch (e) {
+    console.error('Error guardando conocimiento local:', e);
+  }
+};
+
+const addLocalKnowledge = (item: KnowledgeItem) => {
+  const items = getLocalKnowledge();
+  items.unshift(item);
+  saveLocalKnowledge(items.slice(0, 100)); // Max 100 items
+};
 
 export const KnowledgeTab: React.FC = () => {
   const [activeSection, setActiveSection] = useState<'upload' | 'list'>('upload');
   const [url, setUrl] = useState('');
+  const [textContent, setTextContent] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingResult, setProcessingResult] = useState<ProcessingResult | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -49,18 +75,33 @@ export const KnowledgeTab: React.FC = () => {
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Cargar lista de conocimiento
+  // Cargar lista de conocimiento (backend + local)
   const loadKnowledgeList = async () => {
     setIsLoadingList(true);
     try {
+      // Intentar cargar del backend
       const response = await fetch(`${API_BASE}/api/knowledge/list?limite=50`);
       if (response.ok) {
         const data = await response.json();
-        setKnowledgeList(data.items || data.conocimientos || []);
+        const backendItems = data.items || data.conocimientos || [];
+        // Combinar con local
+        const localItems = getLocalKnowledge();
+        const combined = [...backendItems, ...localItems];
+        // Eliminar duplicados por ID
+        const unique = combined.filter((item, index, self) =>
+          index === self.findIndex(i => i.id === item.id)
+        );
+        setKnowledgeList(unique);
+      } else {
+        // Si falla backend, usar solo local
+        setKnowledgeList(getLocalKnowledge());
       }
     } catch (err) {
       console.error('Error cargando conocimiento:', err);
+      // Fallback a local
+      setKnowledgeList(getLocalKnowledge());
     } finally {
       setIsLoadingList(false);
     }
@@ -82,37 +123,117 @@ export const KnowledgeTab: React.FC = () => {
     setError(null);
 
     try {
+      // Leer contenido del archivo localmente
+      const content = await readFileContent(file);
+
+      // Intentar subir al backend
       const formData = new FormData();
       formData.append('archivo', file);
 
-      const response = await fetch(`${API_BASE}/api/knowledge/upload`, {
-        method: 'POST',
-        body: formData,
-      });
+      let backendSuccess = false;
+      let result: any = null;
 
-      if (!response.ok) {
-        throw new Error('Error al procesar archivo');
+      try {
+        const response = await fetch(`${API_BASE}/api/knowledge/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (response.ok) {
+          result = await response.json();
+          backendSuccess = true;
+        }
+      } catch {
+        console.log('Backend no disponible, guardando localmente');
       }
 
-      const result = await response.json();
+      // Siempre guardar localmente como respaldo
+      const localItem: KnowledgeItem = {
+        id: backendSuccess ? result?.id : `local_${Date.now()}`,
+        titulo: backendSuccess ? result?.titulo : file.name.replace(/\.[^/.]+$/, ''),
+        tipo: 'documento',
+        categoria: detectCategoria(content),
+        resumen: content.substring(0, 500) + (content.length > 500 ? '...' : ''),
+        tags: extractTags(content),
+        fecha_carga: new Date().toISOString(),
+      };
+
+      // Guardar en localStorage
+      addLocalKnowledge(localItem);
 
       setProcessingResult({
-        fuente_id: result.id,
+        fuente_id: localItem.id,
         estado: 'completado',
         tipo: 'documento',
-        resumen: result.resumen,
+        resumen: localItem.resumen,
         conocimiento_extraido: {
-          titulo_sugerido: result.titulo,
-          tipo_contenido: result.tipo,
-          resumen: result.resumen,
+          titulo_sugerido: localItem.titulo,
+          tipo_contenido: 'documento',
+          resumen: localItem.resumen,
         },
       });
+
+      setSuccessMessage(`Conocimiento "${localItem.titulo}" guardado exitosamente`);
       setShowConfirm(true);
     } catch (err: any) {
       setError(err.message || 'Error procesando archivo');
     } finally {
       setIsProcessing(false);
+      e.target.value = '';
     }
+  };
+
+  // Leer contenido de archivo
+  const readFileContent = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target?.result as string || '');
+      reader.onerror = reject;
+
+      if (file.type.includes('text') || file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.csv')) {
+        reader.readAsText(file);
+      } else {
+        // Para otros tipos, leer como texto de todos modos
+        reader.readAsText(file);
+      }
+    });
+  };
+
+  // Detectar categoría automáticamente
+  const detectCategoria = (content: string): string => {
+    const lowerContent = content.toLowerCase();
+    if (lowerContent.includes('entrega') || lowerContent.includes('envío') || lowerContent.includes('guía')) return 'logistica';
+    if (lowerContent.includes('proceso') || lowerContent.includes('paso')) return 'proceso';
+    if (lowerContent.includes('regla') || lowerContent.includes('política')) return 'regla';
+    if (lowerContent.includes('plantilla') || lowerContent.includes('formato')) return 'plantilla';
+    return 'general';
+  };
+
+  // Extraer tags del contenido
+  const extractTags = (content: string): string[] => {
+    const keywords = ['entrega', 'devolución', 'novedad', 'transportadora', 'cliente', 'pedido', 'guía', 'flete', 'coordinadora', 'servientrega', 'dropi'];
+    const found = keywords.filter(k => content.toLowerCase().includes(k));
+    return found.slice(0, 5);
+  };
+
+  // Guardar texto directo
+  const handleTextSubmit = () => {
+    if (!textContent.trim()) return;
+
+    const localItem: KnowledgeItem = {
+      id: `local_${Date.now()}`,
+      titulo: textContent.substring(0, 50) + (textContent.length > 50 ? '...' : ''),
+      tipo: 'texto',
+      categoria: detectCategoria(textContent),
+      resumen: textContent.substring(0, 500),
+      tags: extractTags(textContent),
+      fecha_carga: new Date().toISOString(),
+    };
+
+    addLocalKnowledge(localItem);
+    setSuccessMessage(`Aprendizaje guardado exitosamente`);
+    setTextContent('');
+    loadKnowledgeList();
   };
 
   // Procesar URL
@@ -130,31 +251,52 @@ export const KnowledgeTab: React.FC = () => {
         ? `${API_BASE}/api/knowledge/youtube`
         : `${API_BASE}/api/knowledge/scrape`;
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url }),
-      });
+      let backendSuccess = false;
+      let result: any = null;
 
-      if (!response.ok) {
-        throw new Error('Error al procesar URL');
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url }),
+        });
+
+        if (response.ok) {
+          result = await response.json();
+          backendSuccess = true;
+        }
+      } catch {
+        console.log('Backend no disponible, guardando URL localmente');
       }
 
-      const result = await response.json();
+      // Guardar localmente
+      const localItem: KnowledgeItem = {
+        id: backendSuccess ? result?.id : `local_${Date.now()}`,
+        titulo: backendSuccess ? result?.titulo : `Enlace: ${url.substring(0, 50)}`,
+        tipo: isYoutube ? 'youtube' : 'web',
+        categoria: isYoutube ? 'video' : 'web',
+        resumen: backendSuccess ? result?.resumen : `URL guardada: ${url}`,
+        tags: isYoutube ? ['video', 'youtube'] : ['web', 'enlace'],
+        fecha_carga: new Date().toISOString(),
+      };
+
+      addLocalKnowledge(localItem);
 
       setProcessingResult({
-        fuente_id: result.id,
+        fuente_id: localItem.id,
         estado: 'completado',
         tipo: isYoutube ? 'youtube' : 'web',
-        resumen: result.resumen,
+        resumen: localItem.resumen,
         conocimiento_extraido: {
-          titulo_sugerido: result.titulo,
-          tipo_contenido: result.tipo,
-          resumen: result.resumen,
+          titulo_sugerido: localItem.titulo,
+          tipo_contenido: localItem.tipo,
+          resumen: localItem.resumen,
         },
       });
+
+      setSuccessMessage(`URL guardada exitosamente`);
       setShowConfirm(true);
       setUrl('');
     } catch (err: any) {
@@ -280,6 +422,42 @@ export const KnowledgeTab: React.FC = () => {
                   PDF, DOCX, TXT, MD, CSV, JSON
                 </p>
               </label>
+            </div>
+
+            {/* Mensaje de éxito */}
+            {successMessage && (
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3 flex items-center gap-2">
+                <Check className="w-5 h-5 text-emerald-500" />
+                <p className="text-sm text-emerald-700 dark:text-emerald-300">{successMessage}</p>
+                <button
+                  onClick={() => setSuccessMessage(null)}
+                  className="ml-auto text-emerald-400 hover:text-emerald-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Texto directo - NUEVO */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                Pegar texto para aprendizaje
+              </label>
+              <textarea
+                value={textContent}
+                onChange={(e) => setTextContent(e.target.value)}
+                placeholder="Pega aquí cualquier texto, proceso, regla o información que quieras que el asistente aprenda..."
+                className="w-full px-4 py-3 border border-slate-300 dark:border-navy-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-navy-800 text-slate-700 dark:text-slate-200 h-32 resize-none"
+                disabled={isProcessing}
+              />
+              <button
+                onClick={handleTextSubmit}
+                disabled={!textContent.trim() || isProcessing}
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 dark:disabled:bg-navy-700 text-white rounded-xl text-sm font-medium transition-colors disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <Check className="w-4 h-4" />
+                Guardar aprendizaje
+              </button>
             </div>
 
             {/* URL Input */}
