@@ -19,6 +19,7 @@ interface TabNavigationNewProps {
     'ciudad-agentes'?: number;
     'aprendizaje-ia'?: number;
     'mcp-connections'?: number;
+    'conexiones'?: number;
   };
 }
 
@@ -135,10 +136,10 @@ const tabs: TabConfig[] = [
     isNew: true,
   },
   {
-    id: 'mcp-connections',
+    id: 'conexiones',
     icon: Plug,
-    label: 'Conexiones MCP',
-    shortLabel: 'MCP',
+    label: 'Conexiones',
+    shortLabel: 'Conex.',
     color: 'text-orange-500',
     activeColor: 'bg-gradient-to-r from-orange-500 to-amber-500',
     isNew: true,
