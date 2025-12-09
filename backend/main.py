@@ -58,6 +58,24 @@ except ImportError as e:
     KNOWLEDGE_SYSTEM_AVAILABLE = False
     logger.warning(f"Sistema de Conocimiento no disponible: {e}")
 
+# Sistema de Asistente IA
+try:
+    from knowledge_system.assistant_routes import router as assistant_router
+    ASSISTANT_SYSTEM_AVAILABLE = True
+    logger.info("🤖 Sistema de Asistente IA cargado")
+except ImportError as e:
+    ASSISTANT_SYSTEM_AVAILABLE = False
+    logger.warning(f"Sistema de Asistente no disponible: {e}")
+
+# Sistema de Administracion
+try:
+    from knowledge_system.admin_routes import router as admin_router
+    ADMIN_SYSTEM_AVAILABLE = True
+    logger.info("🔐 Sistema de Administracion cargado")
+except ImportError as e:
+    ADMIN_SYSTEM_AVAILABLE = False
+    logger.warning(f"Sistema de Administracion no disponible: {e}")
+
 
 # ==================== CONFIGURACIÓN ====================
 
@@ -165,6 +183,16 @@ app.add_middleware(
 if KNOWLEDGE_SYSTEM_AVAILABLE:
     app.include_router(knowledge_router, prefix="/api")
     logger.success("📚 Rutas de conocimiento registradas en /api/knowledge")
+
+# Incluir router del Asistente IA
+if ASSISTANT_SYSTEM_AVAILABLE:
+    app.include_router(assistant_router, prefix="/api")
+    logger.success("🤖 Rutas de asistente registradas en /api/assistant")
+
+# Incluir router de Administracion
+if ADMIN_SYSTEM_AVAILABLE:
+    app.include_router(admin_router, prefix="/api")
+    logger.success("🔐 Rutas de administracion registradas en /api/admin")
 
 
 # ==================== ENDPOINTS DE SISTEMA ====================

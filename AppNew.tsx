@@ -30,6 +30,7 @@ import {
 } from './components/tabs';
 import { CiudadAgentesTab } from './components/tabs/CiudadAgentesTab';
 import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
+import { AssistantButton } from './components/Assistant';
 import CountrySelector from './components/CountrySelector';
 import { detectarGuiasRetrasadas } from './utils/patternDetection';
 import {
@@ -993,6 +994,9 @@ const AppNew: React.FC = () => {
           </div>
         </div>
       </footer>
+
+      {/* Floating AI Assistant Button */}
+      <AssistantButton />
     </div>
   );
 };
