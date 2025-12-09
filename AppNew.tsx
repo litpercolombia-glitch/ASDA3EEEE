@@ -27,7 +27,7 @@ import {
   DemandTab,
   GamificationTab,
   ProcesosLitperTab,
-  MCPConnectionsTab,
+  ConexionesTab,
 } from './components/tabs';
 import { CiudadAgentesTab } from './components/tabs/CiudadAgentesTab';
 import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
@@ -419,6 +419,7 @@ const AppNew: React.FC = () => {
     'procesos-litper': 0,
     'ciudad-agentes': 0,
     'aprendizaje-ia': 0,
+    'conexiones': 0,
   };
 
   const handleProcessInput = () => {
@@ -904,7 +905,7 @@ const AppNew: React.FC = () => {
           {currentTab === 'ml' && <MLSystemTab />}
           {currentTab === 'procesos-litper' && <ProcesosLitperTab selectedCountry={selectedCountry} />}
           {currentTab === 'ciudad-agentes' && <CiudadAgentesTab selectedCountry={selectedCountry} />}
-          {currentTab === 'mcp-connections' && <MCPConnectionsTab />}
+          {currentTab === 'conexiones' && <ConexionesTab />}
         </div>
       </main>
 

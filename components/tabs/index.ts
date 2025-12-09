@@ -13,3 +13,4 @@ export { CiudadAgentesTab } from './CiudadAgentesTab';
 export { AprendizajeIATab } from './AprendizajeIATab';
 export { DistritosIATab } from './DistritosIATab';
 export { MCPConnectionsTab } from './MCPConnectionsTab';
+export { ConexionesTab } from './ConexionesTab';
