@@ -78,10 +78,16 @@ interface GuiaProcesada {
     fecha: string;
     descripcion: string;
   } | null;
+  ultimos2Estados: {
+    fecha: string;
+    descripcion: string;
+    ubicacion?: string;
+  }[];
   estadoGeneral: string;
   estadoReal: string; // Estado del último evento de tracking
   dias: number;
   tieneTracking: boolean;
+  tieneNovedad: boolean;
 }
 
 // =====================================
@@ -322,7 +328,7 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
 };
 
 // =====================================
-// FILA DE GUÍA EN TABLA
+// FILA DE GUÍA EN TABLA - NUEVA ESTRUCTURA
 // =====================================
 const GuiaTableRow: React.FC<{
   guia: GuiaProcesada;
@@ -360,6 +366,22 @@ const GuiaTableRow: React.FC<{
 
   const statusColors = getStatusColor(guia.estadoGeneral);
 
+  // Formatear fecha para mostrar
+  const formatFecha = (fecha: string) => {
+    try {
+      const date = new Date(fecha);
+      return date.toLocaleDateString('es-CO', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).replace(',', ',');
+    } catch {
+      return fecha;
+    }
+  };
+
   return (
     <tr
       className={`border-b border-slate-100 dark:border-navy-800 hover:bg-slate-50 dark:hover:bg-navy-800/50 cursor-pointer transition-colors ${
@@ -367,10 +389,10 @@ const GuiaTableRow: React.FC<{
       }`}
       onClick={onExpand}
     >
-      {/* Número de Guía */}
-      <td className="px-3 py-3">
+      {/* GUÍA + Badge Novedad */}
+      <td className="px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="font-mono font-bold text-slate-800 dark:text-white text-sm">
+          <span className="font-mono font-bold text-blue-600 dark:text-blue-400 text-sm hover:underline">
             {guia.guia.id}
           </span>
           <button
@@ -384,27 +406,7 @@ const GuiaTableRow: React.FC<{
               <Copy className="w-3.5 h-3.5 text-slate-400" />
             )}
           </button>
-        </div>
-      </td>
-
-      {/* Teléfono */}
-      <td className="px-3 py-3">
-        {guia.celular ? (
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-xs text-slate-600 dark:text-slate-400">
-              {guia.celular}
-            </span>
-            <button
-              onClick={handleCopyPhone}
-              className="p-1 hover:bg-slate-200 dark:hover:bg-navy-700 rounded transition-colors"
-              title="Copiar teléfono"
-            >
-              {copiedPhone ? (
-                <Check className="w-3.5 h-3.5 text-green-500" />
-              ) : (
-                <Copy className="w-3.5 h-3.5 text-slate-400" />
-              )}
-            </button>
+          {guia.celular && (
             <button
               onClick={handleWhatsApp}
               className="p-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
@@ -412,71 +414,89 @@ const GuiaTableRow: React.FC<{
             >
               <MessageCircle className="w-3.5 h-3.5" />
             </button>
-          </div>
-        ) : (
-          <span className="text-xs text-slate-400 italic">Sin teléfono</span>
-        )}
+          )}
+          {guia.tieneNovedad && (
+            <span className="px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-xs font-bold rounded">
+              Novedad
+            </span>
+          )}
+        </div>
       </td>
 
-      {/* Transportadora */}
-      <td className="px-3 py-3 hidden md:table-cell">
-        <span className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
-          <Truck className="w-3.5 h-3.5" />
-          {guia.transportadora}
-        </span>
+      {/* TRANSPORTADORA */}
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <Truck className="w-4 h-4 text-slate-400" />
+          <span className="text-sm text-slate-600 dark:text-slate-400">
+            {guia.transportadora}
+          </span>
+        </div>
       </td>
 
-      {/* Estado */}
-      <td className="px-3 py-3">
+      {/* RUTA: Origen → Destino */}
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
+          <span className="font-medium">{guia.origen}</span>
+          <ArrowRight className="w-3 h-3 text-slate-400" />
+          <span className="font-medium">{guia.destino}</span>
+        </div>
+      </td>
+
+      {/* ESTADO */}
+      <td className="px-4 py-3">
         <StatusBadge status={guia.estadoGeneral} />
       </td>
 
-      {/* Último Evento */}
-      <td className="px-3 py-3 hidden lg:table-cell max-w-xs">
-        {guia.ultimoEvento ? (
-          <div className="text-xs">
-            <span className="text-slate-500 dark:text-slate-500">
-              {guia.ultimoEvento.fecha}
-            </span>
-            <p className="text-slate-700 dark:text-slate-300 truncate" title={guia.ultimoEvento.descripcion}>
-              {guia.ultimoEvento.descripcion}
-            </p>
-          </div>
-        ) : (
-          <span className="text-xs text-slate-400 italic">Sin eventos</span>
-        )}
-      </td>
-
-      {/* Días */}
-      <td className="px-3 py-3 text-center">
-        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${
-          guia.dias > 5 ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400' :
-          guia.dias > 3 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400' :
-          guia.dias > 1 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400' :
-          'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400'
+      {/* DÍAS */}
+      <td className="px-4 py-3 text-center">
+        <span className={`inline-flex items-center gap-1 text-sm font-bold ${
+          guia.dias > 10 ? 'text-red-600 dark:text-red-400' :
+          guia.dias > 5 ? 'text-orange-600 dark:text-orange-400' :
+          guia.dias > 3 ? 'text-amber-600 dark:text-amber-400' :
+          'text-slate-600 dark:text-slate-400'
         }`}>
-          <Clock className="w-3 h-3" />
+          <Clock className="w-4 h-4" />
           {guia.dias}
         </span>
       </td>
 
-      {/* Origen → Destino */}
-      <td className="px-3 py-3 hidden xl:table-cell">
-        <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
-          <span>{guia.origen}</span>
-          <ArrowRight className="w-3 h-3 text-slate-400" />
-          <span>{guia.destino}</span>
+      {/* ÚLTIMOS 2 ESTADOS */}
+      <td className="px-4 py-3">
+        <div className="space-y-1 max-w-xs">
+          {guia.ultimos2Estados.length > 0 ? (
+            guia.ultimos2Estados.map((estado, idx) => (
+              <div key={idx} className="flex items-start gap-2 text-xs">
+                <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                  idx === 0 ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
+                }`}></span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-slate-400 font-mono text-[10px]">
+                    {formatFecha(estado.fecha)}
+                  </span>
+                  <p className="text-slate-700 dark:text-slate-300 truncate" title={estado.descripcion}>
+                    {estado.descripcion}
+                  </p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <span className="text-xs text-slate-400 italic">Sin información</span>
+          )}
         </div>
       </td>
 
-      {/* Acciones */}
-      <td className="px-3 py-3">
+      {/* VER */}
+      <td className="px-4 py-3 text-center">
         <button
           onClick={(e) => { e.stopPropagation(); onExpand(); }}
-          className="p-1.5 bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300 rounded hover:bg-slate-200 dark:hover:bg-navy-700 transition-colors"
+          className={`p-2 rounded-lg transition-colors ${
+            isExpanded
+              ? 'bg-blue-500 text-white'
+              : 'bg-slate-100 dark:bg-navy-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-navy-700'
+          }`}
           title="Ver detalles"
         >
-          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          <Eye className="w-4 h-4" />
         </button>
       </td>
     </tr>
@@ -535,7 +555,7 @@ const GuiaExpandedDetails: React.FC<{
 
   return (
     <tr>
-      <td colSpan={8} className="p-0">
+      <td colSpan={7} className="p-0">
         <div ref={cardRef} className="bg-slate-50 dark:bg-navy-950 p-4 border-t border-slate-200 dark:border-navy-700">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Info Principal - SIN ESTATUS "SÍ" */}
@@ -881,6 +901,13 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
       );
       const ultimoEvento = sortedEvents[0] || null;
 
+      // Obtener últimos 2 estados
+      const ultimos2Estados = sortedEvents.slice(0, 2).map(e => ({
+        fecha: e.date,
+        descripcion: e.description,
+        ubicacion: e.location,
+      }));
+
       // Extraer origen y destino
       let origen = 'Colombia';
       let destino = 'Desconocido';
@@ -890,6 +917,7 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
       // Determinar estado general basado en el último evento o el status
       let estadoGeneral = guia.status || 'Sin Estado';
       let estadoReal = '';
+      let tieneNovedad = false;
 
       if (ultimoEvento) {
         estadoReal = ultimoEvento.description;
@@ -898,14 +926,20 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
         if (descLower.includes('entregado') || descLower.includes('delivered')) {
           estadoGeneral = 'Entregado';
         } else if (descLower.includes('reparto') || descLower.includes('ruta') || descLower.includes('tránsito') || descLower.includes('proceso de entrega')) {
-          estadoGeneral = 'En tránsito';
-        } else if (descLower.includes('oficina') || descLower.includes('centro de distribución') || descLower.includes('bodega')) {
-          estadoGeneral = 'En oficina';
+          estadoGeneral = 'En Reparto';
+        } else if (descLower.includes('oficina') || descLower.includes('centro logístico') || descLower.includes('centro de distribución') || descLower.includes('bodega')) {
+          estadoGeneral = 'En Centro Logístico Destino';
         } else if (descLower.includes('novedad') || descLower.includes('rechazado') || descLower.includes('devuelto') || descLower.includes('no fue posible')) {
           estadoGeneral = 'Novedad';
+          tieneNovedad = true;
         } else if (descLower.includes('recogido') || descLower.includes('recolectado')) {
           estadoGeneral = 'Recogido';
         }
+      }
+
+      // Detectar novedad también por estado de guía
+      if (guia.status === ShipmentStatus.ISSUE || estadoGeneral.toLowerCase().includes('novedad') || estadoGeneral.toLowerCase().includes('devuelto')) {
+        tieneNovedad = true;
       }
 
       // Calcular días
@@ -924,10 +958,12 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
           fecha: ultimoEvento.date,
           descripcion: ultimoEvento.description,
         } : null,
+        ultimos2Estados,
         estadoGeneral,
         estadoReal,
         dias,
         tieneTracking,
+        tieneNovedad,
       };
     });
   }, [shipments]);
@@ -1362,34 +1398,31 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
         )}
       </div>
 
-      {/* Tabla de Guías */}
+      {/* Tabla de Guías - Nueva Estructura */}
       <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 dark:bg-navy-950 border-b border-slate-200 dark:border-navy-700">
-                <th className="px-3 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                   Guía
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                  Teléfono
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider hidden md:table-cell">
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                   Transportadora
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                  Ruta
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                   Estado
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider hidden lg:table-cell">
-                  Último Evento
-                </th>
-                <th className="px-3 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                   Días
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider hidden xl:table-cell">
-                  Origen → Destino
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                  Últimos Estados
                 </th>
-                <th className="px-3 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                   Ver
                 </th>
               </tr>
