@@ -31,6 +31,7 @@ import {
 import { CiudadAgentesTab } from './components/tabs/CiudadAgentesTab';
 import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
 import { AssistantButton } from './components/Assistant';
+import ProBubble from './components/ProAssistant/ProBubble';
 import { AdminPanelPro } from './components/Admin/AdminPanelPro';
 import CountrySelector from './components/CountrySelector';
 import { detectarGuiasRetrasadas } from './utils/patternDetection';
@@ -1001,8 +1002,8 @@ const AppNew: React.FC = () => {
         </div>
       </footer>
 
-      {/* Floating AI Assistant Button */}
-      <AssistantButton shipmentsContext={shipments} />
+      {/* Floating AI Assistant PRO Button */}
+      <ProBubble shipmentsContext={shipments} />
     </div>
   );
 };
