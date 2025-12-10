@@ -893,7 +893,12 @@ const AppNew: React.FC = () => {
             />
           )}
 
-          {currentTab === 'seguimiento' && <SeguimientoTab shipments={shipments} />}
+          {currentTab === 'seguimiento' && (
+            <SeguimientoTab
+              shipments={shipments}
+              onRestoreShipments={(restoredShipments) => setShipments(restoredShipments)}
+            />
+          )}
           {currentTab === 'flash' && <FlashTab country={selectedCountry} />}
           {currentTab === 'demanda' && <DemandTab country={selectedCountry} />}
           {currentTab === 'gamificacion' && <GamificationTab />}

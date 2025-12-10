@@ -50,10 +50,19 @@ import {
   getUltimaFechaEvento,
 } from '../../utils/patternDetection';
 import { toPng } from 'html-to-image';
+import {
+  obtenerTodasLasHojas,
+  guardarNuevaHoja,
+  eliminarHoja,
+  restaurarHoja,
+  sincronizarHojas,
+  HojaCarga,
+} from '../../services/globalStorageService';
 
 interface SeguimientoTabProps {
   shipments: Shipment[];
   onRefresh?: () => void;
+  onRestoreShipments?: (shipments: Shipment[]) => void;
 }
 
 // =====================================
@@ -475,7 +484,7 @@ const GuiaTableRow: React.FC<{
 };
 
 // =====================================
-// DETALLES EXPANDIDOS DE GUÍA
+// DETALLES EXPANDIDOS DE GUÍA (COMPRIMIDO - SOLO 2 ÚLTIMOS ESTADOS)
 // =====================================
 const GuiaExpandedDetails: React.FC<{
   guia: GuiaProcesada;
@@ -486,6 +495,9 @@ const GuiaExpandedDetails: React.FC<{
   const sortedEvents = [...events].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
+
+  // SOLO MOSTRAR LOS ÚLTIMOS 2 ESTADOS
+  const ultimos2Estados = sortedEvents.slice(0, 2);
 
   const handleCapture = async () => {
     if (cardRef.current) {
@@ -526,7 +538,7 @@ const GuiaExpandedDetails: React.FC<{
       <td colSpan={8} className="p-0">
         <div ref={cardRef} className="bg-slate-50 dark:bg-navy-950 p-4 border-t border-slate-200 dark:border-navy-700">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Info Principal */}
+            {/* Info Principal - SIN ESTATUS "SÍ" */}
             <div>
               <h4 className="font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
                 <Package className="w-4 h-4 text-emerald-500" />
@@ -554,17 +566,6 @@ const GuiaExpandedDetails: React.FC<{
                   <span className="text-slate-500">Días:</span>
                   <span className="font-bold text-slate-800 dark:text-white">{guia.dias} días</span>
                 </div>
-              </div>
-
-              {/* Estado Actual */}
-              <div className="mt-4 p-3 bg-white dark:bg-navy-900 rounded-lg border border-slate-200 dark:border-navy-700">
-                <p className="text-xs text-slate-500 mb-2 uppercase tracking-wider">Estado Actual (Último Evento)</p>
-                <StatusBadge status={guia.estadoGeneral} />
-                {guia.ultimoEvento && (
-                  <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
-                    <span className="text-slate-500">{guia.ultimoEvento.fecha}:</span> {guia.ultimoEvento.descripcion}
-                  </p>
-                )}
               </div>
 
               {/* Acciones */}
@@ -595,40 +596,60 @@ const GuiaExpandedDetails: React.FC<{
               </div>
             </div>
 
-            {/* Historial de Eventos */}
+            {/* ÚLTIMOS 2 ESTADOS - COMPRIMIDO */}
             <div>
               <h4 className="font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-blue-500" />
-                Historial de Eventos
+                Últimos 2 Estados
+                <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">
+                  Comprimido
+                </span>
               </h4>
 
-              {sortedEvents.length > 0 ? (
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {sortedEvents.map((event, idx) => (
+              {ultimos2Estados.length > 0 ? (
+                <div className="space-y-3">
+                  {ultimos2Estados.map((event, idx) => (
                     <div
                       key={idx}
-                      className={`flex items-start gap-3 p-2 rounded-lg ${
-                        idx === 0 ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800' : 'bg-white dark:bg-navy-900'
+                      className={`p-3 rounded-lg border-2 ${
+                        idx === 0
+                          ? 'bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-300 dark:border-emerald-700'
+                          : 'bg-slate-50 dark:bg-navy-800 border-slate-200 dark:border-navy-700'
                       }`}
                     >
-                      <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                        idx === 0 ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'
-                      }`} />
-                      <div className="flex-1 min-w-0">
-                        <span className="text-xs text-slate-500 dark:text-slate-400 block">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                          idx === 0
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-slate-400 text-white'
+                        }`}>
+                          Estado {idx + 1}
+                        </span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
                           {event.date}
                         </span>
-                        <span className="text-sm text-slate-700 dark:text-slate-300">
-                          {event.description}
-                        </span>
-                        {event.location && (
-                          <span className="text-xs text-slate-400 block">
-                            📍 {event.location}
-                          </span>
-                        )}
                       </div>
+                      <p className={`text-sm font-medium ${
+                        idx === 0
+                          ? 'text-emerald-800 dark:text-emerald-300'
+                          : 'text-slate-700 dark:text-slate-300'
+                      }`}>
+                        {event.description}
+                      </p>
+                      {event.location && (
+                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {event.location}
+                        </p>
+                      )}
                     </div>
                   ))}
+
+                  {sortedEvents.length > 2 && (
+                    <p className="text-xs text-slate-400 text-center py-2">
+                      +{sortedEvents.length - 2} eventos anteriores ocultos
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-8 text-slate-500">
@@ -744,20 +765,10 @@ const UntrackedGuidesTable: React.FC<{
 
 // =====================================
 // COMPONENTE PRINCIPAL
+// Sistema de Hojas con Persistencia Global
 // =====================================
-// Interface para historial de cargas
-interface CargaHistorial {
-  id: string;
-  fecha: Date;
-  nombreArchivo: string;
-  cantidadGuias: number;
-  guias: Shipment[];
-}
 
-// Constante para storage key
-const STORAGE_KEY_HISTORIAL = 'litper_seguimiento_historial';
-
-export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRefresh }) => {
+export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRefresh, onRestoreShipments }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [filterTransportadora, setFilterTransportadora] = useState<string | null>(null);
@@ -766,51 +777,91 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
   // Estados para Tablero de Alertas
   const [showAlertDashboard, setShowAlertDashboard] = useState(false);
 
-  // Estados para Historial de Cargas
-  const [historialCargas, setHistorialCargas] = useState<CargaHistorial[]>([]);
-  const [showHistorial, setShowHistorial] = useState(false);
+  // Estados para Sistema de Hojas (Persistencia Global)
+  const [hojas, setHojas] = useState<HojaCarga[]>([]);
+  const [showHojas, setShowHojas] = useState(false);
+  const [hojaActiva, setHojaActiva] = useState<string | null>(null);
+  const [cargandoHojas, setCargandoHojas] = useState(false);
+  const [guardandoHoja, setGuardandoHoja] = useState(false);
+  const [sincronizando, setSincronizando] = useState(false);
 
-  // Cargar historial desde localStorage
+  // Cargar hojas desde almacenamiento global al iniciar
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_HISTORIAL);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setHistorialCargas(parsed.map((item: any) => ({
-          ...item,
-          fecha: new Date(item.fecha),
-        })));
-      }
-    } catch (e) {
-      console.error('Error cargando historial:', e);
-    }
+    cargarHojasGlobales();
   }, []);
 
-  // Guardar carga actual en historial
-  const guardarEnHistorial = useCallback(() => {
+  // Cargar todas las hojas del almacenamiento global
+  const cargarHojasGlobales = async () => {
+    setCargandoHojas(true);
+    try {
+      const todasLasHojas = await obtenerTodasLasHojas();
+      setHojas(todasLasHojas);
+    } catch (e) {
+      console.error('Error cargando hojas:', e);
+    } finally {
+      setCargandoHojas(false);
+    }
+  };
+
+  // Guardar carga actual como nueva hoja (persistencia global)
+  const guardarComoNuevaHoja = async () => {
     if (shipments.length === 0) return;
 
-    const nuevaCarga: CargaHistorial = {
-      id: `carga_${Date.now()}`,
-      fecha: new Date(),
-      nombreArchivo: `Carga ${new Date().toLocaleDateString('es-CO')}`,
-      cantidadGuias: shipments.length,
-      guias: shipments,
-    };
+    setGuardandoHoja(true);
+    try {
+      const nuevaHoja = await guardarNuevaHoja(shipments);
+      setHojas(prev => [nuevaHoja, ...prev]);
+      setHojaActiva(nuevaHoja.id);
+      alert(`Hoja "${nuevaHoja.nombre}" guardada exitosamente para todos los usuarios`);
+    } catch (e) {
+      console.error('Error guardando hoja:', e);
+      alert('Error al guardar la hoja');
+    } finally {
+      setGuardandoHoja(false);
+    }
+  };
 
-    const nuevoHistorial = [nuevaCarga, ...historialCargas].slice(0, 10); // Mantener solo las últimas 10
-    setHistorialCargas(nuevoHistorial);
+  // Eliminar una hoja
+  const eliminarHojaHandler = async (hojaId: string) => {
+    if (!confirm('¿Eliminar esta hoja? Esta acción afectará a todos los usuarios.')) return;
 
-    // Guardar en localStorage
-    localStorage.setItem(STORAGE_KEY_HISTORIAL, JSON.stringify(nuevoHistorial));
-  }, [shipments, historialCargas]);
+    try {
+      await eliminarHoja(hojaId);
+      setHojas(prev => prev.filter(h => h.id !== hojaId));
+      if (hojaActiva === hojaId) setHojaActiva(null);
+    } catch (e) {
+      console.error('Error eliminando hoja:', e);
+    }
+  };
 
-  // Eliminar carga del historial
-  const eliminarDelHistorial = useCallback((id: string) => {
-    const nuevoHistorial = historialCargas.filter(c => c.id !== id);
-    setHistorialCargas(nuevoHistorial);
-    localStorage.setItem(STORAGE_KEY_HISTORIAL, JSON.stringify(nuevoHistorial));
-  }, [historialCargas]);
+  // Restaurar una hoja (cargar sus guías)
+  const restaurarHojaHandler = async (hojaId: string) => {
+    const hoja = hojas.find(h => h.id === hojaId);
+    if (hoja && onRestoreShipments) {
+      onRestoreShipments(hoja.guias);
+      setHojaActiva(hojaId);
+      setShowHojas(false);
+      alert(`Hoja "${hoja.nombre}" restaurada con ${hoja.cantidadGuias} guías`);
+    }
+  };
+
+  // Sincronizar hojas con servidor
+  const sincronizarHojasHandler = async () => {
+    setSincronizando(true);
+    try {
+      const resultado = await sincronizarHojas();
+      if (resultado.sincronizado) {
+        await cargarHojasGlobales();
+        alert(`Sincronización completada. ${resultado.hojasServidor} hojas en el servidor.`);
+      } else {
+        alert('No se pudo sincronizar. Trabajando en modo offline.');
+      }
+    } catch (e) {
+      console.error('Error sincronizando:', e);
+    } finally {
+      setSincronizando(false);
+    }
+  };
 
   // Contar guías con alertas
   const guiasConAlertas = useMemo(() => {
@@ -981,37 +1032,65 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
             )}
           </button>
 
-          {/* Botón Historial */}
+          {/* BOTÓN "MIRAR TODAS" - Hojas Guardadas */}
           <button
-            onClick={() => setShowHistorial(!showHistorial)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              showHistorial
-                ? 'bg-purple-500 text-white'
-                : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50'
+            onClick={() => setShowHojas(!showHojas)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+              showHojas
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg'
+                : 'bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30 text-purple-700 dark:text-purple-400 hover:from-purple-200 hover:to-indigo-200 dark:hover:from-purple-900/50 dark:hover:to-indigo-900/50'
             }`}
           >
-            <History className="w-4 h-4" />
-            Historial
-            {historialCargas.length > 0 && (
-              <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
-                showHistorial ? 'bg-white/20 text-white' : 'bg-purple-500 text-white'
+            <List className="w-4 h-4" />
+            MIRAR TODAS
+            {hojas.length > 0 && (
+              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                showHojas ? 'bg-white/20 text-white' : 'bg-purple-600 text-white'
               }`}>
-                {historialCargas.length}
+                {hojas.length} hojas
               </span>
             )}
           </button>
 
-          {/* Botón Guardar Carga */}
+          {/* Botón Guardar como Nueva Hoja */}
           {shipments.length > 0 && (
             <button
-              onClick={guardarEnHistorial}
-              className="flex items-center gap-2 px-3 py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors text-sm font-medium"
-              title="Guardar carga actual en historial"
+              onClick={guardarComoNuevaHoja}
+              disabled={guardandoHoja}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                guardandoHoja
+                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600 shadow-lg'
+              }`}
+              title="Guardar como nueva hoja (para todos los usuarios)"
             >
-              <Save className="w-4 h-4" />
-              Guardar
+              {guardandoHoja ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Guardar Hoja
+                </>
+              )}
             </button>
           )}
+
+          {/* Botón Sincronizar */}
+          <button
+            onClick={sincronizarHojasHandler}
+            disabled={sincronizando}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              sincronizando
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200'
+            }`}
+            title="Sincronizar hojas con servidor"
+          >
+            <RefreshCw className={`w-4 h-4 ${sincronizando ? 'animate-spin' : ''}`} />
+          </button>
 
           {onRefresh && (
             <HelpTooltip
@@ -1051,65 +1130,140 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
         </div>
       )}
 
-      {/* Panel de Historial de Cargas */}
-      {showHistorial && (
-        <div className="bg-white dark:bg-navy-900 rounded-xl border border-purple-200 dark:border-purple-800 shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-500 to-indigo-500 px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-white">
-              <History className="w-5 h-5" />
-              <h3 className="font-bold">Historial de Cargas</h3>
+      {/* ========================================= */}
+      {/* PANEL DE HOJAS - MIRAR TODAS LAS CARGAS */}
+      {/* Persistencia Global para Todos los Usuarios */}
+      {/* ========================================= */}
+      {showHojas && (
+        <div className="bg-white dark:bg-navy-900 rounded-xl border-2 border-purple-300 dark:border-purple-700 shadow-xl overflow-hidden">
+          <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 px-4 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3 text-white">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <FileSpreadsheet className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg">Sistema de Hojas de Carga</h3>
+                <p className="text-purple-200 text-xs">Cada carga se guarda como una hoja • Disponible para todos los usuarios</p>
+              </div>
             </div>
-            <button
-              onClick={() => setShowHistorial(false)}
-              className="p-1 hover:bg-white/20 rounded transition-colors"
-            >
-              <X className="w-5 h-5 text-white" />
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-bold">
+                {hojas.length} hojas guardadas
+              </span>
+              <button
+                onClick={() => setShowHojas(false)}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
+            </div>
           </div>
 
           <div className="p-4">
-            {historialCargas.length === 0 ? (
-              <div className="text-center py-8">
-                <FileSpreadsheet className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500 dark:text-slate-400">
-                  No hay cargas guardadas. Haz clic en "Guardar" para guardar la carga actual.
+            {cargandoHojas ? (
+              <div className="text-center py-12">
+                <RefreshCw className="w-10 h-10 text-purple-500 mx-auto mb-3 animate-spin" />
+                <p className="text-slate-500 dark:text-slate-400">Cargando hojas...</p>
+              </div>
+            ) : hojas.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-20 h-20 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FileSpreadsheet className="w-10 h-10 text-purple-500" />
+                </div>
+                <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-2">
+                  No hay hojas guardadas
+                </h4>
+                <p className="text-slate-500 dark:text-slate-400 mb-4">
+                  Carga guías y haz clic en "Guardar Hoja" para crear tu primera hoja.
+                </p>
+                <p className="text-xs text-purple-500">
+                  Las hojas se guardan para TODOS los usuarios
                 </p>
               </div>
             ) : (
               <div className="space-y-3">
-                {historialCargas.map((carga) => (
+                {/* Leyenda */}
+                <div className="flex items-center gap-4 mb-4 pb-4 border-b border-slate-200 dark:border-navy-700">
+                  <span className="text-xs text-slate-500">
+                    Cada carga se guarda como una hoja independiente. Puedes restaurar cualquier hoja anterior.
+                  </span>
+                </div>
+
+                {/* Lista de Hojas */}
+                {hojas.map((hoja, index) => (
                   <div
-                    key={carga.id}
-                    className="bg-slate-50 dark:bg-navy-800 rounded-lg p-4 border border-slate-200 dark:border-navy-700"
+                    key={hoja.id}
+                    className={`rounded-xl p-4 border-2 transition-all ${
+                      hojaActiva === hoja.id
+                        ? 'bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-400 dark:border-emerald-600 shadow-lg'
+                        : 'bg-slate-50 dark:bg-navy-800 border-slate-200 dark:border-navy-700 hover:border-purple-300 dark:hover:border-purple-600'
+                    }`}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                          <FileSpreadsheet className="w-5 h-5 text-purple-600" />
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        {/* Número de Hoja */}
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${
+                          hojaActiva === hoja.id
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
+                        }`}>
+                          #{index + 1}
                         </div>
+
+                        {/* Info de la Hoja */}
                         <div>
-                          <h4 className="font-bold text-slate-800 dark:text-white">
-                            {carga.nombreArchivo}
-                          </h4>
-                          <p className="text-xs text-slate-500">
-                            {carga.fecha.toLocaleDateString('es-CO', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-slate-800 dark:text-white">
+                              {hoja.nombre}
+                            </h4>
+                            {hojaActiva === hoja.id && (
+                              <span className="px-2 py-0.5 bg-emerald-500 text-white text-xs font-bold rounded-full">
+                                ACTIVA
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {hoja.fechaCreacion.toLocaleDateString('es-CO', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full text-xs font-bold">
-                          {carga.cantidadGuias} guías
+
+                      {/* Acciones */}
+                      <div className="flex items-center gap-3">
+                        <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${
+                          hojaActiva === hoja.id
+                            ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                            : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
+                        }`}>
+                          {hoja.cantidadGuias} guías
                         </span>
+
+                        {/* Botón Restaurar */}
+                        {onRestoreShipments && hojaActiva !== hoja.id && (
+                          <button
+                            onClick={() => restaurarHojaHandler(hoja.id)}
+                            className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+                            title="Restaurar esta hoja"
+                          >
+                            <Download className="w-4 h-4" />
+                            Restaurar
+                          </button>
+                        )}
+
+                        {/* Botón Eliminar */}
                         <button
-                          onClick={() => eliminarDelHistorial(carga.id)}
-                          className="p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
-                          title="Eliminar"
+                          onClick={() => eliminarHojaHandler(hoja.id)}
+                          className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                          title="Eliminar hoja"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1119,6 +1273,13 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Footer con info */}
+          <div className="bg-slate-50 dark:bg-navy-950 px-4 py-3 border-t border-slate-200 dark:border-navy-700">
+            <p className="text-xs text-slate-500 text-center">
+              Las hojas se sincronizan automáticamente y están disponibles para todos los usuarios de la aplicación
+            </p>
           </div>
         </div>
       )}
