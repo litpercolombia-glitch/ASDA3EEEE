@@ -665,16 +665,16 @@ const AppNew: React.FC = () => {
 
               {[
                 { id: 'seguimiento', icon: Package, label: '📦 Seguimiento' },
-                { id: 'inteligencia-logistica', icon: BarChart3, label: '📊 Intel. Logística', isNew: true },
-                { id: 'predicciones', icon: Target, label: '🎯 Análisis' },
-                { id: 'semaforo', icon: Activity, label: '🚦 Semáforo' },
-                { id: 'asistente', icon: Bot, label: '🤖 Asistente IA', isNew: true },
-                { id: 'demanda', icon: TrendingUp, label: '📈 Predicción' },
+                { id: 'demanda', icon: TrendingUp, label: '📈 Predicción', isNew: true },
                 { id: 'gamificacion', icon: Trophy, label: '🏆 Logros' },
+                { id: 'inteligencia-logistica', icon: BarChart3, label: '📊 Intel. Logística', isNew: true },
+                { id: 'semaforo', icon: Activity, label: '🚦 Semáforo' },
+                { id: 'predicciones', icon: Target, label: '🎯 Análisis' },
+                { id: 'asistente', icon: Bot, label: '🤖 Asistente IA', isNew: true },
                 { id: 'ml', icon: Brain, label: '🧠 Sistema ML' },
                 { id: 'procesos-litper', icon: Layers, label: '🏢 Procesos' },
-                { id: 'ciudad-agentes', icon: Globe, label: '🌆 Ciudad IA' },
-                { id: 'admin', icon: Shield, label: '🔐 Admin' },
+                { id: 'ciudad-agentes', icon: Globe, label: '🌆 Ciudad IA', isNew: true },
+                { id: 'admin', icon: Shield, label: '🔐 Admin', isNew: true },
               ].map((item) => (
                 <button
                   key={item.id}
