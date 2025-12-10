@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, Activity, Target, FileBarChart, Bot, Brain, Zap, TrendingUp, Trophy, Building2, GraduationCap, Plug, ShieldCheck } from 'lucide-react';
+import { Package, Activity, Target, FileBarChart, Bot, Brain, Zap, TrendingUp, Trophy, Building2, GraduationCap, Plug, ShieldCheck, BarChart2 } from 'lucide-react';
 import { MainTabNew } from '../../types/logistics';
 
 interface TabNavigationNewProps {
@@ -22,6 +22,7 @@ interface TabNavigationNewProps {
     'conexiones'?: number;
     'admin'?: number;
     'reporte'?: number;
+    'inteligencia-logistica'?: number;
   };
 }
 
@@ -153,6 +154,15 @@ const tabs: TabConfig[] = [
     shortLabel: 'Admin',
     color: 'text-rose-500',
     activeColor: 'bg-gradient-to-r from-rose-500 to-pink-600',
+    isNew: true,
+  },
+  {
+    id: 'inteligencia-logistica',
+    icon: BarChart2,
+    label: 'Intel. Logística',
+    shortLabel: 'Intel.',
+    color: 'text-cyan-500',
+    activeColor: 'bg-gradient-to-r from-cyan-500 to-blue-600',
     isNew: true,
   },
 ];

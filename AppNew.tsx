@@ -29,6 +29,7 @@ import {
   ProcesosLitperTab,
 } from './components/tabs';
 import { CiudadAgentesTab } from './components/tabs/CiudadAgentesTab';
+import { InteligenciaLogisticaTab } from './components/tabs/InteligenciaLogisticaTab';
 import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
 import { AssistantButton } from './components/Assistant';
 import ProBubble from './components/ProAssistant/ProBubble';
@@ -407,8 +408,11 @@ const AppNew: React.FC = () => {
 
   const userProfile = getUserProfile();
 
+  const guiasRetrasadas = detectarGuiasRetrasadas(shipments);
+  const alertasCriticas = guiasRetrasadas.filter((g) => g.nivelAlerta === 'CRITICO').length;
+
   const tabNotifications = {
-    seguimiento: detectarGuiasRetrasadas(shipments).filter((g) => g.nivelAlerta === 'CRITICO').length,
+    seguimiento: alertasCriticas,
     flash: 0,
     demanda: 0,
     gamificacion: userProfile.activeChallenges.filter(c => !c.completed).length,
@@ -420,6 +424,7 @@ const AppNew: React.FC = () => {
     'procesos-litper': 0,
     'ciudad-agentes': 0,
     'aprendizaje-ia': 0,
+    'inteligencia-logistica': guiasRetrasadas.filter(g => g.diasSinMovimiento > 5).length,
   };
 
   const handleProcessInput = () => {
@@ -673,6 +678,7 @@ const AppNew: React.FC = () => {
                 { id: 'procesos-litper', icon: Layers, label: '🏢 Procesos' },
                 { id: 'ciudad-agentes', icon: Globe, label: '🌆 Ciudad IA', isNew: true },
                 { id: 'admin', icon: Shield, label: '🔐 Admin', isNew: true },
+                { id: 'inteligencia-logistica', icon: BarChart3, label: '📊 Intel. Logística', isNew: true },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -910,6 +916,7 @@ const AppNew: React.FC = () => {
           {currentTab === 'procesos-litper' && <ProcesosLitperTab selectedCountry={selectedCountry} />}
           {currentTab === 'ciudad-agentes' && <CiudadAgentesTab selectedCountry={selectedCountry} />}
           {currentTab === 'admin' && <AdminPanelPro />}
+          {currentTab === 'inteligencia-logistica' && <InteligenciaLogisticaTab shipments={shipments} />}
         </div>
       </main>
 
