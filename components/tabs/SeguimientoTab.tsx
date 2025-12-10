@@ -38,7 +38,9 @@ import {
   History,
   FileSpreadsheet,
   X,
+  Table,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { AlertDashboard } from '../AlertDashboard';
 import { HelpTooltip } from '../HelpSystem/HelpTooltip';
 import { seguimientoHelp } from '../HelpSystem/helpContent';
@@ -504,7 +506,7 @@ const GuiaTableRow: React.FC<{
 };
 
 // =====================================
-// DETALLES EXPANDIDOS DE GUÍA (COMPRIMIDO - SOLO 2 ÚLTIMOS ESTADOS)
+// DETALLES EXPANDIDOS DE GUÍA - HISTORIAL COMPLETO
 // =====================================
 const GuiaExpandedDetails: React.FC<{
   guia: GuiaProcesada;
@@ -516,8 +518,21 @@ const GuiaExpandedDetails: React.FC<{
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
-  // SOLO MOSTRAR LOS ÚLTIMOS 2 ESTADOS
-  const ultimos2Estados = sortedEvents.slice(0, 2);
+  // Formatear fecha
+  const formatFecha = (fecha: string) => {
+    try {
+      const date = new Date(fecha);
+      return date.toLocaleDateString('es-CO', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return fecha;
+    }
+  };
 
   const handleCapture = async () => {
     if (cardRef.current) {
@@ -557,8 +572,8 @@ const GuiaExpandedDetails: React.FC<{
     <tr>
       <td colSpan={7} className="p-0">
         <div ref={cardRef} className="bg-slate-50 dark:bg-navy-950 p-4 border-t border-slate-200 dark:border-navy-700">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Info Principal - SIN ESTATUS "SÍ" */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Info Principal */}
             <div>
               <h4 className="font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
                 <Package className="w-4 h-4 text-emerald-500" />
@@ -589,7 +604,7 @@ const GuiaExpandedDetails: React.FC<{
               </div>
 
               {/* Acciones */}
-              <div className="flex gap-2 mt-4">
+              <div className="flex flex-wrap gap-2 mt-4">
                 {guia.celular && (
                   <button
                     onClick={handleWhatsApp}
@@ -608,7 +623,7 @@ const GuiaExpandedDetails: React.FC<{
                 </button>
                 <button
                   onClick={onCollapse}
-                  className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-400 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-navy-700 transition-colors ml-auto"
+                  className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-400 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-navy-700 transition-colors"
                 >
                   <ChevronUp className="w-4 h-4" />
                   Cerrar
@@ -616,63 +631,72 @@ const GuiaExpandedDetails: React.FC<{
               </div>
             </div>
 
-            {/* ÚLTIMOS 2 ESTADOS - COMPRIMIDO */}
-            <div>
+            {/* HISTORIAL COMPLETO DE ESTADOS */}
+            <div className="lg:col-span-2">
               <h4 className="font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-blue-500" />
-                Últimos 2 Estados
+                Historial Completo de Movimientos
                 <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">
-                  Comprimido
+                  {sortedEvents.length} eventos
                 </span>
               </h4>
 
-              {ultimos2Estados.length > 0 ? (
-                <div className="space-y-3">
-                  {ultimos2Estados.map((event, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-3 rounded-lg border-2 ${
-                        idx === 0
-                          ? 'bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-300 dark:border-emerald-700'
-                          : 'bg-slate-50 dark:bg-navy-800 border-slate-200 dark:border-navy-700'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                          idx === 0
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-slate-400 text-white'
-                        }`}>
-                          Estado {idx + 1}
-                        </span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
-                          {event.date}
-                        </span>
-                      </div>
-                      <p className={`text-sm font-medium ${
-                        idx === 0
-                          ? 'text-emerald-800 dark:text-emerald-300'
-                          : 'text-slate-700 dark:text-slate-300'
-                      }`}>
-                        {event.description}
-                      </p>
-                      {event.location && (
-                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {event.location}
-                        </p>
-                      )}
-                    </div>
-                  ))}
+              {sortedEvents.length > 0 ? (
+                <div className="bg-white dark:bg-navy-900 rounded-lg border border-slate-200 dark:border-navy-700 max-h-80 overflow-y-auto">
+                  <div className="divide-y divide-slate-100 dark:divide-navy-800">
+                    {sortedEvents.map((event, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-3 hover:bg-slate-50 dark:hover:bg-navy-800/50 transition-colors ${
+                          idx === 0 ? 'bg-emerald-50 dark:bg-emerald-900/20' : ''
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          {/* Indicador de timeline */}
+                          <div className="flex flex-col items-center">
+                            <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                              idx === 0
+                                ? 'bg-emerald-500 ring-4 ring-emerald-100 dark:ring-emerald-900/50'
+                                : 'bg-slate-300 dark:bg-slate-600'
+                            }`}></div>
+                            {idx < sortedEvents.length - 1 && (
+                              <div className="w-0.5 h-full min-h-[20px] bg-slate-200 dark:bg-slate-700 mt-1"></div>
+                            )}
+                          </div>
 
-                  {sortedEvents.length > 2 && (
-                    <p className="text-xs text-slate-400 text-center py-2">
-                      +{sortedEvents.length - 2} eventos anteriores ocultos
-                    </p>
-                  )}
+                          {/* Contenido del evento */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {idx === 0 && (
+                                <span className="px-2 py-0.5 bg-emerald-500 text-white text-xs font-bold rounded">
+                                  ACTUAL
+                                </span>
+                              )}
+                              <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
+                                {formatFecha(event.date)}
+                              </span>
+                            </div>
+                            <p className={`text-sm font-medium mt-1 ${
+                              idx === 0
+                                ? 'text-emerald-700 dark:text-emerald-400'
+                                : 'text-slate-700 dark:text-slate-300'
+                            }`}>
+                              {event.description}
+                            </p>
+                            {event.location && (
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                {event.location}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : (
-                <div className="text-center py-8 text-slate-500">
+                <div className="text-center py-8 text-slate-500 bg-white dark:bg-navy-900 rounded-lg">
                   <FileWarning className="w-8 h-8 mx-auto mb-2 text-slate-400" />
                   <p className="text-sm">No hay eventos de tracking registrados</p>
                 </div>
@@ -1010,6 +1034,108 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
     setExpandedGuia(null);
   };
 
+  // Exportar a Excel Profesional
+  const exportarExcelProfesional = useCallback(() => {
+    const fechaExport = new Date().toLocaleDateString('es-CO', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).replace(/\//g, '-');
+
+    // Hoja 1: Resumen de guías
+    const datosResumen = guiasFiltradas.map(g => ({
+      'Número de Guía': g.guia.id,
+      'Teléfono': g.celular || '',
+      'Transportadora': g.transportadora,
+      'Ciudad Origen': g.origen,
+      'Ciudad Destino': g.destino,
+      'Estado Actual': g.estadoGeneral,
+      'Días en Tránsito': g.dias,
+      'Tiene Novedad': g.tieneNovedad ? 'Sí' : 'No',
+      'Último Estado': g.ultimos2Estados[0]?.descripcion || '',
+      'Fecha Último Estado': g.ultimos2Estados[0]?.fecha || '',
+      'Estado Anterior': g.ultimos2Estados[1]?.descripcion || '',
+      'Fecha Estado Anterior': g.ultimos2Estados[1]?.fecha || '',
+    }));
+
+    // Hoja 2: Historial detallado
+    const datosHistorial: any[] = [];
+    guiasFiltradas.forEach(g => {
+      const events = g.guia.detailedInfo?.events || [];
+      const sortedEvents = [...events].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      sortedEvents.forEach((event, idx) => {
+        datosHistorial.push({
+          'Número de Guía': g.guia.id,
+          'Transportadora': g.transportadora,
+          'Orden': idx + 1,
+          'Fecha': event.date,
+          'Descripción': event.description,
+          'Ubicación': event.location || '',
+        });
+      });
+    });
+
+    // Hoja 3: Estadísticas
+    const entregados = guiasFiltradas.filter(g => g.estadoGeneral.toLowerCase().includes('entregado')).length;
+    const conNovedad = guiasFiltradas.filter(g => g.tieneNovedad).length;
+    const enReparto = guiasFiltradas.filter(g => g.estadoGeneral.toLowerCase().includes('reparto')).length;
+    const promedioDias = guiasFiltradas.length > 0
+      ? Math.round(guiasFiltradas.reduce((acc, g) => acc + g.dias, 0) / guiasFiltradas.length)
+      : 0;
+
+    const datosEstadisticas = [
+      { 'Métrica': 'Total de Guías', 'Valor': guiasFiltradas.length },
+      { 'Métrica': 'Guías Entregadas', 'Valor': entregados },
+      { 'Métrica': 'Tasa de Entrega', 'Valor': `${guiasFiltradas.length > 0 ? Math.round((entregados / guiasFiltradas.length) * 100) : 0}%` },
+      { 'Métrica': 'Guías con Novedad', 'Valor': conNovedad },
+      { 'Métrica': 'Guías en Reparto', 'Valor': enReparto },
+      { 'Métrica': 'Promedio Días en Tránsito', 'Valor': promedioDias },
+      { 'Métrica': 'Fecha de Generación', 'Valor': new Date().toLocaleString('es-CO') },
+    ];
+
+    // Crear libro de Excel
+    const wb = XLSX.utils.book_new();
+
+    // Agregar hojas
+    const wsResumen = XLSX.utils.json_to_sheet(datosResumen);
+    const wsHistorial = XLSX.utils.json_to_sheet(datosHistorial);
+    const wsEstadisticas = XLSX.utils.json_to_sheet(datosEstadisticas);
+
+    // Configurar anchos de columna
+    wsResumen['!cols'] = [
+      { wch: 18 }, // Guía
+      { wch: 12 }, // Teléfono
+      { wch: 18 }, // Transportadora
+      { wch: 15 }, // Origen
+      { wch: 20 }, // Destino
+      { wch: 25 }, // Estado
+      { wch: 8 },  // Días
+      { wch: 10 }, // Novedad
+      { wch: 40 }, // Último Estado
+      { wch: 20 }, // Fecha
+      { wch: 40 }, // Estado Anterior
+      { wch: 20 }, // Fecha Anterior
+    ];
+
+    wsHistorial['!cols'] = [
+      { wch: 18 }, // Guía
+      { wch: 18 }, // Transportadora
+      { wch: 6 },  // Orden
+      { wch: 20 }, // Fecha
+      { wch: 50 }, // Descripción
+      { wch: 30 }, // Ubicación
+    ];
+
+    XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen Guías');
+    XLSX.utils.book_append_sheet(wb, wsHistorial, 'Historial Detallado');
+    XLSX.utils.book_append_sheet(wb, wsEstadisticas, 'Estadísticas');
+
+    // Descargar archivo
+    XLSX.writeFile(wb, `Seguimiento_Guias_${fechaExport}.xlsx`);
+  }, [guiasFiltradas]);
+
   if (shipments.length === 0) {
     return (
       <div className="bg-white dark:bg-navy-900 rounded-2xl border border-slate-200 dark:border-navy-700 p-12 text-center">
@@ -1088,6 +1214,18 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
             )}
           </button>
 
+          {/* Botón Exportar Excel */}
+          {shipments.length > 0 && (
+            <button
+              onClick={exportarExcelProfesional}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 shadow-lg"
+              title="Exportar a Excel profesional"
+            >
+              <Table className="w-4 h-4" />
+              Exportar Excel
+            </button>
+          )}
+
           {/* Botón Guardar como Nueva Hoja */}
           {shipments.length > 0 && (
             <button
@@ -1096,7 +1234,7 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
                 guardandoHoja
                   ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600 shadow-lg'
+                  : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 shadow-lg'
               }`}
               title="Guardar como nueva hoja (para todos los usuarios)"
             >

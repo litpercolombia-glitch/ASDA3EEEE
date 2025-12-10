@@ -23,7 +23,6 @@ import {
   SemaforoTabNew,
   PrediccionesTab,
   MLSystemTab,
-  FlashTab,
   DemandTab,
   GamificationTab,
   ProcesosLitperTab,
@@ -60,7 +59,6 @@ import {
   Trophy,
   Package,
   TrendingUp,
-  Zap,
   ChevronDown,
   Menu,
   Bell,
@@ -113,9 +111,9 @@ const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, cou
 
   const quickActions = [
     { id: 'seguimiento', icon: Package, label: 'Seguimiento', desc: 'Rastrear envíos', color: 'from-emerald-500 to-teal-600', emoji: '📦' },
-    { id: 'flash', icon: Zap, label: 'Litper Flash', desc: 'Envíos express', color: 'from-orange-500 to-red-500', emoji: '⚡', isNew: true },
     { id: 'demanda', icon: TrendingUp, label: 'Predicción IA', desc: 'Análisis predictivo', color: 'from-purple-500 to-violet-600', emoji: '📈', isNew: true },
-    { id: 'ml', icon: Brain, label: 'Sistema ML', desc: 'Machine Learning', color: 'from-cyan-500 to-blue-600', emoji: '🧠' },
+    { id: 'inteligencia-logistica', icon: BarChart3, label: 'Intel. Logística', desc: 'Inteligencia operativa', color: 'from-cyan-500 to-blue-600', emoji: '📊', isNew: true },
+    { id: 'ml', icon: Brain, label: 'Sistema ML', desc: 'Machine Learning', color: 'from-cyan-600 to-indigo-600', emoji: '🧠' },
   ];
 
   const features = [
@@ -413,9 +411,9 @@ const AppNew: React.FC = () => {
 
   const tabNotifications = {
     seguimiento: alertasCriticas,
-    flash: 0,
     demanda: 0,
     gamificacion: userProfile.activeChallenges.filter(c => !c.completed).length,
+    'inteligencia-logistica': guiasRetrasadas.filter(g => g.diasSinMovimiento > 5).length,
     semaforo: 0,
     predicciones: 0,
     reporte: 0,
@@ -424,7 +422,6 @@ const AppNew: React.FC = () => {
     'procesos-litper': 0,
     'ciudad-agentes': 0,
     'aprendizaje-ia': 0,
-    'inteligencia-logistica': guiasRetrasadas.filter(g => g.diasSinMovimiento > 5).length,
   };
 
   const handleProcessInput = () => {
@@ -668,9 +665,9 @@ const AppNew: React.FC = () => {
 
               {[
                 { id: 'seguimiento', icon: Package, label: '📦 Seguimiento' },
-                { id: 'flash', icon: Zap, label: '⚡ Flash', isNew: true },
                 { id: 'demanda', icon: TrendingUp, label: '📈 Predicción', isNew: true },
                 { id: 'gamificacion', icon: Trophy, label: '🏆 Logros' },
+                { id: 'inteligencia-logistica', icon: BarChart3, label: '📊 Intel. Logística', isNew: true },
                 { id: 'semaforo', icon: Activity, label: '🚦 Semáforo' },
                 { id: 'predicciones', icon: Target, label: '🎯 Análisis' },
                 { id: 'asistente', icon: Bot, label: '🤖 Asistente IA', isNew: true },
@@ -678,7 +675,6 @@ const AppNew: React.FC = () => {
                 { id: 'procesos-litper', icon: Layers, label: '🏢 Procesos' },
                 { id: 'ciudad-agentes', icon: Globe, label: '🌆 Ciudad IA', isNew: true },
                 { id: 'admin', icon: Shield, label: '🔐 Admin', isNew: true },
-                { id: 'inteligencia-logistica', icon: BarChart3, label: '📊 Intel. Logística', isNew: true },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -906,7 +902,6 @@ const AppNew: React.FC = () => {
               onRestoreShipments={(restoredShipments) => setShipments(restoredShipments)}
             />
           )}
-          {currentTab === 'flash' && <FlashTab country={selectedCountry} />}
           {currentTab === 'demanda' && <DemandTab country={selectedCountry} />}
           {currentTab === 'gamificacion' && <GamificationTab />}
           {currentTab === 'semaforo' && <SemaforoTabNew onDataLoaded={handleSemaforoDataLoaded} />}
@@ -916,7 +911,7 @@ const AppNew: React.FC = () => {
           {currentTab === 'procesos-litper' && <ProcesosLitperTab selectedCountry={selectedCountry} />}
           {currentTab === 'ciudad-agentes' && <CiudadAgentesTab selectedCountry={selectedCountry} />}
           {currentTab === 'admin' && <AdminPanelPro />}
-          {currentTab === 'inteligencia-logistica' && <InteligenciaLogisticaTab shipments={shipments} />}
+          {currentTab === 'inteligencia-logistica' && <InteligenciaLogisticaTab />}
         </div>
       </main>
 
@@ -958,8 +953,8 @@ const AppNew: React.FC = () => {
               <h4 className="font-bold text-white mb-4">🚀 Plataforma</h4>
               <ul className="space-y-2 text-sm text-slate-400">
                 <li><button onClick={() => setCurrentTab('seguimiento')} className="hover:text-accent-400 transition-colors">📦 Seguimiento</button></li>
-                <li><button onClick={() => setCurrentTab('flash')} className="hover:text-accent-400 transition-colors">⚡ Litper Flash</button></li>
                 <li><button onClick={() => setCurrentTab('demanda')} className="hover:text-accent-400 transition-colors">📈 Predicción</button></li>
+                <li><button onClick={() => setCurrentTab('inteligencia-logistica')} className="hover:text-accent-400 transition-colors">📊 Intel. Logística</button></li>
                 <li><button onClick={() => setCurrentTab('ml')} className="hover:text-accent-400 transition-colors">🧠 Sistema ML</button></li>
               </ul>
             </div>
