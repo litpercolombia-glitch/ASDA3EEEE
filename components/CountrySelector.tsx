@@ -28,9 +28,9 @@ interface CountrySelectorProps {
 
 // Banderas de países
 const COUNTRY_FLAGS: Record<Country, string> = {
-  [Country.COLOMBIA]: '🇨🇴',
-  [Country.MEXICO]: '🇲🇽',
-  [Country.PERU]: '🇵🇪',
+  COLOMBIA: '🇨🇴',
+  ECUADOR: '🇪🇨',
+  CHILE: '🇨🇱',
 };
 
 const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) => {
