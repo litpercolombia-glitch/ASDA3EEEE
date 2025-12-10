@@ -14,3 +14,4 @@ export { AprendizajeIATab } from './AprendizajeIATab';
 export { DistritosIATab } from './DistritosIATab';
 export { MCPConnectionsTab } from './MCPConnectionsTab';
 export { ConexionesTab } from './ConexionesTab';
+export { InteligenciaLogisticaTab } from './InteligenciaLogisticaTab';
