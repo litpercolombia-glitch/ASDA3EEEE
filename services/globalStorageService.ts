@@ -137,6 +137,44 @@ export const eliminarHoja = async (hojaId: string): Promise<boolean> => {
 };
 
 /**
+ * Elimina una guía individual de una hoja
+ */
+export const eliminarGuiaDeHoja = async (
+  hojaId: string,
+  guiaId: string
+): Promise<HojaCarga | null> => {
+  const hojas = await obtenerTodasLasHojas();
+  const hojaIndex = hojas.findIndex(h => h.id === hojaId);
+
+  if (hojaIndex === -1) return null;
+
+  const hoja = hojas[hojaIndex];
+  const nuevasGuias = hoja.guias.filter(g => g.id !== guiaId);
+
+  // Actualizar la hoja
+  const hojaActualizada: HojaCarga = {
+    ...hoja,
+    guias: nuevasGuias,
+    cantidadGuias: nuevasGuias.length,
+    fechaActualizacion: new Date(),
+  };
+
+  // Si no quedan guías, eliminar la hoja completa
+  if (nuevasGuias.length === 0) {
+    const nuevasHojas = hojas.filter(h => h.id !== hojaId);
+    await guardarHojasGlobal(nuevasHojas);
+    return null;
+  }
+
+  // Actualizar la lista de hojas
+  const nuevasHojas = [...hojas];
+  nuevasHojas[hojaIndex] = hojaActualizada;
+  await guardarHojasGlobal(nuevasHojas);
+
+  return hojaActualizada;
+};
+
+/**
  * Restaura una hoja de carga (la hace activa)
  */
 export const restaurarHoja = async (hojaId: string): Promise<HojaCarga | null> => {
@@ -247,6 +285,7 @@ export default {
   obtenerHojasLocal,
   guardarNuevaHoja,
   eliminarHoja,
+  eliminarGuiaDeHoja,
   restaurarHoja,
   sincronizarHojas,
 };
