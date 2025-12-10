@@ -89,16 +89,11 @@ export function calculateWeeklyMetrics(shipments: Shipment[]): WeeklyMetrics {
 
   const averageDeliveryTime =
     deliveryTimes.length > 0
-      ? Math.round(
-          deliveryTimes.reduce((a, b) => a + b, 0) / deliveryTimes.length
-        )
+      ? Math.round(deliveryTimes.reduce((a, b) => a + b, 0) / deliveryTimes.length)
       : 0;
 
   // Analizar transportadoras
-  const carrierStats = new Map<
-    string,
-    { total: number; successful: number; failed: number }
-  >();
+  const carrierStats = new Map<string, { total: number; successful: number; failed: number }>();
 
   shipments.forEach((shipment) => {
     const carrier = shipment.carrier;
@@ -151,10 +146,7 @@ export function calculateWeeklyMetrics(shipments: Shipment[]): WeeklyMetrics {
 /**
  * Identifica las zonas críticas con más fallos
  */
-export function identifyCriticalZones(
-  shipments: Shipment[],
-  topN: number = 3
-): CriticalZone[] {
+export function identifyCriticalZones(shipments: Shipment[], topN: number = 3): CriticalZone[] {
   const failedShipments = shipments.filter(
     (s) =>
       s.status === 'Fallido' ||
@@ -209,10 +201,7 @@ export function identifyCriticalZones(
 /**
  * Detecta rutas con retrasos significativos
  */
-export function detectDelayedRoutes(
-  shipments: Shipment[],
-  topN: number = 5
-): DelayedRoute[] {
+export function detectDelayedRoutes(shipments: Shipment[], topN: number = 5): DelayedRoute[] {
   const routes = new Map<
     string,
     { times: number[]; origins: Set<string>; destinations: Set<string> }
@@ -270,9 +259,7 @@ export function detectDelayedRoutes(
   });
 
   // Ordenar por retraso (descendente) y tomar top N
-  return delayedRoutes
-    .sort((a, b) => b.delayDays - a.delayDays)
-    .slice(0, topN);
+  return delayedRoutes.sort((a, b) => b.delayDays - a.delayDays).slice(0, topN);
 }
 
 /**
@@ -325,9 +312,7 @@ function extractCity(address: string): string {
  * Obtiene el número de semana del año
  */
 function getWeekNumber(date: Date): number {
-  const d = new Date(
-    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
-  );
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const dayNum = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
@@ -337,9 +322,7 @@ function getWeekNumber(date: Date): number {
 /**
  * Genera un reporte completo de análisis
  */
-export function generateAnalyticsReport(
-  shipments: Shipment[]
-): AnalyticsReport {
+export function generateAnalyticsReport(shipments: Shipment[]): AnalyticsReport {
   const now = new Date();
 
   return {

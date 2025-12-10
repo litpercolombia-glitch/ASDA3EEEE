@@ -1,5 +1,16 @@
 import React from 'react';
-import { Package, Activity, Target, FileBarChart, Bot } from 'lucide-react';
+import {
+  Package,
+  Activity,
+  Target,
+  Bot,
+  Brain,
+  TrendingUp,
+  Trophy,
+  Building2,
+  ShieldCheck,
+  BarChart2,
+} from 'lucide-react';
 import { MainTabNew } from '../../types/logistics';
 
 interface TabNavigationNewProps {
@@ -7,10 +18,20 @@ interface TabNavigationNewProps {
   onTabChange: (tab: MainTabNew) => void;
   notifications?: {
     seguimiento?: number;
+    demanda?: number;
+    gamificacion?: number;
+    'inteligencia-logistica'?: number;
     semaforo?: number;
     predicciones?: number;
     reporte?: number;
     asistente?: number;
+    ml?: number;
+    'procesos-litper'?: number;
+    'ciudad-agentes'?: number;
+    'aprendizaje-ia'?: number;
+    'mcp-connections'?: number;
+    conexiones?: number;
+    admin?: number;
   };
 }
 
@@ -21,9 +42,11 @@ interface TabConfig {
   shortLabel: string;
   color: string;
   activeColor: string;
+  isNew?: boolean;
 }
 
 const tabs: TabConfig[] = [
+  // 1. Seguimiento
   {
     id: 'seguimiento',
     icon: Package,
@@ -32,6 +55,26 @@ const tabs: TabConfig[] = [
     color: 'text-emerald-500',
     activeColor: 'bg-emerald-500',
   },
+  // 2. Intel. Logística
+  {
+    id: 'inteligencia-logistica',
+    icon: BarChart2,
+    label: 'Intel. Logística',
+    shortLabel: 'Intel.',
+    color: 'text-cyan-500',
+    activeColor: 'bg-gradient-to-r from-cyan-500 to-blue-600',
+    isNew: true,
+  },
+  // 3. Análisis
+  {
+    id: 'predicciones',
+    icon: Target,
+    label: 'Análisis',
+    shortLabel: 'Análi.',
+    color: 'text-teal-500',
+    activeColor: 'bg-teal-500',
+  },
+  // 4. Semáforo
   {
     id: 'semaforo',
     icon: Activity,
@@ -40,29 +83,69 @@ const tabs: TabConfig[] = [
     color: 'text-amber-500',
     activeColor: 'bg-amber-500',
   },
-  {
-    id: 'predicciones',
-    icon: Target,
-    label: 'Predicciones',
-    shortLabel: 'Pred.',
-    color: 'text-purple-500',
-    activeColor: 'bg-purple-500',
-  },
-  {
-    id: 'reporte',
-    icon: FileBarChart,
-    label: 'Reporte IA',
-    shortLabel: 'Rep.',
-    color: 'text-blue-500',
-    activeColor: 'bg-blue-500',
-  },
+  // 5. Asistente IA
   {
     id: 'asistente',
     icon: Bot,
     label: 'Asistente IA',
     shortLabel: 'IA',
     color: 'text-pink-500',
-    activeColor: 'bg-pink-500',
+    activeColor: 'bg-gradient-to-r from-pink-500 to-rose-500',
+    isNew: true,
+  },
+  // 6. Predicción
+  {
+    id: 'demanda',
+    icon: TrendingUp,
+    label: 'Predicción',
+    shortLabel: 'Pred.',
+    color: 'text-purple-500',
+    activeColor: 'bg-gradient-to-r from-purple-500 to-violet-500',
+  },
+  // 7. Logros
+  {
+    id: 'gamificacion',
+    icon: Trophy,
+    label: 'Logros',
+    shortLabel: 'XP',
+    color: 'text-yellow-500',
+    activeColor: 'bg-gradient-to-r from-yellow-500 to-amber-500',
+  },
+  // 8. Sistema ML
+  {
+    id: 'ml',
+    icon: Brain,
+    label: 'Sistema ML',
+    shortLabel: 'ML',
+    color: 'text-indigo-500',
+    activeColor: 'bg-gradient-to-r from-indigo-500 to-purple-500',
+  },
+  // 9. Procesos
+  {
+    id: 'procesos-litper',
+    icon: Building2,
+    label: 'Procesos',
+    shortLabel: 'Proc.',
+    color: 'text-slate-500',
+    activeColor: 'bg-gradient-to-r from-slate-600 to-slate-700',
+  },
+  // 10. Ciudad IA
+  {
+    id: 'ciudad-agentes',
+    icon: Building2,
+    label: 'Ciudad IA',
+    shortLabel: 'Ciudad',
+    color: 'text-violet-500',
+    activeColor: 'bg-gradient-to-r from-violet-600 to-purple-600',
+  },
+  // 11. Admin
+  {
+    id: 'admin',
+    icon: ShieldCheck,
+    label: 'Admin',
+    shortLabel: 'Admin',
+    color: 'text-rose-500',
+    activeColor: 'bg-gradient-to-r from-rose-500 to-pink-600',
   },
 ];
 
@@ -101,6 +184,11 @@ export const TabNavigationNew: React.FC<TabNavigationNewProps> = ({
               >
                 <Icon className={`w-5 h-5 ${isActive ? '' : tab.color}`} />
                 <span className="truncate">{tab.label}</span>
+                {tab.isNew && !isActive && (
+                  <span className="px-1.5 py-0.5 text-[9px] font-bold bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-full">
+                    NEW
+                  </span>
+                )}
 
                 {notificationCount && notificationCount > 0 && (
                   <span

@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Shipment } from '../types';
-import {
-  generateAnalyticsReport,
-  AnalyticsReport,
-} from '../services/analyticsService';
+import { generateAnalyticsReport, AnalyticsReport } from '../services/analyticsService';
 import {
   generatePredictiveInsights,
   generateExecutiveSummary,
@@ -17,10 +14,7 @@ interface PredictiveReportProps {
   onClose: () => void;
 }
 
-export function PredictiveReport({
-  shipments,
-  onClose,
-}: PredictiveReportProps) {
+export function PredictiveReport({ shipments, onClose }: PredictiveReportProps) {
   const [report, setReport] = useState<AnalyticsReport | null>(null);
   const [insights, setInsights] = useState<PredictiveInsights | null>(null);
   const [summary, setSummary] = useState<string>('');
@@ -41,10 +35,7 @@ export function PredictiveReport({
       setReport(analyticsReport);
 
       // Generar insights predictivos con IA
-      const predictiveInsights = await generatePredictiveInsights(
-        analyticsReport,
-        shipments
-      );
+      const predictiveInsights = await generatePredictiveInsights(analyticsReport, shipments);
       setInsights(predictiveInsights);
 
       // Generar resumen ejecutivo
@@ -52,9 +43,7 @@ export function PredictiveReport({
       setSummary(execSummary);
     } catch (err) {
       console.error('Error generando reporte:', err);
-      setError(
-        'Error al generar el reporte predictivo. Por favor intenta de nuevo.'
-      );
+      setError('Error al generar el reporte predictivo. Por favor intenta de nuevo.');
     } finally {
       setIsLoading(false);
     }
@@ -80,9 +69,7 @@ export function PredictiveReport({
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-8 max-w-md w-full">
           <LoadingSpinner size="lg" />
-          <p className="text-center mt-4 text-gray-600">
-            Generando reporte predictivo con IA...
-          </p>
+          <p className="text-center mt-4 text-gray-600">Generando reporte predictivo con IA...</p>
         </div>
       </div>
     );
@@ -119,9 +106,7 @@ export function PredictiveReport({
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 rounded-t-lg">
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-3xl font-bold mb-2">
-                📄 Reporte Predictivo Logístico
-              </h2>
+              <h2 className="text-3xl font-bold mb-2">📄 Reporte Predictivo Logístico</h2>
               <p className="text-blue-100">
                 Semana {report.weekNumber} - Año {report.year}
               </p>
@@ -133,12 +118,7 @@ export function PredictiveReport({
               onClick={onClose}
               className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-colors"
             >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -153,9 +133,7 @@ export function PredictiveReport({
         <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
           {/* Empresa Info */}
           <div className="bg-gray-50 border-l-4 border-blue-500 p-4 mb-6">
-            <p className="font-semibold text-gray-700">
-              Empresa: LITPER SEGUIMIENTO DE GUÍAS
-            </p>
+            <p className="font-semibold text-gray-700">Empresa: LITPER SEGUIMIENTO DE GUÍAS</p>
             <p className="text-sm text-gray-600">
               Generado por: Inteligencia Artificial (Claude) + Datos Históricos
             </p>
@@ -169,18 +147,14 @@ export function PredictiveReport({
                 Resumen Ejecutivo
               </h3>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
-                <p className="text-gray-700 leading-relaxed whitespace-pre-line">
-                  {summary}
-                </p>
+                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{summary}</p>
               </div>
             </section>
           )}
 
           {/* Métricas Clave */}
           <section className="mb-8">
-            <h3 className="text-2xl font-bold text-gray-800 mb-4">
-              📈 Métricas Clave
-            </h3>
+            <h3 className="text-2xl font-bold text-gray-800 mb-4">📈 Métricas Clave</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <MetricCard
                 title="Guías Procesadas"
@@ -210,9 +184,7 @@ export function PredictiveReport({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-sm text-green-700 font-semibold mb-1">
-                  🏆 Mejor Transportadora
-                </p>
+                <p className="text-sm text-green-700 font-semibold mb-1">🏆 Mejor Transportadora</p>
                 <p className="text-lg font-bold text-green-900">
                   {report.metrics.bestCarrier.name}
                 </p>
@@ -225,9 +197,7 @@ export function PredictiveReport({
                 <p className="text-sm text-red-700 font-semibold mb-1">
                   ⚠️ Transportadora con Más Fallos
                 </p>
-                <p className="text-lg font-bold text-red-900">
-                  {report.metrics.worstCarrier.name}
-                </p>
+                <p className="text-lg font-bold text-red-900">{report.metrics.worstCarrier.name}</p>
                 <p className="text-sm text-red-600">
                   {report.metrics.worstCarrier.failureCount} fallos registrados
                 </p>
@@ -244,10 +214,7 @@ export function PredictiveReport({
               </h3>
               <div className="space-y-3">
                 {report.criticalZones.map((zone, index) => (
-                  <div
-                    key={index}
-                    className="bg-orange-50 border border-orange-200 rounded-lg p-4"
-                  >
+                  <div key={index} className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-bold text-orange-900 text-lg">
@@ -276,31 +243,22 @@ export function PredictiveReport({
               </h3>
               <div className="space-y-3">
                 {report.delayedRoutes.map((route, index) => (
-                  <div
-                    key={index}
-                    className="bg-yellow-50 border border-yellow-200 rounded-lg p-4"
-                  >
+                  <div key={index} className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <p className="font-bold text-yellow-900 text-lg mb-2">
                       {route.from} → {route.to}
                     </p>
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div>
                         <p className="text-yellow-700">Tiempo promedio</p>
-                        <p className="font-semibold text-yellow-900">
-                          {route.averageTime} días
-                        </p>
+                        <p className="font-semibold text-yellow-900">{route.averageTime} días</p>
                       </div>
                       <div>
                         <p className="text-yellow-700">Tiempo real</p>
-                        <p className="font-semibold text-yellow-900">
-                          {route.actualTime} días
-                        </p>
+                        <p className="font-semibold text-yellow-900">{route.actualTime} días</p>
                       </div>
                       <div>
                         <p className="text-yellow-700">Retraso</p>
-                        <p className="font-semibold text-red-600">
-                          +{route.delayDays} días
-                        </p>
+                        <p className="font-semibold text-red-600">+{route.delayDays} días</p>
                       </div>
                     </div>
                   </div>
@@ -322,9 +280,7 @@ export function PredictiveReport({
               <ul className="space-y-3">
                 {insights.predictions.map((prediction, index) => (
                   <li key={index} className="flex items-start">
-                    <span className="text-purple-600 font-bold mr-3 mt-1">
-                      •
-                    </span>
+                    <span className="text-purple-600 font-bold mr-3 mt-1">•</span>
                     <span className="text-gray-700 flex-1">{prediction}</span>
                   </li>
                 ))}
@@ -375,9 +331,7 @@ export function PredictiveReport({
 
         {/* Footer con acciones */}
         <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex justify-between items-center border-t">
-          <p className="text-sm text-gray-600">
-            Reporte generado automáticamente por LITPER IA
-          </p>
+          <p className="text-sm text-gray-600">Reporte generado automáticamente por LITPER IA</p>
           <div className="flex gap-3">
             <Button onClick={exportReport} variant="secondary" icon={<span>💾</span>}>
               Exportar Reporte
@@ -459,9 +413,13 @@ ${report.criticalZones.map((zone, i) => `${i + 1}. Ciudad: ${zone.city} - Fallos
 
 ⏳ RUTAS CON RETRASOS SIGNIFICATIVOS
 
-${report.delayedRoutes.map((route, i) => `${i + 1}. Ruta: ${route.from} → ${route.to}
+${report.delayedRoutes
+  .map(
+    (route, i) => `${i + 1}. Ruta: ${route.from} → ${route.to}
    - Tiempo promedio: ${route.averageTime} días
-   - Tiempo real: ${route.actualTime} días → Retraso de +${route.delayDays} días`).join('\n\n')}
+   - Tiempo real: ${route.actualTime} días → Retraso de +${route.delayDays} días`
+  )
+  .join('\n\n')}
 
 ────────────────────────────────────────────────────────────────────
 

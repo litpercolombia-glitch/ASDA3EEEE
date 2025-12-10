@@ -104,9 +104,11 @@ export function detectarGuiasRetrasadas(guias: Shipment[]): GuiaRetrasada[] {
 
     if (diasSinMovimiento >= 2 && ultimaFecha) {
       const events = guia.detailedInfo?.events || [];
-      const ultimoEstado = events.length > 0
-        ? events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].description
-        : guia.status;
+      const ultimoEstado =
+        events.length > 0
+          ? events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
+              .description
+          : guia.status;
 
       const nivelAlerta = clasificarAlerta(diasSinMovimiento);
       const recomendacionIA = getRecomendacionPorAlerta(nivelAlerta, guia);
@@ -130,12 +132,15 @@ export function detectarGuiasRetrasadas(guias: Shipment[]): GuiaRetrasada[] {
  * Group items by a key
  */
 function groupBy<T>(array: T[], keyFn: (item: T) => string): Record<string, T[]> {
-  return array.reduce((acc, item) => {
-    const key = keyFn(item);
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(item);
-    return acc;
-  }, {} as Record<string, T[]>);
+  return array.reduce(
+    (acc, item) => {
+      const key = keyFn(item);
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    },
+    {} as Record<string, T[]>
+  );
 }
 
 /**
@@ -165,7 +170,8 @@ export function detectarPatrones(
         guiasEjemplo: sinMovimiento48h.slice(0, 3).map((g) => g.id),
       },
       impacto: sinMovimiento48h.length > 5 ? 'CRITICO' : 'ALTO',
-      recomendacion: 'Contactar proactivamente antes de que cumplan 72h. Guías sin movimiento > 48h tienen 60% probabilidad de devolución.',
+      recomendacion:
+        'Contactar proactivamente antes de que cumplan 72h. Guías sin movimiento > 48h tienen 60% probabilidad de devolución.',
       accionable: true,
       guiasAfectadas: sinMovimiento48h,
     });
@@ -243,7 +249,8 @@ export function detectarPatrones(
         guiasEjemplo: guiasAntiguas.slice(0, 3).map((g) => g.id),
       },
       impacto: 'CRITICO',
-      recomendacion: 'Escalar con transportadora. Iniciar proceso de reclamación. Alta probabilidad de pérdida.',
+      recomendacion:
+        'Escalar con transportadora. Iniciar proceso de reclamación. Alta probabilidad de pérdida.',
       accionable: true,
       guiasAfectadas: guiasAntiguas,
     });
@@ -265,7 +272,8 @@ export function detectarPatrones(
         guiasEjemplo: enOficinaMuchoTiempo.slice(0, 3).map((g) => g.id),
       },
       impacto: 'ALTO',
-      recomendacion: 'Contactar clientes urgentemente. Las guías en oficina > 5 días serán devueltas automáticamente.',
+      recomendacion:
+        'Contactar clientes urgentemente. Las guías en oficina > 5 días serán devueltas automáticamente.',
       accionable: true,
       guiasAfectadas: enOficinaMuchoTiempo,
     });
@@ -407,7 +415,10 @@ export function generarPrediccion(
   const ajustePorRetrasos = retrasadas.length > 0 ? -10 : 0;
   const ajustePorTendencia = tendencia === 'MEJORANDO' ? 5 : tendencia === 'EMPEORANDO' ? -5 : 0;
 
-  const probabilidadExito = Math.min(100, Math.max(0, tasaBase + ajustePorRetrasos + ajustePorTendencia));
+  const probabilidadExito = Math.min(
+    100,
+    Math.max(0, tasaBase + ajustePorRetrasos + ajustePorTendencia)
+  );
 
   // Generate recommendations
   const recomendaciones: string[] = [];

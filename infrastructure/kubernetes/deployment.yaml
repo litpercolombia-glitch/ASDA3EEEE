@@ -1,0 +1,405 @@
+# kubernetes/deployment.yaml
+# Deployment de Litper API con auto-scaling
+# ==========================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litper-api
+  labels:
+    app: litper-api
+    environment: production
+    team: platform
+spec:
+  replicas: 3  # Mínimo 3 para alta disponibilidad
+  selector:
+    matchLabels:
+      app: litper-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: litper-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: litper-api
+      containers:
+        - name: litper-api
+          image: litper/api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: litper-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: litper-secrets
+                  key: redis-url
+            - name: CLAUDE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litper-secrets
+                  key: claude-api-key
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litper-secrets
+                  key: jwt-secret
+            - name: MASTER_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litper-secrets
+                  key: encryption-key
+            - name: ENVIRONMENT
+              value: "production"
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: TZ
+              value: "America/Bogota"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: litper-config
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: litper-api
+                topologyKey: "kubernetes.io/hostname"
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: litper-api
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: litper-api
+  labels:
+    app: litper-api
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+  selector:
+    app: litper-api
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: litper-api-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: litper-api
+  minReplicas: 3
+  maxReplicas: 50
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Pods
+      pods:
+        metric:
+          name: http_requests_per_second
+        target:
+          type: AverageValue
+          averageValue: "1000"
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 60
+        - type: Pods
+          value: 4
+          periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+
+---
+# Agent Orchestrator Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-orchestrator
+  labels:
+    app: agent-orchestrator
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: agent-orchestrator
+  template:
+    metadata:
+      labels:
+        app: agent-orchestrator
+    spec:
+      containers:
+        - name: orchestrator
+          image: litper/agent-orchestrator:latest
+          ports:
+            - containerPort: 8001
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "4Gi"
+              cpu: "2000m"
+          env:
+            - name: MAX_CONCURRENT_AGENTS
+              value: "100"
+            - name: CLAUDE_MODEL
+              value: "claude-sonnet-4-20250514"
+            - name: AGENT_TIMEOUT_SECONDS
+              value: "120"
+            - name: CLAUDE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litper-secrets
+                  key: claude-api-key
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: litper-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: litper-secrets
+                  key: redis-url
+
+---
+# Agent Workers Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-workers
+  labels:
+    app: agent-workers
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: agent-workers
+  template:
+    metadata:
+      labels:
+        app: agent-workers
+    spec:
+      containers:
+        - name: worker
+          image: litper/agent-worker:latest
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          env:
+            - name: WORKER_CONCURRENCY
+              value: "10"
+            - name: TASK_QUEUE
+              valueFrom:
+                secretKeyRef:
+                  name: litper-secrets
+                  key: redis-url
+            - name: CLAUDE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litper-secrets
+                  key: claude-api-key
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: agent-workers-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: agent-workers
+  minReplicas: 5
+  maxReplicas: 100
+  metrics:
+    - type: External
+      external:
+        metric:
+          name: redis_queue_length
+          selector:
+            matchLabels:
+              queue: task_queue
+        target:
+          type: AverageValue
+          averageValue: "100"
+
+---
+# ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: litper-config
+data:
+  app.yaml: |
+    environment: production
+    debug: false
+    log_level: INFO
+    timezone: America/Bogota
+
+    api:
+      host: 0.0.0.0
+      port: 8000
+      workers: 4
+
+    agents:
+      max_concurrent: 100
+      timeout_seconds: 120
+
+    carriers:
+      - name: coordinadora
+        enabled: true
+      - name: interrapidisimo
+        enabled: true
+      - name: envia
+        enabled: true
+      - name: tcc
+        enabled: true
+      - name: veloces
+        enabled: true
+
+    countries:
+      - code: CO
+        name: Colombia
+        enabled: true
+      - code: CL
+        name: Chile
+        enabled: true
+      - code: EC
+        name: Ecuador
+        enabled: true
+
+---
+# Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: litper-api-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: litper-api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+        - podSelector:
+            matchLabels:
+              app: litper-frontend
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgresql
+        - podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 6379
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443  # HTTPS (APIs externas)
+        - protocol: TCP
+          port: 80   # HTTP
+
+---
+# Pod Disruption Budget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: litper-api-pdb
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: litper-api

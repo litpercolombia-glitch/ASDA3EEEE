@@ -28,11 +28,13 @@ const TabButton: React.FC<TabButtonProps> = ({ active, icon: Icon, label, onClic
       text-sm font-bold
       rounded-xl
       transition-all duration-200
-      ${disabled
-        ? 'text-slate-400 dark:text-slate-600 cursor-not-allowed opacity-50'
-        : active
-          ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-lg ring-1 ring-black/5 dark:ring-white/10'
-          : 'text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'}
+      ${
+        disabled
+          ? 'text-slate-400 dark:text-slate-600 cursor-not-allowed opacity-50'
+          : active
+            ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-lg ring-1 ring-black/5 dark:ring-white/10'
+            : 'text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
+      }
     `}
   >
     <Icon className="w-5 h-5" />
@@ -43,7 +45,7 @@ const TabButton: React.FC<TabButtonProps> = ({ active, icon: Icon, label, onClic
 export const TabNavigation: React.FC<TabNavigationProps> = ({
   currentTab,
   onTabChange,
-  hasShipments
+  hasShipments,
 }) => {
   return (
     <div className="w-full max-w-3xl mx-auto">

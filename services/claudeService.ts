@@ -403,3 +403,206 @@ El mensaje debe ser:
     throw new APIError('Error al generar mensaje', 500, error);
   }
 };
+
+/**
+ * AI Analysis of delay patterns as Colombian logistics expert
+ * @param shipments - Array of shipments to analyze
+ * @returns Detailed AI analysis with patterns, recommendations, and Colombian context
+ */
+export const analyzeDelayPatterns = async (
+  shipments: Shipment[]
+): Promise<{
+  patterns: Array<{
+    type: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+    description: string;
+    affectedCount: number;
+    guideNumbers: string[];
+    daysWithoutMovement: number;
+    commonFactors: string[];
+    recommendation: string;
+  }>;
+  urgentReview: string[];
+  recommendations: {
+    immediate: string[];
+    shortTerm: string[];
+    strategic: string[];
+  };
+  riskSummary: {
+    totalAtRisk: number;
+    criticalCount: number;
+    estimatedLoss: number;
+    mainCauses: string[];
+  };
+  colombianContext: {
+    regionalIssues: string[];
+    carrierAlerts: string[];
+    seasonalFactors: string[];
+    marketInsights: string[];
+  };
+}> => {
+  try {
+    const client = getClient();
+
+    // Prepare shipment data summary
+    const shipmentData = shipments.map((s) => ({
+      guia: s.id,
+      transportadora: s.carrier,
+      estado: s.status,
+      diasTransito: s.detailedInfo?.daysInTransit || 0,
+      destino: s.detailedInfo?.destination || 'N/A',
+      origen: s.detailedInfo?.origin || 'N/A',
+      riesgo: s.riskAnalysis?.level || 'N/A',
+      ultimaActualizacion: s.detailedInfo?.events?.[0]?.date || 'Sin info',
+      telefono: s.phone || 'N/A',
+    }));
+
+    // Calculate basic metrics
+    const totalGuides = shipments.length;
+    const avgDays =
+      shipments.reduce((sum, s) => sum + (s.detailedInfo?.daysInTransit || 0), 0) / totalGuides;
+    const criticalCount = shipments.filter(
+      (s) => s.riskAnalysis?.level === 'URGENTE' || (s.detailedInfo?.daysInTransit || 0) > 7
+    ).length;
+
+    // Group by carrier
+    const byCarrier: Record<string, number> = {};
+    shipments.forEach((s) => {
+      byCarrier[s.carrier] = (byCarrier[s.carrier] || 0) + 1;
+    });
+
+    // Group by destination city
+    const byCity: Record<string, number> = {};
+    shipments.forEach((s) => {
+      const city = s.detailedInfo?.destination || 'Desconocido';
+      byCity[city] = (byCity[city] || 0) + 1;
+    });
+
+    const prompt = `Eres un EXPERTO EN LOGÍSTICA DE ÚLTIMA MILLA EN COLOMBIA con 15+ años de experiencia. Conoces perfectamente:
+- Las zonas de difícil acceso del país
+- Los tiempos realistas por ciudad y región
+- Los problemas típicos de cada transportadora colombiana (Inter Rapidísimo, Envía, Coordinadora, TCC, Veloces)
+- Factores estacionales (lluvias, paros, fiestas patrias, etc.)
+- El mercado logístico colombiano actual
+
+DATOS DE ENVÍOS A ANALIZAR (${totalGuides} guías):
+${JSON.stringify(shipmentData.slice(0, 50), null, 2)}
+
+MÉTRICAS ACTUALES:
+- Total de guías: ${totalGuides}
+- Promedio días en tránsito: ${avgDays.toFixed(1)}
+- Guías críticas (>7 días o URGENTES): ${criticalCount}
+- Distribución por transportadora: ${JSON.stringify(byCarrier)}
+- Distribución por ciudad destino (top): ${JSON.stringify(Object.entries(byCity).slice(0, 10))}
+
+ANALIZA y responde en formato JSON con esta estructura EXACTA:
+{
+  "patterns": [
+    {
+      "type": "CRITICAL|HIGH|MEDIUM|LOW",
+      "description": "Descripción del patrón identificado",
+      "affectedCount": número,
+      "guideNumbers": ["guía1", "guía2"],
+      "daysWithoutMovement": número,
+      "commonFactors": ["factor1", "factor2"],
+      "recommendation": "Acción específica recomendada"
+    }
+  ],
+  "urgentReview": ["guías que necesitan revisión INMEDIATA"],
+  "recommendations": {
+    "immediate": ["acciones para las próximas 2 horas"],
+    "shortTerm": ["acciones para hoy/mañana"],
+    "strategic": ["mejoras a mediano plazo"]
+  },
+  "riskSummary": {
+    "totalAtRisk": número,
+    "criticalCount": número,
+    "estimatedLoss": número en COP (costo de devolución promedio 15000 por guía),
+    "mainCauses": ["causa principal 1", "causa 2"]
+  },
+  "colombianContext": {
+    "regionalIssues": ["problemas específicos de regiones colombianas afectadas"],
+    "carrierAlerts": ["alertas sobre transportadoras específicas según los datos"],
+    "seasonalFactors": ["factores estacionales actuales que pueden afectar"],
+    "marketInsights": ["insights del mercado logístico colombiano relevantes"]
+  }
+}
+
+SÉ MUY ESPECÍFICO:
+- Menciona guías reales de los datos
+- Da tiempos realistas para Colombia
+- Menciona ciudades específicas de los datos
+- Usa tu experiencia en el mercado colombiano
+- Si hay zonas de difícil acceso menciónalas
+- Considera el día de la semana y mes actual para factores estacionales`;
+
+    const response = await client.messages.create({
+      model: API_CONFIG.CLAUDE_MODELS.DEFAULT,
+      max_tokens: 4096,
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+    });
+
+    const text = response.content[0].type === 'text' ? response.content[0].text : '{}';
+
+    // Parse JSON from response
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          patterns: parsed.patterns || [],
+          urgentReview: parsed.urgentReview || [],
+          recommendations: parsed.recommendations || {
+            immediate: [],
+            shortTerm: [],
+            strategic: [],
+          },
+          riskSummary: parsed.riskSummary || {
+            totalAtRisk: 0,
+            criticalCount: 0,
+            estimatedLoss: 0,
+            mainCauses: [],
+          },
+          colombianContext: parsed.colombianContext || {
+            regionalIssues: [],
+            carrierAlerts: [],
+            seasonalFactors: [],
+            marketInsights: [],
+          },
+        };
+      }
+    } catch (parseError) {
+      logError(parseError, 'analyzeDelayPatterns.parse');
+    }
+
+    // Fallback response
+    return {
+      patterns: [],
+      urgentReview: [],
+      recommendations: {
+        immediate: ['Revisar guías con más de 5 días en tránsito'],
+        shortTerm: ['Contactar clientes afectados'],
+        strategic: ['Evaluar transportadoras con mayor tasa de retraso'],
+      },
+      riskSummary: {
+        totalAtRisk: criticalCount,
+        criticalCount,
+        estimatedLoss: criticalCount * 15000,
+        mainCauses: ['Análisis no disponible temporalmente'],
+      },
+      colombianContext: {
+        regionalIssues: [],
+        carrierAlerts: [],
+        seasonalFactors: [],
+        marketInsights: [],
+      },
+    };
+  } catch (error) {
+    logError(error, 'analyzeDelayPatterns');
+    throw new APIError('Error en análisis de patrones de retraso', 500, error);
+  }
+};

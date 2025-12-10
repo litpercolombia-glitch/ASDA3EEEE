@@ -901,13 +901,23 @@ export const calculateStats = (shipments: Shipment[]): ReportStats => {
   };
 };
 
+interface ParseError {
+  guideNumber?: string;
+  phone?: string;
+  type: string;
+  reason: string;
+  rawData?: string;
+  carrier?: CarrierName;
+}
+
 export const parseDetailedInput = (
   text: string,
   phoneRegistry: Record<string, string> = {},
   forcedCarrier?: CarrierName
-): { shipments: Shipment[] } => {
+): { shipments: Shipment[]; errors: ParseError[] } => {
   const blocks = text.split(/Número:\s*/).filter((b) => b.trim().length > 0);
   const shipments: Shipment[] = [];
+  const parseErrors: ParseError[] = [];
   const today = new Date().toISOString().split('T')[0];
   const batchId = uuidv4();
   const batchDate = new Date().toISOString();
@@ -984,7 +994,7 @@ export const parseDetailedInput = (
       const match = line.match(dateRegex);
       if (match) {
         const fullDate = `${match[1]}T${match[2]}`;
-        let restOfLine = line.replace(match[0], '').trim();
+        const restOfLine = line.replace(match[0], '').trim();
 
         let location = 'Ubicación Logística';
         const locMatch = restOfLine.match(
@@ -1082,8 +1092,33 @@ export const parseDetailedInput = (
     };
 
     baseShipment.riskAnalysis = analyzeShipmentRisk(baseShipment);
+
+    // Track errors for guides with issues
+    if (errors.length > 0 || carrier === CarrierName.UNKNOWN) {
+      parseErrors.push({
+        guideNumber: id,
+        phone,
+        type: carrier === CarrierName.UNKNOWN ? 'CARRIER_NOT_DETECTED' : 'DATA_INCOMPLETE',
+        reason:
+          carrier === CarrierName.UNKNOWN
+            ? 'No se pudo detectar la transportadora automáticamente'
+            : errors.join('; '),
+        rawData: block.substring(0, 200),
+        carrier,
+      });
+    }
+
+    if (!phone && phoneRegistry && Object.keys(phoneRegistry).length > 0) {
+      parseErrors.push({
+        guideNumber: id,
+        type: 'PHONE_NOT_FOUND',
+        reason: 'No se encontró teléfono asociado a esta guía en el registro',
+        carrier,
+      });
+    }
+
     shipments.push(baseShipment);
   });
 
-  return { shipments };
+  return { shipments, errors: parseErrors };
 };
