@@ -97,31 +97,98 @@ interface DashboardProps {
   userProfile: any;
 }
 
-const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, country, userProfile }) => {
+const PremiumDashboard: React.FC<DashboardProps> = ({
+  shipments,
+  onNavigate,
+  country,
+  userProfile,
+}) => {
   const stats = useMemo(() => {
     const total = shipments.length;
-    const delivered = shipments.filter(s => s.status === ShipmentStatus.DELIVERED).length;
-    const inTransit = shipments.filter(s => s.status === ShipmentStatus.IN_TRANSIT).length;
-    const pending = shipments.filter(s => s.status === ShipmentStatus.PENDING).length;
-    const issues = shipments.filter(s => s.status === ShipmentStatus.EXCEPTION || s.status === ShipmentStatus.RETURNED).length;
+    const delivered = shipments.filter((s) => s.status === ShipmentStatus.DELIVERED).length;
+    const inTransit = shipments.filter((s) => s.status === ShipmentStatus.IN_TRANSIT).length;
+    const pending = shipments.filter((s) => s.status === ShipmentStatus.PENDING).length;
+    const issues = shipments.filter(
+      (s) => s.status === ShipmentStatus.EXCEPTION || s.status === ShipmentStatus.RETURNED
+    ).length;
     const deliveryRate = total > 0 ? Math.round((delivered / total) * 100) : 0;
 
     return { total, delivered, inTransit, pending, issues, deliveryRate };
   }, [shipments]);
 
   const quickActions = [
-    { id: 'seguimiento', icon: Package, label: 'Seguimiento', desc: 'Rastrear envíos', color: 'from-emerald-500 to-teal-600', emoji: '📦' },
-    { id: 'demanda', icon: TrendingUp, label: 'Predicción IA', desc: 'Análisis predictivo', color: 'from-purple-500 to-violet-600', emoji: '📈', isNew: true },
-    { id: 'inteligencia-logistica', icon: BarChart3, label: 'Intel. Logística', desc: 'Inteligencia operativa', color: 'from-cyan-500 to-blue-600', emoji: '📊', isNew: true },
-    { id: 'ml', icon: Brain, label: 'Sistema ML', desc: 'Machine Learning', color: 'from-cyan-600 to-indigo-600', emoji: '🧠' },
+    {
+      id: 'seguimiento',
+      icon: Package,
+      label: 'Seguimiento',
+      desc: 'Rastrear envíos',
+      color: 'from-emerald-500 to-teal-600',
+      emoji: '📦',
+    },
+    {
+      id: 'demanda',
+      icon: TrendingUp,
+      label: 'Predicción IA',
+      desc: 'Análisis predictivo',
+      color: 'from-purple-500 to-violet-600',
+      emoji: '📈',
+      isNew: true,
+    },
+    {
+      id: 'inteligencia-logistica',
+      icon: BarChart3,
+      label: 'Intel. Logística',
+      desc: 'Inteligencia operativa',
+      color: 'from-cyan-500 to-blue-600',
+      emoji: '📊',
+      isNew: true,
+    },
+    {
+      id: 'ml',
+      icon: Brain,
+      label: 'Sistema ML',
+      desc: 'Machine Learning',
+      color: 'from-cyan-600 to-indigo-600',
+      emoji: '🧠',
+    },
   ];
 
   const features = [
-    { id: 'semaforo', icon: Activity, label: 'Semáforo', desc: 'Control de entregas en tiempo real', color: 'bg-amber-500' },
-    { id: 'predicciones', icon: Target, label: 'Análisis', desc: 'Estadísticas y métricas avanzadas', color: 'bg-teal-500' },
-    { id: 'reporte', icon: BarChart3, label: 'Reporte IA', desc: 'Informes inteligentes automatizados', color: 'bg-blue-500' },
-    { id: 'asistente', icon: Bot, label: 'Asistente IA', desc: 'Soporte inteligente 24/7', color: 'bg-pink-500' },
-    { id: 'gamificacion', icon: Trophy, label: 'Logros', desc: 'Sistema de recompensas', color: 'bg-indigo-500' },
+    {
+      id: 'semaforo',
+      icon: Activity,
+      label: 'Semáforo',
+      desc: 'Control de entregas en tiempo real',
+      color: 'bg-amber-500',
+    },
+    {
+      id: 'predicciones',
+      icon: Target,
+      label: 'Análisis',
+      desc: 'Estadísticas y métricas avanzadas',
+      color: 'bg-teal-500',
+    },
+    {
+      id: 'reporte',
+      icon: BarChart3,
+      label: 'Reporte IA',
+      desc: 'Informes inteligentes automatizados',
+      color: 'bg-blue-500',
+    },
+    {
+      id: 'asistente',
+      icon: Bot,
+      label: 'Asistente IA',
+      desc: 'Soporte inteligente 24/7',
+      color: 'bg-pink-500',
+    },
+    {
+      id: 'gamificacion',
+      icon: Trophy,
+      label: 'Logros',
+      desc: 'Sistema de recompensas',
+      color: 'bg-indigo-500',
+    },
   ];
 
   return (
@@ -137,7 +204,10 @@ const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, cou
               <span className="text-4xl">👑</span>
               <div>
                 <h1 className="text-3xl lg:text-4xl font-bold">
-                  Bienvenido a <span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent">LITPER PRO</span>
+                  Bienvenido a{' '}
+                  <span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent">
+                    LITPER PRO
+                  </span>
                 </h1>
                 <p className="text-slate-300 text-lg">Plataforma Enterprise de Logística con IA</p>
               </div>
@@ -171,17 +241,57 @@ const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, cou
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {[
-          { label: 'Total Envíos', value: stats.total, icon: Box, color: 'bg-slate-600', textColor: 'text-slate-600', emoji: '📊' },
-          { label: 'Entregados', value: stats.delivered, icon: CheckCircle, color: 'bg-emerald-500', textColor: 'text-emerald-600', emoji: '✅' },
-          { label: 'En Tránsito', value: stats.inTransit, icon: Truck, color: 'bg-blue-500', textColor: 'text-blue-600', emoji: '🚚' },
-          { label: 'Pendientes', value: stats.pending, icon: Clock, color: 'bg-amber-500', textColor: 'text-amber-600', emoji: '⏳' },
-          { label: 'Incidencias', value: stats.issues, icon: AlertTriangle, color: 'bg-red-500', textColor: 'text-red-600', emoji: '⚠️' },
+          {
+            label: 'Total Envíos',
+            value: stats.total,
+            icon: Box,
+            color: 'bg-slate-600',
+            textColor: 'text-slate-600',
+            emoji: '📊',
+          },
+          {
+            label: 'Entregados',
+            value: stats.delivered,
+            icon: CheckCircle,
+            color: 'bg-emerald-500',
+            textColor: 'text-emerald-600',
+            emoji: '✅',
+          },
+          {
+            label: 'En Tránsito',
+            value: stats.inTransit,
+            icon: Truck,
+            color: 'bg-blue-500',
+            textColor: 'text-blue-600',
+            emoji: '🚚',
+          },
+          {
+            label: 'Pendientes',
+            value: stats.pending,
+            icon: Clock,
+            color: 'bg-amber-500',
+            textColor: 'text-amber-600',
+            emoji: '⏳',
+          },
+          {
+            label: 'Incidencias',
+            value: stats.issues,
+            icon: AlertTriangle,
+            color: 'bg-red-500',
+            textColor: 'text-red-600',
+            emoji: '⚠️',
+          },
         ].map((stat, idx) => (
-          <div key={idx} className="card-premium bg-white dark:bg-navy-900 rounded-2xl p-5 shadow-card border border-slate-100 dark:border-navy-800">
+          <div
+            key={idx}
+            className="card-premium bg-white dark:bg-navy-900 rounded-2xl p-5 shadow-card border border-slate-100 dark:border-navy-800"
+          >
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">{stat.label}</p>
-                <p className={`text-3xl font-bold ${stat.textColor} dark:text-white`}>{stat.value}</p>
+                <p className={`text-3xl font-bold ${stat.textColor} dark:text-white`}>
+                  {stat.value}
+                </p>
               </div>
               <div className={`${stat.color} p-3 rounded-xl text-white`}>
                 <stat.icon className="w-5 h-5" />
@@ -214,7 +324,9 @@ const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, cou
               onClick={() => onNavigate(action.id as MainTabNew)}
               className="group relative overflow-hidden rounded-2xl p-6 text-left transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${action.color} opacity-90 group-hover:opacity-100 transition-opacity`} />
+              <div
+                className={`absolute inset-0 bg-gradient-to-br ${action.color} opacity-90 group-hover:opacity-100 transition-opacity`}
+              />
               <div className="relative z-10 text-white">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 bg-white/20 rounded-xl backdrop-blur">
@@ -226,7 +338,9 @@ const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, cou
                     </span>
                   )}
                 </div>
-                <h3 className="text-xl font-bold mb-1">{action.emoji} {action.label}</h3>
+                <h3 className="text-xl font-bold mb-1">
+                  {action.emoji} {action.label}
+                </h3>
                 <p className="text-sm text-white/80">{action.desc}</p>
                 <div className="mt-4 flex items-center gap-2 text-sm font-medium">
                   <span>Acceder</span>
@@ -246,7 +360,9 @@ const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, cou
               <Layers className="w-6 h-6 text-corporate-500" />
               Todas las Herramientas
             </h2>
-            <p className="text-slate-500 dark:text-slate-400">Explora todas las funcionalidades disponibles</p>
+            <p className="text-slate-500 dark:text-slate-400">
+              Explora todas las funcionalidades disponibles
+            </p>
           </div>
         </div>
 
@@ -257,11 +373,15 @@ const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, cou
               onClick={() => onNavigate(feature.id as MainTabNew)}
               className="card-premium group bg-white dark:bg-navy-900 rounded-2xl p-5 text-left shadow-card border border-slate-100 dark:border-navy-800 hover:border-corporate-300 dark:hover:border-corporate-700"
             >
-              <div className={`${feature.color} w-12 h-12 rounded-xl flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform`}>
+              <div
+                className={`${feature.color} w-12 h-12 rounded-xl flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform`}
+              >
                 <feature.icon className="w-6 h-6" />
               </div>
               <h3 className="font-bold text-slate-800 dark:text-white mb-1">{feature.label}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{feature.desc}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                {feature.desc}
+              </p>
               <div className="mt-3 flex items-center gap-1 text-corporate-500 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
                 <span>Abrir</span>
                 <ChevronRight className="w-3 h-3" />
@@ -281,8 +401,8 @@ const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, cou
             <div>
               <h3 className="text-xl font-bold mb-2">🔒 Plataforma Segura y Confiable</h3>
               <p className="text-corporate-100 text-sm">
-                LITPER utiliza tecnología de punta con inteligencia artificial para garantizar
-                el seguimiento preciso de tus envíos. Más de 10,000 empresas confían en nosotros.
+                LITPER utiliza tecnología de punta con inteligencia artificial para garantizar el
+                seguimiento preciso de tus envíos. Más de 10,000 empresas confían en nosotros.
               </p>
               <div className="mt-4 flex items-center gap-4">
                 <div className="flex items-center gap-2">
@@ -306,9 +426,15 @@ const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, cou
             </div>
             <div className="mt-4 flex items-center gap-2">
               <div className="flex -space-x-2">
-                <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-sm">🚀</div>
-                <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-sm">🤖</div>
-                <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-sm">📊</div>
+                <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-sm">
+                  🚀
+                </div>
+                <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-sm">
+                  🤖
+                </div>
+                <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-sm">
+                  📊
+                </div>
               </div>
               <span className="text-sm">+50 funciones IA</span>
             </div>
@@ -336,7 +462,9 @@ const AppNew: React.FC = () => {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   // Input state
-  const [activeInputTab, setActiveInputTab] = useState<'PHONES' | 'REPORT' | 'SUMMARY' | 'EXCEL'>('PHONES');
+  const [activeInputTab, setActiveInputTab] = useState<'PHONES' | 'REPORT' | 'SUMMARY' | 'EXCEL'>(
+    'PHONES'
+  );
   const [inputCarrier, setInputCarrier] = useState<CarrierName | 'AUTO'>('AUTO');
   const [inputText, setInputText] = useState('');
 
@@ -347,11 +475,7 @@ const AppNew: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   // Excel parser hook
-  const {
-    parseExcelFile,
-    isLoading: isExcelLoading,
-    xlsxLoaded,
-  } = useShipmentExcelParser();
+  const { parseExcelFile, isLoading: isExcelLoading, xlsxLoaded } = useShipmentExcelParser();
 
   // Load data on mount
   useEffect(() => {
@@ -412,8 +536,8 @@ const AppNew: React.FC = () => {
   const tabNotifications = {
     seguimiento: alertasCriticas,
     demanda: 0,
-    gamificacion: userProfile.activeChallenges.filter(c => !c.completed).length,
-    'inteligencia-logistica': guiasRetrasadas.filter(g => g.diasSinMovimiento > 5).length,
+    gamificacion: userProfile.activeChallenges.filter((c) => !c.completed).length,
+    'inteligencia-logistica': guiasRetrasadas.filter((g) => g.diasSinMovimiento > 5).length,
     semaforo: 0,
     predicciones: 0,
     reporte: 0,
@@ -433,18 +557,25 @@ const AppNew: React.FC = () => {
       const newPhones = parsePhoneRegistry(inputText);
       setPhoneRegistry((prev) => ({ ...prev, ...newPhones }));
       const mergedShipments = mergePhoneNumbers(inputText, shipments);
-      const countDiff = mergedShipments.filter((s) => s.phone).length - shipments.filter((s) => s.phone).length;
+      const countDiff =
+        mergedShipments.filter((s) => s.phone).length - shipments.filter((s) => s.phone).length;
       setShipments(mergedShipments);
 
       if (Object.keys(newPhones).length > 0) {
-        setNotification(`✅ ${Object.keys(newPhones).length} celulares registrados. ${countDiff > 0 ? countDiff + ' guías actualizadas.' : ''}`);
+        setNotification(
+          `✅ ${Object.keys(newPhones).length} celulares registrados. ${countDiff > 0 ? countDiff + ' guías actualizadas.' : ''}`
+        );
         setInputText('');
         setActiveInputTab('REPORT');
       } else {
         setNotification('⚠️ No se encontraron celulares válidos.');
       }
     } else if (activeInputTab === 'REPORT') {
-      const { shipments: newShipments } = parseDetailedInput(inputText, phoneRegistry, forcedCarrier);
+      const { shipments: newShipments } = parseDetailedInput(
+        inputText,
+        phoneRegistry,
+        forcedCarrier
+      );
       if (newShipments.length > 0) {
         setShipments((prev) => {
           const ids = new Set(newShipments.map((s) => s.id));
@@ -457,7 +588,12 @@ const AppNew: React.FC = () => {
         setNotification('⚠️ No se detectaron guías en el reporte');
       }
     } else if (activeInputTab === 'SUMMARY') {
-      const { shipments: newSummaryShipments } = parseSummaryInput(inputText, phoneRegistry, shipments, forcedCarrier);
+      const { shipments: newSummaryShipments } = parseSummaryInput(
+        inputText,
+        phoneRegistry,
+        shipments,
+        forcedCarrier
+      );
       if (newSummaryShipments.length > 0) {
         setShipments((prev) => [...prev, ...newSummaryShipments]);
         setNotification(`✅ ${newSummaryShipments.length} guías nuevas añadidas`);
@@ -543,7 +679,11 @@ const AppNew: React.FC = () => {
                   </div>
                   <div className="hidden sm:block">
                     <h1 className="text-xl font-bold tracking-tight">
-                      LITPER<span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent"> PRO</span>
+                      LITPER
+                      <span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent">
+                        {' '}
+                        PRO
+                      </span>
                     </h1>
                     <p className="text-[10px] text-slate-400 font-medium tracking-widest uppercase -mt-0.5">
                       👑 Enterprise Logistics
@@ -612,9 +752,17 @@ const AppNew: React.FC = () => {
                   >
                     <Save className="w-4 h-4" />
                   </button>
-                  <label className="p-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-md cursor-pointer transition-colors" title="Cargar Sesión">
+                  <label
+                    className="p-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-md cursor-pointer transition-colors"
+                    title="Cargar Sesión"
+                  >
                     <Download className="w-4 h-4" />
-                    <input type="file" accept=".json" onChange={handleImportSession} className="hidden" />
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={handleImportSession}
+                      className="hidden"
+                    />
                   </label>
                   {shipments.length > 0 && (
                     <button
@@ -665,7 +813,12 @@ const AppNew: React.FC = () => {
 
               {[
                 { id: 'seguimiento', icon: Package, label: '📦 Seguimiento' },
-                { id: 'inteligencia-logistica', icon: BarChart3, label: '📊 Intel. Logística', isNew: true },
+                {
+                  id: 'inteligencia-logistica',
+                  icon: BarChart3,
+                  label: '📊 Intel. Logística',
+                  isNew: true,
+                },
                 { id: 'predicciones', icon: Target, label: '🎯 Análisis' },
                 { id: 'semaforo', icon: Activity, label: '🚦 Semáforo' },
                 { id: 'asistente', icon: Bot, label: '🤖 Asistente IA', isNew: true },
@@ -740,8 +893,12 @@ const AppNew: React.FC = () => {
           <section className="mb-8 bg-white dark:bg-navy-900 rounded-2xl shadow-xl border border-slate-200 dark:border-navy-800 overflow-hidden animate-slide-up">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-navy-800 bg-slate-50 dark:bg-navy-950">
               <div>
-                <h2 className="font-bold text-lg text-slate-800 dark:text-white">📥 Centro de Carga de Datos</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Importa tus guías desde múltiples fuentes</p>
+                <h2 className="font-bold text-lg text-slate-800 dark:text-white">
+                  📥 Centro de Carga de Datos
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Importa tus guías desde múltiples fuentes
+                </p>
               </div>
               <button
                 onClick={() => setShowDataInput(false)}
@@ -787,11 +944,13 @@ const AppNew: React.FC = () => {
                     Sube un archivo Excel (.xlsx, .xls) con tus guías
                   </p>
 
-                  <label className={`inline-flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-lg cursor-pointer transition-all transform hover:scale-105 shadow-xl ${
-                    isExcelLoading
-                      ? 'bg-slate-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
-                  }`}>
+                  <label
+                    className={`inline-flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-lg cursor-pointer transition-all transform hover:scale-105 shadow-xl ${
+                      isExcelLoading
+                        ? 'bg-slate-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
+                    }`}
+                  >
                     {isExcelLoading ? (
                       <>
                         <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -817,7 +976,9 @@ const AppNew: React.FC = () => {
               <div className="p-6">
                 {(activeInputTab === 'REPORT' || activeInputTab === 'SUMMARY') && (
                   <div className="mb-4 flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-bold text-slate-400 uppercase">Transportadora:</span>
+                    <span className="text-xs font-bold text-slate-400 uppercase">
+                      Transportadora:
+                    </span>
                     <button
                       onClick={() => setInputCarrier('AUTO')}
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -871,7 +1032,11 @@ const AppNew: React.FC = () => {
                             : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
                       }`}
                     >
-                      {activeInputTab === 'PHONES' ? '📱 Guardar' : activeInputTab === 'REPORT' ? '📄 Cargar' : '📋 Procesar'}
+                      {activeInputTab === 'PHONES'
+                        ? '📱 Guardar'
+                        : activeInputTab === 'REPORT'
+                          ? '📄 Cargar'
+                          : '📋 Procesar'}
                     </button>
                     {activeInputTab === 'PHONES' && (
                       <p className="text-xs text-center text-slate-400">
@@ -908,8 +1073,12 @@ const AppNew: React.FC = () => {
           {currentTab === 'predicciones' && <PrediccionesTab shipments={shipments} />}
           {currentTab === 'asistente' && <AsistenteIAUnificado shipments={shipments} />}
           {currentTab === 'ml' && <MLSystemTab />}
-          {currentTab === 'procesos-litper' && <ProcesosLitperTab selectedCountry={selectedCountry} />}
-          {currentTab === 'ciudad-agentes' && <CiudadAgentesTab selectedCountry={selectedCountry} />}
+          {currentTab === 'procesos-litper' && (
+            <ProcesosLitperTab selectedCountry={selectedCountry} />
+          )}
+          {currentTab === 'ciudad-agentes' && (
+            <CiudadAgentesTab selectedCountry={selectedCountry} />
+          )}
           {currentTab === 'admin' && <AdminPanelPro />}
           {currentTab === 'inteligencia-logistica' && <InteligenciaLogisticaTab />}
         </div>
@@ -929,19 +1098,28 @@ const AppNew: React.FC = () => {
                   <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-white rounded-full animate-pulse" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold">LITPER<span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent"> PRO</span></h3>
+                  <h3 className="text-xl font-bold">
+                    LITPER
+                    <span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent">
+                      {' '}
+                      PRO
+                    </span>
+                  </h3>
                   <p className="text-xs text-slate-400">👑 Enterprise Logistics</p>
                 </div>
               </div>
               <p className="text-sm text-slate-400 mb-4">
-                Plataforma enterprise de gestión logística inteligente con IA para empresas de alto rendimiento.
+                Plataforma enterprise de gestión logística inteligente con IA para empresas de alto
+                rendimiento.
               </p>
               <div className="flex items-center gap-2">
-                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold ${
-                  isOnline
-                    ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-700'
-                    : 'bg-red-900/30 text-red-400 border border-red-700'
-                }`}>
+                <div
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold ${
+                    isOnline
+                      ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-700'
+                      : 'bg-red-900/30 text-red-400 border border-red-700'
+                  }`}
+                >
                   {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
                   {isOnline ? '🟢 Conectado' : '🔴 Offline'}
                 </div>
@@ -952,10 +1130,38 @@ const AppNew: React.FC = () => {
             <div>
               <h4 className="font-bold text-white mb-4">🚀 Plataforma</h4>
               <ul className="space-y-2 text-sm text-slate-400">
-                <li><button onClick={() => setCurrentTab('seguimiento')} className="hover:text-accent-400 transition-colors">📦 Seguimiento</button></li>
-                <li><button onClick={() => setCurrentTab('demanda')} className="hover:text-accent-400 transition-colors">📈 Predicción</button></li>
-                <li><button onClick={() => setCurrentTab('inteligencia-logistica')} className="hover:text-accent-400 transition-colors">📊 Intel. Logística</button></li>
-                <li><button onClick={() => setCurrentTab('ml')} className="hover:text-accent-400 transition-colors">🧠 Sistema ML</button></li>
+                <li>
+                  <button
+                    onClick={() => setCurrentTab('seguimiento')}
+                    className="hover:text-accent-400 transition-colors"
+                  >
+                    📦 Seguimiento
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => setCurrentTab('demanda')}
+                    className="hover:text-accent-400 transition-colors"
+                  >
+                    📈 Predicción
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => setCurrentTab('inteligencia-logistica')}
+                    className="hover:text-accent-400 transition-colors"
+                  >
+                    📊 Intel. Logística
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => setCurrentTab('ml')}
+                    className="hover:text-accent-400 transition-colors"
+                  >
+                    🧠 Sistema ML
+                  </button>
+                </li>
               </ul>
             </div>
 
@@ -963,9 +1169,30 @@ const AppNew: React.FC = () => {
             <div>
               <h4 className="font-bold text-white mb-4">🛠️ Herramientas</h4>
               <ul className="space-y-2 text-sm text-slate-400">
-                <li><button onClick={() => setCurrentTab('semaforo')} className="hover:text-accent-400 transition-colors">🚦 Semáforo</button></li>
-                <li><button onClick={() => setCurrentTab('predicciones')} className="hover:text-accent-400 transition-colors">🎯 Análisis</button></li>
-                <li><button onClick={() => setCurrentTab('asistente')} className="hover:text-accent-400 transition-colors">🤖 Asistente IA</button></li>
+                <li>
+                  <button
+                    onClick={() => setCurrentTab('semaforo')}
+                    className="hover:text-accent-400 transition-colors"
+                  >
+                    🚦 Semáforo
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => setCurrentTab('predicciones')}
+                    className="hover:text-accent-400 transition-colors"
+                  >
+                    🎯 Análisis
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => setCurrentTab('asistente')}
+                    className="hover:text-accent-400 transition-colors"
+                  >
+                    🤖 Asistente IA
+                  </button>
+                </li>
               </ul>
             </div>
 

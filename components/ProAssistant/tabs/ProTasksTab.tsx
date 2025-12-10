@@ -78,7 +78,7 @@ const quickActions = [
 // COMPONENTE DE ACCION RAPIDA
 // ============================================
 const QuickActionCard: React.FC<{
-  action: typeof quickActions[0];
+  action: (typeof quickActions)[0];
   onExecute: () => void;
   isExecuting: boolean;
 }> = ({ action, onExecute, isExecuting }) => {
@@ -193,7 +193,9 @@ const TaskItem: React.FC<{
             {/* Resultado o error */}
             {task.status === 'completed' && task.result && (
               <p className="text-xs text-emerald-400 mt-1">
-                {typeof task.result === 'string' ? task.result : JSON.stringify(task.result).substring(0, 50)}
+                {typeof task.result === 'string'
+                  ? task.result
+                  : JSON.stringify(task.result).substring(0, 50)}
               </p>
             )}
             {task.status === 'error' && task.error && (
@@ -208,9 +210,7 @@ const TaskItem: React.FC<{
               {task.status === 'scheduled' && task.scheduledFor && (
                 <span>Programado: {formatTime(task.scheduledFor)}</span>
               )}
-              {task.status === 'running' && (
-                <span>Iniciado {getTimeAgo(task.createdAt)}</span>
-              )}
+              {task.status === 'running' && <span>Iniciado {getTimeAgo(task.createdAt)}</span>}
             </div>
           </div>
         </div>
@@ -288,7 +288,8 @@ const ProTasksTab: React.FC = () => {
       case 'report_daily':
         result = {
           total: shipmentsContext.length,
-          delivered: shipmentsContext.filter((s) => s.status?.toLowerCase().includes('entreg')).length,
+          delivered: shipmentsContext.filter((s) => s.status?.toLowerCase().includes('entreg'))
+            .length,
           pending: shipmentsContext.filter((s) => s.novelty).length,
         };
         break;
@@ -361,11 +362,7 @@ const ProTasksTab: React.FC = () => {
             </div>
             <div className="space-y-2">
               {runningTasks.map((task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  onRemove={() => removeTask(task.id)}
-                />
+                <TaskItem key={task.id} task={task} onRemove={() => removeTask(task.id)} />
               ))}
             </div>
           </div>
@@ -382,11 +379,7 @@ const ProTasksTab: React.FC = () => {
             </div>
             <div className="space-y-2">
               {scheduledTasks.map((task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  onRemove={() => removeTask(task.id)}
-                />
+                <TaskItem key={task.id} task={task} onRemove={() => removeTask(task.id)} />
               ))}
             </div>
           </div>
@@ -411,11 +404,7 @@ const ProTasksTab: React.FC = () => {
             </div>
             <div className="space-y-2">
               {completedTasks.slice(0, 5).map((task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  onRemove={() => removeTask(task.id)}
-                />
+                <TaskItem key={task.id} task={task} onRemove={() => removeTask(task.id)} />
               ))}
               {completedTasks.length > 5 && (
                 <p className="text-xs text-slate-500 text-center py-2">

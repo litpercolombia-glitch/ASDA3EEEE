@@ -119,9 +119,7 @@ const LoadHistoryPage: React.FC<LoadHistoryPageProps> = ({
     (currentPage + 1) * BATCHES_PER_PAGE
   );
 
-  const selectedBatch = selectedBatchId
-    ? batches.find((b) => b.id === selectedBatchId)
-    : null;
+  const selectedBatch = selectedBatchId ? batches.find((b) => b.id === selectedBatchId) : null;
 
   const formatDate = (dateString: string) => {
     try {

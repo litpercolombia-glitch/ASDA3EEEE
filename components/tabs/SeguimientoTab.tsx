@@ -98,31 +98,81 @@ interface GuiaProcesada {
 const getStatusColor = (status: string): { bg: string; text: string; border: string } => {
   const statusLower = status.toLowerCase();
 
-  if (statusLower.includes('entregado') || statusLower === 'delivered' || status === ShipmentStatus.DELIVERED) {
-    return { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-400', border: 'border-green-300 dark:border-green-700' };
+  if (
+    statusLower.includes('entregado') ||
+    statusLower === 'delivered' ||
+    status === ShipmentStatus.DELIVERED
+  ) {
+    return {
+      bg: 'bg-green-100 dark:bg-green-900/30',
+      text: 'text-green-700 dark:text-green-400',
+      border: 'border-green-300 dark:border-green-700',
+    };
   }
-  if (statusLower.includes('tránsito') || statusLower.includes('transito') || statusLower.includes('reparto') || status === ShipmentStatus.IN_TRANSIT) {
-    return { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-400', border: 'border-blue-300 dark:border-blue-700' };
+  if (
+    statusLower.includes('tránsito') ||
+    statusLower.includes('transito') ||
+    statusLower.includes('reparto') ||
+    status === ShipmentStatus.IN_TRANSIT
+  ) {
+    return {
+      bg: 'bg-blue-100 dark:bg-blue-900/30',
+      text: 'text-blue-700 dark:text-blue-400',
+      border: 'border-blue-300 dark:border-blue-700',
+    };
   }
   if (statusLower.includes('oficina') || status === ShipmentStatus.IN_OFFICE) {
-    return { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-400', border: 'border-purple-300 dark:border-purple-700' };
+    return {
+      bg: 'bg-purple-100 dark:bg-purple-900/30',
+      text: 'text-purple-700 dark:text-purple-400',
+      border: 'border-purple-300 dark:border-purple-700',
+    };
   }
-  if (statusLower.includes('novedad') || statusLower.includes('rechazado') || statusLower.includes('devuelto') || statusLower.includes('problema') || status === ShipmentStatus.ISSUE) {
-    return { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400', border: 'border-red-300 dark:border-red-700' };
+  if (
+    statusLower.includes('novedad') ||
+    statusLower.includes('rechazado') ||
+    statusLower.includes('devuelto') ||
+    statusLower.includes('problema') ||
+    status === ShipmentStatus.ISSUE
+  ) {
+    return {
+      bg: 'bg-red-100 dark:bg-red-900/30',
+      text: 'text-red-700 dark:text-red-400',
+      border: 'border-red-300 dark:border-red-700',
+    };
   }
   if (statusLower.includes('pendiente') || status === ShipmentStatus.PENDING) {
-    return { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-400', border: 'border-yellow-300 dark:border-yellow-700' };
+    return {
+      bg: 'bg-yellow-100 dark:bg-yellow-900/30',
+      text: 'text-yellow-700 dark:text-yellow-400',
+      border: 'border-yellow-300 dark:border-yellow-700',
+    };
   }
-  return { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-400', border: 'border-gray-300 dark:border-gray-700' };
+  return {
+    bg: 'bg-gray-100 dark:bg-gray-800',
+    text: 'text-gray-700 dark:text-gray-400',
+    border: 'border-gray-300 dark:border-gray-700',
+  };
 };
 
 const getStatusIcon = (status: string): string => {
   const statusLower = status.toLowerCase();
 
   if (statusLower.includes('entregado') || statusLower === 'delivered') return '🟢';
-  if (statusLower.includes('tránsito') || statusLower.includes('transito') || statusLower.includes('reparto')) return '🔵';
+  if (
+    statusLower.includes('tránsito') ||
+    statusLower.includes('transito') ||
+    statusLower.includes('reparto')
+  )
+    return '🔵';
   if (statusLower.includes('oficina')) return '🟣';
-  if (statusLower.includes('novedad') || statusLower.includes('rechazado') || statusLower.includes('devuelto') || statusLower.includes('problema')) return '🔴';
+  if (
+    statusLower.includes('novedad') ||
+    statusLower.includes('rechazado') ||
+    statusLower.includes('devuelto') ||
+    statusLower.includes('problema')
+  )
+    return '🔴';
   if (statusLower.includes('pendiente')) return '🟡';
   return '⚪';
 };
@@ -137,23 +187,24 @@ const SummaryCards: React.FC<{
 }> = ({ guiasProcesadas, onFilterByStatus, activeFilter }) => {
   const stats = useMemo(() => {
     const total = guiasProcesadas.length;
-    const sinTracking = guiasProcesadas.filter(g => !g.tieneTracking).length;
+    const sinTracking = guiasProcesadas.filter((g) => !g.tieneTracking).length;
     const conTracking = total - sinTracking;
 
     // Agrupar por estado
     const porEstado: Record<string, number> = {};
-    guiasProcesadas.forEach(g => {
+    guiasProcesadas.forEach((g) => {
       const estado = g.estadoGeneral || 'Sin Estado';
       porEstado[estado] = (porEstado[estado] || 0) + 1;
     });
 
     // Calcular promedio de días de entrega (solo entregados)
-    const entregados = guiasProcesadas.filter(g =>
+    const entregados = guiasProcesadas.filter((g) =>
       g.estadoGeneral.toLowerCase().includes('entregado')
     );
-    const promedioDias = entregados.length > 0
-      ? Math.round(entregados.reduce((acc, g) => acc + g.dias, 0) / entregados.length)
-      : 0;
+    const promedioDias =
+      entregados.length > 0
+        ? Math.round(entregados.reduce((acc, g) => acc + g.dias, 0) / entregados.length)
+        : 0;
 
     return { total, sinTracking, conTracking, porEstado, promedioDias };
   }, [guiasProcesadas]);
@@ -170,7 +221,7 @@ const SummaryCards: React.FC<{
             'Total Guías: Todas las guías cargadas',
             'Sin Tracking: Guías sin información de seguimiento',
             'Promedio Días: Tiempo promedio de entrega de guías entregadas',
-            'Con Tracking: Guías con información de seguimiento activo'
+            'Con Tracking: Guías con información de seguimiento activo',
           ]}
           position="right"
         >
@@ -191,7 +242,9 @@ const SummaryCards: React.FC<{
         >
           <div className="flex items-center gap-2 mb-1">
             <Package className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">Total Guías</span>
+            <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+              Total Guías
+            </span>
           </div>
           <p className="text-2xl font-bold text-emerald-800 dark:text-emerald-300">{stats.total}</p>
         </div>
@@ -207,37 +260,51 @@ const SummaryCards: React.FC<{
         >
           <div className="flex items-center gap-2 mb-1">
             <FileWarning className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-            <span className="text-xs font-medium text-orange-700 dark:text-orange-400">Sin Tracking</span>
+            <span className="text-xs font-medium text-orange-700 dark:text-orange-400">
+              Sin Tracking
+            </span>
           </div>
-          <p className="text-2xl font-bold text-orange-800 dark:text-orange-300">{stats.sinTracking}</p>
+          <p className="text-2xl font-bold text-orange-800 dark:text-orange-300">
+            {stats.sinTracking}
+          </p>
         </div>
 
         {/* Promedio Días */}
         <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20">
           <div className="flex items-center gap-2 mb-1">
             <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <span className="text-xs font-medium text-blue-700 dark:text-blue-400">Promedio Días</span>
+            <span className="text-xs font-medium text-blue-700 dark:text-blue-400">
+              Promedio Días
+            </span>
           </div>
-          <p className="text-2xl font-bold text-blue-800 dark:text-blue-300">{stats.promedioDias}</p>
+          <p className="text-2xl font-bold text-blue-800 dark:text-blue-300">
+            {stats.promedioDias}
+          </p>
         </div>
 
         {/* Con Tracking */}
         <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20">
           <div className="flex items-center gap-2 mb-1">
             <TrendingUp className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-            <span className="text-xs font-medium text-purple-700 dark:text-purple-400">Con Tracking</span>
+            <span className="text-xs font-medium text-purple-700 dark:text-purple-400">
+              Con Tracking
+            </span>
           </div>
-          <p className="text-2xl font-bold text-purple-800 dark:text-purple-300">{stats.conTracking}</p>
+          <p className="text-2xl font-bold text-purple-800 dark:text-purple-300">
+            {stats.conTracking}
+          </p>
         </div>
 
         {/* Transportadoras */}
         <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
           <div className="flex items-center gap-2 mb-1">
             <Truck className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-            <span className="text-xs font-medium text-slate-700 dark:text-slate-400">Transportadoras</span>
+            <span className="text-xs font-medium text-slate-700 dark:text-slate-400">
+              Transportadoras
+            </span>
           </div>
           <p className="text-2xl font-bold text-slate-800 dark:text-slate-300">
-            {new Set(guiasProcesadas.map(g => g.transportadora)).size}
+            {new Set(guiasProcesadas.map((g) => g.transportadora)).size}
           </p>
         </div>
       </div>
@@ -255,7 +322,7 @@ const DynamicStatusButtons: React.FC<{
 }> = ({ guiasProcesadas, onFilterByStatus, activeFilter }) => {
   const statusGroups = useMemo(() => {
     const groups: Record<string, GuiaProcesada[]> = {};
-    guiasProcesadas.forEach(g => {
+    guiasProcesadas.forEach((g) => {
       const estado = g.estadoGeneral || 'Sin Estado';
       if (!groups[estado]) groups[estado] = [];
       groups[estado].push(g);
@@ -322,7 +389,9 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const icon = getStatusIcon(status);
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${colors.bg} ${colors.text} border ${colors.border}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${colors.bg} ${colors.text} border ${colors.border}`}
+    >
       <span>{icon}</span>
       <span>{status}</span>
     </span>
@@ -372,13 +441,15 @@ const GuiaTableRow: React.FC<{
   const formatFecha = (fecha: string) => {
     try {
       const date = new Date(fecha);
-      return date.toLocaleDateString('es-CO', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }).replace(',', ',');
+      return date
+        .toLocaleDateString('es-CO', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+        .replace(',', ',');
     } catch {
       return fecha;
     }
@@ -429,9 +500,7 @@ const GuiaTableRow: React.FC<{
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <Truck className="w-4 h-4 text-slate-400" />
-          <span className="text-sm text-slate-600 dark:text-slate-400">
-            {guia.transportadora}
-          </span>
+          <span className="text-sm text-slate-600 dark:text-slate-400">{guia.transportadora}</span>
         </div>
       </td>
 
@@ -451,12 +520,17 @@ const GuiaTableRow: React.FC<{
 
       {/* DÍAS */}
       <td className="px-4 py-3 text-center">
-        <span className={`inline-flex items-center gap-1 text-sm font-bold ${
-          guia.dias > 10 ? 'text-red-600 dark:text-red-400' :
-          guia.dias > 5 ? 'text-orange-600 dark:text-orange-400' :
-          guia.dias > 3 ? 'text-amber-600 dark:text-amber-400' :
-          'text-slate-600 dark:text-slate-400'
-        }`}>
+        <span
+          className={`inline-flex items-center gap-1 text-sm font-bold ${
+            guia.dias > 10
+              ? 'text-red-600 dark:text-red-400'
+              : guia.dias > 5
+                ? 'text-orange-600 dark:text-orange-400'
+                : guia.dias > 3
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-slate-600 dark:text-slate-400'
+          }`}
+        >
           <Clock className="w-4 h-4" />
           {guia.dias}
         </span>
@@ -468,14 +542,19 @@ const GuiaTableRow: React.FC<{
           {guia.ultimos2Estados.length > 0 ? (
             guia.ultimos2Estados.map((estado, idx) => (
               <div key={idx} className="flex items-start gap-2 text-xs">
-                <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                  idx === 0 ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
-                }`}></span>
+                <span
+                  className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                    idx === 0 ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
+                  }`}
+                ></span>
                 <div className="flex-1 min-w-0">
                   <span className="text-slate-400 font-mono text-[10px]">
                     {formatFecha(estado.fecha)}
                   </span>
-                  <p className="text-slate-700 dark:text-slate-300 truncate" title={estado.descripcion}>
+                  <p
+                    className="text-slate-700 dark:text-slate-300 truncate"
+                    title={estado.descripcion}
+                  >
                     {estado.descripcion}
                   </p>
                 </div>
@@ -490,7 +569,10 @@ const GuiaTableRow: React.FC<{
       {/* VER */}
       <td className="px-4 py-3 text-center">
         <button
-          onClick={(e) => { e.stopPropagation(); onExpand(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onExpand();
+          }}
           className={`p-2 rounded-lg transition-colors ${
             isExpanded
               ? 'bg-blue-500 text-white'
@@ -527,7 +609,7 @@ const GuiaExpandedDetails: React.FC<{
         month: 'short',
         year: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
       });
     } catch {
       return fecha;
@@ -571,7 +653,10 @@ const GuiaExpandedDetails: React.FC<{
   return (
     <tr>
       <td colSpan={7} className="p-0">
-        <div ref={cardRef} className="bg-slate-50 dark:bg-navy-950 p-4 border-t border-slate-200 dark:border-navy-700">
+        <div
+          ref={cardRef}
+          className="bg-slate-50 dark:bg-navy-950 p-4 border-t border-slate-200 dark:border-navy-700"
+        >
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Info Principal */}
             <div>
@@ -583,11 +668,15 @@ const GuiaExpandedDetails: React.FC<{
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between p-2 bg-white dark:bg-navy-900 rounded-lg">
                   <span className="text-slate-500">Guía:</span>
-                  <span className="font-mono font-bold text-slate-800 dark:text-white">{guia.guia.id}</span>
+                  <span className="font-mono font-bold text-slate-800 dark:text-white">
+                    {guia.guia.id}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between p-2 bg-white dark:bg-navy-900 rounded-lg">
                   <span className="text-slate-500">Teléfono:</span>
-                  <span className="font-mono text-slate-800 dark:text-white">{guia.celular || '-'}</span>
+                  <span className="font-mono text-slate-800 dark:text-white">
+                    {guia.celular || '-'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between p-2 bg-white dark:bg-navy-900 rounded-lg">
                   <span className="text-slate-500">Transportadora:</span>
@@ -595,7 +684,9 @@ const GuiaExpandedDetails: React.FC<{
                 </div>
                 <div className="flex items-center justify-between p-2 bg-white dark:bg-navy-900 rounded-lg">
                   <span className="text-slate-500">Ruta:</span>
-                  <span className="text-slate-800 dark:text-white">{guia.origen} → {guia.destino}</span>
+                  <span className="text-slate-800 dark:text-white">
+                    {guia.origen} → {guia.destino}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between p-2 bg-white dark:bg-navy-900 rounded-lg">
                   <span className="text-slate-500">Días:</span>
@@ -654,11 +745,13 @@ const GuiaExpandedDetails: React.FC<{
                         <div className="flex items-start gap-3">
                           {/* Indicador de timeline */}
                           <div className="flex flex-col items-center">
-                            <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
-                              idx === 0
-                                ? 'bg-emerald-500 ring-4 ring-emerald-100 dark:ring-emerald-900/50'
-                                : 'bg-slate-300 dark:bg-slate-600'
-                            }`}></div>
+                            <div
+                              className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                                idx === 0
+                                  ? 'bg-emerald-500 ring-4 ring-emerald-100 dark:ring-emerald-900/50'
+                                  : 'bg-slate-300 dark:bg-slate-600'
+                              }`}
+                            ></div>
                             {idx < sortedEvents.length - 1 && (
                               <div className="w-0.5 h-full min-h-[20px] bg-slate-200 dark:bg-slate-700 mt-1"></div>
                             )}
@@ -676,11 +769,13 @@ const GuiaExpandedDetails: React.FC<{
                                 {formatFecha(event.date)}
                               </span>
                             </div>
-                            <p className={`text-sm font-medium mt-1 ${
-                              idx === 0
-                                ? 'text-emerald-700 dark:text-emerald-400'
-                                : 'text-slate-700 dark:text-slate-300'
-                            }`}>
+                            <p
+                              className={`text-sm font-medium mt-1 ${
+                                idx === 0
+                                  ? 'text-emerald-700 dark:text-emerald-400'
+                                  : 'text-slate-700 dark:text-slate-300'
+                              }`}
+                            >
                               {event.description}
                             </p>
                             {event.location && (
@@ -718,13 +813,11 @@ const UntrackedGuidesTable: React.FC<{
   const [copiedAll, setCopiedAll] = useState(false);
 
   const untrackedGuias = useMemo(() => {
-    return guias.filter(g => !g.tieneTracking);
+    return guias.filter((g) => !g.tieneTracking);
   }, [guias]);
 
   const handleCopyAll = () => {
-    const text = untrackedGuias
-      .map(g => `${g.guia.id}\t${g.celular || ''}`)
-      .join('\n');
+    const text = untrackedGuias.map((g) => `${g.guia.id}\t${g.celular || ''}`).join('\n');
     navigator.clipboard.writeText(text);
     setCopiedAll(true);
     setTimeout(() => setCopiedAll(false), 2000);
@@ -737,9 +830,7 @@ const UntrackedGuidesTable: React.FC<{
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <FileWarning className="w-5 h-5 text-orange-500" />
-          <h3 className="font-bold text-slate-800 dark:text-white">
-            Guías Sin Rastrear
-          </h3>
+          <h3 className="font-bold text-slate-800 dark:text-white">Guías Sin Rastrear</h3>
           <span className="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-2 py-0.5 rounded-full text-xs font-bold">
             {untrackedGuias.length}
           </span>
@@ -812,7 +903,11 @@ const UntrackedGuidesTable: React.FC<{
 // Sistema de Hojas con Persistencia Global
 // =====================================
 
-export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRefresh, onRestoreShipments }) => {
+export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
+  shipments,
+  onRefresh,
+  onRestoreShipments,
+}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [filterTransportadora, setFilterTransportadora] = useState<string | null>(null);
@@ -854,7 +949,7 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
     setGuardandoHoja(true);
     try {
       const nuevaHoja = await guardarNuevaHoja(shipments);
-      setHojas(prev => [nuevaHoja, ...prev]);
+      setHojas((prev) => [nuevaHoja, ...prev]);
       setHojaActiva(nuevaHoja.id);
       alert(`Hoja "${nuevaHoja.nombre}" guardada exitosamente para todos los usuarios`);
     } catch (e) {
@@ -871,7 +966,7 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
 
     try {
       await eliminarHoja(hojaId);
-      setHojas(prev => prev.filter(h => h.id !== hojaId));
+      setHojas((prev) => prev.filter((h) => h.id !== hojaId));
       if (hojaActiva === hojaId) setHojaActiva(null);
     } catch (e) {
       console.error('Error eliminando hoja:', e);
@@ -880,7 +975,7 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
 
   // Restaurar una hoja (cargar sus guías)
   const restaurarHojaHandler = async (hojaId: string) => {
-    const hoja = hojas.find(h => h.id === hojaId);
+    const hoja = hojas.find((h) => h.id === hojaId);
     if (hoja && onRestoreShipments) {
       onRestoreShipments(hoja.guias);
       setHojaActiva(hojaId);
@@ -909,16 +1004,17 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
 
   // Contar guías con alertas
   const guiasConAlertas = useMemo(() => {
-    return shipments.filter(s =>
-      s.riskAnalysis?.level === 'URGENTE' ||
-      s.riskAnalysis?.level === 'ATENCIÓN' ||
-      s.status === ShipmentStatus.ISSUE
+    return shipments.filter(
+      (s) =>
+        s.riskAnalysis?.level === 'URGENTE' ||
+        s.riskAnalysis?.level === 'ATENCIÓN' ||
+        s.status === ShipmentStatus.ISSUE
     ).length;
   }, [shipments]);
 
   // Procesar TODAS las guías
   const guiasProcesadas: GuiaProcesada[] = useMemo(() => {
-    return shipments.map(guia => {
+    return shipments.map((guia) => {
       const events = guia.detailedInfo?.events || [];
       const sortedEvents = [...events].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -926,7 +1022,7 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
       const ultimoEvento = sortedEvents[0] || null;
 
       // Obtener últimos 2 estados
-      const ultimos2Estados = sortedEvents.slice(0, 2).map(e => ({
+      const ultimos2Estados = sortedEvents.slice(0, 2).map((e) => ({
         fecha: e.date,
         descripcion: e.description,
         ubicacion: e.location,
@@ -949,11 +1045,26 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
         const descLower = ultimoEvento.description.toLowerCase();
         if (descLower.includes('entregado') || descLower.includes('delivered')) {
           estadoGeneral = 'Entregado';
-        } else if (descLower.includes('reparto') || descLower.includes('ruta') || descLower.includes('tránsito') || descLower.includes('proceso de entrega')) {
+        } else if (
+          descLower.includes('reparto') ||
+          descLower.includes('ruta') ||
+          descLower.includes('tránsito') ||
+          descLower.includes('proceso de entrega')
+        ) {
           estadoGeneral = 'En Reparto';
-        } else if (descLower.includes('oficina') || descLower.includes('centro logístico') || descLower.includes('centro de distribución') || descLower.includes('bodega')) {
+        } else if (
+          descLower.includes('oficina') ||
+          descLower.includes('centro logístico') ||
+          descLower.includes('centro de distribución') ||
+          descLower.includes('bodega')
+        ) {
           estadoGeneral = 'En Centro Logístico Destino';
-        } else if (descLower.includes('novedad') || descLower.includes('rechazado') || descLower.includes('devuelto') || descLower.includes('no fue posible')) {
+        } else if (
+          descLower.includes('novedad') ||
+          descLower.includes('rechazado') ||
+          descLower.includes('devuelto') ||
+          descLower.includes('no fue posible')
+        ) {
           estadoGeneral = 'Novedad';
           tieneNovedad = true;
         } else if (descLower.includes('recogido') || descLower.includes('recolectado')) {
@@ -962,7 +1073,11 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
       }
 
       // Detectar novedad también por estado de guía
-      if (guia.status === ShipmentStatus.ISSUE || estadoGeneral.toLowerCase().includes('novedad') || estadoGeneral.toLowerCase().includes('devuelto')) {
+      if (
+        guia.status === ShipmentStatus.ISSUE ||
+        estadoGeneral.toLowerCase().includes('novedad') ||
+        estadoGeneral.toLowerCase().includes('devuelto')
+      ) {
         tieneNovedad = true;
       }
 
@@ -978,10 +1093,12 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
         transportadora: guia.carrier || CarrierName.UNKNOWN,
         origen,
         destino,
-        ultimoEvento: ultimoEvento ? {
-          fecha: ultimoEvento.date,
-          descripcion: ultimoEvento.description,
-        } : null,
+        ultimoEvento: ultimoEvento
+          ? {
+              fecha: ultimoEvento.date,
+              descripcion: ultimoEvento.description,
+            }
+          : null,
         ultimos2Estados,
         estadoGeneral,
         estadoReal,
@@ -994,7 +1111,7 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
 
   // Filtrar guías
   const guiasFiltradas = useMemo(() => {
-    return guiasProcesadas.filter(g => {
+    return guiasProcesadas.filter((g) => {
       // Filtro de búsqueda
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -1025,8 +1142,8 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
 
   // Obtener transportadoras únicas
   const carriers = useMemo(() => {
-    const unique = new Set(shipments.map(s => s.carrier));
-    return Array.from(unique).filter(c => c !== CarrierName.UNKNOWN);
+    const unique = new Set(shipments.map((s) => s.carrier));
+    return Array.from(unique).filter((c) => c !== CarrierName.UNKNOWN);
   }, [shipments]);
 
   const handleStatusFilter = (status: string | null) => {
@@ -1036,17 +1153,19 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
 
   // Exportar a Excel Profesional
   const exportarExcelProfesional = useCallback(() => {
-    const fechaExport = new Date().toLocaleDateString('es-CO', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).replace(/\//g, '-');
+    const fechaExport = new Date()
+      .toLocaleDateString('es-CO', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      })
+      .replace(/\//g, '-');
 
     // Hoja 1: Resumen de guías
-    const datosResumen = guiasFiltradas.map(g => ({
+    const datosResumen = guiasFiltradas.map((g) => ({
       'Número de Guía': g.guia.id,
-      'Teléfono': g.celular || '',
-      'Transportadora': g.transportadora,
+      Teléfono: g.celular || '',
+      Transportadora: g.transportadora,
       'Ciudad Origen': g.origen,
       'Ciudad Destino': g.destino,
       'Estado Actual': g.estadoGeneral,
@@ -1060,7 +1179,7 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
 
     // Hoja 2: Historial detallado
     const datosHistorial: any[] = [];
-    guiasFiltradas.forEach(g => {
+    guiasFiltradas.forEach((g) => {
       const events = g.guia.detailedInfo?.events || [];
       const sortedEvents = [...events].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -1068,31 +1187,39 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
       sortedEvents.forEach((event, idx) => {
         datosHistorial.push({
           'Número de Guía': g.guia.id,
-          'Transportadora': g.transportadora,
-          'Orden': idx + 1,
-          'Fecha': event.date,
-          'Descripción': event.description,
-          'Ubicación': event.location || '',
+          Transportadora: g.transportadora,
+          Orden: idx + 1,
+          Fecha: event.date,
+          Descripción: event.description,
+          Ubicación: event.location || '',
         });
       });
     });
 
     // Hoja 3: Estadísticas
-    const entregados = guiasFiltradas.filter(g => g.estadoGeneral.toLowerCase().includes('entregado')).length;
-    const conNovedad = guiasFiltradas.filter(g => g.tieneNovedad).length;
-    const enReparto = guiasFiltradas.filter(g => g.estadoGeneral.toLowerCase().includes('reparto')).length;
-    const promedioDias = guiasFiltradas.length > 0
-      ? Math.round(guiasFiltradas.reduce((acc, g) => acc + g.dias, 0) / guiasFiltradas.length)
-      : 0;
+    const entregados = guiasFiltradas.filter((g) =>
+      g.estadoGeneral.toLowerCase().includes('entregado')
+    ).length;
+    const conNovedad = guiasFiltradas.filter((g) => g.tieneNovedad).length;
+    const enReparto = guiasFiltradas.filter((g) =>
+      g.estadoGeneral.toLowerCase().includes('reparto')
+    ).length;
+    const promedioDias =
+      guiasFiltradas.length > 0
+        ? Math.round(guiasFiltradas.reduce((acc, g) => acc + g.dias, 0) / guiasFiltradas.length)
+        : 0;
 
     const datosEstadisticas = [
-      { 'Métrica': 'Total de Guías', 'Valor': guiasFiltradas.length },
-      { 'Métrica': 'Guías Entregadas', 'Valor': entregados },
-      { 'Métrica': 'Tasa de Entrega', 'Valor': `${guiasFiltradas.length > 0 ? Math.round((entregados / guiasFiltradas.length) * 100) : 0}%` },
-      { 'Métrica': 'Guías con Novedad', 'Valor': conNovedad },
-      { 'Métrica': 'Guías en Reparto', 'Valor': enReparto },
-      { 'Métrica': 'Promedio Días en Tránsito', 'Valor': promedioDias },
-      { 'Métrica': 'Fecha de Generación', 'Valor': new Date().toLocaleString('es-CO') },
+      { Métrica: 'Total de Guías', Valor: guiasFiltradas.length },
+      { Métrica: 'Guías Entregadas', Valor: entregados },
+      {
+        Métrica: 'Tasa de Entrega',
+        Valor: `${guiasFiltradas.length > 0 ? Math.round((entregados / guiasFiltradas.length) * 100) : 0}%`,
+      },
+      { Métrica: 'Guías con Novedad', Valor: conNovedad },
+      { Métrica: 'Guías en Reparto', Valor: enReparto },
+      { Métrica: 'Promedio Días en Tránsito', Valor: promedioDias },
+      { Métrica: 'Fecha de Generación', Valor: new Date().toLocaleString('es-CO') },
     ];
 
     // Crear libro de Excel
@@ -1111,7 +1238,7 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
       { wch: 15 }, // Origen
       { wch: 20 }, // Destino
       { wch: 25 }, // Estado
-      { wch: 8 },  // Días
+      { wch: 8 }, // Días
       { wch: 10 }, // Novedad
       { wch: 40 }, // Último Estado
       { wch: 20 }, // Fecha
@@ -1122,7 +1249,7 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
     wsHistorial['!cols'] = [
       { wch: 18 }, // Guía
       { wch: 18 }, // Transportadora
-      { wch: 6 },  // Orden
+      { wch: 6 }, // Orden
       { wch: 20 }, // Fecha
       { wch: 50 }, // Descripción
       { wch: 30 }, // Ubicación
@@ -1170,7 +1297,8 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
             </HelpTooltip>
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
-            {shipments.length} guías totales • {guiasProcesadas.filter(g => g.tieneTracking).length} con tracking
+            {shipments.length} guías totales •{' '}
+            {guiasProcesadas.filter((g) => g.tieneTracking).length} con tracking
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -1186,9 +1314,11 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
             <Siren className="w-4 h-4" />
             Alertas
             {guiasConAlertas > 0 && (
-              <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
-                showAlertDashboard ? 'bg-white/20 text-white' : 'bg-red-500 text-white'
-              }`}>
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                  showAlertDashboard ? 'bg-white/20 text-white' : 'bg-red-500 text-white'
+                }`}
+              >
                 {guiasConAlertas}
               </span>
             )}
@@ -1206,9 +1336,11 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
             <List className="w-4 h-4" />
             MIRAR TODAS
             {hojas.length > 0 && (
-              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                showHojas ? 'bg-white/20 text-white' : 'bg-purple-600 text-white'
-              }`}>
+              <span
+                className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  showHojas ? 'bg-white/20 text-white' : 'bg-purple-600 text-white'
+                }`}
+              >
                 {hojas.length} hojas
               </span>
             )}
@@ -1317,7 +1449,9 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
               </div>
               <div>
                 <h3 className="font-bold text-lg">Sistema de Hojas de Carga</h3>
-                <p className="text-purple-200 text-xs">Cada carga se guarda como una hoja • Disponible para todos los usuarios</p>
+                <p className="text-purple-200 text-xs">
+                  Cada carga se guarda como una hoja • Disponible para todos los usuarios
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -1359,7 +1493,8 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
                 {/* Leyenda */}
                 <div className="flex items-center gap-4 mb-4 pb-4 border-b border-slate-200 dark:border-navy-700">
                   <span className="text-xs text-slate-500">
-                    Cada carga se guarda como una hoja independiente. Puedes restaurar cualquier hoja anterior.
+                    Cada carga se guarda como una hoja independiente. Puedes restaurar cualquier
+                    hoja anterior.
                   </span>
                 </div>
 
@@ -1376,11 +1511,13 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         {/* Número de Hoja */}
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${
-                          hojaActiva === hoja.id
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
-                        }`}>
+                        <div
+                          className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${
+                            hojaActiva === hoja.id
+                              ? 'bg-emerald-500 text-white'
+                              : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
+                          }`}
+                        >
                           #{index + 1}
                         </div>
 
@@ -1413,11 +1550,13 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
 
                       {/* Acciones */}
                       <div className="flex items-center gap-3">
-                        <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${
-                          hojaActiva === hoja.id
-                            ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-                            : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
-                        }`}>
+                        <span
+                          className={`px-3 py-1.5 rounded-full text-sm font-bold ${
+                            hojaActiva === hoja.id
+                              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                              : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
+                          }`}
+                        >
                           {hoja.cantidadGuias} guías
                         </span>
 
@@ -1452,7 +1591,8 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
           {/* Footer con info */}
           <div className="bg-slate-50 dark:bg-navy-950 px-4 py-3 border-t border-slate-200 dark:border-navy-700">
             <p className="text-xs text-slate-500 text-center">
-              Las hojas se sincronizan automáticamente y están disponibles para todos los usuarios de la aplicación
+              Las hojas se sincronizan automáticamente y están disponibles para todos los usuarios
+              de la aplicación
             </p>
           </div>
         </div>
@@ -1574,10 +1714,7 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
                     isExpanded={expandedGuia === g.guia.id}
                   />
                   {expandedGuia === g.guia.id && (
-                    <GuiaExpandedDetails
-                      guia={g}
-                      onCollapse={() => setExpandedGuia(null)}
-                    />
+                    <GuiaExpandedDetails guia={g} onCollapse={() => setExpandedGuia(null)} />
                   )}
                 </React.Fragment>
               ))}

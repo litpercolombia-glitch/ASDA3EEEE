@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Shipment, ShipmentStatus, CarrierName, AITrackingResult, ReportStats, ErrorTrackingEntry, TrackingErrorType } from './types';
+import {
+  Shipment,
+  ShipmentStatus,
+  CarrierName,
+  AITrackingResult,
+  ReportStats,
+  ErrorTrackingEntry,
+  TrackingErrorType,
+} from './types';
 import {
   detectCarrier,
   saveShipments,
@@ -19,7 +27,7 @@ import {
   LoadHistoryPage,
   ErrorTrackingTable,
   DynamicClassificationButtons,
-  AIDelayPatternAnalysis
+  AIDelayPatternAnalysis,
 } from './components/services';
 import { DetailedShipmentCard } from './components/DetailedShipmentCard';
 import { GeneralReport } from './components/GeneralReport';
@@ -82,7 +90,9 @@ const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<MainTab>('home');
 
   const [viewMode, setViewMode] = useState<'SIMPLE' | 'DETAILED' | 'ALERTS'>('SIMPLE');
-  const [activeInputTab, setActiveInputTab] = useState<'REPORT' | 'PHONES' | 'SUMMARY' | 'EXCEL'>('PHONES');
+  const [activeInputTab, setActiveInputTab] = useState<'REPORT' | 'PHONES' | 'SUMMARY' | 'EXCEL'>(
+    'PHONES'
+  );
   const [inputCarrier, setInputCarrier] = useState<CarrierName | 'AUTO'>('AUTO');
 
   const [inputText, setInputText] = useState('');
@@ -113,7 +123,13 @@ const App: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
 
   // Excel parser hook
-  const { parseExcelFile, isLoading: isExcelLoading, xlsxLoaded, parseResult: excelResult, reset: resetExcel } = useShipmentExcelParser();
+  const {
+    parseExcelFile,
+    isLoading: isExcelLoading,
+    xlsxLoaded,
+    parseResult: excelResult,
+    reset: resetExcel,
+  } = useShipmentExcelParser();
 
   // Load data on mount
   useEffect(() => {
@@ -198,7 +214,7 @@ const App: React.FC = () => {
         id: `error-${batchId}-${idx}`,
         guideNumber: err.guideNumber || 'N/A',
         phone: err.phone,
-        errorType: err.type as TrackingErrorType || 'PARSE_ERROR',
+        errorType: (err.type as TrackingErrorType) || 'PARSE_ERROR',
         errorReason: err.reason || 'Error al procesar',
         rawData: err.rawData,
         timestamp: batchDate,
@@ -208,7 +224,7 @@ const App: React.FC = () => {
       }));
 
       if (newErrorEntries.length > 0) {
-        setTrackingErrors(prev => [...prev, ...newErrorEntries]);
+        setTrackingErrors((prev) => [...prev, ...newErrorEntries]);
       }
 
       if (newShipments.length > 0) {
@@ -218,7 +234,9 @@ const App: React.FC = () => {
           return [...filteredPrev, ...newShipments];
         });
         setViewMode('DETAILED');
-        setNotification(`Carga exitosa: ${newShipments.length} guías añadidas y vinculadas.${newErrorEntries.length > 0 ? ` (${newErrorEntries.length} errores)` : ''}`);
+        setNotification(
+          `Carga exitosa: ${newShipments.length} guías añadidas y vinculadas.${newErrorEntries.length > 0 ? ` (${newErrorEntries.length} errores)` : ''}`
+        );
         setInputText('');
         if (newShipments[0].batchId) {
           setActiveBatchId(newShipments[0].batchId);
@@ -554,8 +572,8 @@ const App: React.FC = () => {
                   </button>
                 </div>
                 <LoadSummaryView
-                  shipments={shipments.filter(s => s.batchId === lastBatchId)}
-                  errors={trackingErrors.filter(e => e.batchId === lastBatchId)}
+                  shipments={shipments.filter((s) => s.batchId === lastBatchId)}
+                  errors={trackingErrors.filter((e) => e.batchId === lastBatchId)}
                   batchId={lastBatchId}
                   batchDate={lastBatchDate}
                   onGuideClick={(shipment) => {
@@ -566,8 +584,10 @@ const App: React.FC = () => {
                     setNotification(`Reintentando guía ${error.guideNumber}...`);
                   }}
                   onMarkErrorResolved={(errorId, note) => {
-                    setTrackingErrors(prev =>
-                      prev.map(e => e.id === errorId ? { ...e, resolved: true, resolutionNote: note } : e)
+                    setTrackingErrors((prev) =>
+                      prev.map((e) =>
+                        e.id === errorId ? { ...e, resolved: true, resolutionNote: note } : e
+                      )
                     );
                     setNotification('Error marcado como resuelto');
                   }}
@@ -601,8 +621,10 @@ const App: React.FC = () => {
                     setNotification(`Reintentando guía ${error.guideNumber}...`);
                   }}
                   onMarkErrorResolved={(errorId, note) => {
-                    setTrackingErrors(prev =>
-                      prev.map(e => e.id === errorId ? { ...e, resolved: true, resolutionNote: note } : e)
+                    setTrackingErrors((prev) =>
+                      prev.map((e) =>
+                        e.id === errorId ? { ...e, resolved: true, resolutionNote: note } : e
+                      )
                     );
                     setNotification('Error marcado como resuelto');
                   }}
@@ -655,7 +677,9 @@ const App: React.FC = () => {
             {/* Detailed view */}
             {viewMode === 'DETAILED' && (
               <section className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-                {currentStats && <GeneralReport stats={currentStats} onFilter={handleSpecialFilter} />}
+                {currentStats && (
+                  <GeneralReport stats={currentStats} onFilter={handleSpecialFilter} />
+                )}
 
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 border-b border-slate-200 dark:border-navy-800 pb-4">
                   <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
@@ -858,9 +882,7 @@ const App: React.FC = () => {
         )}
 
         {/* SEMAFORO TAB */}
-        {currentTab === 'semaforo' && (
-          <SemaforoTab shipments={shipments} />
-        )}
+        {currentTab === 'semaforo' && <SemaforoTab shipments={shipments} />}
       </main>
 
       {/* Footer */}

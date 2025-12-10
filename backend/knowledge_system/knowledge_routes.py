@@ -24,8 +24,8 @@ import os
 from typing import Optional, List
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Query, Form
-from pydantic import BaseModel, Field, HttpUrl
+from fastapi import APIRouter, HTTPException, UploadFile, File, Query
+from pydantic import BaseModel, Field
 from loguru import logger
 
 from .knowledge_manager import get_knowledge_manager
@@ -169,7 +169,7 @@ async def upload_file(
         km = get_knowledge_manager()
 
         # Parsear documento
-        texto = await km.document_parser.parsear_bytes(contenido, archivo.filename)
+        await km.document_parser.parsear_bytes(contenido, archivo.filename)
 
         # Guardar como conocimiento
         resultado = await km.cargar_conocimiento(

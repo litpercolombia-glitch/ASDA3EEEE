@@ -23,7 +23,11 @@ import {
   ExternalLink,
   Zap,
 } from 'lucide-react';
-import { getWhatsAppTemplate, getLogisticsTemplates, getTrackingUrl } from '../services/logisticsService';
+import {
+  getWhatsAppTemplate,
+  getLogisticsTemplates,
+  getTrackingUrl,
+} from '../services/logisticsService';
 
 interface AlertDashboardProps {
   shipments: Shipment[];
@@ -38,34 +42,52 @@ const getSmartWhatsAppTemplate = (shipment: Shipment): { message: string; action
   const destination = detailedInfo?.destination || 'tu ciudad';
 
   // 🔴 URGENTE: Cliente no contesta
-  if (reason.includes('NO CONTESTA') || rawStatus.includes('NO CONTESTA') || rawStatus.includes('NO RESPONDE')) {
+  if (
+    reason.includes('NO CONTESTA') ||
+    rawStatus.includes('NO CONTESTA') ||
+    rawStatus.includes('NO RESPONDE')
+  ) {
     return {
       message: `🚨 *URGENTE - Pedido en riesgo de devolución*\n\nHola! Hemos intentado contactarte varias veces para la entrega de tu pedido.\n\n📦 *Guía:* ${id}\n🚚 *Transportadora:* ${carrier}\n📍 *Destino:* ${destination}\n\n⚠️ *Si no confirmamos en las próximas horas, el paquete será devuelto.*\n\n¿Podrías confirmar:\n1️⃣ Tu disponibilidad para recibir\n2️⃣ Un número donde te puedan contactar\n3️⃣ Alguna referencia adicional de la dirección\n\n¡Gracias!`,
-      actionType: 'CONTACTO_URGENTE'
+      actionType: 'CONTACTO_URGENTE',
     };
   }
 
   // 🔴 URGENTE: Problema de dirección
-  if (reason.includes('DIRECCION') || rawStatus.includes('DIRECCION') || rawStatus.includes('NOMENCLATURA') || rawStatus.includes('NO EXISTE')) {
+  if (
+    reason.includes('DIRECCION') ||
+    rawStatus.includes('DIRECCION') ||
+    rawStatus.includes('NOMENCLATURA') ||
+    rawStatus.includes('NO EXISTE')
+  ) {
     return {
       message: `📍 *Problema con la dirección de entrega*\n\nHola! La transportadora reporta que hay un problema con la dirección de tu pedido.\n\n📦 *Guía:* ${id}\n🚚 *Transportadora:* ${carrier}\n\n❓ *Por favor confirma:*\n• Dirección completa (incluyendo barrio)\n• Referencias del lugar\n• Número de contacto para el mensajero\n\n⚠️ *Sin esta información no pueden realizar la entrega.*\n\n¡Gracias por tu pronta respuesta!`,
-      actionType: 'CORREGIR_DIRECCION'
+      actionType: 'CORREGIR_DIRECCION',
     };
   }
 
   // ⚠️ ATENCIÓN: En oficina (devolución inminente)
-  if (shipment.status === ShipmentStatus.IN_OFFICE || rawStatus.includes('OFICINA') || rawStatus.includes('DISPONIBLE')) {
+  if (
+    shipment.status === ShipmentStatus.IN_OFFICE ||
+    rawStatus.includes('OFICINA') ||
+    rawStatus.includes('DISPONIBLE')
+  ) {
     return {
       message: `🏢 *Tu pedido está en oficina*\n\nHola! Tu pedido ya llegó y está disponible para retiro.\n\n📦 *Guía:* ${id}\n🚚 *Transportadora:* ${carrier}\n📍 *Ubicación:* Oficina de ${carrier} en ${destination}\n\n⏰ *IMPORTANTE:* Tienes *5 días hábiles* para reclamarlo antes de que sea devuelto.\n\n📋 *Lleva:*\n• Cédula original\n• Número de guía\n\n¿Necesitas que solicitemos una extensión o un nuevo intento de entrega?`,
-      actionType: 'RETIRO_OFICINA'
+      actionType: 'RETIRO_OFICINA',
     };
   }
 
   // ⚠️ ATENCIÓN: Rechazo o intento fallido
-  if (reason.includes('RECHAZ') || reason.includes('FALLIDO') || rawStatus.includes('RECHAZ') || rawStatus.includes('NO RECIBE')) {
+  if (
+    reason.includes('RECHAZ') ||
+    reason.includes('FALLIDO') ||
+    rawStatus.includes('RECHAZ') ||
+    rawStatus.includes('NO RECIBE')
+  ) {
     return {
       message: `📦 *Intento de entrega fallido*\n\nHola! La transportadora intentó entregar tu pedido pero no fue posible.\n\n📦 *Guía:* ${id}\n🚚 *Transportadora:* ${carrier}\n📍 *Destino:* ${destination}\n\n🔄 *Motivo reportado:* ${detailedInfo?.rawStatus || 'No especificado'}\n\n¿Podrías confirmar:\n1️⃣ Día y horario preferido para el nuevo intento\n2️⃣ Si alguien más puede recibir\n3️⃣ Alguna indicación adicional\n\n¡Coordinamos de inmediato!`,
-      actionType: 'REPROGRAMAR_ENTREGA'
+      actionType: 'REPROGRAMAR_ENTREGA',
     };
   }
 
@@ -73,7 +95,7 @@ const getSmartWhatsAppTemplate = (shipment: Shipment): { message: string; action
   if (reason.includes('ZONA') || reason.includes('PERIFÉRICA')) {
     return {
       message: `📍 *Confirmación de dirección*\n\nHola! Tu pedido va en camino a una zona que requiere referencias adicionales.\n\n📦 *Guía:* ${id}\n🚚 *Transportadora:* ${carrier}\n📍 *Destino:* ${destination}\n\n¿Podrías confirmar referencias como:\n• Conjunto/edificio\n• Local cercano conocido\n• Color de la fachada\n• Indicaciones para el mensajero\n\n¡Así aseguramos la entrega exitosa!`,
-      actionType: 'CONFIRMAR_REFERENCIAS'
+      actionType: 'CONFIRMAR_REFERENCIAS',
     };
   }
 
@@ -81,14 +103,14 @@ const getSmartWhatsAppTemplate = (shipment: Shipment): { message: string; action
   if (reason.includes('72H') || reason.includes('SIN MOVIMIENTO')) {
     return {
       message: `⏰ *Actualización de tu pedido*\n\nHola! Estamos haciendo seguimiento a tu envío que lleva tiempo sin actualización.\n\n📦 *Guía:* ${id}\n🚚 *Transportadora:* ${carrier}\n📍 *Destino:* ${destination}\n⏱️ *Tiempo:* ${riskAnalysis?.timeLabel || 'Varios días'}\n\nYa estamos gestionando con la transportadora. Te mantendremos informado.\n\n¿Tienes alguna novedad o cambio en la dirección de entrega?`,
-      actionType: 'SEGUIMIENTO_DEMORA'
+      actionType: 'SEGUIMIENTO_DEMORA',
     };
   }
 
   // Default: Template estándar
   return {
     message: getWhatsAppTemplate(shipment),
-    actionType: 'GENERAL'
+    actionType: 'GENERAL',
   };
 };
 
@@ -113,35 +135,43 @@ const getProblemIcon = (shipment: Shipment) => {
 };
 
 export const AlertDashboard: React.FC<AlertDashboardProps> = ({ shipments, onSelectShipment }) => {
-  const [filterCity, setFilterCity] = useState<'ALL' | 'BOGOTA' | 'MEDELLIN' | 'CALI' | 'BARRANQUILLA' | 'BUCARAMANGA' | 'OTROS'>('ALL');
+  const [filterCity, setFilterCity] = useState<
+    'ALL' | 'BOGOTA' | 'MEDELLIN' | 'CALI' | 'BARRANQUILLA' | 'BUCARAMANGA' | 'OTROS'
+  >('ALL');
   const [filterCarrier, setFilterCarrier] = useState<CarrierName | 'ALL'>('ALL');
   const [filterRisk, setFilterRisk] = useState<ShipmentRiskLevel | 'ALL'>('ALL');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Categorize Shipments by Risk
-  const riskCounts = useMemo(() => ({
-    urgent: shipments.filter((s) => s.riskAnalysis?.level === ShipmentRiskLevel.URGENT),
-    attention: shipments.filter((s) => s.riskAnalysis?.level === ShipmentRiskLevel.ATTENTION),
-    watch: shipments.filter((s) => s.riskAnalysis?.level === ShipmentRiskLevel.WATCH),
-    normal: shipments.filter((s) => s.riskAnalysis?.level === ShipmentRiskLevel.NORMAL),
-  }), [shipments]);
+  const riskCounts = useMemo(
+    () => ({
+      urgent: shipments.filter((s) => s.riskAnalysis?.level === ShipmentRiskLevel.URGENT),
+      attention: shipments.filter((s) => s.riskAnalysis?.level === ShipmentRiskLevel.ATTENTION),
+      watch: shipments.filter((s) => s.riskAnalysis?.level === ShipmentRiskLevel.WATCH),
+      normal: shipments.filter((s) => s.riskAnalysis?.level === ShipmentRiskLevel.NORMAL),
+    }),
+    [shipments]
+  );
 
   // Get unique carriers from shipments
   const availableCarriers = useMemo(() => {
-    const carriers = new Set(shipments.map(s => s.carrier));
-    return Array.from(carriers).filter(c => c !== CarrierName.UNKNOWN);
+    const carriers = new Set(shipments.map((s) => s.carrier));
+    return Array.from(carriers).filter((c) => c !== CarrierName.UNKNOWN);
   }, [shipments]);
 
   // Get unique cities from shipments
   const availableCities = useMemo(() => {
     const cities: Record<string, number> = {};
-    shipments.forEach(s => {
+    shipments.forEach((s) => {
       const dest = (s.detailedInfo?.destination || '').toUpperCase();
       if (dest.includes('BOGOTA')) cities['BOGOTA'] = (cities['BOGOTA'] || 0) + 1;
-      else if (dest.includes('MEDELLIN') || dest.includes('ENVIGADO')) cities['MEDELLIN'] = (cities['MEDELLIN'] || 0) + 1;
+      else if (dest.includes('MEDELLIN') || dest.includes('ENVIGADO'))
+        cities['MEDELLIN'] = (cities['MEDELLIN'] || 0) + 1;
       else if (dest.includes('CALI')) cities['CALI'] = (cities['CALI'] || 0) + 1;
-      else if (dest.includes('BARRANQUILLA')) cities['BARRANQUILLA'] = (cities['BARRANQUILLA'] || 0) + 1;
-      else if (dest.includes('BUCARAMANGA')) cities['BUCARAMANGA'] = (cities['BUCARAMANGA'] || 0) + 1;
+      else if (dest.includes('BARRANQUILLA'))
+        cities['BARRANQUILLA'] = (cities['BARRANQUILLA'] || 0) + 1;
+      else if (dest.includes('BUCARAMANGA'))
+        cities['BUCARAMANGA'] = (cities['BUCARAMANGA'] || 0) + 1;
       else cities['OTROS'] = (cities['OTROS'] || 0) + 1;
     });
     return cities;
@@ -155,13 +185,18 @@ export const AlertDashboard: React.FC<AlertDashboardProps> = ({ shipments, onSel
       // City Filter
       const dest = (s.detailedInfo?.destination || '').toUpperCase();
       if (filterCity === 'BOGOTA' && !dest.includes('BOGOTA')) return false;
-      if (filterCity === 'MEDELLIN' && !dest.includes('MEDELLIN') && !dest.includes('ENVIGADO')) return false;
+      if (filterCity === 'MEDELLIN' && !dest.includes('MEDELLIN') && !dest.includes('ENVIGADO'))
+        return false;
       if (filterCity === 'CALI' && !dest.includes('CALI')) return false;
       if (filterCity === 'BARRANQUILLA' && !dest.includes('BARRANQUILLA')) return false;
       if (filterCity === 'BUCARAMANGA' && !dest.includes('BUCARAMANGA')) return false;
       if (filterCity === 'OTROS') {
-        const isMainCity = dest.includes('BOGOTA') || dest.includes('MEDELLIN') || dest.includes('CALI') ||
-                          dest.includes('BARRANQUILLA') || dest.includes('BUCARAMANGA');
+        const isMainCity =
+          dest.includes('BOGOTA') ||
+          dest.includes('MEDELLIN') ||
+          dest.includes('CALI') ||
+          dest.includes('BARRANQUILLA') ||
+          dest.includes('BUCARAMANGA');
         if (isMainCity) return false;
       }
 
@@ -232,15 +267,16 @@ export const AlertDashboard: React.FC<AlertDashboardProps> = ({ shipments, onSel
             ? 'bg-yellow-500 text-white shadow-yellow-500/30'
             : 'bg-emerald-500 text-white shadow-emerald-500/30';
 
-    const actionButtonLabel = {
-      'CONTACTO_URGENTE': '🚨 Llamar YA',
-      'CORREGIR_DIRECCION': '📍 Solicitar Dirección',
-      'RETIRO_OFICINA': '🏢 Notificar Retiro',
-      'REPROGRAMAR_ENTREGA': '🔄 Reprogramar',
-      'CONFIRMAR_REFERENCIAS': '📋 Pedir Referencias',
-      'SEGUIMIENTO_DEMORA': '⏰ Informar Estado',
-      'GENERAL': '💬 Contactar',
-    }[actionType] || '💬 Contactar';
+    const actionButtonLabel =
+      {
+        CONTACTO_URGENTE: '🚨 Llamar YA',
+        CORREGIR_DIRECCION: '📍 Solicitar Dirección',
+        RETIRO_OFICINA: '🏢 Notificar Retiro',
+        REPROGRAMAR_ENTREGA: '🔄 Reprogramar',
+        CONFIRMAR_REFERENCIAS: '📋 Pedir Referencias',
+        SEGUIMIENTO_DEMORA: '⏰ Informar Estado',
+        GENERAL: '💬 Contactar',
+      }[actionType] || '💬 Contactar';
 
     return (
       <div
@@ -251,7 +287,9 @@ export const AlertDashboard: React.FC<AlertDashboardProps> = ({ shipments, onSel
         <div className="flex justify-between items-start mb-3">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm ${badgeColor}`}>
+              <span
+                className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm ${badgeColor}`}
+              >
                 {risk?.level}
               </span>
               <span className="text-xs font-bold px-2 py-0.5 rounded bg-slate-200 dark:bg-navy-700 text-slate-600 dark:text-slate-300">
@@ -371,14 +409,23 @@ export const AlertDashboard: React.FC<AlertDashboardProps> = ({ shipments, onSel
                 CENTRO DE ALERTAS
               </h2>
               <p className="text-sm text-slate-400">
-                Inteligencia Operativa Proactiva • {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
+                Inteligencia Operativa Proactiva •{' '}
+                {new Date().toLocaleDateString('es-CO', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                })}
               </p>
             </div>
 
             {/* Risk Counters - Clickable Filters */}
             <div className="flex flex-wrap gap-3">
               <button
-                onClick={() => setFilterRisk(filterRisk === ShipmentRiskLevel.URGENT ? 'ALL' : ShipmentRiskLevel.URGENT)}
+                onClick={() =>
+                  setFilterRisk(
+                    filterRisk === ShipmentRiskLevel.URGENT ? 'ALL' : ShipmentRiskLevel.URGENT
+                  )
+                }
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                   filterRisk === ShipmentRiskLevel.URGENT
                     ? 'bg-red-500 shadow-lg shadow-red-500/30 scale-105'
@@ -387,28 +434,42 @@ export const AlertDashboard: React.FC<AlertDashboardProps> = ({ shipments, onSel
               >
                 <div className="text-2xl font-black text-red-400">{riskCounts.urgent.length}</div>
                 <div className="text-left">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-red-300">Urgentes</div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-red-300">
+                    Urgentes
+                  </div>
                   <div className="text-[9px] text-red-400/60">🔴 Resolver ya</div>
                 </div>
               </button>
 
               <button
-                onClick={() => setFilterRisk(filterRisk === ShipmentRiskLevel.ATTENTION ? 'ALL' : ShipmentRiskLevel.ATTENTION)}
+                onClick={() =>
+                  setFilterRisk(
+                    filterRisk === ShipmentRiskLevel.ATTENTION ? 'ALL' : ShipmentRiskLevel.ATTENTION
+                  )
+                }
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                   filterRisk === ShipmentRiskLevel.ATTENTION
                     ? 'bg-amber-500 shadow-lg shadow-amber-500/30 scale-105'
                     : 'bg-navy-700/50 hover:bg-navy-700'
                 }`}
               >
-                <div className="text-2xl font-black text-amber-400">{riskCounts.attention.length}</div>
+                <div className="text-2xl font-black text-amber-400">
+                  {riskCounts.attention.length}
+                </div>
                 <div className="text-left">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-amber-300">Atención</div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                    Atención
+                  </div>
                   <div className="text-[9px] text-amber-400/60">⚠️ Hoy</div>
                 </div>
               </button>
 
               <button
-                onClick={() => setFilterRisk(filterRisk === ShipmentRiskLevel.WATCH ? 'ALL' : ShipmentRiskLevel.WATCH)}
+                onClick={() =>
+                  setFilterRisk(
+                    filterRisk === ShipmentRiskLevel.WATCH ? 'ALL' : ShipmentRiskLevel.WATCH
+                  )
+                }
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                   filterRisk === ShipmentRiskLevel.WATCH
                     ? 'bg-yellow-500 shadow-lg shadow-yellow-500/30 scale-105'
@@ -417,22 +478,32 @@ export const AlertDashboard: React.FC<AlertDashboardProps> = ({ shipments, onSel
               >
                 <div className="text-2xl font-black text-yellow-400">{riskCounts.watch.length}</div>
                 <div className="text-left">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-yellow-300">Seguimiento</div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-yellow-300">
+                    Seguimiento
+                  </div>
                   <div className="text-[9px] text-yellow-400/60">🟡 Monitorear</div>
                 </div>
               </button>
 
               <button
-                onClick={() => setFilterRisk(filterRisk === ShipmentRiskLevel.NORMAL ? 'ALL' : ShipmentRiskLevel.NORMAL)}
+                onClick={() =>
+                  setFilterRisk(
+                    filterRisk === ShipmentRiskLevel.NORMAL ? 'ALL' : ShipmentRiskLevel.NORMAL
+                  )
+                }
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                   filterRisk === ShipmentRiskLevel.NORMAL
                     ? 'bg-emerald-500 shadow-lg shadow-emerald-500/30 scale-105'
                     : 'bg-navy-700/50 hover:bg-navy-700'
                 }`}
               >
-                <div className="text-2xl font-black text-emerald-400">{riskCounts.normal.length}</div>
+                <div className="text-2xl font-black text-emerald-400">
+                  {riskCounts.normal.length}
+                </div>
                 <div className="text-left">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">Normal</div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                    Normal
+                  </div>
                   <div className="text-[9px] text-emerald-400/60">🟢 OK</div>
                 </div>
               </button>
@@ -471,7 +542,10 @@ export const AlertDashboard: React.FC<AlertDashboardProps> = ({ shipments, onSel
               {filterRisk !== 'ALL' && (
                 <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-slate-100 to-slate-50 dark:from-navy-800 dark:to-navy-700 rounded-full text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-navy-600">
                   Riesgo: {filterRisk}
-                  <button onClick={() => setFilterRisk('ALL')} className="ml-1 text-red-400 hover:text-red-600">
+                  <button
+                    onClick={() => setFilterRisk('ALL')}
+                    className="ml-1 text-red-400 hover:text-red-600"
+                  >
                     <X className="w-3 h-3" />
                   </button>
                 </span>
@@ -479,7 +553,10 @@ export const AlertDashboard: React.FC<AlertDashboardProps> = ({ shipments, onSel
               {filterCity !== 'ALL' && (
                 <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-slate-100 to-slate-50 dark:from-navy-800 dark:to-navy-700 rounded-full text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-navy-600">
                   Ciudad: {filterCity}
-                  <button onClick={() => setFilterCity('ALL')} className="ml-1 text-red-400 hover:text-red-600">
+                  <button
+                    onClick={() => setFilterCity('ALL')}
+                    className="ml-1 text-red-400 hover:text-red-600"
+                  >
                     <X className="w-3 h-3" />
                   </button>
                 </span>
@@ -487,7 +564,10 @@ export const AlertDashboard: React.FC<AlertDashboardProps> = ({ shipments, onSel
               {filterCarrier !== 'ALL' && (
                 <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-slate-100 to-slate-50 dark:from-navy-800 dark:to-navy-700 rounded-full text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-navy-600">
                   Transportadora: {filterCarrier}
-                  <button onClick={() => setFilterCarrier('ALL')} className="ml-1 text-red-400 hover:text-red-600">
+                  <button
+                    onClick={() => setFilterCarrier('ALL')}
+                    className="ml-1 text-red-400 hover:text-red-600"
+                  >
                     <X className="w-3 h-3" />
                   </button>
                 </span>
@@ -524,9 +604,11 @@ export const AlertDashboard: React.FC<AlertDashboardProps> = ({ shipments, onSel
                     }`}
                   >
                     {city}
-                    <span className={`text-[10px] px-1.5 rounded-full ${
-                      filterCity === city ? 'bg-blue-500' : 'bg-slate-200 dark:bg-navy-700'
-                    }`}>
+                    <span
+                      className={`text-[10px] px-1.5 rounded-full ${
+                        filterCity === city ? 'bg-blue-500' : 'bg-slate-200 dark:bg-navy-700'
+                      }`}
+                    >
                       {count}
                     </span>
                   </button>
@@ -551,7 +633,7 @@ export const AlertDashboard: React.FC<AlertDashboardProps> = ({ shipments, onSel
                   Todas
                 </button>
                 {availableCarriers.map((carrier) => {
-                  const count = shipments.filter(s => s.carrier === carrier).length;
+                  const count = shipments.filter((s) => s.carrier === carrier).length;
                   const carrierColors: Record<string, string> = {
                     [CarrierName.INTER_RAPIDISIMO]: 'bg-orange-500 border-orange-500',
                     [CarrierName.ENVIA]: 'bg-red-600 border-red-600',
@@ -570,9 +652,13 @@ export const AlertDashboard: React.FC<AlertDashboardProps> = ({ shipments, onSel
                       }`}
                     >
                       {carrier}
-                      <span className={`text-[10px] px-1.5 rounded-full ${
-                        filterCarrier === carrier ? 'bg-white/20' : 'bg-slate-200 dark:bg-navy-700'
-                      }`}>
+                      <span
+                        className={`text-[10px] px-1.5 rounded-full ${
+                          filterCarrier === carrier
+                            ? 'bg-white/20'
+                            : 'bg-slate-200 dark:bg-navy-700'
+                        }`}
+                      >
                         {count}
                       </span>
                     </button>
@@ -587,8 +673,13 @@ export const AlertDashboard: React.FC<AlertDashboardProps> = ({ shipments, onSel
       {/* Results Summary */}
       <div className="flex items-center justify-between px-2">
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Mostrando <span className="font-bold text-slate-700 dark:text-slate-200">{filteredList.length}</span> alertas
-          {activeFiltersCount > 0 && ` de ${shipments.filter(s => s.riskAnalysis?.level !== ShipmentRiskLevel.NORMAL).length} totales`}
+          Mostrando{' '}
+          <span className="font-bold text-slate-700 dark:text-slate-200">
+            {filteredList.length}
+          </span>{' '}
+          alertas
+          {activeFiltersCount > 0 &&
+            ` de ${shipments.filter((s) => s.riskAnalysis?.level !== ShipmentRiskLevel.NORMAL).length} totales`}
         </p>
         {filteredList.length > 0 && (
           <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -605,8 +696,12 @@ export const AlertDashboard: React.FC<AlertDashboardProps> = ({ shipments, onSel
             <div className="inline-flex p-4 bg-emerald-100 dark:bg-emerald-900/20 rounded-full mb-4">
               <CheckCircle className="w-12 h-12 text-emerald-500" />
             </div>
-            <p className="text-lg font-bold text-slate-700 dark:text-slate-200 mb-1">¡Todo bajo control!</p>
-            <p className="text-sm text-slate-400 mb-4">No hay alertas activas para los filtros seleccionados.</p>
+            <p className="text-lg font-bold text-slate-700 dark:text-slate-200 mb-1">
+              ¡Todo bajo control!
+            </p>
+            <p className="text-sm text-slate-400 mb-4">
+              No hay alertas activas para los filtros seleccionados.
+            </p>
             {activeFiltersCount > 0 && (
               <button
                 onClick={clearAllFilters}

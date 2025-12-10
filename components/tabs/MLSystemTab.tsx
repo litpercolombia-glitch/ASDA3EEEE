@@ -54,8 +54,14 @@ const ML_SUBTABS = [
     description: 'Métricas y estadísticas del sistema ML',
     color: 'blue',
     helpTitle: '📊 Dashboard ML',
-    helpContent: 'Visualiza todas las métricas y estadísticas del sistema de predicción en tiempo real.',
-    helpTips: ['KPIs en tiempo real', 'Gráficos de tendencias', 'Estado de los modelos ML', 'Precisión del modelo: 92.3%'],
+    helpContent:
+      'Visualiza todas las métricas y estadísticas del sistema de predicción en tiempo real.',
+    helpTips: [
+      'KPIs en tiempo real',
+      'Gráficos de tendencias',
+      'Estado de los modelos ML',
+      'Precisión del modelo: 92.3%',
+    ],
   },
   {
     id: 'predictor' as const,
@@ -65,7 +71,12 @@ const ML_SUBTABS = [
     color: 'green',
     helpTitle: '🎯 Predictor de Retrasos',
     helpContent: 'Predice la probabilidad de retraso para cualquier guía individual con IA.',
-    helpTips: ['Ingresa el número de guía', 'Obtén predicción al instante', 'Recibe recomendaciones personalizadas', 'Análisis de factores de riesgo'],
+    helpTips: [
+      'Ingresa el número de guía',
+      'Obtén predicción al instante',
+      'Recibe recomendaciones personalizadas',
+      'Análisis de factores de riesgo',
+    ],
   },
   {
     id: 'masivo' as const,
@@ -74,8 +85,14 @@ const ML_SUBTABS = [
     description: 'Predecir múltiples guías',
     color: 'indigo',
     helpTitle: '📋 Predicción Masiva',
-    helpContent: 'Analiza múltiples guías simultáneamente. Pega una lista de guías o carga un Excel para predecir el riesgo de todas.',
-    helpTips: ['Pega lista de guías (una por línea)', 'Máximo 100 guías por análisis', 'Exporta resultados a Excel', 'Predicción automática de guías en rastreo'],
+    helpContent:
+      'Analiza múltiples guías simultáneamente. Pega una lista de guías o carga un Excel para predecir el riesgo de todas.',
+    helpTips: [
+      'Pega lista de guías (una por línea)',
+      'Máximo 100 guías por análisis',
+      'Exporta resultados a Excel',
+      'Predicción automática de guías en rastreo',
+    ],
     isNew: true,
   },
   {
@@ -85,8 +102,14 @@ const ML_SUBTABS = [
     description: 'Consultas inteligentes',
     color: 'purple',
     helpTitle: '🤖 Chat Inteligente',
-    helpContent: 'Pregunta cualquier cosa sobre tus envíos en lenguaje natural. El asistente puede buscar guías, dar estadísticas y más.',
-    helpTips: ['Consultas de estadísticas', 'Análisis de transportadoras', 'Búsqueda de guías pendientes', 'Recomendaciones IA personalizadas'],
+    helpContent:
+      'Pregunta cualquier cosa sobre tus envíos en lenguaje natural. El asistente puede buscar guías, dar estadísticas y más.',
+    helpTips: [
+      'Consultas de estadísticas',
+      'Análisis de transportadoras',
+      'Búsqueda de guías pendientes',
+      'Recomendaciones IA personalizadas',
+    ],
   },
   {
     id: 'cargar' as const,
@@ -95,8 +118,14 @@ const ML_SUBTABS = [
     description: 'Subir Excel para entrenamiento',
     color: 'orange',
     helpTitle: '📤 Cargar Datos',
-    helpContent: 'Sube archivos Excel con datos históricos para entrenar y mejorar el modelo de predicción.',
-    helpTips: ['Formato Excel (.xlsx)', 'Máximo 10,000 filas', 'Mapeo automático de columnas', 'Reentrenamiento automático'],
+    helpContent:
+      'Sube archivos Excel con datos históricos para entrenar y mejorar el modelo de predicción.',
+    helpTips: [
+      'Formato Excel (.xlsx)',
+      'Máximo 10,000 filas',
+      'Mapeo automático de columnas',
+      'Reentrenamiento automático',
+    ],
   },
 ];
 
@@ -157,8 +186,8 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
   const handlePrediccionMasiva = useCallback(async () => {
     const guias = guiasMasivas
       .split('\n')
-      .map(g => g.trim().toUpperCase())
-      .filter(g => g.length >= 5 && /^[A-Z0-9]+$/.test(g));
+      .map((g) => g.trim().toUpperCase())
+      .filter((g) => g.length >= 5 && /^[A-Z0-9]+$/.test(g));
 
     if (guias.length === 0) return;
 
@@ -173,10 +202,11 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
       setProgresoMasivo(Math.round(((i + 1) / guias.length) * 100));
 
       // Simular predicción (en producción llamaría al API real)
-      await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
+      await new Promise((resolve) => setTimeout(resolve, 100 + Math.random() * 200));
 
       const prob = Math.random();
-      const nivelRiesgo = prob < 0.25 ? 'BAJO' : prob < 0.5 ? 'MEDIO' : prob < 0.75 ? 'ALTO' : 'CRITICO';
+      const nivelRiesgo =
+        prob < 0.25 ? 'BAJO' : prob < 0.5 ? 'MEDIO' : prob < 0.75 ? 'ALTO' : 'CRITICO';
 
       const factoresPosibles = [
         'Zona de difícil acceso',
@@ -184,7 +214,7 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
         'Historial de retrasos en ruta',
         'Transportadora con alta demanda',
         'Destino rural',
-        'Condiciones climáticas adversas'
+        'Condiciones climáticas adversas',
       ];
 
       resultados.push({
@@ -192,7 +222,7 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
         probabilidadRetraso: prob,
         nivelRiesgo,
         diasEstimados: Math.floor(Math.random() * 5) + 1,
-        factores: factoresPosibles.filter(() => Math.random() > 0.6)
+        factores: factoresPosibles.filter(() => Math.random() > 0.6),
       });
     }
 
@@ -206,16 +236,17 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
 
     const csv = [
       'Guía,Probabilidad Retraso,Nivel Riesgo,Días Estimados,Factores',
-      ...prediccionesMasivas.map(p =>
-        `${p.numeroGuia},${(p.probabilidadRetraso * 100).toFixed(1)}%,${p.nivelRiesgo},${p.diasEstimados},"${p.factores.join('; ')}"`
-      )
+      ...prediccionesMasivas.map(
+        (p) =>
+          `${p.numeroGuia},${(p.probabilidadRetraso * 100).toFixed(1)}%,${p.nivelRiesgo},${p.diasEstimados},"${p.factores.join('; ')}"`
+      ),
     ].join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `predicciones_masivas_${new Date().toISOString().slice(0,10)}.csv`;
+    link.download = `predicciones_masivas_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
   };
 
@@ -232,7 +263,9 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
             <div>
               <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                 Predicción Masiva de Guías
-                <span className="px-2 py-0.5 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full">NUEVO</span>
+                <span className="px-2 py-0.5 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full">
+                  NUEVO
+                </span>
               </h2>
               <p className="text-indigo-100 text-sm mt-1">
                 Analiza múltiples guías simultáneamente con Machine Learning
@@ -250,19 +283,27 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-blue-800">
               <div className="flex items-start gap-2">
-                <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">1</span>
+                <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                  1
+                </span>
                 <p>Pega una lista de guías (una por línea) o cárgalas desde Excel</p>
               </div>
               <div className="flex items-start gap-2">
-                <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">2</span>
+                <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                  2
+                </span>
                 <p>El modelo ML analiza cada guía individualmente</p>
               </div>
               <div className="flex items-start gap-2">
-                <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">3</span>
+                <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                  3
+                </span>
                 <p>Obtén el nivel de riesgo y factores de cada guía</p>
               </div>
               <div className="flex items-start gap-2">
-                <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">4</span>
+                <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                  4
+                </span>
                 <p>Exporta los resultados a Excel para tu análisis</p>
               </div>
             </div>
@@ -282,7 +323,9 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
                 disabled={procesandoMasivo}
               />
               <div className="flex items-center justify-between mt-2 text-sm text-gray-500">
-                <span>{guiasMasivas.split('\n').filter(g => g.trim()).length} guías detectadas</span>
+                <span>
+                  {guiasMasivas.split('\n').filter((g) => g.trim()).length} guías detectadas
+                </span>
                 <span className="text-xs">Máximo 100 guías</span>
               </div>
             </div>
@@ -299,7 +342,9 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
                   />
                   <div>
                     <span className="font-semibold text-purple-900">Predicción Automática</span>
-                    <p className="text-xs text-purple-700">Predice automáticamente las guías que estés rastreando</p>
+                    <p className="text-xs text-purple-700">
+                      Predice automáticamente las guías que estés rastreando
+                    </p>
                   </div>
                 </label>
               </div>
@@ -353,16 +398,19 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
 
               {/* Resumen */}
               <div className="grid grid-cols-4 gap-3">
-                {(['BAJO', 'MEDIO', 'ALTO', 'CRITICO'] as const).map(nivel => {
-                  const count = prediccionesMasivas.filter(p => p.nivelRiesgo === nivel).length;
+                {(['BAJO', 'MEDIO', 'ALTO', 'CRITICO'] as const).map((nivel) => {
+                  const count = prediccionesMasivas.filter((p) => p.nivelRiesgo === nivel).length;
                   const colors = {
                     BAJO: 'bg-green-100 text-green-700 border-green-200',
                     MEDIO: 'bg-yellow-100 text-yellow-700 border-yellow-200',
                     ALTO: 'bg-orange-100 text-orange-700 border-orange-200',
-                    CRITICO: 'bg-red-100 text-red-700 border-red-200'
+                    CRITICO: 'bg-red-100 text-red-700 border-red-200',
                   };
                   return (
-                    <div key={nivel} className={`${colors[nivel]} rounded-xl p-3 border text-center`}>
+                    <div
+                      key={nivel}
+                      className={`${colors[nivel]} rounded-xl p-3 border text-center`}
+                    >
                       <div className="text-2xl font-bold">{count}</div>
                       <div className="text-xs font-medium">{nivel}</div>
                     </div>
@@ -377,8 +425,12 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
                     <tr>
                       <th className="px-4 py-3 text-left font-semibold text-gray-700">Guía</th>
                       <th className="px-4 py-3 text-center font-semibold text-gray-700">Riesgo</th>
-                      <th className="px-4 py-3 text-center font-semibold text-gray-700">Probabilidad</th>
-                      <th className="px-4 py-3 text-center font-semibold text-gray-700">Días Est.</th>
+                      <th className="px-4 py-3 text-center font-semibold text-gray-700">
+                        Probabilidad
+                      </th>
+                      <th className="px-4 py-3 text-center font-semibold text-gray-700">
+                        Días Est.
+                      </th>
                       <th className="px-4 py-3 text-left font-semibold text-gray-700">Factores</th>
                     </tr>
                   </thead>
@@ -388,19 +440,25 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
                         BAJO: 'bg-green-100 text-green-700',
                         MEDIO: 'bg-yellow-100 text-yellow-700',
                         ALTO: 'bg-orange-100 text-orange-700',
-                        CRITICO: 'bg-red-100 text-red-700'
+                        CRITICO: 'bg-red-100 text-red-700',
                       };
                       return (
                         <tr key={idx} className="hover:bg-gray-50">
                           <td className="px-4 py-3 font-mono font-medium">{p.numeroGuia}</td>
                           <td className="px-4 py-3 text-center">
-                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${colors[p.nivelRiesgo]}`}>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-bold ${colors[p.nivelRiesgo]}`}
+                            >
                               {p.nivelRiesgo}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center font-semibold">{(p.probabilidadRetraso * 100).toFixed(0)}%</td>
+                          <td className="px-4 py-3 text-center font-semibold">
+                            {(p.probabilidadRetraso * 100).toFixed(0)}%
+                          </td>
                           <td className="px-4 py-3 text-center">{p.diasEstimados}d</td>
-                          <td className="px-4 py-3 text-xs text-gray-600">{p.factores.join(', ') || '-'}</td>
+                          <td className="px-4 py-3 text-xs text-gray-600">
+                            {p.factores.join(', ') || '-'}
+                          </td>
                         </tr>
                       );
                     })}
@@ -442,7 +500,14 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
       default:
         return <DashboardML />;
     }
-  }, [activeSubTab, guiasMasivas, prediccionesMasivas, procesandoMasivo, progresoMasivo, autoPredict]);
+  }, [
+    activeSubTab,
+    guiasMasivas,
+    prediccionesMasivas,
+    procesandoMasivo,
+    progresoMasivo,
+    autoPredict,
+  ]);
 
   return (
     <div className={`min-h-screen bg-gray-50 ${className}`}>
@@ -487,7 +552,7 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
                 tips={[
                   'En modo online, se conecta al backend para predicciones reales',
                   'En modo offline, usa datos simulados de alta calidad',
-                  'Todas las funcionalidades están disponibles en ambos modos'
+                  'Todas las funcionalidades están disponibles en ambos modos',
                 ]}
                 position="bottom"
               >
@@ -561,8 +626,8 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
                 <div>
                   <span className="font-medium">Modo Offline Activo</span>
                   <span className="text-blue-700 ml-1">
-                    - El sistema usa datos de demostración y predicciones locales.
-                    Todas las funcionalidades están disponibles.
+                    - El sistema usa datos de demostración y predicciones locales. Todas las
+                    funcionalidades están disponibles.
                   </span>
                 </div>
               </div>
@@ -573,11 +638,11 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
                   'Abre una terminal en /backend',
                   'Ejecuta: pip install -r requirements.txt',
                   'Ejecuta: python main.py',
-                  'El servidor iniciará en http://localhost:8000'
+                  'El servidor iniciará en http://localhost:8000',
                 ]}
                 tips={[
                   'El modo offline es perfecto para demos y pruebas',
-                  'Los datos se guardan cuando el servidor esté disponible'
+                  'Los datos se guardan cuando el servidor esté disponible',
                 ]}
                 position="left"
               >
@@ -592,9 +657,7 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
       )}
 
       {/* Contenido principal */}
-      <div className="max-w-7xl mx-auto">
-        {renderContent()}
-      </div>
+      <div className="max-w-7xl mx-auto">{renderContent()}</div>
 
       {/* Footer con info */}
       <div className="bg-white border-t mt-8">

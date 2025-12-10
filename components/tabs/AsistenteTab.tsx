@@ -141,16 +141,49 @@ const CATEGORIAS_CONSULTA: CategoriaConsulta[] = [
     nombre: 'Procesos',
     icono: '📋',
     color: 'from-amber-500 to-orange-600',
-    ejemplos: ['Proceso de novedades', 'Cómo crear pedido', 'Flujo de seguimiento', 'Ver plantillas'],
+    ejemplos: [
+      'Proceso de novedades',
+      'Cómo crear pedido',
+      'Flujo de seguimiento',
+      'Ver plantillas',
+    ],
   },
 ];
 
 // Estadísticas de transportadoras
 const TRANSPORTADORAS_STATS = [
-  { nombre: 'Coordinadora', guias: 4521, entregadas: 4298, retrasos: 156, tasaExito: 95.1, tiempoProm: 2.3 },
-  { nombre: 'Servientrega', guias: 3892, entregadas: 3543, retrasos: 234, tasaExito: 91.0, tiempoProm: 2.8 },
-  { nombre: 'Interrapidísimo', guias: 2987, entregadas: 2689, retrasos: 198, tasaExito: 90.0, tiempoProm: 3.1 },
-  { nombre: 'Envía', guias: 2156, entregadas: 1897, retrasos: 178, tasaExito: 88.0, tiempoProm: 3.5 },
+  {
+    nombre: 'Coordinadora',
+    guias: 4521,
+    entregadas: 4298,
+    retrasos: 156,
+    tasaExito: 95.1,
+    tiempoProm: 2.3,
+  },
+  {
+    nombre: 'Servientrega',
+    guias: 3892,
+    entregadas: 3543,
+    retrasos: 234,
+    tasaExito: 91.0,
+    tiempoProm: 2.8,
+  },
+  {
+    nombre: 'Interrapidísimo',
+    guias: 2987,
+    entregadas: 2689,
+    retrasos: 198,
+    tasaExito: 90.0,
+    tiempoProm: 3.1,
+  },
+  {
+    nombre: 'Envía',
+    guias: 2156,
+    entregadas: 1897,
+    retrasos: 178,
+    tasaExito: 88.0,
+    tiempoProm: 3.5,
+  },
   { nombre: 'TCC', guias: 1845, entregadas: 1567, retrasos: 189, tasaExito: 85.0, tiempoProm: 4.2 },
 ];
 
@@ -168,21 +201,34 @@ export const AsistenteTab: React.FC<AsistenteTabProps> = ({ shipments }) => {
   const guiasData = useMemo(() => {
     if (shipments.length === 0) return [];
 
-    return shipments.map(s => ({
+    return shipments.map((s) => ({
       id: s.id,
-      estado: s.status === ShipmentStatus.DELIVERED ? 'ENTREGADO' :
-              s.status === ShipmentStatus.IN_TRANSIT ? 'EN TRÁNSITO' :
-              s.status === ShipmentStatus.IN_OFFICE ? 'EN OFICINA' :
-              s.status === ShipmentStatus.ISSUE ? 'NOVEDAD' :
-              s.status === ShipmentStatus.OUT_FOR_DELIVERY ? 'EN REPARTO' :
-              s.status === ShipmentStatus.RETURNED ? 'DEVUELTO' : 'PENDIENTE',
+      estado:
+        s.status === ShipmentStatus.DELIVERED
+          ? 'ENTREGADO'
+          : s.status === ShipmentStatus.IN_TRANSIT
+            ? 'EN TRÁNSITO'
+            : s.status === ShipmentStatus.IN_OFFICE
+              ? 'EN OFICINA'
+              : s.status === ShipmentStatus.ISSUE
+                ? 'NOVEDAD'
+                : s.status === ShipmentStatus.OUT_FOR_DELIVERY
+                  ? 'EN REPARTO'
+                  : s.status === ShipmentStatus.RETURNED
+                    ? 'DEVUELTO'
+                    : 'PENDIENTE',
       transportadora: s.carrier,
       ciudad: s.detailedInfo?.destination || 'N/A',
       telefono: s.phone,
       diasTransito: s.detailedInfo?.daysInTransit || 0,
-      nivelRiesgo: (s.detailedInfo?.daysInTransit || 0) >= 5 ? 'CRITICO' as const :
-                   (s.detailedInfo?.daysInTransit || 0) >= 3 ? 'ALTO' as const :
-                   (s.detailedInfo?.daysInTransit || 0) >= 2 ? 'MEDIO' as const : 'BAJO' as const,
+      nivelRiesgo:
+        (s.detailedInfo?.daysInTransit || 0) >= 5
+          ? ('CRITICO' as const)
+          : (s.detailedInfo?.daysInTransit || 0) >= 3
+            ? ('ALTO' as const)
+            : (s.detailedInfo?.daysInTransit || 0) >= 2
+              ? ('MEDIO' as const)
+              : ('BAJO' as const),
       ultimaActualizacion: s.lastUpdate || new Date().toISOString(),
     }));
   }, [shipments]);
@@ -202,18 +248,44 @@ Estoy aquí para ayudarte con todo lo relacionado a tu logística. Puedo:
 🧠 **Usar Machine Learning** para predecir retrasos
 📋 **Guiarte en los procesos** de LITPER
 
-${shipments.length > 0
-  ? `\n**📊 Datos cargados:** ${shipments.length} guías activas`
-  : '\n**⚠️ Sin datos:** Carga guías para análisis completo'}
+${
+  shipments.length > 0
+    ? `\n**📊 Datos cargados:** ${shipments.length} guías activas`
+    : '\n**⚠️ Sin datos:** Carga guías para análisis completo'
+}
 
 **¿Qué necesitas saber?** Usa las categorías de abajo o escribe tu pregunta.`,
       timestamp: new Date(),
       tipo: 'texto',
       acciones: [
-        { id: 'guias-hoy', label: 'Ver guías', icon: '📦', comando: 'Muéstrame todas las guías', tipo: 'info' },
-        { id: 'resumen', label: 'Resumen del día', icon: '📊', comando: 'Dame el resumen del día', tipo: 'info' },
-        { id: 'novedades', label: 'Novedades', icon: '🚨', comando: 'Lista las novedades activas', tipo: 'info' },
-        { id: 'ml', label: 'Sistema ML', icon: '🧠', comando: 'Estado del sistema ML', tipo: 'info' },
+        {
+          id: 'guias-hoy',
+          label: 'Ver guías',
+          icon: '📦',
+          comando: 'Muéstrame todas las guías',
+          tipo: 'info',
+        },
+        {
+          id: 'resumen',
+          label: 'Resumen del día',
+          icon: '📊',
+          comando: 'Dame el resumen del día',
+          tipo: 'info',
+        },
+        {
+          id: 'novedades',
+          label: 'Novedades',
+          icon: '🚨',
+          comando: 'Lista las novedades activas',
+          tipo: 'info',
+        },
+        {
+          id: 'ml',
+          label: 'Sistema ML',
+          icon: '🧠',
+          comando: 'Estado del sistema ML',
+          tipo: 'info',
+        },
       ],
     };
     setMensajes([welcomeMessage]);
@@ -225,71 +297,116 @@ ${shipments.length > 0
   }, [mensajes]);
 
   // Generar respuesta inteligente
-  const generateResponse = useCallback(async (userMessage: string): Promise<MensajeChat> => {
-    const lowerMessage = userMessage.toLowerCase();
-    await new Promise(resolve => setTimeout(resolve, 600 + Math.random() * 800));
+  const generateResponse = useCallback(
+    async (userMessage: string): Promise<MensajeChat> => {
+      const lowerMessage = userMessage.toLowerCase();
+      await new Promise((resolve) => setTimeout(resolve, 600 + Math.random() * 800));
 
-    const guiasRetrasadas = detectarGuiasRetrasadas(shipments);
-    const patrones = detectarPatrones(shipments);
+      const guiasRetrasadas = detectarGuiasRetrasadas(shipments);
+      const patrones = detectarPatrones(shipments);
 
-    const total = shipments.length || guiasData.length || 8;
-    const entregadas = shipments.filter(s => s.status === ShipmentStatus.DELIVERED).length ||
-                       guiasData.filter(g => g.estado === 'ENTREGADO').length || 1;
-    const enReparto = shipments.filter(s => s.status === ShipmentStatus.OUT_FOR_DELIVERY).length ||
-                      guiasData.filter(g => g.estado === 'EN REPARTO').length || 2;
-    const enOficina = shipments.filter(s => s.status === ShipmentStatus.IN_OFFICE).length ||
-                      guiasData.filter(g => g.estado === 'EN OFICINA').length || 1;
-    const novedades = shipments.filter(s => s.status === ShipmentStatus.ISSUE).length ||
-                      guiasData.filter(g => g.estado === 'NOVEDAD').length || 2;
-    const enTransito = shipments.filter(s => s.status === ShipmentStatus.IN_TRANSIT).length ||
-                       guiasData.filter(g => g.estado === 'EN TRÁNSITO').length || 1;
-    const criticas = guiasRetrasadas.filter(g => g.nivelAlerta === 'CRITICO').length ||
-                     guiasData.filter(g => g.nivelRiesgo === 'CRITICO').length || 1;
+      const total = shipments.length || guiasData.length || 8;
+      const entregadas =
+        shipments.filter((s) => s.status === ShipmentStatus.DELIVERED).length ||
+        guiasData.filter((g) => g.estado === 'ENTREGADO').length ||
+        1;
+      const enReparto =
+        shipments.filter((s) => s.status === ShipmentStatus.OUT_FOR_DELIVERY).length ||
+        guiasData.filter((g) => g.estado === 'EN REPARTO').length ||
+        2;
+      const enOficina =
+        shipments.filter((s) => s.status === ShipmentStatus.IN_OFFICE).length ||
+        guiasData.filter((g) => g.estado === 'EN OFICINA').length ||
+        1;
+      const novedades =
+        shipments.filter((s) => s.status === ShipmentStatus.ISSUE).length ||
+        guiasData.filter((g) => g.estado === 'NOVEDAD').length ||
+        2;
+      const enTransito =
+        shipments.filter((s) => s.status === ShipmentStatus.IN_TRANSIT).length ||
+        guiasData.filter((g) => g.estado === 'EN TRÁNSITO').length ||
+        1;
+      const criticas =
+        guiasRetrasadas.filter((g) => g.nivelAlerta === 'CRITICO').length ||
+        guiasData.filter((g) => g.nivelRiesgo === 'CRITICO').length ||
+        1;
 
-    // ============ CONSULTAS DE GUÍAS ============
-    if (lowerMessage.includes('guía') || lowerMessage.includes('guias') || lowerMessage.includes('lista')) {
-      // Guías retrasadas
-      if (lowerMessage.includes('retrasad') || lowerMessage.includes('retraso') || lowerMessage.includes('demora')) {
-        const retrasadas = guiasData.filter(g =>
-          g.diasTransito > 3 || g.nivelRiesgo === 'ALTO' || g.nivelRiesgo === 'CRITICO'
-        );
-        return {
-          id: uuidv4(),
-          rol: 'assistant',
-          contenido: `⚠️ **GUÍAS RETRASADAS (${retrasadas.length})**
+      // ============ CONSULTAS DE GUÍAS ============
+      if (
+        lowerMessage.includes('guía') ||
+        lowerMessage.includes('guias') ||
+        lowerMessage.includes('lista')
+      ) {
+        // Guías retrasadas
+        if (
+          lowerMessage.includes('retrasad') ||
+          lowerMessage.includes('retraso') ||
+          lowerMessage.includes('demora')
+        ) {
+          const retrasadas = guiasData.filter(
+            (g) => g.diasTransito > 3 || g.nivelRiesgo === 'ALTO' || g.nivelRiesgo === 'CRITICO'
+          );
+          return {
+            id: uuidv4(),
+            rol: 'assistant',
+            contenido: `⚠️ **GUÍAS RETRASADAS (${retrasadas.length})**
 
 Estas guías necesitan atención prioritaria:
 
-${retrasadas.slice(0, 6).map((g, i) => `**${i + 1}. ${g.id}**
+${retrasadas
+  .slice(0, 6)
+  .map(
+    (g, i) => `**${i + 1}. ${g.id}**
    • Estado: ${g.estado} | ${g.transportadora}
    • Ciudad: ${g.ciudad} | ${g.diasTransito} días
    • Riesgo: ${g.nivelRiesgo === 'CRITICO' ? '🔴' : g.nivelRiesgo === 'ALTO' ? '🟠' : '🟡'} ${g.nivelRiesgo}
-`).join('\n')}
+`
+  )
+  .join('\n')}
 
 💡 **Acción recomendada:** Contacta primero las guías CRÍTICAS (🔴)`,
-          timestamp: new Date(),
-          tipo: 'guias',
-          datos: { guias: retrasadas, filtro: 'retrasadas' },
-          acciones: [
-            { id: 'contactar-todos', label: 'Contactar clientes', icon: '📞', comando: 'Cómo contactar clientes', tipo: 'accion' },
-            { id: 'crear-tickets', label: 'Crear tickets', icon: '🎫', comando: 'Cómo crear tickets', tipo: 'accion' },
-          ],
-          confianza: 0.95,
-        };
-      }
+            timestamp: new Date(),
+            tipo: 'guias',
+            datos: { guias: retrasadas, filtro: 'retrasadas' },
+            acciones: [
+              {
+                id: 'contactar-todos',
+                label: 'Contactar clientes',
+                icon: '📞',
+                comando: 'Cómo contactar clientes',
+                tipo: 'accion',
+              },
+              {
+                id: 'crear-tickets',
+                label: 'Crear tickets',
+                icon: '🎫',
+                comando: 'Cómo crear tickets',
+                tipo: 'accion',
+              },
+            ],
+            confianza: 0.95,
+          };
+        }
 
-      // Guías en reparto
-      if (lowerMessage.includes('reparto')) {
-        const guiasReparto = guiasData.filter(g => g.estado === 'EN REPARTO');
-        return {
-          id: uuidv4(),
-          rol: 'assistant',
-          contenido: `🚚 **GUÍAS EN REPARTO HOY (${guiasReparto.length || enReparto})**
+        // Guías en reparto
+        if (lowerMessage.includes('reparto')) {
+          const guiasReparto = guiasData.filter((g) => g.estado === 'EN REPARTO');
+          return {
+            id: uuidv4(),
+            rol: 'assistant',
+            contenido: `🚚 **GUÍAS EN REPARTO HOY (${guiasReparto.length || enReparto})**
 
-${guiasReparto.slice(0, 5).map((g, i) => `**${i + 1}. ${g.id}**
+${
+  guiasReparto
+    .slice(0, 5)
+    .map(
+      (g, i) => `**${i + 1}. ${g.id}**
    • ${g.transportadora} → ${g.ciudad}
    • Día ${g.diasTransito} de tránsito
-`).join('\n') || 'Las guías en reparto se entregarán hoy. El mensajero intentará la entrega.'}
+`
+    )
+    .join('\n') || 'Las guías en reparto se entregarán hoy. El mensajero intentará la entrega.'
+}
 
 **📋 PLANTILLA PARA NOTIFICAR:**
 \`\`\`
@@ -297,51 +414,76 @@ Hola! Tu pedido ya está en camino. El mensajero
 intentará la entrega hoy. Estate pendiente de
 nuestro contacto. Guía: [NUMERO]
 \`\`\``,
-          timestamp: new Date(),
-          tipo: 'guias',
-          acciones: [
-            { id: 'notificar', label: 'Ver plantilla', icon: '📝', comando: 'Muéstrame las plantillas', tipo: 'info' },
-          ],
-          confianza: 0.98,
-        };
-      }
+            timestamp: new Date(),
+            tipo: 'guias',
+            acciones: [
+              {
+                id: 'notificar',
+                label: 'Ver plantilla',
+                icon: '📝',
+                comando: 'Muéstrame las plantillas',
+                tipo: 'info',
+              },
+            ],
+            confianza: 0.98,
+          };
+        }
 
-      // Guías en oficina
-      if (lowerMessage.includes('oficina')) {
-        const guiasOficina = guiasData.filter(g => g.estado === 'EN OFICINA');
-        return {
-          id: uuidv4(),
-          rol: 'assistant',
-          contenido: `📍 **GUÍAS EN OFICINA (${guiasOficina.length || enOficina})**
+        // Guías en oficina
+        if (lowerMessage.includes('oficina')) {
+          const guiasOficina = guiasData.filter((g) => g.estado === 'EN OFICINA');
+          return {
+            id: uuidv4(),
+            rol: 'assistant',
+            contenido: `📍 **GUÍAS EN OFICINA (${guiasOficina.length || enOficina})**
 
 Estas guías esperan ser reclamadas por el cliente.
 
-${guiasOficina.slice(0, 5).map((g, i) => `**${i + 1}. ${g.id}**
+${
+  guiasOficina
+    .slice(0, 5)
+    .map(
+      (g, i) => `**${i + 1}. ${g.id}**
    • ${g.transportadora} | ${g.ciudad}
    • ${g.diasTransito} días en oficina
    • ${g.diasTransito > 3 ? '⚠️ URGENTE - próximo a devolución' : '✅ Tiempo normal'}
-`).join('\n') || 'No hay guías en oficina actualmente.'}
+`
+    )
+    .join('\n') || 'No hay guías en oficina actualmente.'
+}
 
 **📋 REGLAS:**
 - 0-3 días: Enviar plantilla "Reclamo en Oficina"
 - +3 días: Enviar plantilla "No Oficina" + imagen de guía
 - +7 días: Se devuelve automáticamente`,
-          timestamp: new Date(),
-          tipo: 'guias',
-          acciones: [
-            { id: 'plantilla-oficina', label: 'Ver plantilla', icon: '📝', comando: 'Dame la plantilla de oficina', tipo: 'info' },
-            { id: 'llamar', label: 'Proceso de llamada', icon: '📞', comando: 'Cómo llamar al cliente', tipo: 'info' },
-          ],
-          confianza: 0.97,
-        };
-      }
+            timestamp: new Date(),
+            tipo: 'guias',
+            acciones: [
+              {
+                id: 'plantilla-oficina',
+                label: 'Ver plantilla',
+                icon: '📝',
+                comando: 'Dame la plantilla de oficina',
+                tipo: 'info',
+              },
+              {
+                id: 'llamar',
+                label: 'Proceso de llamada',
+                icon: '📞',
+                comando: 'Cómo llamar al cliente',
+                tipo: 'info',
+              },
+            ],
+            confianza: 0.97,
+          };
+        }
 
-      // Todas las guías
-      const totalGuias = guiasData.length || total;
-      return {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: `📦 **LISTADO DE GUÍAS (${totalGuias} total)**
+        // Todas las guías
+        const totalGuias = guiasData.length || total;
+        return {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: `📦 **LISTADO DE GUÍAS (${totalGuias} total)**
 
 | Estado | Cantidad | Porcentaje |
 |--------|----------|------------|
@@ -355,24 +497,47 @@ ${guiasOficina.slice(0, 5).map((g, i) => `**${i + 1}. ${g.id}**
 **📈 Tasa de entrega:** ${((entregadas / totalGuias) * 100).toFixed(1)}%
 
 ¿Qué estado quieres ver en detalle?`,
-        timestamp: new Date(),
-        tipo: 'estadisticas',
-        acciones: [
-          { id: 'retrasadas', label: 'Ver retrasadas', icon: '⚠️', comando: 'Muéstrame las guías retrasadas', tipo: 'info' },
-          { id: 'reparto', label: 'Ver en reparto', icon: '🚚', comando: 'Muéstrame las guías en reparto', tipo: 'info' },
-          { id: 'oficina', label: 'Ver en oficina', icon: '📍', comando: 'Muéstrame las guías en oficina', tipo: 'info' },
-        ],
-        confianza: 0.99,
-      };
-    }
+          timestamp: new Date(),
+          tipo: 'estadisticas',
+          acciones: [
+            {
+              id: 'retrasadas',
+              label: 'Ver retrasadas',
+              icon: '⚠️',
+              comando: 'Muéstrame las guías retrasadas',
+              tipo: 'info',
+            },
+            {
+              id: 'reparto',
+              label: 'Ver en reparto',
+              icon: '🚚',
+              comando: 'Muéstrame las guías en reparto',
+              tipo: 'info',
+            },
+            {
+              id: 'oficina',
+              label: 'Ver en oficina',
+              icon: '📍',
+              comando: 'Muéstrame las guías en oficina',
+              tipo: 'info',
+            },
+          ],
+          confianza: 0.99,
+        };
+      }
 
-    // ============ CONSULTAS DE NOVEDADES ============
-    if (lowerMessage.includes('novedad')) {
-      if (lowerMessage.includes('cómo') || lowerMessage.includes('como') || lowerMessage.includes('resolver') || lowerMessage.includes('proceso')) {
-        return {
-          id: uuidv4(),
-          rol: 'assistant',
-          contenido: `📋 **PROCESO DE NOVEDADES (P02)**
+      // ============ CONSULTAS DE NOVEDADES ============
+      if (lowerMessage.includes('novedad')) {
+        if (
+          lowerMessage.includes('cómo') ||
+          lowerMessage.includes('como') ||
+          lowerMessage.includes('resolver') ||
+          lowerMessage.includes('proceso')
+        ) {
+          return {
+            id: uuidv4(),
+            rol: 'assistant',
+            contenido: `📋 **PROCESO DE NOVEDADES (P02)**
 
 **FLUJO DE RESOLUCIÓN:**
 
@@ -413,26 +578,45 @@ ${guiasOficina.slice(0, 5).map((g, i) => `**${i + 1}. ${g.id}**
 ❌ NUNCA devolver sin autorización del supervisor
 ✅ SIEMPRE verificar Chatea ANTES de llamar
 ✅ SIEMPRE registrar TODO en Dropi`,
-          timestamp: new Date(),
-          tipo: 'texto',
-          acciones: [
-            { id: 'ver-novedades', label: 'Ver novedades', icon: '🚨', comando: 'Lista las novedades activas', tipo: 'info' },
-            { id: 'ejemplo', label: 'Ver ejemplo', icon: '💡', comando: 'Dame un ejemplo de novedad', tipo: 'info' },
-          ],
-          confianza: 0.96,
-        };
-      }
+            timestamp: new Date(),
+            tipo: 'texto',
+            acciones: [
+              {
+                id: 'ver-novedades',
+                label: 'Ver novedades',
+                icon: '🚨',
+                comando: 'Lista las novedades activas',
+                tipo: 'info',
+              },
+              {
+                id: 'ejemplo',
+                label: 'Ver ejemplo',
+                icon: '💡',
+                comando: 'Dame un ejemplo de novedad',
+                tipo: 'info',
+              },
+            ],
+            confianza: 0.96,
+          };
+        }
 
-      const guiasNovedad = guiasData.filter(g => g.estado === 'NOVEDAD');
-      return {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: `🚨 **NOVEDADES ACTIVAS (${guiasNovedad.length || novedades})**
+        const guiasNovedad = guiasData.filter((g) => g.estado === 'NOVEDAD');
+        return {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: `🚨 **NOVEDADES ACTIVAS (${guiasNovedad.length || novedades})**
 
-${guiasNovedad.slice(0, 5).map((g, i) => `**${i + 1}. ${g.id}**
+${
+  guiasNovedad
+    .slice(0, 5)
+    .map(
+      (g, i) => `**${i + 1}. ${g.id}**
    • ${g.transportadora} → ${g.ciudad}
    • ${g.diasTransito} días | Riesgo: ${g.nivelRiesgo}
-`).join('\n') || `Hay ${novedades} novedades que requieren atención.`}
+`
+    )
+    .join('\n') || `Hay ${novedades} novedades que requieren atención.`
+}
 
 **📋 ORDEN DE ATENCIÓN:**
 1. Primero las más antiguas (más días)
@@ -440,25 +624,42 @@ ${guiasNovedad.slice(0, 5).map((g, i) => `**${i + 1}. ${g.id}**
 3. Registrar TODA solución en Dropi
 
 ¿Quieres ver el proceso de resolución?`,
-        timestamp: new Date(),
-        tipo: 'guias',
-        acciones: [
-          { id: 'proceso', label: 'Ver proceso', icon: '📋', comando: 'Cómo resolver una novedad', tipo: 'info' },
-          { id: 'plantillas', label: 'Ver plantillas', icon: '📝', comando: 'Muéstrame las plantillas', tipo: 'info' },
-        ],
-        confianza: 0.94,
-      };
-    }
+          timestamp: new Date(),
+          tipo: 'guias',
+          acciones: [
+            {
+              id: 'proceso',
+              label: 'Ver proceso',
+              icon: '📋',
+              comando: 'Cómo resolver una novedad',
+              tipo: 'info',
+            },
+            {
+              id: 'plantillas',
+              label: 'Ver plantillas',
+              icon: '📝',
+              comando: 'Muéstrame las plantillas',
+              tipo: 'info',
+            },
+          ],
+          confianza: 0.94,
+        };
+      }
 
-    // ============ CONSULTAS DE RESUMEN/ESTADÍSTICAS ============
-    if (lowerMessage.includes('resumen') || lowerMessage.includes('estadística') || lowerMessage.includes('métrica') || lowerMessage.includes('día')) {
-      const totalGuias = shipments.length || 8;
-      const tasaEntrega = totalGuias > 0 ? ((entregadas / totalGuias) * 100).toFixed(1) : '85.0';
+      // ============ CONSULTAS DE RESUMEN/ESTADÍSTICAS ============
+      if (
+        lowerMessage.includes('resumen') ||
+        lowerMessage.includes('estadística') ||
+        lowerMessage.includes('métrica') ||
+        lowerMessage.includes('día')
+      ) {
+        const totalGuias = shipments.length || 8;
+        const tasaEntrega = totalGuias > 0 ? ((entregadas / totalGuias) * 100).toFixed(1) : '85.0';
 
-      return {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: `📊 **RESUMEN DEL DÍA**
+        return {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: `📊 **RESUMEN DEL DÍA**
 *${new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}*
 
 | Métrica | Valor | Estado |
@@ -477,26 +678,49 @@ ${guiasNovedad.slice(0, 5).map((g, i) => `**${i + 1}. ${g.id}**
 ${criticas > 0 ? `\n⚠️ **ALERTA:** ${criticas} guía(s) CRÍTICAS requieren atención INMEDIATA.` : '✅ No hay alertas críticas.'}
 
 ${patrones.length > 0 ? `\n🔍 **PATRONES:** ${patrones.length} detectados` : ''}`,
-        timestamp: new Date(),
-        tipo: 'estadisticas',
-        acciones: [
-          { id: 'criticas', label: 'Ver críticas', icon: '🔴', comando: 'Muéstrame las guías críticas', tipo: 'info' },
-          { id: 'patrones', label: 'Ver patrones', icon: '🔍', comando: 'Muéstrame los patrones detectados', tipo: 'info' },
-          { id: 'transportadoras', label: 'Transportadoras', icon: '🚚', comando: 'Ranking de transportadoras', tipo: 'info' },
-        ],
-        confianza: 0.98,
-      };
-    }
+          timestamp: new Date(),
+          tipo: 'estadisticas',
+          acciones: [
+            {
+              id: 'criticas',
+              label: 'Ver críticas',
+              icon: '🔴',
+              comando: 'Muéstrame las guías críticas',
+              tipo: 'info',
+            },
+            {
+              id: 'patrones',
+              label: 'Ver patrones',
+              icon: '🔍',
+              comando: 'Muéstrame los patrones detectados',
+              tipo: 'info',
+            },
+            {
+              id: 'transportadoras',
+              label: 'Transportadoras',
+              icon: '🚚',
+              comando: 'Ranking de transportadoras',
+              tipo: 'info',
+            },
+          ],
+          confianza: 0.98,
+        };
+      }
 
-    // ============ CONSULTAS DE TRANSPORTADORAS ============
-    if (lowerMessage.includes('transportadora') || lowerMessage.includes('mejor') || lowerMessage.includes('ranking') || lowerMessage.includes('rendimiento')) {
-      const mejor = TRANSPORTADORAS_STATS[0];
-      const peor = TRANSPORTADORAS_STATS[TRANSPORTADORAS_STATS.length - 1];
+      // ============ CONSULTAS DE TRANSPORTADORAS ============
+      if (
+        lowerMessage.includes('transportadora') ||
+        lowerMessage.includes('mejor') ||
+        lowerMessage.includes('ranking') ||
+        lowerMessage.includes('rendimiento')
+      ) {
+        const mejor = TRANSPORTADORAS_STATS[0];
+        const peor = TRANSPORTADORAS_STATS[TRANSPORTADORAS_STATS.length - 1];
 
-      return {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: `🚚 **RANKING DE TRANSPORTADORAS**
+        return {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: `🚚 **RANKING DE TRANSPORTADORAS**
 
 | # | Transportadora | Guías | Éxito | Tiempo |
 |---|----------------|-------|-------|--------|
@@ -512,21 +736,33 @@ ${patrones.length > 0 ? `\n🔍 **PATRONES:** ${patrones.length} detectados` : '
 - **A mejorar:** ${peor.nombre} (${peor.tasaExito}%)
 
 Prioriza envíos importantes con ${mejor.nombre} para mejor resultado.`,
-        timestamp: new Date(),
-        tipo: 'tabla',
-        acciones: [
-          { id: 'comparar', label: 'Comparar', icon: '📊', comando: 'Compara las transportadoras', tipo: 'info' },
-        ],
-        confianza: 0.97,
-      };
-    }
+          timestamp: new Date(),
+          tipo: 'tabla',
+          acciones: [
+            {
+              id: 'comparar',
+              label: 'Comparar',
+              icon: '📊',
+              comando: 'Compara las transportadoras',
+              tipo: 'info',
+            },
+          ],
+          confianza: 0.97,
+        };
+      }
 
-    // ============ CONSULTAS DE ML ============
-    if (lowerMessage.includes('machine') || lowerMessage.includes('ml') || lowerMessage.includes('predicción') || lowerMessage.includes('prediccion') || lowerMessage.includes('modelo')) {
-      return {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: `🧠 **SISTEMA DE MACHINE LEARNING**
+      // ============ CONSULTAS DE ML ============
+      if (
+        lowerMessage.includes('machine') ||
+        lowerMessage.includes('ml') ||
+        lowerMessage.includes('predicción') ||
+        lowerMessage.includes('prediccion') ||
+        lowerMessage.includes('modelo')
+      ) {
+        return {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: `🧠 **SISTEMA DE MACHINE LEARNING**
 
 **📊 MODELOS ACTIVOS:**
 
@@ -537,34 +773,65 @@ Prioriza envíos importantes con ${mejor.nombre} para mejor resultado.`,
 | Optimizador Rutas | 89.1% | ${mlActivo ? '🟢 Activo' : '🔴 Off'} | 456 hoy |
 
 **🔍 PATRONES DETECTADOS:**
-${patrones.slice(0, 3).map(p => `• ${p.titulo} (${p.impacto})`).join('\n') || '• Sin patrones críticos detectados'}
+${
+  patrones
+    .slice(0, 3)
+    .map((p) => `• ${p.titulo} (${p.impacto})`)
+    .join('\n') || '• Sin patrones críticos detectados'
+}
 
 **💡 INSIGHT ML:**
 El sistema predice que implementando acciones proactivas se puede mejorar la tasa de entrega en un **15%**.
 
 Estado del sistema: ${mlActivo ? '✅ **ACTIVO** - Procesando en tiempo real' : '⚠️ **INACTIVO** - Actívalo para predicciones'}`,
-        timestamp: new Date(),
-        tipo: 'reporte',
-        acciones: [
-          { id: 'patrones', label: 'Ver patrones', icon: '🔍', comando: 'Muéstrame los patrones detectados', tipo: 'info' },
-          { id: 'predecir', label: 'Predecir guía', icon: '🎯', comando: 'Predice el riesgo de mis guías', tipo: 'info' },
-        ],
-        confianza: 0.93,
-      };
-    }
+          timestamp: new Date(),
+          tipo: 'reporte',
+          acciones: [
+            {
+              id: 'patrones',
+              label: 'Ver patrones',
+              icon: '🔍',
+              comando: 'Muéstrame los patrones detectados',
+              tipo: 'info',
+            },
+            {
+              id: 'predecir',
+              label: 'Predecir guía',
+              icon: '🎯',
+              comando: 'Predice el riesgo de mis guías',
+              tipo: 'info',
+            },
+          ],
+          confianza: 0.93,
+        };
+      }
 
-    // ============ CONSULTAS DE PATRONES ============
-    if (lowerMessage.includes('patrón') || lowerMessage.includes('patron') || lowerMessage.includes('detecta')) {
-      return {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: `🔍 **PATRONES DETECTADOS**
+      // ============ CONSULTAS DE PATRONES ============
+      if (
+        lowerMessage.includes('patrón') ||
+        lowerMessage.includes('patron') ||
+        lowerMessage.includes('detecta')
+      ) {
+        return {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: `🔍 **PATRONES DETECTADOS**
 
-${patrones.length > 0 ? patrones.slice(0, 4).map(p => `**${p.impacto === 'CRITICO' ? '🔴' : p.impacto === 'ALTO' ? '🟠' : '🟡'} ${p.titulo}**
+${
+  patrones.length > 0
+    ? patrones
+        .slice(0, 4)
+        .map(
+          (
+            p
+          ) => `**${p.impacto === 'CRITICO' ? '🔴' : p.impacto === 'ALTO' ? '🟠' : '🟡'} ${p.titulo}**
 • ${p.descripcion}
 • Afecta: ${p.datosApoyo.cantidad} guías (${p.datosApoyo.porcentaje.toFixed(1)}%)
 • Acción: ${p.recomendacion}
-`).join('\n') : `**Análisis basado en datos del sistema:**
+`
+        )
+        .join('\n')
+    : `**Análisis basado en datos del sistema:**
 
 🔴 **CRÍTICO - Acumulación oficinas**
 • ${enOficina} guías en oficina
@@ -576,25 +843,32 @@ ${patrones.length > 0 ? patrones.slice(0, 4).map(p => `**${p.impacto === 'CRITIC
 • Acción: Resolver en orden de antigüedad
 
 🟢 **BUENO - Tránsito normal**
-• ${enTransito + enReparto} guías fluyendo bien`}
+• ${enTransito + enReparto} guías fluyendo bien`
+}
 
 **💡 INSIGHT ML:**
 Resolviendo los patrones críticos se puede reducir la tasa de devolución hasta en un **40%**.`,
-        timestamp: new Date(),
-        tipo: 'lista',
-        acciones: [
-          { id: 'resolver', label: 'Resolver críticos', icon: '🔴', comando: 'Cómo resolver el patrón crítico', tipo: 'accion' },
-        ],
-        confianza: 0.91,
-      };
-    }
+          timestamp: new Date(),
+          tipo: 'lista',
+          acciones: [
+            {
+              id: 'resolver',
+              label: 'Resolver críticos',
+              icon: '🔴',
+              comando: 'Cómo resolver el patrón crítico',
+              tipo: 'accion',
+            },
+          ],
+          confianza: 0.91,
+        };
+      }
 
-    // ============ PLANTILLAS ============
-    if (lowerMessage.includes('plantilla')) {
-      return {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: `📝 **PLANTILLAS DE MENSAJES**
+      // ============ PLANTILLAS ============
+      if (lowerMessage.includes('plantilla')) {
+        return {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: `📝 **PLANTILLAS DE MENSAJES**
 
 **1. REPARTO** 🚚
 \`\`\`
@@ -630,21 +904,27 @@ Hola! Necesitamos coordinar la entrega de tu pedido.
 \`\`\`
 
 Copia la plantilla que necesites reemplazando [DATOS].`,
-        timestamp: new Date(),
-        tipo: 'lista',
-        acciones: [
-          { id: 'proceso-chat', label: 'Proceso de chat', icon: '💬', comando: 'Explícame el proceso de chat en vivo', tipo: 'info' },
-        ],
-        confianza: 0.99,
-      };
-    }
+          timestamp: new Date(),
+          tipo: 'lista',
+          acciones: [
+            {
+              id: 'proceso-chat',
+              label: 'Proceso de chat',
+              icon: '💬',
+              comando: 'Explícame el proceso de chat en vivo',
+              tipo: 'info',
+            },
+          ],
+          confianza: 0.99,
+        };
+      }
 
-    // ============ PROCESOS ============
-    if (lowerMessage.includes('proceso') || lowerMessage.includes('flujo')) {
-      return {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: `📋 **PROCESOS LITPER DISPONIBLES**
+      // ============ PROCESOS ============
+      if (lowerMessage.includes('proceso') || lowerMessage.includes('flujo')) {
+        return {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: `📋 **PROCESOS LITPER DISPONIBLES**
 
 | ID | Proceso | Automatizable | Prioridad |
 |----|---------|---------------|-----------|
@@ -657,22 +937,40 @@ Copia la plantilla que necesites reemplazando [DATOS].`,
 **META PRINCIPAL:** 85% tasa de entrega
 
 Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas conocer?`,
-        timestamp: new Date(),
-        tipo: 'lista',
-        acciones: [
-          { id: 'p01', label: 'P01: Seguimiento', icon: '📦', comando: 'Explícame el proceso de seguimiento', tipo: 'info' },
-          { id: 'p02', label: 'P02: Novedades', icon: '🚨', comando: 'Explícame el proceso de novedades', tipo: 'info' },
-          { id: 'p04', label: 'P04: Chat', icon: '💬', comando: 'Explícame el proceso de chat', tipo: 'info' },
-        ],
-        confianza: 0.99,
-      };
-    }
+          timestamp: new Date(),
+          tipo: 'lista',
+          acciones: [
+            {
+              id: 'p01',
+              label: 'P01: Seguimiento',
+              icon: '📦',
+              comando: 'Explícame el proceso de seguimiento',
+              tipo: 'info',
+            },
+            {
+              id: 'p02',
+              label: 'P02: Novedades',
+              icon: '🚨',
+              comando: 'Explícame el proceso de novedades',
+              tipo: 'info',
+            },
+            {
+              id: 'p04',
+              label: 'P04: Chat',
+              icon: '💬',
+              comando: 'Explícame el proceso de chat',
+              tipo: 'info',
+            },
+          ],
+          confianza: 0.99,
+        };
+      }
 
-    // ============ RESPUESTA POR DEFECTO ============
-    return {
-      id: uuidv4(),
-      rol: 'assistant',
-      contenido: `Entiendo tu consulta. Déjame ayudarte.
+      // ============ RESPUESTA POR DEFECTO ============
+      return {
+        id: uuidv4(),
+        rol: 'assistant',
+        contenido: `Entiendo tu consulta. Déjame ayudarte.
 
 **📊 Estado actual:**
 • ${total} guías activas
@@ -688,16 +986,30 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
 📋 **Procesos:** "Ver procesos" / "Plantillas"
 
 ¿Qué información específica necesitas?`,
-      timestamp: new Date(),
-      tipo: 'texto',
-      acciones: [
-        { id: 'guias', label: 'Ver guías', icon: '📦', comando: 'Lista las guías', tipo: 'info' },
-        { id: 'resumen', label: 'Resumen', icon: '📊', comando: 'Dame el resumen del día', tipo: 'info' },
-        { id: 'novedades', label: 'Novedades', icon: '🚨', comando: 'Lista las novedades', tipo: 'info' },
-      ],
-      confianza: 0.85,
-    };
-  }, [shipments, guiasData, mlActivo]);
+        timestamp: new Date(),
+        tipo: 'texto',
+        acciones: [
+          { id: 'guias', label: 'Ver guías', icon: '📦', comando: 'Lista las guías', tipo: 'info' },
+          {
+            id: 'resumen',
+            label: 'Resumen',
+            icon: '📊',
+            comando: 'Dame el resumen del día',
+            tipo: 'info',
+          },
+          {
+            id: 'novedades',
+            label: 'Novedades',
+            icon: '🚨',
+            comando: 'Lista las novedades',
+            tipo: 'info',
+          },
+        ],
+        confianza: 0.85,
+      };
+    },
+    [shipments, guiasData, mlActivo]
+  );
 
   // Enviar mensaje
   const handleSend = async (message?: string) => {
@@ -711,21 +1023,24 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
       timestamp: new Date(),
     };
 
-    setMensajes(prev => [...prev, userMessage]);
+    setMensajes((prev) => [...prev, userMessage]);
     setInputValue('');
     setMostrarSugerencias(false);
     setIsLoading(true);
 
     try {
       const response = await generateResponse(texto);
-      setMensajes(prev => [...prev, response]);
+      setMensajes((prev) => [...prev, response]);
     } catch (error) {
-      setMensajes(prev => [...prev, {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: '❌ Error procesando solicitud. Intenta de nuevo.',
-        timestamp: new Date(),
-      }]);
+      setMensajes((prev) => [
+        ...prev,
+        {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: '❌ Error procesando solicitud. Intenta de nuevo.',
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -734,16 +1049,30 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
   // Limpiar chat
   const handleClear = () => {
     if (confirm('¿Limpiar conversación?')) {
-      setMensajes([{
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: '¡Conversación reiniciada! 🔄 ¿En qué puedo ayudarte?',
-        timestamp: new Date(),
-        acciones: [
-          { id: 'guias', label: 'Ver guías', icon: '📦', comando: 'Lista las guías', tipo: 'info' },
-          { id: 'resumen', label: 'Resumen', icon: '📊', comando: 'Dame el resumen del día', tipo: 'info' },
-        ],
-      }]);
+      setMensajes([
+        {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: '¡Conversación reiniciada! 🔄 ¿En qué puedo ayudarte?',
+          timestamp: new Date(),
+          acciones: [
+            {
+              id: 'guias',
+              label: 'Ver guías',
+              icon: '📦',
+              comando: 'Lista las guías',
+              tipo: 'info',
+            },
+            {
+              id: 'resumen',
+              label: 'Resumen',
+              icon: '📊',
+              comando: 'Dame el resumen del día',
+              tipo: 'info',
+            },
+          ],
+        },
+      ]);
       setMostrarSugerencias(true);
     }
   };
@@ -756,7 +1085,10 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
           <div className="max-w-[85%] bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl rounded-br-sm px-4 py-3 shadow-lg">
             <p className="text-sm">{mensaje.contenido}</p>
             <p className="text-xs text-white/60 mt-1 text-right">
-              {new Date(mensaje.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+              {new Date(mensaje.timestamp).toLocaleTimeString('es-CO', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
             </p>
           </div>
         </div>
@@ -770,7 +1102,9 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
             <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
               <Bot className="w-4 h-4 text-white" />
             </div>
-            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">Asistente LITPER</span>
+            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+              Asistente LITPER
+            </span>
             {mensaje.confianza && (
               <span className="text-xs text-gray-400 ml-auto">
                 {(mensaje.confianza * 100).toFixed(0)}%
@@ -787,7 +1121,7 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
             <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
               <p className="text-xs text-gray-400 mb-2">Acciones sugeridas:</p>
               <div className="flex flex-wrap gap-2">
-                {mensaje.acciones.map(accion => (
+                {mensaje.acciones.map((accion) => (
                   <button
                     key={accion.id}
                     onClick={() => handleSend(accion.comando)}
@@ -806,7 +1140,10 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
           )}
 
           <p className="text-xs text-gray-400 mt-2 text-right">
-            {new Date(mensaje.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+            {new Date(mensaje.timestamp).toLocaleTimeString('es-CO', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
           </p>
         </div>
       </div>
@@ -825,7 +1162,9 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
             <h2 className="text-xl font-bold">Asistente IA LITPER</h2>
             <p className="text-xs text-indigo-200 flex items-center gap-2">
               <span className="flex items-center gap-1">
-                <span className={`w-2 h-2 rounded-full ${mlActivo ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+                <span
+                  className={`w-2 h-2 rounded-full ${mlActivo ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}
+                />
                 ML {mlActivo ? 'Activo' : 'Off'}
               </span>
               <span>•</span>
@@ -859,12 +1198,16 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
       {/* Categorías */}
       {mostrarSugerencias && (
         <div className="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-100 dark:border-indigo-800">
-          <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-2">CONSULTAS RÁPIDAS:</p>
+          <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-2">
+            CONSULTAS RÁPIDAS:
+          </p>
           <div className="flex flex-wrap gap-2">
-            {CATEGORIAS_CONSULTA.map(cat => (
+            {CATEGORIAS_CONSULTA.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => setCategoriaSeleccionada(cat.id === categoriaSeleccionada ? null : cat.id)}
+                onClick={() =>
+                  setCategoriaSeleccionada(cat.id === categoriaSeleccionada ? null : cat.id)
+                }
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   categoriaSeleccionada === cat.id
                     ? `bg-gradient-to-r ${cat.color} text-white shadow-lg`
@@ -879,15 +1222,17 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
 
           {categoriaSeleccionada && (
             <div className="mt-2 flex flex-wrap gap-2">
-              {CATEGORIAS_CONSULTA.find(c => c.id === categoriaSeleccionada)?.ejemplos.map((ejemplo, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleSend(ejemplo)}
-                  className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors"
-                >
-                  "{ejemplo}"
-                </button>
-              ))}
+              {CATEGORIAS_CONSULTA.find((c) => c.id === categoriaSeleccionada)?.ejemplos.map(
+                (ejemplo, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSend(ejemplo)}
+                    className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors"
+                  >
+                    "{ejemplo}"
+                  </button>
+                )
+              )}
             </div>
           )}
         </div>
@@ -916,7 +1261,11 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
             onClick={() => setMostrarSugerencias(!mostrarSugerencias)}
             className="p-2 text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
           >
-            {mostrarSugerencias ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            {mostrarSugerencias ? (
+              <ChevronUp className="w-5 h-5" />
+            ) : (
+              <ChevronDown className="w-5 h-5" />
+            )}
           </button>
 
           <input
@@ -939,9 +1288,7 @@ Cada proceso tiene su flujo detallado con reglas y plantillas. ¿Cuál necesitas
           </button>
         </div>
 
-        <p className="text-xs text-center text-gray-400 mt-2">
-          Claude AI + ML • Enter para enviar
-        </p>
+        <p className="text-xs text-center text-gray-400 mt-2">Claude AI + ML • Enter para enviar</p>
       </div>
     </div>
   );

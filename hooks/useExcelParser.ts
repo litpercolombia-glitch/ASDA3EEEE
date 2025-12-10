@@ -55,9 +55,7 @@ export function useExcelParser() {
         const missingColumns = requiredColumns.filter((col) => !(col in firstRow));
 
         if (missingColumns.length > 0) {
-          throw new Error(
-            `Faltan columnas en "Tasa_Entregas": ${missingColumns.join(', ')}`
-          );
+          throw new Error(`Faltan columnas en "Tasa_Entregas": ${missingColumns.join(', ')}`);
         }
       }
 
@@ -68,9 +66,7 @@ export function useExcelParser() {
         const missingColumns = requiredColumns.filter((col) => !(col in firstRow));
 
         if (missingColumns.length > 0) {
-          throw new Error(
-            `Faltan columnas en "Tiempo_Promedio": ${missingColumns.join(', ')}`
-          );
+          throw new Error(`Faltan columnas en "Tiempo_Promedio": ${missingColumns.join(', ')}`);
         }
       }
 

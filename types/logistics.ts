@@ -9,7 +9,22 @@ import { Shipment, ShipmentStatus, CarrierName } from '../types';
 // TAB NAVIGATION TYPES
 // ============================================
 
-export type MainTabNew = 'seguimiento' | 'demanda' | 'gamificacion' | 'inteligencia-logistica' | 'semaforo' | 'predicciones' | 'asistente' | 'ml' | 'procesos-litper' | 'ciudad-agentes' | 'mcp-connections' | 'conexiones' | 'admin' | 'reporte' | 'aprendizaje-ia';
+export type MainTabNew =
+  | 'seguimiento'
+  | 'demanda'
+  | 'gamificacion'
+  | 'inteligencia-logistica'
+  | 'semaforo'
+  | 'predicciones'
+  | 'asistente'
+  | 'ml'
+  | 'procesos-litper'
+  | 'ciudad-agentes'
+  | 'mcp-connections'
+  | 'conexiones'
+  | 'admin'
+  | 'reporte'
+  | 'aprendizaje-ia';
 
 // ============================================
 // GUIA RETRASADA (DELAYED SHIPMENT)
@@ -60,9 +75,9 @@ export interface TasaEntregaRow {
   ciudad: string;
   transportadora: string;
   devoluciones: number;
-  devolucionesPct: number;  // Percentage of returns
+  devolucionesPct: number; // Percentage of returns
   entregas: number;
-  entregasPct: number;      // Percentage of deliveries
+  entregasPct: number; // Percentage of deliveries
   total: number;
 }
 
@@ -88,11 +103,11 @@ export interface TiempoPromedioRow {
  * Used during Excel parsing before normalization
  */
 export interface PivotTableRawRow {
-  etiqueta: string;              // "CIUDAD" or "  TRANSPORTADORA"
-  devolucionesCant?: number;     // DEVOLUCION count
-  devolucionesPct?: number;      // DEVOLUCION percentage
-  entregasCant?: number;         // ENTREGADO count
-  entregasPct?: number;          // ENTREGADO percentage
+  etiqueta: string; // "CIUDAD" or "  TRANSPORTADORA"
+  devolucionesCant?: number; // DEVOLUCION count
+  devolucionesPct?: number; // DEVOLUCION percentage
+  entregasCant?: number; // ENTREGADO count
+  entregasPct?: number; // ENTREGADO percentage
   total?: number;
 }
 

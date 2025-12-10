@@ -129,29 +129,88 @@ const MAX_SESIONES = 30;
 // =====================================
 // HELPERS
 // =====================================
-const getStatusColor = (status: string): { bg: string; text: string; border: string; dot: string } => {
+const getStatusColor = (
+  status: string
+): { bg: string; text: string; border: string; dot: string } => {
   const statusLower = status.toLowerCase();
   if (statusLower.includes('entregado') || statusLower === 'delivered') {
-    return { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400', border: 'border-emerald-200 dark:border-emerald-800', dot: 'bg-emerald-500' };
+    return {
+      bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+      text: 'text-emerald-700 dark:text-emerald-400',
+      border: 'border-emerald-200 dark:border-emerald-800',
+      dot: 'bg-emerald-500',
+    };
   }
-  if (statusLower.includes('reparto') || statusLower.includes('tránsito') || statusLower.includes('transito') || statusLower.includes('viajando')) {
-    return { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-400', border: 'border-blue-200 dark:border-blue-800', dot: 'bg-blue-500' };
+  if (
+    statusLower.includes('reparto') ||
+    statusLower.includes('tránsito') ||
+    statusLower.includes('transito') ||
+    statusLower.includes('viajando')
+  ) {
+    return {
+      bg: 'bg-blue-50 dark:bg-blue-900/20',
+      text: 'text-blue-700 dark:text-blue-400',
+      border: 'border-blue-200 dark:border-blue-800',
+      dot: 'bg-blue-500',
+    };
   }
-  if (statusLower.includes('oficina') || statusLower.includes('centro') || statusLower.includes('recogido')) {
-    return { bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-700 dark:text-purple-400', border: 'border-purple-200 dark:border-purple-800', dot: 'bg-purple-500' };
+  if (
+    statusLower.includes('oficina') ||
+    statusLower.includes('centro') ||
+    statusLower.includes('recogido')
+  ) {
+    return {
+      bg: 'bg-purple-50 dark:bg-purple-900/20',
+      text: 'text-purple-700 dark:text-purple-400',
+      border: 'border-purple-200 dark:border-purple-800',
+      dot: 'bg-purple-500',
+    };
   }
-  if (statusLower.includes('novedad') || statusLower.includes('devuelto') || statusLower.includes('rechaz') || statusLower.includes('alerta')) {
-    return { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-400', border: 'border-red-200 dark:border-red-800', dot: 'bg-red-500' };
+  if (
+    statusLower.includes('novedad') ||
+    statusLower.includes('devuelto') ||
+    statusLower.includes('rechaz') ||
+    statusLower.includes('alerta')
+  ) {
+    return {
+      bg: 'bg-red-50 dark:bg-red-900/20',
+      text: 'text-red-700 dark:text-red-400',
+      border: 'border-red-200 dark:border-red-800',
+      dot: 'bg-red-500',
+    };
   }
   if (statusLower.includes('pendiente') || statusLower.includes('reclamo')) {
-    return { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-400', border: 'border-amber-200 dark:border-amber-800', dot: 'bg-amber-500' };
+    return {
+      bg: 'bg-amber-50 dark:bg-amber-900/20',
+      text: 'text-amber-700 dark:text-amber-400',
+      border: 'border-amber-200 dark:border-amber-800',
+      dot: 'bg-amber-500',
+    };
   }
-  return { bg: 'bg-slate-50 dark:bg-slate-800', text: 'text-slate-700 dark:text-slate-400', border: 'border-slate-200 dark:border-slate-700', dot: 'bg-slate-400' };
+  return {
+    bg: 'bg-slate-50 dark:bg-slate-800',
+    text: 'text-slate-700 dark:text-slate-400',
+    border: 'border-slate-200 dark:border-slate-700',
+    dot: 'bg-slate-400',
+  };
 };
 
 const formatDateForSession = (date: Date): string => {
   const day = date.getDate().toString().padStart(2, '0');
-  const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const months = [
+    'Ene',
+    'Feb',
+    'Mar',
+    'Abr',
+    'May',
+    'Jun',
+    'Jul',
+    'Ago',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dic',
+  ];
   const month = months[date.getMonth()];
   const year = date.getFullYear();
   return `${day}-${month}-${year}`;
@@ -164,7 +223,20 @@ const formatDateTime = (dateStr: string): string => {
       const datePart = parts[0];
       const timePart = parts[1];
       const [year, month, day] = datePart.split('-');
-      const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      const months = [
+        'ene',
+        'feb',
+        'mar',
+        'abr',
+        'may',
+        'jun',
+        'jul',
+        'ago',
+        'sep',
+        'oct',
+        'nov',
+        'dic',
+      ];
       return `${day} ${months[parseInt(month) - 1]}, ${timePart}`;
     }
     return dateStr;
@@ -193,7 +265,7 @@ const parseExcelFile = async (file: File): Promise<GuiaLogistica[]> => {
         // Buscar índices de columnas
         const findColumnIndex = (names: string[]) => {
           return headers.findIndex((h: any) =>
-            names.some(name => String(h).toLowerCase().includes(name.toLowerCase()))
+            names.some((name) => String(h).toLowerCase().includes(name.toLowerCase()))
           );
         };
 
@@ -213,13 +285,19 @@ const parseExcelFile = async (file: File): Promise<GuiaLogistica[]> => {
           if (!numeroGuia) continue;
 
           const estadoActual = estadoIdx >= 0 ? String(row[estadoIdx] || 'Pendiente') : 'Pendiente';
-          const transportadora = transportadoraIdx >= 0 ? String(row[transportadoraIdx] || 'Desconocido') : 'Desconocido';
-          const ciudadDestino = ciudadIdx >= 0 ? String(row[ciudadIdx] || 'Desconocido') : 'Desconocido';
+          const transportadora =
+            transportadoraIdx >= 0
+              ? String(row[transportadoraIdx] || 'Desconocido')
+              : 'Desconocido';
+          const ciudadDestino =
+            ciudadIdx >= 0 ? String(row[ciudadIdx] || 'Desconocido') : 'Desconocido';
           const diasTranscurridos = diasIdx >= 0 ? parseInt(String(row[diasIdx] || '0')) || 0 : 0;
           const telefono = telefonoIdx >= 0 ? String(row[telefonoIdx] || '') : '';
-          const tieneNovedad = novedadIdx >= 0 ? Boolean(row[novedadIdx]) :
-            estadoActual.toLowerCase().includes('novedad') ||
-            estadoActual.toLowerCase().includes('devuelto');
+          const tieneNovedad =
+            novedadIdx >= 0
+              ? Boolean(row[novedadIdx])
+              : estadoActual.toLowerCase().includes('novedad') ||
+                estadoActual.toLowerCase().includes('devuelto');
 
           guias.push({
             numeroGuia,
@@ -250,10 +328,13 @@ const parseExcelFile = async (file: File): Promise<GuiaLogistica[]> => {
 // =====================================
 const parseTrackingText = (text: string): GuiaLogistica[] => {
   const guias: GuiaLogistica[] = [];
-  const blocks = text.split('======================================').filter(b => b.trim());
+  const blocks = text.split('======================================').filter((b) => b.trim());
 
   for (const block of blocks) {
-    const lines = block.trim().split('\n').filter(l => l.trim());
+    const lines = block
+      .trim()
+      .split('\n')
+      .filter((l) => l.trim());
     if (lines.length < 3) continue;
 
     let numeroGuia = '';
@@ -283,7 +364,11 @@ const parseTrackingText = (text: string): GuiaLogistica[] => {
           ciudadOrigen = rutaMatch[1].trim();
           ciudadDestino = rutaMatch[2].trim();
         }
-      } else if (trimmedLine.includes('(') && trimmedLine.includes(')') && !trimmedLine.match(/^\d{4}-\d{2}-\d{2}/)) {
+      } else if (
+        trimmedLine.includes('(') &&
+        trimmedLine.includes(')') &&
+        !trimmedLine.match(/^\d{4}-\d{2}-\d{2}/)
+      ) {
         transportadora = trimmedLine.split('(')[0].trim();
       } else if (trimmedLine.match(/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/)) {
         const eventoMatch = trimmedLine.match(/^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})\s+(.+?)\s+(.+)$/);
@@ -298,10 +383,11 @@ const parseTrackingText = (text: string): GuiaLogistica[] => {
     }
 
     if (numeroGuia) {
-      const tieneNovedad = estadoPaquete.toLowerCase().includes('alerta') ||
-                          estadoPaquete.toLowerCase().includes('novedad') ||
-                          estadoPaquete.toLowerCase().includes('devuelto') ||
-                          eventos.some(e => e.descripcion.toLowerCase().includes('devuelto'));
+      const tieneNovedad =
+        estadoPaquete.toLowerCase().includes('alerta') ||
+        estadoPaquete.toLowerCase().includes('novedad') ||
+        estadoPaquete.toLowerCase().includes('devuelto') ||
+        eventos.some((e) => e.descripcion.toLowerCase().includes('devuelto'));
 
       guias.push({
         numeroGuia,
@@ -346,45 +432,50 @@ const saveSesiones = (sesiones: Sesion[]) => {
 // COMPARACIÓN DE SESIONES
 // =====================================
 const compararSesiones = (anterior: Sesion, actual: Sesion): ComparacionSesiones => {
-  const guiasAnteriores = new Map(anterior.guias.map(g => [g.numeroGuia, g]));
-  const guiasActuales = new Map(actual.guias.map(g => [g.numeroGuia, g]));
+  const guiasAnteriores = new Map(anterior.guias.map((g) => [g.numeroGuia, g]));
+  const guiasActuales = new Map(actual.guias.map((g) => [g.numeroGuia, g]));
 
   // Guías nuevas (no existían ayer)
-  const guiasNuevas = actual.guias.filter(g => !guiasAnteriores.has(g.numeroGuia));
+  const guiasNuevas = actual.guias.filter((g) => !guiasAnteriores.has(g.numeroGuia));
 
   // Guías desaparecidas (existían ayer pero no hoy)
   const guiasDesaparecidas = anterior.guias
-    .filter(g => !guiasActuales.has(g.numeroGuia))
-    .map(g => g.numeroGuia);
+    .filter((g) => !guiasActuales.has(g.numeroGuia))
+    .map((g) => g.numeroGuia);
 
   // Cambios de estado
   const cambiosEstado: ComparacionSesiones['cambiosEstado'] = [];
   const guiasEstancadas: GuiaLogistica[] = [];
   const guiasEntregadasHoy: GuiaLogistica[] = [];
 
-  actual.guias.forEach(guiaActual => {
+  actual.guias.forEach((guiaActual) => {
     const guiaAnterior = guiasAnteriores.get(guiaActual.numeroGuia);
     if (guiaAnterior) {
       if (guiaAnterior.estadoActual !== guiaActual.estadoActual) {
-        const mejora = guiaActual.estadoActual.toLowerCase().includes('entregado') ||
-                       (guiaActual.estadoActual.toLowerCase().includes('reparto') &&
-                        !guiaAnterior.estadoActual.toLowerCase().includes('reparto'));
+        const mejora =
+          guiaActual.estadoActual.toLowerCase().includes('entregado') ||
+          (guiaActual.estadoActual.toLowerCase().includes('reparto') &&
+            !guiaAnterior.estadoActual.toLowerCase().includes('reparto'));
 
         cambiosEstado.push({
           guia: guiaActual,
           estadoAnterior: guiaAnterior.estadoActual,
           estadoActual: guiaActual.estadoActual,
-          mejora
+          mejora,
         });
 
-        if (guiaActual.estadoActual.toLowerCase().includes('entregado') &&
-            !guiaAnterior.estadoActual.toLowerCase().includes('entregado')) {
+        if (
+          guiaActual.estadoActual.toLowerCase().includes('entregado') &&
+          !guiaAnterior.estadoActual.toLowerCase().includes('entregado')
+        ) {
           guiasEntregadasHoy.push(guiaActual);
         }
       } else {
         // Mismo estado, verificar si está estancada
-        if (guiaActual.diasTranscurridos >= 2 &&
-            !guiaActual.estadoActual.toLowerCase().includes('entregado')) {
+        if (
+          guiaActual.diasTranscurridos >= 2 &&
+          !guiaActual.estadoActual.toLowerCase().includes('entregado')
+        ) {
           guiasEstancadas.push(guiaActual);
         }
       }
@@ -407,8 +498,8 @@ const compararSesiones = (anterior: Sesion, actual: Sesion): ComparacionSesiones
     metricas: {
       variacionEntregas,
       variacionNovedades,
-      variacionDevoluciones
-    }
+      variacionDevoluciones,
+    },
   };
 };
 
@@ -455,10 +546,12 @@ export const InteligenciaLogisticaTab: React.FC = () => {
     const fecha = new Date();
     const fechaStr = formatDateForSession(fecha);
 
-    const entregadas = guias.filter(g => g.estadoActual.toLowerCase().includes('entregado')).length;
-    const enReparto = guias.filter(g => g.estadoActual.toLowerCase().includes('reparto')).length;
-    const conNovedad = guias.filter(g => g.tieneNovedad).length;
-    const devueltas = guias.filter(g => g.estadoActual.toLowerCase().includes('devuelto')).length;
+    const entregadas = guias.filter((g) =>
+      g.estadoActual.toLowerCase().includes('entregado')
+    ).length;
+    const enReparto = guias.filter((g) => g.estadoActual.toLowerCase().includes('reparto')).length;
+    const conNovedad = guias.filter((g) => g.tieneNovedad).length;
+    const devueltas = guias.filter((g) => g.estadoActual.toLowerCase().includes('devuelto')).length;
 
     const nuevaSesion: Sesion = {
       id: `sesion-${Date.now()}`,
@@ -473,7 +566,7 @@ export const InteligenciaLogisticaTab: React.FC = () => {
       devueltas,
     };
 
-    setSesiones(prev => {
+    setSesiones((prev) => {
       const nuevasSesiones = [...prev, nuevaSesion];
       saveSesiones(nuevasSesiones);
 
@@ -547,7 +640,7 @@ export const InteligenciaLogisticaTab: React.FC = () => {
     setSesionActiva(sesion);
 
     // Buscar sesión anterior para comparación
-    const idx = sesiones.findIndex(s => s.id === sesion.id);
+    const idx = sesiones.findIndex((s) => s.id === sesion.id);
     if (idx > 0) {
       setComparacion(compararSesiones(sesiones[idx - 1], sesion));
     } else {
@@ -559,8 +652,8 @@ export const InteligenciaLogisticaTab: React.FC = () => {
   const eliminarSesion = (sesionId: string) => {
     if (!confirm('¿Eliminar esta sesión?')) return;
 
-    setSesiones(prev => {
-      const nuevas = prev.filter(s => s.id !== sesionId);
+    setSesiones((prev) => {
+      const nuevas = prev.filter((s) => s.id !== sesionId);
       saveSesiones(nuevas);
 
       if (sesionActiva?.id === sesionId) {
@@ -576,9 +669,12 @@ export const InteligenciaLogisticaTab: React.FC = () => {
 
   // Filtrado
   const guiasFiltradas = useMemo(() => {
-    return guiasActivas.filter(g => {
-      if (searchQuery && !g.numeroGuia.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          !g.ciudadDestino.toLowerCase().includes(searchQuery.toLowerCase())) {
+    return guiasActivas.filter((g) => {
+      if (
+        searchQuery &&
+        !g.numeroGuia.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !g.ciudadDestino.toLowerCase().includes(searchQuery.toLowerCase())
+      ) {
         return false;
       }
       if (filtroTransportadora !== 'ALL' && g.transportadora !== filtroTransportadora) return false;
@@ -596,10 +692,16 @@ export const InteligenciaLogisticaTab: React.FC = () => {
   // Estadísticas
   const estadisticas = useMemo(() => {
     const total = guiasActivas.length;
-    const entregadas = guiasActivas.filter(g => g.estadoActual.toLowerCase().includes('entregado')).length;
-    const enReparto = guiasActivas.filter(g => g.estadoActual.toLowerCase().includes('reparto')).length;
-    const conNovedad = guiasActivas.filter(g => g.tieneNovedad).length;
-    const devueltas = guiasActivas.filter(g => g.estadoActual.toLowerCase().includes('devuelto')).length;
+    const entregadas = guiasActivas.filter((g) =>
+      g.estadoActual.toLowerCase().includes('entregado')
+    ).length;
+    const enReparto = guiasActivas.filter((g) =>
+      g.estadoActual.toLowerCase().includes('reparto')
+    ).length;
+    const conNovedad = guiasActivas.filter((g) => g.tieneNovedad).length;
+    const devueltas = guiasActivas.filter((g) =>
+      g.estadoActual.toLowerCase().includes('devuelto')
+    ).length;
     const tasaEntrega = total > 0 ? Math.round((entregadas / total) * 100) : 0;
 
     return { total, entregadas, enReparto, conNovedad, devueltas, tasaEntrega };
@@ -607,7 +709,7 @@ export const InteligenciaLogisticaTab: React.FC = () => {
 
   // Transportadoras únicas
   const transportadoras = useMemo(() => {
-    return [...new Set(guiasActivas.map(g => g.transportadora))].filter(Boolean);
+    return [...new Set(guiasActivas.map((g) => g.transportadora))].filter(Boolean);
   }, [guiasActivas]);
 
   // Alertas basadas en comparación
@@ -622,9 +724,9 @@ export const InteligenciaLogisticaTab: React.FC = () => {
           tipo: 'critico',
           titulo: `${comparacion.guiasEstancadas.length} guías estancadas`,
           descripcion: 'Mismo estado por 2+ días',
-          guiasAfectadas: comparacion.guiasEstancadas.map(g => g.numeroGuia),
+          guiasAfectadas: comparacion.guiasEstancadas.map((g) => g.numeroGuia),
           accion: 'Gestionar urgente',
-          icono: AlertOctagon
+          icono: AlertOctagon,
         });
       }
 
@@ -635,30 +737,30 @@ export const InteligenciaLogisticaTab: React.FC = () => {
           tipo: 'info',
           titulo: `${comparacion.guiasEntregadasHoy.length} entregas nuevas`,
           descripcion: 'Guías entregadas desde ayer',
-          guiasAfectadas: comparacion.guiasEntregadasHoy.map(g => g.numeroGuia),
+          guiasAfectadas: comparacion.guiasEntregadasHoy.map((g) => g.numeroGuia),
           accion: 'Ver detalle',
-          icono: CheckCircle2
+          icono: CheckCircle2,
         });
       }
 
       // Guías con novedad que empeoraron
-      const empeoradas = comparacion.cambiosEstado.filter(c => !c.mejora);
+      const empeoradas = comparacion.cambiosEstado.filter((c) => !c.mejora);
       if (empeoradas.length > 0) {
         alertasGeneradas.push({
           id: 'empeoradas',
           tipo: 'urgente',
           titulo: `${empeoradas.length} guías empeoraron`,
           descripcion: 'Cambio de estado negativo',
-          guiasAfectadas: empeoradas.map(c => c.guia.numeroGuia),
+          guiasAfectadas: empeoradas.map((c) => c.guia.numeroGuia),
           accion: 'Investigar',
-          icono: TrendingDown
+          icono: TrendingDown,
         });
       }
     }
 
     // Alertas generales (sin comparación)
-    const sinMovimiento5Dias = guiasActivas.filter(g =>
-      g.diasTranscurridos > 5 && !g.estadoActual.toLowerCase().includes('entregado')
+    const sinMovimiento5Dias = guiasActivas.filter(
+      (g) => g.diasTranscurridos > 5 && !g.estadoActual.toLowerCase().includes('entregado')
     );
     if (sinMovimiento5Dias.length > 0) {
       alertasGeneradas.push({
@@ -666,9 +768,9 @@ export const InteligenciaLogisticaTab: React.FC = () => {
         tipo: 'critico',
         titulo: `${sinMovimiento5Dias.length} guías +5 días`,
         descripcion: 'Sin movimiento crítico',
-        guiasAfectadas: sinMovimiento5Dias.map(g => g.numeroGuia),
+        guiasAfectadas: sinMovimiento5Dias.map((g) => g.numeroGuia),
         accion: 'Contactar urgente',
-        icono: Clock
+        icono: Clock,
       });
     }
 
@@ -706,12 +808,12 @@ export const InteligenciaLogisticaTab: React.FC = () => {
     // Hoja 2: Cambios de Estado
     const cambios = [
       ['Guía', 'Estado Anterior', 'Estado Actual', 'Mejoró'],
-      ...comparacion.cambiosEstado.map(c => [
+      ...comparacion.cambiosEstado.map((c) => [
         c.guia.numeroGuia,
         c.estadoAnterior,
         c.estadoActual,
-        c.mejora ? 'Sí' : 'No'
-      ])
+        c.mejora ? 'Sí' : 'No',
+      ]),
     ];
     const wsCambios = XLSX.utils.aoa_to_sheet(cambios);
     XLSX.utils.book_append_sheet(wb, wsCambios, 'Cambios Estado');
@@ -719,13 +821,13 @@ export const InteligenciaLogisticaTab: React.FC = () => {
     // Hoja 3: Guías Estancadas
     const estancadas = [
       ['Guía', 'Estado', 'Días', 'Transportadora', 'Ciudad'],
-      ...comparacion.guiasEstancadas.map(g => [
+      ...comparacion.guiasEstancadas.map((g) => [
         g.numeroGuia,
         g.estadoActual,
         g.diasTranscurridos,
         g.transportadora,
-        g.ciudadDestino
-      ])
+        g.ciudadDestino,
+      ]),
     ];
     const wsEstancadas = XLSX.utils.aoa_to_sheet(estancadas);
     XLSX.utils.book_append_sheet(wb, wsEstancadas, 'Estancadas');
@@ -739,7 +841,9 @@ export const InteligenciaLogisticaTab: React.FC = () => {
   return (
     <div className="flex h-full">
       {/* Sidebar de Sesiones */}
-      <div className={`${showSidebar ? 'w-72' : 'w-0'} transition-all duration-300 overflow-hidden border-r border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-950`}>
+      <div
+        className={`${showSidebar ? 'w-72' : 'w-0'} transition-all duration-300 overflow-hidden border-r border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-950`}
+      >
         <div className="p-4 h-full flex flex-col">
           {/* Header Sidebar */}
           <div className="flex items-center justify-between mb-4">
@@ -764,45 +868,52 @@ export const InteligenciaLogisticaTab: React.FC = () => {
                 <p className="text-xs mt-1">Carga un archivo para crear una</p>
               </div>
             ) : (
-              sesiones.slice().reverse().map((sesion) => (
-                <button
-                  key={sesion.id}
-                  onClick={() => seleccionarSesion(sesion)}
-                  className={`w-full text-left p-3 rounded-xl transition-all ${
-                    sesionActiva?.id === sesion.id
-                      ? 'bg-cyan-500 text-white shadow-lg'
-                      : 'bg-white dark:bg-navy-900 hover:bg-cyan-50 dark:hover:bg-navy-800 border border-slate-200 dark:border-navy-700'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {sesionActiva?.id === sesion.id ? (
-                        <FolderOpen className="w-4 h-4" />
-                      ) : (
-                        <Folder className="w-4 h-4 text-slate-400" />
-                      )}
-                      <span className="font-medium text-sm">{sesion.nombre}</span>
+              sesiones
+                .slice()
+                .reverse()
+                .map((sesion) => (
+                  <button
+                    key={sesion.id}
+                    onClick={() => seleccionarSesion(sesion)}
+                    className={`w-full text-left p-3 rounded-xl transition-all ${
+                      sesionActiva?.id === sesion.id
+                        ? 'bg-cyan-500 text-white shadow-lg'
+                        : 'bg-white dark:bg-navy-900 hover:bg-cyan-50 dark:hover:bg-navy-800 border border-slate-200 dark:border-navy-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {sesionActiva?.id === sesion.id ? (
+                          <FolderOpen className="w-4 h-4" />
+                        ) : (
+                          <Folder className="w-4 h-4 text-slate-400" />
+                        )}
+                        <span className="font-medium text-sm">{sesion.nombre}</span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          eliminarSesion(sesion.id);
+                        }}
+                        className={`p-1 rounded hover:bg-white/20 ${
+                          sesionActiva?.id === sesion.id
+                            ? 'text-white/70'
+                            : 'text-slate-400 hover:text-red-500'
+                        }`}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        eliminarSesion(sesion.id);
-                      }}
-                      className={`p-1 rounded hover:bg-white/20 ${
-                        sesionActiva?.id === sesion.id ? 'text-white/70' : 'text-slate-400 hover:text-red-500'
-                      }`}
+                    <div
+                      className={`mt-2 text-xs ${sesionActiva?.id === sesion.id ? 'text-white/80' : 'text-slate-500'}`}
                     >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                  <div className={`mt-2 text-xs ${sesionActiva?.id === sesion.id ? 'text-white/80' : 'text-slate-500'}`}>
-                    <div className="flex justify-between">
-                      <span>{sesion.totalGuias} guías</span>
-                      <span>{sesion.entregadas} entregadas</span>
+                      <div className="flex justify-between">
+                        <span>{sesion.totalGuias} guías</span>
+                        <span>{sesion.entregadas} entregadas</span>
+                      </div>
                     </div>
-                  </div>
-                </button>
-              ))
+                  </button>
+                ))
             )}
           </div>
 
@@ -823,16 +934,18 @@ export const InteligenciaLogisticaTab: React.FC = () => {
                 onClick={() => setShowSidebar(!showSidebar)}
                 className="p-2 hover:bg-slate-100 dark:hover:bg-navy-800 rounded-lg transition-colors"
               >
-                {showSidebar ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                {showSidebar ? (
+                  <ChevronLeft className="w-5 h-5" />
+                ) : (
+                  <ChevronRight className="w-5 h-5" />
+                )}
               </button>
               <div>
                 <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
                   <BarChart3 className="w-6 h-6 text-cyan-500" />
                   Inteligencia Logística
                 </h2>
-                {sesionActiva && (
-                  <p className="text-sm text-slate-500">{sesionActiva.nombre}</p>
-                )}
+                {sesionActiva && <p className="text-sm text-slate-500">{sesionActiva.nombre}</p>}
               </div>
             </div>
 
@@ -861,22 +974,61 @@ export const InteligenciaLogisticaTab: React.FC = () => {
             <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
               {[
                 { label: 'Total', value: estadisticas.total, color: 'bg-slate-500', icon: Package },
-                { label: 'Entregadas', value: estadisticas.entregadas, color: 'bg-emerald-500', icon: CheckCircle2, delta: comparacion?.metricas.variacionEntregas },
-                { label: 'En Reparto', value: estadisticas.enReparto, color: 'bg-blue-500', icon: Truck },
-                { label: 'Con Novedad', value: estadisticas.conNovedad, color: 'bg-amber-500', icon: AlertTriangle, delta: comparacion?.metricas.variacionNovedades },
-                { label: 'Devueltas', value: estadisticas.devueltas, color: 'bg-red-500', icon: XCircle, delta: comparacion?.metricas.variacionDevoluciones },
-                { label: 'Tasa Entrega', value: `${estadisticas.tasaEntrega}%`, color: 'bg-purple-500', icon: Target },
+                {
+                  label: 'Entregadas',
+                  value: estadisticas.entregadas,
+                  color: 'bg-emerald-500',
+                  icon: CheckCircle2,
+                  delta: comparacion?.metricas.variacionEntregas,
+                },
+                {
+                  label: 'En Reparto',
+                  value: estadisticas.enReparto,
+                  color: 'bg-blue-500',
+                  icon: Truck,
+                },
+                {
+                  label: 'Con Novedad',
+                  value: estadisticas.conNovedad,
+                  color: 'bg-amber-500',
+                  icon: AlertTriangle,
+                  delta: comparacion?.metricas.variacionNovedades,
+                },
+                {
+                  label: 'Devueltas',
+                  value: estadisticas.devueltas,
+                  color: 'bg-red-500',
+                  icon: XCircle,
+                  delta: comparacion?.metricas.variacionDevoluciones,
+                },
+                {
+                  label: 'Tasa Entrega',
+                  value: `${estadisticas.tasaEntrega}%`,
+                  color: 'bg-purple-500',
+                  icon: Target,
+                },
               ].map((stat, idx) => (
-                <div key={idx} className="bg-slate-50 dark:bg-navy-800 rounded-xl p-3 border border-slate-200 dark:border-navy-700">
+                <div
+                  key={idx}
+                  className="bg-slate-50 dark:bg-navy-800 rounded-xl p-3 border border-slate-200 dark:border-navy-700"
+                >
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-slate-500">{stat.label}</span>
                     <stat.icon className={`w-4 h-4 ${stat.color.replace('bg-', 'text-')}`} />
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xl font-bold text-slate-800 dark:text-white">{stat.value}</span>
+                    <span className="text-xl font-bold text-slate-800 dark:text-white">
+                      {stat.value}
+                    </span>
                     {stat.delta !== undefined && stat.delta !== 0 && (
-                      <span className={`text-xs font-bold flex items-center ${stat.delta > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {stat.delta > 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                      <span
+                        className={`text-xs font-bold flex items-center ${stat.delta > 0 ? 'text-emerald-500' : 'text-red-500'}`}
+                      >
+                        {stat.delta > 0 ? (
+                          <ArrowUpRight className="w-3 h-3" />
+                        ) : (
+                          <ArrowDownRight className="w-3 h-3" />
+                        )}
                         {Math.abs(stat.delta)}
                       </span>
                     )}
@@ -895,12 +1047,15 @@ export const InteligenciaLogisticaTab: React.FC = () => {
               <h3 className="font-bold text-slate-800 dark:text-white">Alertas del Día</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-              {alertas.map(alerta => {
+              {alertas.map((alerta) => {
                 const Icon = alerta.icono;
                 const colors = {
-                  critico: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400',
-                  urgente: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400',
-                  atencion: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400',
+                  critico:
+                    'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400',
+                  urgente:
+                    'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400',
+                  atencion:
+                    'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400',
                   info: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400',
                 };
                 return (
@@ -939,8 +1094,10 @@ export const InteligenciaLogisticaTab: React.FC = () => {
                 className="px-4 py-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
               >
                 <option value="ALL">Todas las transportadoras</option>
-                {transportadoras.map(t => (
-                  <option key={t} value={t}>{t}</option>
+                {transportadoras.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
                 ))}
               </select>
               <select
@@ -969,8 +1126,8 @@ export const InteligenciaLogisticaTab: React.FC = () => {
                 Inteligencia Logística
               </h3>
               <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md">
-                Carga un archivo Excel o de texto para comenzar a analizar tus guías.
-                El sistema creará sesiones automáticamente y comparará los datos entre días.
+                Carga un archivo Excel o de texto para comenzar a analizar tus guías. El sistema
+                creará sesiones automáticamente y comparará los datos entre días.
               </p>
               <button
                 onClick={() => setShowUploadModal(true)}
@@ -990,18 +1147,32 @@ export const InteligenciaLogisticaTab: React.FC = () => {
               <table className="w-full">
                 <thead className="bg-slate-50 dark:bg-navy-800">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Guía</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Transportadora</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Destino</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Estado</th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Días</th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Acciones</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
+                      Guía
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
+                      Transportadora
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
+                      Destino
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
+                      Estado
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
+                      Días
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-navy-800">
                   {guiasFiltradas.map((guia) => {
                     const statusColors = getStatusColor(guia.estadoActual);
-                    const cambio = comparacion?.cambiosEstado.find(c => c.guia.numeroGuia === guia.numeroGuia);
+                    const cambio = comparacion?.cambiosEstado.find(
+                      (c) => c.guia.numeroGuia === guia.numeroGuia
+                    );
 
                     return (
                       <React.Fragment key={guia.numeroGuia}>
@@ -1017,11 +1188,13 @@ export const InteligenciaLogisticaTab: React.FC = () => {
                                 </span>
                               )}
                               {cambio && (
-                                <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${
-                                  cambio.mejora
-                                    ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-                                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                                }`}>
+                                <span
+                                  className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${
+                                    cambio.mejora
+                                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                                      : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                                  }`}
+                                >
                                   {cambio.mejora ? 'MEJORÓ' : 'EMPEORÓ'}
                                 </span>
                               )}
@@ -1034,19 +1207,29 @@ export const InteligenciaLogisticaTab: React.FC = () => {
                             {guia.ciudadDestino}
                           </td>
                           <td className="px-4 py-3">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusColors.bg} ${statusColors.text}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${statusColors.dot}`}></span>
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusColors.bg} ${statusColors.text}`}
+                            >
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${statusColors.dot}`}
+                              ></span>
                               {guia.estadoActual}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <span className={`font-bold ${guia.diasTranscurridos > 5 ? 'text-red-500' : guia.diasTranscurridos > 3 ? 'text-amber-500' : 'text-slate-600 dark:text-slate-400'}`}>
+                            <span
+                              className={`font-bold ${guia.diasTranscurridos > 5 ? 'text-red-500' : guia.diasTranscurridos > 3 ? 'text-amber-500' : 'text-slate-600 dark:text-slate-400'}`}
+                            >
                               {guia.diasTranscurridos}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center">
                             <button
-                              onClick={() => setExpandedGuia(expandedGuia === guia.numeroGuia ? null : guia.numeroGuia)}
+                              onClick={() =>
+                                setExpandedGuia(
+                                  expandedGuia === guia.numeroGuia ? null : guia.numeroGuia
+                                )
+                              }
                               className="p-2 hover:bg-slate-100 dark:hover:bg-navy-700 rounded-lg transition-colors"
                             >
                               <Eye className="w-4 h-4 text-slate-400" />
@@ -1070,17 +1253,23 @@ export const InteligenciaLogisticaTab: React.FC = () => {
                                           <span className="text-slate-500 dark:text-slate-400">
                                             {formatDateTime(evento.fecha)}
                                           </span>
-                                          <span className="mx-2 text-slate-300 dark:text-slate-600">•</span>
+                                          <span className="mx-2 text-slate-300 dark:text-slate-600">
+                                            •
+                                          </span>
                                           <span className="font-medium text-slate-700 dark:text-slate-300">
                                             {evento.ubicacion}
                                           </span>
-                                          <p className="text-slate-600 dark:text-slate-400">{evento.descripcion}</p>
+                                          <p className="text-slate-600 dark:text-slate-400">
+                                            {evento.descripcion}
+                                          </p>
                                         </div>
                                       </div>
                                     ))}
                                   </div>
                                 ) : (
-                                  <p className="text-slate-500 text-sm">No hay historial detallado disponible</p>
+                                  <p className="text-slate-500 text-sm">
+                                    No hay historial detallado disponible
+                                  </p>
                                 )}
                                 {cambio && (
                                   <div className="mt-4 p-3 bg-white dark:bg-navy-900 rounded-lg border border-slate-200 dark:border-navy-700">
@@ -1089,9 +1278,17 @@ export const InteligenciaLogisticaTab: React.FC = () => {
                                       Cambio vs Sesión Anterior
                                     </h5>
                                     <div className="flex items-center gap-3 text-sm">
-                                      <span className="text-slate-500">{cambio.estadoAnterior}</span>
+                                      <span className="text-slate-500">
+                                        {cambio.estadoAnterior}
+                                      </span>
                                       <ArrowRight className="w-4 h-4 text-slate-400" />
-                                      <span className={cambio.mejora ? 'text-emerald-600 font-bold' : 'text-red-600 font-bold'}>
+                                      <span
+                                        className={
+                                          cambio.mejora
+                                            ? 'text-emerald-600 font-bold'
+                                            : 'text-red-600 font-bold'
+                                        }
+                                      >
                                         {cambio.estadoActual}
                                       </span>
                                     </div>
@@ -1140,9 +1337,7 @@ export const InteligenciaLogisticaTab: React.FC = () => {
                   <span className="text-slate-600 dark:text-slate-400 font-medium">
                     Click para seleccionar archivo
                   </span>
-                  <span className="text-xs text-slate-400 mt-1">
-                    Formatos: .xlsx, .xls, .txt
-                  </span>
+                  <span className="text-xs text-slate-400 mt-1">Formatos: .xlsx, .xls, .txt</span>
                   <input
                     ref={fileInputRef}
                     type="file"

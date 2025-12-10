@@ -11,4 +11,11 @@ export { Button } from './Button';
 export { Modal } from './Modal';
 export { SessionManager } from './SessionManager';
 export { DocumentAnalysisPanel } from './DocumentAnalysisPanel';
-export { LoadHistoryPanel, LoadHistoryButton, saveLoadEntry, getLoadEntries, deleteLoadEntry, toggleFavorite } from './LoadHistoryPanel';
+export {
+  LoadHistoryPanel,
+  LoadHistoryButton,
+  saveLoadEntry,
+  getLoadEntries,
+  deleteLoadEntry,
+  toggleFavorite,
+} from './LoadHistoryPanel';

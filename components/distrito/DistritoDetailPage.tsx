@@ -126,7 +126,12 @@ const DISTRITOS_CONFIG: Record<string, DistritoConfig> = {
     colorBg: 'bg-red-50 dark:bg-red-900/20',
     descripcion: 'Manejo de novedades y resolución de problemas',
     procesos: ['P02: Novedades', 'P03: Reclamo en Oficina'],
-    capacidades: ['Resolver novedades', 'Gestionar reclamos', 'Escalar casos', 'Coordinar entregas'],
+    capacidades: [
+      'Resolver novedades',
+      'Gestionar reclamos',
+      'Escalar casos',
+      'Coordinar entregas',
+    ],
   },
   communications: {
     id: 'communications',
@@ -136,7 +141,12 @@ const DISTRITOS_CONFIG: Record<string, DistritoConfig> = {
     colorBg: 'bg-purple-50 dark:bg-purple-900/20',
     descripcion: 'Chat en vivo y comunicación con clientes',
     procesos: ['P04: Chat en Vivo'],
-    capacidades: ['Responder chats', 'Enviar plantillas', 'Gestionar tableros', 'Automatizar respuestas'],
+    capacidades: [
+      'Responder chats',
+      'Enviar plantillas',
+      'Gestionar tableros',
+      'Automatizar respuestas',
+    ],
   },
   quality: {
     id: 'quality',
@@ -146,7 +156,12 @@ const DISTRITOS_CONFIG: Record<string, DistritoConfig> = {
     colorBg: 'bg-teal-50 dark:bg-teal-900/20',
     descripcion: 'Control de calidad y garantías',
     procesos: ['Gestión de Garantías'],
-    capacidades: ['Verificar entregas', 'Procesar garantías', 'Validar evidencias', 'Auditar procesos'],
+    capacidades: [
+      'Verificar entregas',
+      'Procesar garantías',
+      'Validar evidencias',
+      'Auditar procesos',
+    ],
   },
   intelligence: {
     id: 'intelligence',
@@ -166,17 +181,67 @@ const DISTRITOS_CONFIG: Record<string, DistritoConfig> = {
     colorBg: 'bg-gray-50 dark:bg-gray-900/20',
     descripcion: 'Automatización de procesos',
     procesos: ['Workflows Automáticos'],
-    capacidades: ['Ejecutar flujos', 'Programar tareas', 'Integrar sistemas', 'Monitorear procesos'],
+    capacidades: [
+      'Ejecutar flujos',
+      'Programar tareas',
+      'Integrar sistemas',
+      'Monitorear procesos',
+    ],
   },
 };
 
 // Datos de ejemplo para demostración
 const GUIAS_EJEMPLO: GuiaInfo[] = [
-  { id: '8001234567890', estado: 'EN REPARTO', transportadora: 'Interrapidísimo', ciudad: 'Bogotá', telefono: '3001234567', diasTransito: 2, nivelRiesgo: 'BAJO', ultimaActualizacion: '2024-12-08 10:30' },
-  { id: '8009876543210', estado: 'EN OFICINA', transportadora: 'Coordinadora', ciudad: 'Medellín', telefono: '3109876543', diasTransito: 4, nivelRiesgo: 'ALTO', ultimaActualizacion: '2024-12-06 15:45' },
-  { id: '9001122334455', estado: 'NOVEDAD', transportadora: 'Envía', ciudad: 'Cali', telefono: '3201122334', diasTransito: 3, nivelRiesgo: 'MEDIO', ultimaActualizacion: '2024-12-07 09:15' },
-  { id: '7005566778899', estado: 'EN TRÁNSITO', transportadora: 'Servientrega', ciudad: 'Barranquilla', telefono: '3155566778', diasTransito: 1, nivelRiesgo: 'BAJO', ultimaActualizacion: '2024-12-08 08:00' },
-  { id: '8002233445566', estado: 'DEVUELTO', transportadora: 'TCC', ciudad: 'Cartagena', telefono: '3182233445', diasTransito: 7, nivelRiesgo: 'CRITICO', ultimaActualizacion: '2024-12-01 14:20' },
+  {
+    id: '8001234567890',
+    estado: 'EN REPARTO',
+    transportadora: 'Interrapidísimo',
+    ciudad: 'Bogotá',
+    telefono: '3001234567',
+    diasTransito: 2,
+    nivelRiesgo: 'BAJO',
+    ultimaActualizacion: '2024-12-08 10:30',
+  },
+  {
+    id: '8009876543210',
+    estado: 'EN OFICINA',
+    transportadora: 'Coordinadora',
+    ciudad: 'Medellín',
+    telefono: '3109876543',
+    diasTransito: 4,
+    nivelRiesgo: 'ALTO',
+    ultimaActualizacion: '2024-12-06 15:45',
+  },
+  {
+    id: '9001122334455',
+    estado: 'NOVEDAD',
+    transportadora: 'Envía',
+    ciudad: 'Cali',
+    telefono: '3201122334',
+    diasTransito: 3,
+    nivelRiesgo: 'MEDIO',
+    ultimaActualizacion: '2024-12-07 09:15',
+  },
+  {
+    id: '7005566778899',
+    estado: 'EN TRÁNSITO',
+    transportadora: 'Servientrega',
+    ciudad: 'Barranquilla',
+    telefono: '3155566778',
+    diasTransito: 1,
+    nivelRiesgo: 'BAJO',
+    ultimaActualizacion: '2024-12-08 08:00',
+  },
+  {
+    id: '8002233445566',
+    estado: 'DEVUELTO',
+    transportadora: 'TCC',
+    ciudad: 'Cartagena',
+    telefono: '3182233445',
+    diasTransito: 7,
+    nivelRiesgo: 'CRITICO',
+    ultimaActualizacion: '2024-12-01 14:20',
+  },
 ];
 
 // Componente principal
@@ -190,7 +255,9 @@ export const DistritoDetailPage: React.FC<DistritoDetailPageProps> = ({
   const [mensajes, setMensajes] = useState<MensajeChat[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [vistaActiva, setVistaActiva] = useState<'chat' | 'guias' | 'metricas' | 'procesos'>('chat');
+  const [vistaActiva, setVistaActiva] = useState<'chat' | 'guias' | 'metricas' | 'procesos'>(
+    'chat'
+  );
   const [filtroEstado, setFiltroEstado] = useState<string>('TODOS');
   const [guiasSeleccionadas, setGuiasSeleccionadas] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -203,10 +270,10 @@ export const DistritoDetailPage: React.FC<DistritoDetailPageProps> = ({
       contenido: `¡Hola! Soy el asistente IA del **${config.nombre}** ${config.icono}
 
 Estoy aquí para ayudarte con:
-${config.capacidades.map(c => `• ${c}`).join('\n')}
+${config.capacidades.map((c) => `• ${c}`).join('\n')}
 
 **Procesos que manejo:**
-${config.procesos.map(p => `📋 ${p}`).join('\n')}
+${config.procesos.map((p) => `📋 ${p}`).join('\n')}
 
 ¿En qué puedo ayudarte hoy?`,
       timestamp: new Date(),
@@ -223,45 +290,141 @@ ${config.procesos.map(p => `📋 ${p}`).join('\n')}
   // Obtener acciones rápidas según el distrito
   function getAccionesRapidas(distrito: string): AccionRapida[] {
     const accionesBase: AccionRapida[] = [
-      { id: 'listar-guias', label: 'Listar guías', icon: '📋', comando: 'Muéstrame todas las guías', tipo: 'info' },
-      { id: 'resumen', label: 'Resumen del día', icon: '📊', comando: '¿Cuál es el resumen del día?', tipo: 'info' },
+      {
+        id: 'listar-guias',
+        label: 'Listar guías',
+        icon: '📋',
+        comando: 'Muéstrame todas las guías',
+        tipo: 'info',
+      },
+      {
+        id: 'resumen',
+        label: 'Resumen del día',
+        icon: '📊',
+        comando: '¿Cuál es el resumen del día?',
+        tipo: 'info',
+      },
     ];
 
     const accionesPorDistrito: Record<string, AccionRapida[]> = {
       tracking: [
         ...accionesBase,
-        { id: 'retrasadas', label: 'Guías retrasadas', icon: '⚠️', comando: 'Muéstrame las guías retrasadas', tipo: 'info' },
-        { id: 'en-reparto', label: 'En reparto', icon: '🚚', comando: 'Lista las guías en reparto', tipo: 'info' },
+        {
+          id: 'retrasadas',
+          label: 'Guías retrasadas',
+          icon: '⚠️',
+          comando: 'Muéstrame las guías retrasadas',
+          tipo: 'info',
+        },
+        {
+          id: 'en-reparto',
+          label: 'En reparto',
+          icon: '🚚',
+          comando: 'Lista las guías en reparto',
+          tipo: 'info',
+        },
       ],
       crisis: [
         ...accionesBase,
-        { id: 'novedades', label: 'Ver novedades', icon: '🚨', comando: 'Muéstrame las novedades activas', tipo: 'info' },
-        { id: 'resolver', label: 'Resolver novedad', icon: '✅', comando: '¿Cómo resuelvo una novedad?', tipo: 'accion' },
+        {
+          id: 'novedades',
+          label: 'Ver novedades',
+          icon: '🚨',
+          comando: 'Muéstrame las novedades activas',
+          tipo: 'info',
+        },
+        {
+          id: 'resolver',
+          label: 'Resolver novedad',
+          icon: '✅',
+          comando: '¿Cómo resuelvo una novedad?',
+          tipo: 'accion',
+        },
       ],
       communications: [
         ...accionesBase,
-        { id: 'plantillas', label: 'Ver plantillas', icon: '📝', comando: 'Muéstrame las plantillas de mensaje', tipo: 'info' },
-        { id: 'sin-respuesta', label: 'Chats pendientes', icon: '💬', comando: 'Lista los chats sin respuesta', tipo: 'info' },
+        {
+          id: 'plantillas',
+          label: 'Ver plantillas',
+          icon: '📝',
+          comando: 'Muéstrame las plantillas de mensaje',
+          tipo: 'info',
+        },
+        {
+          id: 'sin-respuesta',
+          label: 'Chats pendientes',
+          icon: '💬',
+          comando: 'Lista los chats sin respuesta',
+          tipo: 'info',
+        },
       ],
       orders: [
         ...accionesBase,
-        { id: 'pendientes', label: 'Pedidos pendientes', icon: '🛒', comando: 'Lista los pedidos pendientes', tipo: 'info' },
-        { id: 'crear', label: 'Crear pedido', icon: '➕', comando: '¿Cómo creo un nuevo pedido?', tipo: 'accion' },
+        {
+          id: 'pendientes',
+          label: 'Pedidos pendientes',
+          icon: '🛒',
+          comando: 'Lista los pedidos pendientes',
+          tipo: 'info',
+        },
+        {
+          id: 'crear',
+          label: 'Crear pedido',
+          icon: '➕',
+          comando: '¿Cómo creo un nuevo pedido?',
+          tipo: 'accion',
+        },
       ],
       intelligence: [
         ...accionesBase,
-        { id: 'patrones', label: 'Ver patrones', icon: '🔍', comando: 'Muéstrame los patrones detectados', tipo: 'info' },
-        { id: 'prediccion', label: 'Predicción ML', icon: '🎯', comando: 'Dame predicciones de retraso', tipo: 'info' },
+        {
+          id: 'patrones',
+          label: 'Ver patrones',
+          icon: '🔍',
+          comando: 'Muéstrame los patrones detectados',
+          tipo: 'info',
+        },
+        {
+          id: 'prediccion',
+          label: 'Predicción ML',
+          icon: '🎯',
+          comando: 'Dame predicciones de retraso',
+          tipo: 'info',
+        },
       ],
       quality: [
         ...accionesBase,
-        { id: 'garantias', label: 'Garantías', icon: '🔄', comando: 'Lista las solicitudes de garantía', tipo: 'info' },
-        { id: 'verificar', label: 'Verificar entrega', icon: '✅', comando: '¿Cómo verifico una entrega?', tipo: 'accion' },
+        {
+          id: 'garantias',
+          label: 'Garantías',
+          icon: '🔄',
+          comando: 'Lista las solicitudes de garantía',
+          tipo: 'info',
+        },
+        {
+          id: 'verificar',
+          label: 'Verificar entrega',
+          icon: '✅',
+          comando: '¿Cómo verifico una entrega?',
+          tipo: 'accion',
+        },
       ],
       automation: [
         ...accionesBase,
-        { id: 'workflows', label: 'Ver workflows', icon: '⚙️', comando: 'Muéstrame los workflows activos', tipo: 'info' },
-        { id: 'ejecutar', label: 'Ejecutar tarea', icon: '▶️', comando: '¿Qué tareas puedo automatizar?', tipo: 'accion' },
+        {
+          id: 'workflows',
+          label: 'Ver workflows',
+          icon: '⚙️',
+          comando: 'Muéstrame los workflows activos',
+          tipo: 'info',
+        },
+        {
+          id: 'ejecutar',
+          label: 'Ejecutar tarea',
+          icon: '▶️',
+          comando: '¿Qué tareas puedo automatizar?',
+          tipo: 'accion',
+        },
       ],
     };
 
@@ -269,66 +432,73 @@ ${config.procesos.map(p => `📋 ${p}`).join('\n')}
   }
 
   // Generar respuesta del asistente
-  const generateResponse = useCallback(async (userMessage: string): Promise<MensajeChat> => {
-    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 700));
+  const generateResponse = useCallback(
+    async (userMessage: string): Promise<MensajeChat> => {
+      await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 700));
 
-    const lowerMessage = userMessage.toLowerCase();
+      const lowerMessage = userMessage.toLowerCase();
 
-    // Detectar intención y generar respuesta apropiada
-    if (lowerMessage.includes('guía') || lowerMessage.includes('guias') || lowerMessage.includes('lista')) {
-      if (lowerMessage.includes('retrasad') || lowerMessage.includes('retraso')) {
-        const retrasadas = GUIAS_EJEMPLO.filter(g => g.diasTransito > 3 || g.nivelRiesgo === 'ALTO' || g.nivelRiesgo === 'CRITICO');
+      // Detectar intención y generar respuesta apropiada
+      if (
+        lowerMessage.includes('guía') ||
+        lowerMessage.includes('guias') ||
+        lowerMessage.includes('lista')
+      ) {
+        if (lowerMessage.includes('retrasad') || lowerMessage.includes('retraso')) {
+          const retrasadas = GUIAS_EJEMPLO.filter(
+            (g) => g.diasTransito > 3 || g.nivelRiesgo === 'ALTO' || g.nivelRiesgo === 'CRITICO'
+          );
+          return {
+            id: uuidv4(),
+            rol: 'assistant',
+            contenido: `⚠️ **GUÍAS RETRASADAS (${retrasadas.length})**\n\nHaz clic en cualquier guía para ver más detalles o tomar acción:`,
+            timestamp: new Date(),
+            tipo: 'guias',
+            datos: retrasadas,
+          };
+        }
+
+        if (lowerMessage.includes('reparto')) {
+          const enReparto = GUIAS_EJEMPLO.filter((g) => g.estado === 'EN REPARTO');
+          return {
+            id: uuidv4(),
+            rol: 'assistant',
+            contenido: `🚚 **GUÍAS EN REPARTO (${enReparto.length})**\n\nEstas guías están listas para entrega hoy:`,
+            timestamp: new Date(),
+            tipo: 'guias',
+            datos: enReparto,
+          };
+        }
+
+        if (lowerMessage.includes('oficina')) {
+          const enOficina = GUIAS_EJEMPLO.filter((g) => g.estado === 'EN OFICINA');
+          return {
+            id: uuidv4(),
+            rol: 'assistant',
+            contenido: `📍 **GUÍAS EN OFICINA (${enOficina.length})**\n\nEstas guías esperan ser reclamadas por el cliente:`,
+            timestamp: new Date(),
+            tipo: 'guias',
+            datos: enOficina,
+          };
+        }
+
+        // Listar todas las guías
         return {
           id: uuidv4(),
           rol: 'assistant',
-          contenido: `⚠️ **GUÍAS RETRASADAS (${retrasadas.length})**\n\nHaz clic en cualquier guía para ver más detalles o tomar acción:`,
+          contenido: `📋 **TODAS LAS GUÍAS (${GUIAS_EJEMPLO.length})**\n\nHaz clic en cualquier guía para ver detalles o realizar acciones:`,
           timestamp: new Date(),
           tipo: 'guias',
-          datos: retrasadas,
+          datos: GUIAS_EJEMPLO,
         };
       }
 
-      if (lowerMessage.includes('reparto')) {
-        const enReparto = GUIAS_EJEMPLO.filter(g => g.estado === 'EN REPARTO');
+      if (lowerMessage.includes('novedad')) {
+        const novedades = GUIAS_EJEMPLO.filter((g) => g.estado === 'NOVEDAD');
         return {
           id: uuidv4(),
           rol: 'assistant',
-          contenido: `🚚 **GUÍAS EN REPARTO (${enReparto.length})**\n\nEstas guías están listas para entrega hoy:`,
-          timestamp: new Date(),
-          tipo: 'guias',
-          datos: enReparto,
-        };
-      }
-
-      if (lowerMessage.includes('oficina')) {
-        const enOficina = GUIAS_EJEMPLO.filter(g => g.estado === 'EN OFICINA');
-        return {
-          id: uuidv4(),
-          rol: 'assistant',
-          contenido: `📍 **GUÍAS EN OFICINA (${enOficina.length})**\n\nEstas guías esperan ser reclamadas por el cliente:`,
-          timestamp: new Date(),
-          tipo: 'guias',
-          datos: enOficina,
-        };
-      }
-
-      // Listar todas las guías
-      return {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: `📋 **TODAS LAS GUÍAS (${GUIAS_EJEMPLO.length})**\n\nHaz clic en cualquier guía para ver detalles o realizar acciones:`,
-        timestamp: new Date(),
-        tipo: 'guias',
-        datos: GUIAS_EJEMPLO,
-      };
-    }
-
-    if (lowerMessage.includes('novedad')) {
-      const novedades = GUIAS_EJEMPLO.filter(g => g.estado === 'NOVEDAD');
-      return {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: `🚨 **NOVEDADES ACTIVAS (${novedades.length})**
+          contenido: `🚨 **NOVEDADES ACTIVAS (${novedades.length})**
 
 Para resolver una novedad:
 1. Busca al cliente en Chatea Pro
@@ -341,29 +511,45 @@ Para resolver una novedad:
 ❌ NUNCA dar hora exacta (solo jornada)
 ❌ NUNCA devolver sin autorización
 ✅ SIEMPRE verificar Chatea antes de llamar`,
-        timestamp: new Date(),
-        tipo: 'guias',
-        datos: novedades,
-        acciones: [
-          { id: 'resolver-todas', label: 'Resolver todas', icon: '✅', comando: 'Resolver novedades', tipo: 'accion' },
-          { id: 'llamar-cliente', label: 'Llamar cliente', icon: '📞', comando: 'Contactar cliente', tipo: 'accion' },
-        ],
-      };
-    }
+          timestamp: new Date(),
+          tipo: 'guias',
+          datos: novedades,
+          acciones: [
+            {
+              id: 'resolver-todas',
+              label: 'Resolver todas',
+              icon: '✅',
+              comando: 'Resolver novedades',
+              tipo: 'accion',
+            },
+            {
+              id: 'llamar-cliente',
+              label: 'Llamar cliente',
+              icon: '📞',
+              comando: 'Contactar cliente',
+              tipo: 'accion',
+            },
+          ],
+        };
+      }
 
-    if (lowerMessage.includes('resumen') || lowerMessage.includes('estado') || lowerMessage.includes('día')) {
-      const stats = {
-        total: GUIAS_EJEMPLO.length,
-        enReparto: GUIAS_EJEMPLO.filter(g => g.estado === 'EN REPARTO').length,
-        enOficina: GUIAS_EJEMPLO.filter(g => g.estado === 'EN OFICINA').length,
-        novedades: GUIAS_EJEMPLO.filter(g => g.estado === 'NOVEDAD').length,
-        criticas: GUIAS_EJEMPLO.filter(g => g.nivelRiesgo === 'CRITICO').length,
-      };
+      if (
+        lowerMessage.includes('resumen') ||
+        lowerMessage.includes('estado') ||
+        lowerMessage.includes('día')
+      ) {
+        const stats = {
+          total: GUIAS_EJEMPLO.length,
+          enReparto: GUIAS_EJEMPLO.filter((g) => g.estado === 'EN REPARTO').length,
+          enOficina: GUIAS_EJEMPLO.filter((g) => g.estado === 'EN OFICINA').length,
+          novedades: GUIAS_EJEMPLO.filter((g) => g.estado === 'NOVEDAD').length,
+          criticas: GUIAS_EJEMPLO.filter((g) => g.nivelRiesgo === 'CRITICO').length,
+        };
 
-      return {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: `📊 **RESUMEN DEL DÍA - ${config.nombre}**
+        return {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: `📊 **RESUMEN DEL DÍA - ${config.nombre}**
 
 | Métrica | Cantidad | Estado |
 |---------|----------|--------|
@@ -376,23 +562,37 @@ Para resolver una novedad:
 **📈 TASA DE ÉXITO:** 85%
 **⏱️ TIEMPO PROMEDIO:** 2.8 días
 
-💡 **RECOMENDACIÓN:** ${stats.criticas > 0
-  ? `Hay ${stats.criticas} guía(s) crítica(s) que requieren atención INMEDIATA.`
-  : 'Todo bajo control. Continúa el monitoreo regular.'}`,
-        timestamp: new Date(),
-        tipo: 'tabla',
-        acciones: [
-          { id: 'ver-criticas', label: 'Ver críticas', icon: '🔴', comando: 'Muéstrame las guías críticas', tipo: 'info' },
-          { id: 'exportar', label: 'Exportar Excel', icon: '📥', comando: 'Exportar reporte', tipo: 'accion' },
-        ],
-      };
-    }
+💡 **RECOMENDACIÓN:** ${
+            stats.criticas > 0
+              ? `Hay ${stats.criticas} guía(s) crítica(s) que requieren atención INMEDIATA.`
+              : 'Todo bajo control. Continúa el monitoreo regular.'
+          }`,
+          timestamp: new Date(),
+          tipo: 'tabla',
+          acciones: [
+            {
+              id: 'ver-criticas',
+              label: 'Ver críticas',
+              icon: '🔴',
+              comando: 'Muéstrame las guías críticas',
+              tipo: 'info',
+            },
+            {
+              id: 'exportar',
+              label: 'Exportar Excel',
+              icon: '📥',
+              comando: 'Exportar reporte',
+              tipo: 'accion',
+            },
+          ],
+        };
+      }
 
-    if (lowerMessage.includes('plantilla')) {
-      return {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: `📝 **PLANTILLAS DISPONIBLES**
+      if (lowerMessage.includes('plantilla')) {
+        return {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: `📝 **PLANTILLAS DISPONIBLES**
 
 **1. REPARTO:**
 \`\`\`
@@ -422,20 +622,36 @@ en 1-2 días hábiles. Llamaremos antes de la entrega.
 \`\`\`
 
 Haz clic en cualquier plantilla para copiarla.`,
-        timestamp: new Date(),
-        tipo: 'lista',
-        acciones: [
-          { id: 'copiar-reparto', label: 'Copiar REPARTO', icon: '📋', comando: 'Copiar plantilla reparto', tipo: 'accion' },
-          { id: 'copiar-oficina', label: 'Copiar OFICINA', icon: '📋', comando: 'Copiar plantilla oficina', tipo: 'accion' },
-        ],
-      };
-    }
+          timestamp: new Date(),
+          tipo: 'lista',
+          acciones: [
+            {
+              id: 'copiar-reparto',
+              label: 'Copiar REPARTO',
+              icon: '📋',
+              comando: 'Copiar plantilla reparto',
+              tipo: 'accion',
+            },
+            {
+              id: 'copiar-oficina',
+              label: 'Copiar OFICINA',
+              icon: '📋',
+              comando: 'Copiar plantilla oficina',
+              tipo: 'accion',
+            },
+          ],
+        };
+      }
 
-    if (lowerMessage.includes('patrón') || lowerMessage.includes('patron') || lowerMessage.includes('detecta')) {
-      return {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: `🔍 **PATRONES DETECTADOS**
+      if (
+        lowerMessage.includes('patrón') ||
+        lowerMessage.includes('patron') ||
+        lowerMessage.includes('detecta')
+      ) {
+        return {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: `🔍 **PATRONES DETECTADOS**
 
 **🔴 CRÍTICO - Acumulación en oficinas Medellín**
 • 8 guías llevan +3 días en oficina
@@ -454,21 +670,37 @@ Haz clic en cualquier plantilla para copiarla.`,
 • **Acción:** Mejorar validación de direcciones
 
 💡 **INSIGHT ML:** Implementando acciones recomendadas se puede reducir la tasa de devolución en un 40%.`,
-        timestamp: new Date(),
-        tipo: 'lista',
-        acciones: [
-          { id: 'resolver-patron', label: 'Resolver patrón crítico', icon: '🔴', comando: 'Resolver patrón crítico', tipo: 'accion' },
-          { id: 'ver-detalles', label: 'Ver análisis completo', icon: '📊', comando: 'Análisis detallado de patrones', tipo: 'info' },
-        ],
-      };
-    }
+          timestamp: new Date(),
+          tipo: 'lista',
+          acciones: [
+            {
+              id: 'resolver-patron',
+              label: 'Resolver patrón crítico',
+              icon: '🔴',
+              comando: 'Resolver patrón crítico',
+              tipo: 'accion',
+            },
+            {
+              id: 'ver-detalles',
+              label: 'Ver análisis completo',
+              icon: '📊',
+              comando: 'Análisis detallado de patrones',
+              tipo: 'info',
+            },
+          ],
+        };
+      }
 
-    if (lowerMessage.includes('cómo') || lowerMessage.includes('como') || lowerMessage.includes('proceso')) {
-      const procesoInfo = config.procesos[0] || 'Proceso general';
-      return {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: `📋 **PROCESO: ${procesoInfo}**
+      if (
+        lowerMessage.includes('cómo') ||
+        lowerMessage.includes('como') ||
+        lowerMessage.includes('proceso')
+      ) {
+        const procesoInfo = config.procesos[0] || 'Proceso general';
+        return {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: `📋 **PROCESO: ${procesoInfo}**
 
 **FLUJO DE TRABAJO:**
 
@@ -507,22 +739,34 @@ INICIO
 ❌ NUNCA devolver sin autorización
 
 ¿Necesitas ayuda con algún paso específico?`,
-        timestamp: new Date(),
-        tipo: 'texto',
-        acciones: [
-          { id: 'ver-ejemplo', label: 'Ver ejemplo', icon: '💡', comando: 'Dame un ejemplo práctico', tipo: 'info' },
-          { id: 'practicar', label: 'Practicar', icon: '🎯', comando: 'Quiero practicar el proceso', tipo: 'accion' },
-        ],
-      };
-    }
+          timestamp: new Date(),
+          tipo: 'texto',
+          acciones: [
+            {
+              id: 'ver-ejemplo',
+              label: 'Ver ejemplo',
+              icon: '💡',
+              comando: 'Dame un ejemplo práctico',
+              tipo: 'info',
+            },
+            {
+              id: 'practicar',
+              label: 'Practicar',
+              icon: '🎯',
+              comando: 'Quiero practicar el proceso',
+              tipo: 'accion',
+            },
+          ],
+        };
+      }
 
-    // Respuesta por defecto contextual
-    return {
-      id: uuidv4(),
-      rol: 'assistant',
-      contenido: `Entiendo tu consulta. Como asistente del **${config.nombre}**, puedo ayudarte con:
+      // Respuesta por defecto contextual
+      return {
+        id: uuidv4(),
+        rol: 'assistant',
+        contenido: `Entiendo tu consulta. Como asistente del **${config.nombre}**, puedo ayudarte con:
 
-${config.capacidades.map(c => `• ${c}`).join('\n')}
+${config.capacidades.map((c) => `• ${c}`).join('\n')}
 
 **Consultas sugeridas:**
 • "Muéstrame las guías retrasadas"
@@ -531,10 +775,12 @@ ${config.capacidades.map(c => `• ${c}`).join('\n')}
 • "¿Cómo resuelvo una novedad?"
 
 ¿Qué información necesitas?`,
-      timestamp: new Date(),
-      acciones: getAccionesRapidas(distritoId),
-    };
-  }, [config, distritoId]);
+        timestamp: new Date(),
+        acciones: getAccionesRapidas(distritoId),
+      };
+    },
+    [config, distritoId]
+  );
 
   // Enviar mensaje
   const handleSend = async (message?: string) => {
@@ -548,20 +794,23 @@ ${config.capacidades.map(c => `• ${c}`).join('\n')}
       timestamp: new Date(),
     };
 
-    setMensajes(prev => [...prev, userMessage]);
+    setMensajes((prev) => [...prev, userMessage]);
     setInputValue('');
     setIsLoading(true);
 
     try {
       const response = await generateResponse(texto);
-      setMensajes(prev => [...prev, response]);
+      setMensajes((prev) => [...prev, response]);
     } catch (error) {
-      setMensajes(prev => [...prev, {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: 'Lo siento, hubo un error. Por favor intenta de nuevo.',
-        timestamp: new Date(),
-      }]);
+      setMensajes((prev) => [
+        ...prev,
+        {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: 'Lo siento, hubo un error. Por favor intenta de nuevo.',
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -570,13 +819,15 @@ ${config.capacidades.map(c => `• ${c}`).join('\n')}
   // Limpiar chat
   const handleClear = () => {
     if (confirm('¿Limpiar el historial de conversación?')) {
-      setMensajes([{
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: '¡Conversación reiniciada! ¿En qué puedo ayudarte?',
-        timestamp: new Date(),
-        acciones: getAccionesRapidas(distritoId),
-      }]);
+      setMensajes([
+        {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: '¡Conversación reiniciada! ¿En qué puedo ayudarte?',
+          timestamp: new Date(),
+          acciones: getAccionesRapidas(distritoId),
+        },
+      ]);
     }
   };
 
@@ -603,7 +854,9 @@ ${config.capacidades.map(c => `• ${c}`).join('\n')}
               {guia.transportadora}
             </p>
           </div>
-          <span className={`px-2 py-1 rounded-full text-xs font-bold ${riesgoColors[guia.nivelRiesgo]}`}>
+          <span
+            className={`px-2 py-1 rounded-full text-xs font-bold ${riesgoColors[guia.nivelRiesgo]}`}
+          >
             {guia.nivelRiesgo}
           </span>
         </div>
@@ -617,13 +870,19 @@ ${config.capacidades.map(c => `• ${c}`).join('\n')}
             <Clock className="w-3 h-3" />
             {guia.diasTransito}d
           </span>
-          <span className={`px-2 py-0.5 rounded ${
-            guia.estado === 'EN REPARTO' ? 'bg-blue-100 text-blue-700' :
-            guia.estado === 'EN OFICINA' ? 'bg-orange-100 text-orange-700' :
-            guia.estado === 'NOVEDAD' ? 'bg-red-100 text-red-700' :
-            guia.estado === 'DEVUELTO' ? 'bg-gray-100 text-gray-700' :
-            'bg-green-100 text-green-700'
-          }`}>
+          <span
+            className={`px-2 py-0.5 rounded ${
+              guia.estado === 'EN REPARTO'
+                ? 'bg-blue-100 text-blue-700'
+                : guia.estado === 'EN OFICINA'
+                  ? 'bg-orange-100 text-orange-700'
+                  : guia.estado === 'NOVEDAD'
+                    ? 'bg-red-100 text-red-700'
+                    : guia.estado === 'DEVUELTO'
+                      ? 'bg-gray-100 text-gray-700'
+                      : 'bg-green-100 text-green-700'
+            }`}
+          >
             {guia.estado}
           </span>
         </div>
@@ -633,7 +892,10 @@ ${config.capacidades.map(c => `• ${c}`).join('\n')}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                window.open(`https://wa.me/57${guia.telefono}?text=Hola! Le escribo de Litper sobre su pedido con guía ${guia.id}.`, '_blank');
+                window.open(
+                  `https://wa.me/57${guia.telefono}?text=Hola! Le escribo de Litper sobre su pedido con guía ${guia.id}.`,
+                  '_blank'
+                );
               }}
               className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs font-medium hover:bg-green-600 transition-colors"
             >
@@ -669,7 +931,10 @@ ${config.capacidades.map(c => `• ${c}`).join('\n')}
           <div className="max-w-[85%] bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl px-4 py-3">
             <div className="text-sm">{mensaje.contenido}</div>
             <p className="text-xs text-white/70 mt-1">
-              {new Date(mensaje.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+              {new Date(mensaje.timestamp).toLocaleTimeString('es-CO', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
             </p>
           </div>
         </div>
@@ -702,7 +967,7 @@ ${config.capacidades.map(c => `• ${c}`).join('\n')}
             <div className="mt-4 pt-3 border-t border-slate-200 dark:border-gray-700">
               <p className="text-xs text-slate-400 mb-2">Acciones rápidas:</p>
               <div className="flex flex-wrap gap-2">
-                {mensaje.acciones.map(accion => (
+                {mensaje.acciones.map((accion) => (
                   <button
                     key={accion.id}
                     onClick={() => handleSend(accion.comando)}
@@ -721,7 +986,10 @@ ${config.capacidades.map(c => `• ${c}`).join('\n')}
           )}
 
           <p className="text-xs text-slate-400 mt-2">
-            {new Date(mensaje.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+            {new Date(mensaje.timestamp).toLocaleTimeString('es-CO', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
           </p>
         </div>
       </div>
@@ -770,7 +1038,7 @@ ${config.capacidades.map(c => `• ${c}`).join('\n')}
               { id: 'guias', label: 'Guías', icon: Package },
               { id: 'metricas', label: 'Métricas', icon: BarChart3 },
               { id: 'procesos', label: 'Procesos', icon: Settings },
-            ].map(tab => (
+            ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setVistaActiva(tab.id as any)}
@@ -795,7 +1063,9 @@ ${config.capacidades.map(c => `• ${c}`).join('\n')}
             {/* Chat header */}
             <div className="px-6 py-4 border-b border-slate-200 dark:border-gray-700 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 bg-gradient-to-br ${config.color} rounded-xl flex items-center justify-center`}>
+                <div
+                  className={`w-10 h-10 bg-gradient-to-br ${config.color} rounded-xl flex items-center justify-center`}
+                >
                   <Bot className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -855,7 +1125,9 @@ ${config.capacidades.map(c => `• ${c}`).join('\n')}
         {vistaActiva === 'guias' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Listado de Guías</h2>
+              <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
+                Listado de Guías
+              </h2>
               <div className="flex items-center gap-2">
                 <select
                   value={filtroEstado}
@@ -876,9 +1148,9 @@ ${config.capacidades.map(c => `• ${c}`).join('\n')}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {GUIAS_EJEMPLO
-                .filter(g => filtroEstado === 'TODOS' || g.estado === filtroEstado)
-                .map(renderGuiaCard)}
+              {GUIAS_EJEMPLO.filter(
+                (g) => filtroEstado === 'TODOS' || g.estado === filtroEstado
+              ).map(renderGuiaCard)}
             </div>
           </div>
         )}
@@ -887,11 +1159,24 @@ ${config.capacidades.map(c => `• ${c}`).join('\n')}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               { label: 'Total Guías', value: GUIAS_EJEMPLO.length, icon: Package, color: 'blue' },
-              { label: 'En Reparto', value: GUIAS_EJEMPLO.filter(g => g.estado === 'EN REPARTO').length, icon: Truck, color: 'green' },
-              { label: 'Con Novedad', value: GUIAS_EJEMPLO.filter(g => g.estado === 'NOVEDAD').length, icon: AlertTriangle, color: 'red' },
+              {
+                label: 'En Reparto',
+                value: GUIAS_EJEMPLO.filter((g) => g.estado === 'EN REPARTO').length,
+                icon: Truck,
+                color: 'green',
+              },
+              {
+                label: 'Con Novedad',
+                value: GUIAS_EJEMPLO.filter((g) => g.estado === 'NOVEDAD').length,
+                icon: AlertTriangle,
+                color: 'red',
+              },
               { label: 'Tasa Éxito', value: '85%', icon: TrendingUp, color: 'indigo' },
             ].map((stat, idx) => (
-              <div key={idx} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-slate-200 dark:border-gray-700">
+              <div
+                key={idx}
+                className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-slate-200 dark:border-gray-700"
+              >
                 <div className="flex items-center justify-between mb-4">
                   <stat.icon className={`w-8 h-8 text-${stat.color}-500`} />
                   <span className={`text-3xl font-bold text-${stat.color}-600`}>{stat.value}</span>
@@ -904,12 +1189,16 @@ ${config.capacidades.map(c => `• ${c}`).join('\n')}
 
         {vistaActiva === 'procesos' && (
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6">Procesos del Distrito</h2>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6">
+              Procesos del Distrito
+            </h2>
             <div className="space-y-4">
               {config.procesos.map((proceso, idx) => (
                 <div key={idx} className="p-4 bg-slate-50 dark:bg-gray-700 rounded-xl">
                   <h3 className="font-bold text-slate-800 dark:text-white mb-2">{proceso}</h3>
-                  <p className="text-sm text-slate-500">Haz clic para ver el flujo detallado del proceso.</p>
+                  <p className="text-sm text-slate-500">
+                    Haz clic para ver el flujo detallado del proceso.
+                  </p>
                   <button
                     onClick={() => {
                       setVistaActiva('chat');

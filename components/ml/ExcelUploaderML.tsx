@@ -230,17 +230,11 @@ export function ExcelUploaderML() {
                 </div>
                 <div className="text-gray-600 mb-2">
                   <span className="font-medium">
-                    {isDragging
-                      ? 'Suelta el archivo aquí'
-                      : 'Arrastra tu archivo Excel aquí'}
+                    {isDragging ? 'Suelta el archivo aquí' : 'Arrastra tu archivo Excel aquí'}
                   </span>
                 </div>
-                <p className="text-sm text-gray-400">
-                  o haz clic para seleccionar
-                </p>
-                <p className="text-xs text-gray-400 mt-2">
-                  Formatos: .xlsx, .xls · Máximo: 50MB
-                </p>
+                <p className="text-sm text-gray-400">o haz clic para seleccionar</p>
+                <p className="text-xs text-gray-400 mt-2">Formatos: .xlsx, .xls · Máximo: 50MB</p>
               </div>
 
               {/* Mensaje de error */}
@@ -262,12 +256,8 @@ export function ExcelUploaderML() {
                   <FileSpreadsheet className="w-6 h-6 text-emerald-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-gray-900 truncate">
-                    {file.name}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {formatFileSize(file.size)}
-                  </div>
+                  <div className="font-medium text-gray-900 truncate">{file.name}</div>
+                  <div className="text-sm text-gray-500">{formatFileSize(file.size)}</div>
                 </div>
                 <button
                   onClick={handleReset}
@@ -294,9 +284,7 @@ export function ExcelUploaderML() {
           {uploadState === 'uploading' && (
             <div className="text-center py-8">
               <Loader2 className="w-12 h-12 text-emerald-600 animate-spin mx-auto mb-4" />
-              <div className="text-lg font-medium text-gray-900 mb-2">
-                Procesando archivo...
-              </div>
+              <div className="text-lg font-medium text-gray-900 mb-2">Procesando archivo...</div>
               <p className="text-gray-500 text-sm">
                 Esto puede tardar unos momentos según el tamaño del archivo
               </p>
@@ -310,12 +298,8 @@ export function ExcelUploaderML() {
               <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
                 <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
                 <div>
-                  <div className="font-medium text-green-800">
-                    Archivo procesado exitosamente
-                  </div>
-                  <div className="text-sm text-green-600">
-                    {result.mensaje}
-                  </div>
+                  <div className="font-medium text-green-800">Archivo procesado exitosamente</div>
+                  <div className="text-sm text-green-600">{result.mensaje}</div>
                 </div>
               </div>
 

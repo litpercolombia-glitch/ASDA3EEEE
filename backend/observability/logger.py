@@ -20,7 +20,7 @@ import logging
 import json
 import sys
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Dict
 import traceback
 from contextvars import ContextVar
 import os

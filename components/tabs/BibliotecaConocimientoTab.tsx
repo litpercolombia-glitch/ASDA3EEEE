@@ -36,7 +36,7 @@ import {
   ChevronRight,
   BarChart3,
   Lightbulb,
-  HelpCircle
+  HelpCircle,
 } from 'lucide-react';
 import { HelpTooltip } from '../HelpSystem/HelpTooltip';
 import { knowledgeLibraryHelp } from '../HelpSystem/helpContent';
@@ -75,19 +75,19 @@ type ViewTab = 'cargar' | 'explorar' | 'estadisticas';
 const API_BASE = import.meta.env.VITE_ML_API_URL || 'http://localhost:8000';
 
 const CATEGORIA_COLORS: Record<string, string> = {
-  'Logística': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  'Dropshipping': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  'Tecnología': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-  'Operaciones': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+  Logística: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  Dropshipping: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  Tecnología: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+  Operaciones: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
   'Legal y Compliance': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-  'Mercados': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  Mercados: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
 };
 
 const TIPO_ICONS: Record<string, React.ReactNode> = {
-  'archivo': <FileText size={16} />,
-  'web': <Globe size={16} />,
-  'youtube': <Youtube size={16} />,
-  'texto': <FileText size={16} />,
+  archivo: <FileText size={16} />,
+  web: <Globe size={16} />,
+  youtube: <Youtube size={16} />,
+  texto: <FileText size={16} />,
 };
 
 // ==================== COMPONENTE PRINCIPAL ====================
@@ -134,7 +134,7 @@ const BibliotecaConocimientoTab: React.FC = () => {
       const params = new URLSearchParams({
         limite: '50',
         pagina: '1',
-        orden: 'fecha_desc'
+        orden: 'fecha_desc',
       });
       if (selectedCategoria) {
         params.append('categoria', selectedCategoria);
@@ -172,7 +172,7 @@ const BibliotecaConocimientoTab: React.FC = () => {
     try {
       const params = new URLSearchParams({
         q: searchQuery,
-        limite: '20'
+        limite: '20',
       });
 
       const response = await fetch(`${API_BASE}/api/knowledge/search?${params}`);
@@ -196,7 +196,7 @@ const BibliotecaConocimientoTab: React.FC = () => {
 
       const response = await fetch(`${API_BASE}/api/knowledge/upload`, {
         method: 'POST',
-        body: formData
+        body: formData,
       });
 
       const data = await response.json();
@@ -224,8 +224,8 @@ const BibliotecaConocimientoTab: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url: webUrl,
-          con_login: requiresLogin
-        })
+          con_login: requiresLogin,
+        }),
       });
 
       const data = await response.json();
@@ -251,7 +251,7 @@ const BibliotecaConocimientoTab: React.FC = () => {
       const response = await fetch(`${API_BASE}/api/knowledge/youtube`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: youtubeUrl })
+        body: JSON.stringify({ url: youtubeUrl }),
       });
 
       const data = await response.json();
@@ -279,8 +279,8 @@ const BibliotecaConocimientoTab: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           titulo: textoTitulo,
-          contenido: textoContenido
-        })
+          contenido: textoContenido,
+        }),
       });
 
       const data = await response.json();
@@ -304,7 +304,7 @@ const BibliotecaConocimientoTab: React.FC = () => {
 
     try {
       const response = await fetch(`${API_BASE}/api/knowledge/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       });
 
       if (response.ok) {
@@ -328,7 +328,7 @@ const BibliotecaConocimientoTab: React.FC = () => {
       return new Date(dateStr).toLocaleDateString('es-CO', {
         day: '2-digit',
         month: 'short',
-        year: 'numeric'
+        year: 'numeric',
       });
     } catch {
       return dateStr;
@@ -486,7 +486,11 @@ const BibliotecaConocimientoTab: React.FC = () => {
             <HelpTooltip
               title="Texto Directo"
               content="Escribe o pega texto directamente para guardarlo en la biblioteca."
-              tips={['Ideal para notas internas', 'Procesos documentados', 'Aprendizajes del equipo']}
+              tips={[
+                'Ideal para notas internas',
+                'Procesos documentados',
+                'Aprendizajes del equipo',
+              ]}
               position="right"
             >
               <div
@@ -534,7 +538,9 @@ const BibliotecaConocimientoTab: React.FC = () => {
                     />
                     <Upload className="mx-auto text-gray-400 mb-4" size={48} />
                     <p className="text-gray-600 dark:text-gray-400">
-                      {selectedFile ? selectedFile.name : 'Arrastra un archivo o click para seleccionar'}
+                      {selectedFile
+                        ? selectedFile.name
+                        : 'Arrastra un archivo o click para seleccionar'}
                     </p>
                     <p className="text-sm text-gray-400 mt-2">
                       PDF, DOCX, TXT, MD, CSV, JSON (max 50MB)
@@ -546,7 +552,11 @@ const BibliotecaConocimientoTab: React.FC = () => {
                     disabled={!selectedFile || isLoading}
                     className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {isLoading ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
+                    {isLoading ? (
+                      <Loader2 className="animate-spin" size={20} />
+                    ) : (
+                      <Upload size={20} />
+                    )}
                     {isLoading ? 'Procesando...' : 'Cargar Archivo'}
                   </button>
                 </div>
@@ -583,7 +593,11 @@ const BibliotecaConocimientoTab: React.FC = () => {
                     disabled={!webUrl.trim() || isLoading}
                     className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {isLoading ? <Loader2 className="animate-spin" size={20} /> : <Globe size={20} />}
+                    {isLoading ? (
+                      <Loader2 className="animate-spin" size={20} />
+                    ) : (
+                      <Globe size={20} />
+                    )}
                     {isLoading ? 'Extrayendo...' : 'Extraer Contenido'}
                   </button>
                 </div>
@@ -617,7 +631,11 @@ const BibliotecaConocimientoTab: React.FC = () => {
                     disabled={!youtubeUrl.trim() || isLoading}
                     className="w-full py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {isLoading ? <Loader2 className="animate-spin" size={20} /> : <Youtube size={20} />}
+                    {isLoading ? (
+                      <Loader2 className="animate-spin" size={20} />
+                    ) : (
+                      <Youtube size={20} />
+                    )}
                     {isLoading ? 'Extrayendo...' : 'Extraer Transcripción'}
                   </button>
                 </div>
@@ -652,7 +670,11 @@ const BibliotecaConocimientoTab: React.FC = () => {
                     disabled={!textoTitulo.trim() || !textoContenido.trim() || isLoading}
                     className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {isLoading ? <Loader2 className="animate-spin" size={20} /> : <FileText size={20} />}
+                    {isLoading ? (
+                      <Loader2 className="animate-spin" size={20} />
+                    ) : (
+                      <FileText size={20} />
+                    )}
                     {isLoading ? 'Guardando...' : 'Guardar Texto'}
                   </button>
                 </div>
@@ -669,7 +691,10 @@ const BibliotecaConocimientoTab: React.FC = () => {
           <HelpTooltip {...knowledgeLibraryHelp.busqueda}>
             <div className="flex gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <Search
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={20}
+                />
                 <input
                   type="text"
                   value={searchQuery}
@@ -706,7 +731,9 @@ const BibliotecaConocimientoTab: React.FC = () => {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-gray-400">{TIPO_ICONS[item.fuente_tipo] || <FileText size={16} />}</span>
+                      <span className="text-gray-400">
+                        {TIPO_ICONS[item.fuente_tipo] || <FileText size={16} />}
+                      </span>
                       <h3 className="font-semibold text-gray-800 dark:text-white">{item.titulo}</h3>
                       {item.similitud && (
                         <span className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-0.5 rounded">
@@ -720,7 +747,9 @@ const BibliotecaConocimientoTab: React.FC = () => {
                     </p>
 
                     <div className="flex items-center gap-4 text-sm">
-                      <span className={`px-2 py-1 rounded ${CATEGORIA_COLORS[item.categoria] || 'bg-gray-100 text-gray-800'}`}>
+                      <span
+                        className={`px-2 py-1 rounded ${CATEGORIA_COLORS[item.categoria] || 'bg-gray-100 text-gray-800'}`}
+                      >
                         {item.categoria}
                       </span>
                       <span className="text-gray-400 flex items-center gap-1">
@@ -787,15 +816,21 @@ const BibliotecaConocimientoTab: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
               <p className="text-sm text-gray-500">Total Documentos</p>
-              <p className="text-3xl font-bold text-gray-800 dark:text-white">{stats.total_documentos}</p>
+              <p className="text-3xl font-bold text-gray-800 dark:text-white">
+                {stats.total_documentos}
+              </p>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
               <p className="text-sm text-gray-500">Categorías</p>
-              <p className="text-3xl font-bold text-blue-600">{Object.keys(stats.por_categoria).length}</p>
+              <p className="text-3xl font-bold text-blue-600">
+                {Object.keys(stats.por_categoria).length}
+              </p>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
               <p className="text-sm text-gray-500">Tipos de Fuente</p>
-              <p className="text-3xl font-bold text-green-600">{Object.keys(stats.por_tipo).length}</p>
+              <p className="text-3xl font-bold text-green-600">
+                {Object.keys(stats.por_tipo).length}
+              </p>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
               <p className="text-sm text-gray-500">Último Cargado</p>
@@ -814,7 +849,9 @@ const BibliotecaConocimientoTab: React.FC = () => {
             <div className="space-y-3">
               {Object.entries(stats.por_categoria).map(([cat, count]) => (
                 <div key={cat} className="flex items-center gap-4">
-                  <span className={`px-3 py-1 rounded-lg ${CATEGORIA_COLORS[cat] || 'bg-gray-100 text-gray-800'}`}>
+                  <span
+                    className={`px-3 py-1 rounded-lg ${CATEGORIA_COLORS[cat] || 'bg-gray-100 text-gray-800'}`}
+                  >
                     {cat}
                   </span>
                   <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -837,10 +874,7 @@ const BibliotecaConocimientoTab: React.FC = () => {
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {Object.entries(stats.por_tipo).map(([tipo, count]) => (
-                <div
-                  key={tipo}
-                  className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 text-center"
-                >
+                <div key={tipo} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 text-center">
                   <div className="text-3xl mb-2">{TIPO_ICONS[tipo] || <FileText size={24} />}</div>
                   <p className="text-2xl font-bold text-gray-800 dark:text-white">{count}</p>
                   <p className="text-sm text-gray-500 capitalize">{tipo}</p>

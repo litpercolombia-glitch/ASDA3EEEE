@@ -23,7 +23,7 @@ import {
   FileText,
   Phone,
   AlertTriangle,
-  Activity
+  Activity,
 } from 'lucide-react';
 
 // ============================================
@@ -93,9 +93,9 @@ const CONNECTIONS: ConnectionConfig[] = [
         label: 'URL Webhook',
         type: 'url',
         placeholder: 'https://n8n.ejemplo.com/webhook/...',
-        required: true
-      }
-    ]
+        required: true,
+      },
+    ],
   },
   {
     id: 'chatea-pro',
@@ -108,16 +108,16 @@ const CONNECTIONS: ConnectionConfig[] = [
         label: 'API Key',
         type: 'password',
         placeholder: '••••••••••••••••',
-        required: true
+        required: true,
       },
       {
         key: 'webhookUrl',
         label: 'Webhook URL',
         type: 'url',
         placeholder: 'https://api.chateapro.com/webhook/...',
-        required: true
-      }
-    ]
+        required: true,
+      },
+    ],
   },
   {
     id: 'dropi',
@@ -130,17 +130,17 @@ const CONNECTIONS: ConnectionConfig[] = [
         label: 'API Key',
         type: 'password',
         placeholder: '••••••••••••••••',
-        required: true
+        required: true,
       },
       {
         key: 'storeId',
         label: 'Store ID',
         type: 'text',
         placeholder: 'Tu ID de tienda',
-        required: true
-      }
-    ]
-  }
+        required: true,
+      },
+    ],
+  },
 ];
 
 const APP_WEBHOOKS: Webhook[] = [
@@ -148,26 +148,26 @@ const APP_WEBHOOKS: Webhook[] = [
     id: 'orden-nueva',
     name: 'Orden Nueva',
     url: '/api/webhook/orden-nueva',
-    description: 'Se dispara cuando se crea un nuevo pedido'
+    description: 'Se dispara cuando se crea un nuevo pedido',
   },
   {
     id: 'estado-guia',
     name: 'Estado Guía',
     url: '/api/webhook/estado-guia',
-    description: 'Se dispara cuando cambia el estado de una guía'
+    description: 'Se dispara cuando cambia el estado de una guía',
   },
   {
     id: 'novedad',
     name: 'Novedad',
     url: '/api/webhook/novedad',
-    description: 'Se dispara cuando hay una novedad en un envío'
+    description: 'Se dispara cuando hay una novedad en un envío',
   },
   {
     id: 'chat-entrante',
     name: 'Chat Entrante',
     url: '/api/webhook/chat-entrante',
-    description: 'Se dispara cuando llega un mensaje de chat'
-  }
+    description: 'Se dispara cuando llega un mensaje de chat',
+  },
 ];
 
 const INITIAL_PROCESSES: ProcessStatus[] = [
@@ -176,43 +176,43 @@ const INITIAL_PROCESSES: ProcessStatus[] = [
     name: 'Chat en Vivo',
     icon: <MessageCircle className="w-5 h-5" />,
     status: 'active',
-    description: 'Atención al cliente en tiempo real'
+    description: 'Atención al cliente en tiempo real',
   },
   {
     id: 'generacion-pedidos',
     name: 'Generación Pedidos',
     icon: <Package className="w-5 h-5" />,
     status: 'active',
-    description: 'Creación automática de pedidos'
+    description: 'Creación automática de pedidos',
   },
   {
     id: 'seguimiento-guias',
     name: 'Seguimiento Guías',
     icon: <FileText className="w-5 h-5" />,
     status: 'active',
-    description: 'Tracking de envíos automático'
+    description: 'Tracking de envíos automático',
   },
   {
     id: 'novedades',
     name: 'Novedades',
     icon: <AlertTriangle className="w-5 h-5" />,
     status: 'active',
-    description: 'Gestión de incidencias'
+    description: 'Gestión de incidencias',
   },
   {
     id: 'reclamo-oficina',
     name: 'Reclamo Oficina',
     icon: <Phone className="w-5 h-5" />,
     status: 'active',
-    description: 'Escalamiento de reclamos'
+    description: 'Escalamiento de reclamos',
   },
   {
     id: 'llamadas-ia',
     name: 'Llamadas IA',
     icon: <Activity className="w-5 h-5" />,
     status: 'paused',
-    description: 'Llamadas automatizadas con IA'
-  }
+    description: 'Llamadas automatizadas con IA',
+  },
 ];
 
 // ============================================
@@ -225,7 +225,7 @@ const COLORS = {
   connected: '#10B981',
   disconnected: '#EF4444',
   info: '#3B82F6',
-  warning: '#F59E0B'
+  warning: '#F59E0B',
 };
 
 // ============================================
@@ -267,14 +267,15 @@ export const ConexionesTab: React.FC = () => {
   // Inicializar conexiones con valores por defecto
   function initializeConnections(): Record<string, ConnectionState> {
     const initial: Record<string, ConnectionState> = {};
-    CONNECTIONS.forEach(conn => {
+    CONNECTIONS.forEach((conn) => {
       const values: Record<string, string> = {};
-      conn.fields.forEach(field => {
+      conn.fields.forEach((field) => {
         values[field.key] = '';
       });
       // URL de N8N por defecto
       if (conn.id === 'n8n') {
-        values.webhookUrl = 'https://n8n.srv1103164.hstgr.cloud/prueba-de-webhook/240bf3b5-7689-4997-8001-0f1183eb79e9';
+        values.webhookUrl =
+          'https://n8n.srv1103164.hstgr.cloud/prueba-de-webhook/240bf3b5-7689-4997-8001-0f1183eb79e9';
       }
       initial[conn.id] = { values, status: 'idle' };
     });
@@ -299,49 +300,60 @@ export const ConexionesTab: React.FC = () => {
   }, []);
 
   // Agregar log
-  const addLog = useCallback((type: LogEntry['type'], source: LogEntry['source'], message: string) => {
-    const newLog: LogEntry = {
-      id: Date.now().toString(),
-      timestamp: new Date().toISOString(),
-      type,
-      source,
-      message
-    };
-    setLogs(prev => [newLog, ...prev].slice(0, 100));
-  }, []);
+  const addLog = useCallback(
+    (type: LogEntry['type'], source: LogEntry['source'], message: string) => {
+      const newLog: LogEntry = {
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+        type,
+        source,
+        message,
+      };
+      setLogs((prev) => [newLog, ...prev].slice(0, 100));
+    },
+    []
+  );
 
   // Probar conexión
   const testConnection = async (connectionId: string) => {
     const connection = connections[connectionId];
-    const connectionInfo = CONNECTIONS.find(c => c.id === connectionId);
+    const connectionInfo = CONNECTIONS.find((c) => c.id === connectionId);
 
     if (!connectionInfo) return;
 
     // Validar campos requeridos
     const missingFields = connectionInfo.fields
-      .filter(f => f.required && !connection.values[f.key])
-      .map(f => f.label);
+      .filter((f) => f.required && !connection.values[f.key])
+      .map((f) => f.label);
 
     if (missingFields.length > 0) {
-      addLog('error', connectionId as LogEntry['source'], `Campos requeridos: ${missingFields.join(', ')}`);
-      setConnections(prev => ({
+      addLog(
+        'error',
+        connectionId as LogEntry['source'],
+        `Campos requeridos: ${missingFields.join(', ')}`
+      );
+      setConnections((prev) => ({
         ...prev,
         [connectionId]: {
           ...prev[connectionId],
           status: 'error',
-          errorMessage: `Faltan campos: ${missingFields.join(', ')}`
-        }
+          errorMessage: `Faltan campos: ${missingFields.join(', ')}`,
+        },
       }));
       return;
     }
 
     // Marcar como probando
-    setConnections(prev => ({
+    setConnections((prev) => ({
       ...prev,
-      [connectionId]: { ...prev[connectionId], status: 'testing', errorMessage: undefined }
+      [connectionId]: { ...prev[connectionId], status: 'testing', errorMessage: undefined },
     }));
 
-    addLog('info', connectionId as LogEntry['source'], `Probando conexión con ${connectionInfo.name}...`);
+    addLog(
+      'info',
+      connectionId as LogEntry['source'],
+      `Probando conexión con ${connectionInfo.name}...`
+    );
 
     try {
       // Determinar URL a probar
@@ -353,7 +365,7 @@ export const ConexionesTab: React.FC = () => {
 
       // Preparar headers
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       };
 
       if (connection.values.apiKey) {
@@ -368,35 +380,38 @@ export const ConexionesTab: React.FC = () => {
           test: true,
           source: 'litper',
           timestamp: new Date().toISOString(),
-          ...(connection.values.storeId && { storeId: connection.values.storeId })
+          ...(connection.values.storeId && { storeId: connection.values.storeId }),
         }),
-        mode: 'no-cors'
+        mode: 'no-cors',
       });
 
       // Marcar como conectado (no-cors no permite verificar response)
-      setConnections(prev => ({
+      setConnections((prev) => ({
         ...prev,
         [connectionId]: {
           ...prev[connectionId],
           status: 'connected',
           lastTested: new Date().toISOString(),
-          errorMessage: undefined
-        }
+          errorMessage: undefined,
+        },
       }));
 
-      addLog('success', connectionId as LogEntry['source'], `Conexión exitosa con ${connectionInfo.name}`);
-
+      addLog(
+        'success',
+        connectionId as LogEntry['source'],
+        `Conexión exitosa con ${connectionInfo.name}`
+      );
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Error desconocido';
 
-      setConnections(prev => ({
+      setConnections((prev) => ({
         ...prev,
         [connectionId]: {
           ...prev[connectionId],
           status: 'error',
           lastTested: new Date().toISOString(),
-          errorMessage: errorMsg
-        }
+          errorMessage: errorMsg,
+        },
       }));
 
       addLog('error', connectionId as LogEntry['source'], `Error: ${errorMsg}`);
@@ -405,17 +420,17 @@ export const ConexionesTab: React.FC = () => {
 
   // Actualizar campo de conexión
   const updateConnectionField = (connectionId: string, fieldKey: string, value: string) => {
-    setConnections(prev => ({
+    setConnections((prev) => ({
       ...prev,
       [connectionId]: {
         ...prev[connectionId],
         values: {
           ...prev[connectionId].values,
-          [fieldKey]: value
+          [fieldKey]: value,
         },
         status: 'idle',
-        errorMessage: undefined
-      }
+        errorMessage: undefined,
+      },
     }));
   };
 
@@ -446,7 +461,7 @@ export const ConexionesTab: React.FC = () => {
     return date.toLocaleTimeString('es-CO', {
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit'
+      second: '2-digit',
     });
   };
 
@@ -456,22 +471,34 @@ export const ConexionesTab: React.FC = () => {
       case 'connected':
         return (
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: COLORS.connected }} />
-            <span className="text-sm font-medium" style={{ color: COLORS.connected }}>Conectado</span>
+            <div
+              className="w-3 h-3 rounded-full animate-pulse"
+              style={{ backgroundColor: COLORS.connected }}
+            />
+            <span className="text-sm font-medium" style={{ color: COLORS.connected }}>
+              Conectado
+            </span>
           </div>
         );
       case 'error':
         return (
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.disconnected }} />
-            <span className="text-sm font-medium" style={{ color: COLORS.disconnected }}>Desconectado</span>
+            <div
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: COLORS.disconnected }}
+            />
+            <span className="text-sm font-medium" style={{ color: COLORS.disconnected }}>
+              Desconectado
+            </span>
           </div>
         );
       case 'testing':
         return (
           <div className="flex items-center gap-2">
             <RefreshCw className="w-3 h-3 animate-spin" style={{ color: COLORS.primary }} />
-            <span className="text-sm font-medium" style={{ color: COLORS.primary }}>Probando...</span>
+            <span className="text-sm font-medium" style={{ color: COLORS.primary }}>
+              Probando...
+            </span>
           </div>
         );
       default:
@@ -502,7 +529,7 @@ export const ConexionesTab: React.FC = () => {
       n8n: 'N8N',
       chatea: 'Chatea Pro',
       dropi: 'Dropi',
-      sistema: 'Sistema'
+      sistema: 'Sistema',
     };
     return labels[source] || source;
   };
@@ -514,29 +541,35 @@ export const ConexionesTab: React.FC = () => {
         return (
           <div className="flex items-center gap-1.5">
             <CheckCircle className="w-4 h-4" style={{ color: COLORS.connected }} />
-            <span className="text-xs font-medium" style={{ color: COLORS.connected }}>Activo</span>
+            <span className="text-xs font-medium" style={{ color: COLORS.connected }}>
+              Activo
+            </span>
           </div>
         );
       case 'paused':
         return (
           <div className="flex items-center gap-1.5">
             <PauseCircle className="w-4 h-4" style={{ color: COLORS.warning }} />
-            <span className="text-xs font-medium" style={{ color: COLORS.warning }}>Pausado</span>
+            <span className="text-xs font-medium" style={{ color: COLORS.warning }}>
+              Pausado
+            </span>
           </div>
         );
       case 'error':
         return (
           <div className="flex items-center gap-1.5">
             <AlertCircle className="w-4 h-4" style={{ color: COLORS.disconnected }} />
-            <span className="text-xs font-medium" style={{ color: COLORS.disconnected }}>Error</span>
+            <span className="text-xs font-medium" style={{ color: COLORS.disconnected }}>
+              Error
+            </span>
           </div>
         );
     }
   };
 
   // Contar conexiones
-  const connectedCount = Object.values(connections).filter(c => c.status === 'connected').length;
-  const errorCount = Object.values(connections).filter(c => c.status === 'error').length;
+  const connectedCount = Object.values(connections).filter((c) => c.status === 'connected').length;
+  const errorCount = Object.values(connections).filter((c) => c.status === 'error').length;
 
   return (
     <div className="space-y-6 p-6 min-h-screen" style={{ backgroundColor: COLORS.background }}>
@@ -559,8 +592,12 @@ export const ConexionesTab: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {CONNECTIONS.map((conn) => {
           const state = connections[conn.id];
-          const borderColor = state.status === 'connected' ? COLORS.connected :
-                             state.status === 'error' ? COLORS.disconnected : '#334155';
+          const borderColor =
+            state.status === 'connected'
+              ? COLORS.connected
+              : state.status === 'error'
+                ? COLORS.disconnected
+                : '#334155';
 
           return (
             <div
@@ -568,13 +605,16 @@ export const ConexionesTab: React.FC = () => {
               className="rounded-xl p-6 border-2 transition-all hover:shadow-lg"
               style={{
                 backgroundColor: COLORS.cards,
-                borderColor
+                borderColor,
               }}
             >
               {/* Card Header */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg text-white" style={{ backgroundColor: COLORS.primary }}>
+                  <div
+                    className="p-2 rounded-lg text-white"
+                    style={{ backgroundColor: COLORS.primary }}
+                  >
                     {conn.icon}
                   </div>
                   <div>
@@ -590,7 +630,8 @@ export const ConexionesTab: React.FC = () => {
                 {conn.fields.map((field) => (
                   <div key={field.key}>
                     <label className="block text-sm font-medium text-slate-300 mb-1">
-                      {field.label} {field.required && <span style={{ color: COLORS.disconnected }}>*</span>}
+                      {field.label}{' '}
+                      {field.required && <span style={{ color: COLORS.disconnected }}>*</span>}
                     </label>
                     <input
                       type={field.type}
@@ -600,7 +641,7 @@ export const ConexionesTab: React.FC = () => {
                       className="w-full px-3 py-2 rounded-lg border text-white placeholder-slate-500 focus:ring-2 outline-none transition-all text-sm"
                       style={{
                         backgroundColor: COLORS.background,
-                        borderColor: '#334155'
+                        borderColor: '#334155',
                       }}
                     />
                   </div>
@@ -685,7 +726,8 @@ export const ConexionesTab: React.FC = () => {
                   onClick={() => copyWebhook(webhook)}
                   className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all shrink-0 text-white"
                   style={{
-                    backgroundColor: copiedWebhook === webhook.id ? COLORS.connected : COLORS.primary
+                    backgroundColor:
+                      copiedWebhook === webhook.id ? COLORS.connected : COLORS.primary,
                   }}
                 >
                   {copiedWebhook === webhook.id ? (
@@ -751,11 +793,15 @@ export const ConexionesTab: React.FC = () => {
                         {getSourceLabel(log.source)}
                       </span>
                     </div>
-                    <p className={`text-sm mt-0.5 ${
-                      log.type === 'error' ? 'text-red-400' :
-                      log.type === 'success' ? 'text-green-400' :
-                      'text-blue-400'
-                    }`}>
+                    <p
+                      className={`text-sm mt-0.5 ${
+                        log.type === 'error'
+                          ? 'text-red-400'
+                          : log.type === 'success'
+                            ? 'text-green-400'
+                            : 'text-blue-400'
+                      }`}
+                    >
                       {log.message}
                     </p>
                   </div>
@@ -789,12 +835,18 @@ export const ConexionesTab: React.FC = () => {
                 <div
                   className="p-1.5 rounded"
                   style={{
-                    backgroundColor: process.status === 'active' ? `${COLORS.connected}20` :
-                                    process.status === 'paused' ? `${COLORS.warning}20` :
-                                    `${COLORS.disconnected}20`,
-                    color: process.status === 'active' ? COLORS.connected :
-                           process.status === 'paused' ? COLORS.warning :
-                           COLORS.disconnected
+                    backgroundColor:
+                      process.status === 'active'
+                        ? `${COLORS.connected}20`
+                        : process.status === 'paused'
+                          ? `${COLORS.warning}20`
+                          : `${COLORS.disconnected}20`,
+                    color:
+                      process.status === 'active'
+                        ? COLORS.connected
+                        : process.status === 'paused'
+                          ? COLORS.warning
+                          : COLORS.disconnected,
                   }}
                 >
                   {process.icon}

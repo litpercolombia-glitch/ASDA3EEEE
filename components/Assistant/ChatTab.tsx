@@ -1,5 +1,18 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Loader2, Bot, User, Lightbulb, RefreshCw, Package, Phone, Truck, MapPin, Clock, AlertTriangle } from 'lucide-react';
+import {
+  Send,
+  Loader2,
+  Bot,
+  User,
+  Lightbulb,
+  RefreshCw,
+  Package,
+  Phone,
+  Truck,
+  MapPin,
+  Clock,
+  AlertTriangle,
+} from 'lucide-react';
 import { Shipment, ShipmentStatus, CarrierName } from '../../types';
 
 interface Message {
@@ -22,22 +35,37 @@ const API_BASE = import.meta.env.VITE_ML_API_URL || 'http://localhost:8000';
 // RESPUESTAS LOCALES INTELIGENTES
 // ===========================================
 const RESPUESTAS_LOCALES: Record<string, string> = {
-  'hola': 'Hola! Soy el asistente de Litper. Estoy aqui para ayudarte con:\n\n- Consultar tus guias y envios\n- Explicar procesos de logistica\n- Resolver dudas sobre la app\n\nQue necesitas?',
-  'ayuda': 'Claro! Puedo ayudarte con:\n\n**Guias:**\n- "Lista de guias" - Ver todas tus guias\n- "Guias pendientes" - Ver guias sin entregar\n- "Guias con novedad" - Ver guias problemáticas\n\n**Procesos:**\n- "Como funciona el semaforo?"\n- "Como proceso una novedad?"\n- "Como cargo un archivo Excel?"\n\nQue quieres saber?',
-  'semaforo': '**Sistema de Semaforo de Rutas**\n\nEl semaforo clasifica las rutas segun su tasa de exito:\n\n🟢 **VERDE** (+75%): Ruta excelente, ideal para contraentrega\n🟡 **AMARILLO** (65-75%): Buen rendimiento, monitorear tiempos\n🟠 **NARANJA** (50-65%): Alerta, confirmar datos del cliente\n🔴 **ROJO** (<50%): Critica, exigir PREPAGO obligatorio\n\nSube un archivo Excel con datos de entregas y devoluciones para calcular el semaforo de cada ruta.',
-  'novedad': '**Proceso de Novedades**\n\n1. **Identificar** - Revisar el estado de la guia en tracking\n2. **Contactar** - Llamar al cliente para coordinar\n3. **Gestionar** - Reprogramar entrega o devolver\n4. **Registrar** - Documentar la accion tomada\n\n**Tips:**\n- Contacta al cliente maximo 24h despues de la novedad\n- Usa WhatsApp para coordinar entregas\n- Si no contesta en 3 intentos, considerar devolucion',
-  'excel': '**Cargar Archivo Excel**\n\n1. Ve a la pestaña "Semaforo" o "Modo Admin"\n2. Haz clic en "Cargar Archivo"\n3. Selecciona tu Excel con formato:\n   - Hoja 1: Tasa de entregas (tabla pivote)\n   - Hoja 2: Tiempo promedio\n\n**Columnas requeridas:**\n- Ciudad\n- Transportadora\n- Entregas\n- Devoluciones\n- Total',
-  'transportadora': '**Transportadoras Disponibles**\n\n- **Coordinadora**: Alta confiabilidad, tiempos estables\n- **Inter Rapidisimo**: Buena cobertura nacional\n- **Envia**: Precios competitivos\n- **TCC**: Especializado en carga pesada\n- **Veloces**: Rapido en zonas urbanas\n\nConsulta el semaforo para ver el rendimiento por ciudad.',
-  'predicciones': '**Sistema de Predicciones ML**\n\nNuestro sistema analiza:\n\n- 📅 **Temporada**: Navidad, lluvias, etc.\n- 📆 **Dia de semana**: Impacto de fines de semana\n- 🎉 **Festivos**: Colombia tiene 17 festivos\n- 📊 **Historico**: Rendimiento pasado de la ruta\n\nEl ML calcula la probabilidad de exito para cada envio.',
-  'proceso': '**Procesos Principales de Litper**\n\n1. **Seguimiento de Guias** - Monitorear estado de envios\n2. **Novedades** - Resolver problemas de entrega\n3. **Semaforo** - Evaluar rutas por rendimiento\n4. **Predicciones** - Estimar probabilidad de exito\n5. **Chat en Vivo** - Atender clientes por WhatsApp\n6. **Modo Admin** - Gestion avanzada del sistema',
+  hola: 'Hola! Soy el asistente de Litper. Estoy aqui para ayudarte con:\n\n- Consultar tus guias y envios\n- Explicar procesos de logistica\n- Resolver dudas sobre la app\n\nQue necesitas?',
+  ayuda:
+    'Claro! Puedo ayudarte con:\n\n**Guias:**\n- "Lista de guias" - Ver todas tus guias\n- "Guias pendientes" - Ver guias sin entregar\n- "Guias con novedad" - Ver guias problemáticas\n\n**Procesos:**\n- "Como funciona el semaforo?"\n- "Como proceso una novedad?"\n- "Como cargo un archivo Excel?"\n\nQue quieres saber?',
+  semaforo:
+    '**Sistema de Semaforo de Rutas**\n\nEl semaforo clasifica las rutas segun su tasa de exito:\n\n🟢 **VERDE** (+75%): Ruta excelente, ideal para contraentrega\n🟡 **AMARILLO** (65-75%): Buen rendimiento, monitorear tiempos\n🟠 **NARANJA** (50-65%): Alerta, confirmar datos del cliente\n🔴 **ROJO** (<50%): Critica, exigir PREPAGO obligatorio\n\nSube un archivo Excel con datos de entregas y devoluciones para calcular el semaforo de cada ruta.',
+  novedad:
+    '**Proceso de Novedades**\n\n1. **Identificar** - Revisar el estado de la guia en tracking\n2. **Contactar** - Llamar al cliente para coordinar\n3. **Gestionar** - Reprogramar entrega o devolver\n4. **Registrar** - Documentar la accion tomada\n\n**Tips:**\n- Contacta al cliente maximo 24h despues de la novedad\n- Usa WhatsApp para coordinar entregas\n- Si no contesta en 3 intentos, considerar devolucion',
+  excel:
+    '**Cargar Archivo Excel**\n\n1. Ve a la pestaña "Semaforo" o "Modo Admin"\n2. Haz clic en "Cargar Archivo"\n3. Selecciona tu Excel con formato:\n   - Hoja 1: Tasa de entregas (tabla pivote)\n   - Hoja 2: Tiempo promedio\n\n**Columnas requeridas:**\n- Ciudad\n- Transportadora\n- Entregas\n- Devoluciones\n- Total',
+  transportadora:
+    '**Transportadoras Disponibles**\n\n- **Coordinadora**: Alta confiabilidad, tiempos estables\n- **Inter Rapidisimo**: Buena cobertura nacional\n- **Envia**: Precios competitivos\n- **TCC**: Especializado en carga pesada\n- **Veloces**: Rapido en zonas urbanas\n\nConsulta el semaforo para ver el rendimiento por ciudad.',
+  predicciones:
+    '**Sistema de Predicciones ML**\n\nNuestro sistema analiza:\n\n- 📅 **Temporada**: Navidad, lluvias, etc.\n- 📆 **Dia de semana**: Impacto de fines de semana\n- 🎉 **Festivos**: Colombia tiene 17 festivos\n- 📊 **Historico**: Rendimiento pasado de la ruta\n\nEl ML calcula la probabilidad de exito para cada envio.',
+  proceso:
+    '**Procesos Principales de Litper**\n\n1. **Seguimiento de Guias** - Monitorear estado de envios\n2. **Novedades** - Resolver problemas de entrega\n3. **Semaforo** - Evaluar rutas por rendimiento\n4. **Predicciones** - Estimar probabilidad de exito\n5. **Chat en Vivo** - Atender clientes por WhatsApp\n6. **Modo Admin** - Gestion avanzada del sistema',
 };
 
 // Detectar intención del usuario
 const detectarIntencion = (mensaje: string): { tipo: string; query?: string } => {
-  const msgLower = mensaje.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const msgLower = mensaje
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 
   // Intenciones de listar guías
-  if (msgLower.includes('lista') || msgLower.includes('guias') || msgLower.includes('envios') || msgLower.includes('pedidos')) {
+  if (
+    msgLower.includes('lista') ||
+    msgLower.includes('guias') ||
+    msgLower.includes('envios') ||
+    msgLower.includes('pedidos')
+  ) {
     if (msgLower.includes('pendiente') || msgLower.includes('sin entregar')) {
       return { tipo: 'LISTAR_GUIAS_PENDIENTES' };
     }
@@ -67,55 +95,61 @@ const detectarIntencion = (mensaje: string): { tipo: string; query?: string } =>
 };
 
 // Generar respuesta local inteligente
-const generarRespuestaLocal = (mensaje: string, shipments: Shipment[]): { content: string; guias?: Shipment[] } => {
+const generarRespuestaLocal = (
+  mensaje: string,
+  shipments: Shipment[]
+): { content: string; guias?: Shipment[] } => {
   const intencion = detectarIntencion(mensaje);
 
   switch (intencion.tipo) {
     case 'LISTAR_TODAS_GUIAS':
       if (shipments.length === 0) {
-        return { content: 'No tienes guias cargadas actualmente. Carga un archivo Excel o agrega guias manualmente.' };
+        return {
+          content:
+            'No tienes guias cargadas actualmente. Carga un archivo Excel o agrega guias manualmente.',
+        };
       }
       return {
         content: `**Lista de Guias (${shipments.length} total)**\n\nAqui estan tus guias:`,
-        guias: shipments.slice(0, 20)
+        guias: shipments.slice(0, 20),
       };
 
     case 'LISTAR_GUIAS_PENDIENTES':
-      const pendientes = shipments.filter(s => s.status !== ShipmentStatus.DELIVERED);
+      const pendientes = shipments.filter((s) => s.status !== ShipmentStatus.DELIVERED);
       if (pendientes.length === 0) {
         return { content: 'No tienes guias pendientes. Todas han sido entregadas!' };
       }
       return {
         content: `**Guias Pendientes (${pendientes.length})**\n\nEstas guias aun no se han entregado:`,
-        guias: pendientes.slice(0, 20)
+        guias: pendientes.slice(0, 20),
       };
 
     case 'LISTAR_GUIAS_NOVEDAD':
-      const conNovedad = shipments.filter(s => s.status === ShipmentStatus.ISSUE);
+      const conNovedad = shipments.filter((s) => s.status === ShipmentStatus.ISSUE);
       if (conNovedad.length === 0) {
         return { content: 'No tienes guias con novedad actualmente.' };
       }
       return {
         content: `**Guias con Novedad (${conNovedad.length})**\n\nEstas guias requieren atencion:`,
-        guias: conNovedad.slice(0, 20)
+        guias: conNovedad.slice(0, 20),
       };
 
     case 'LISTAR_GUIAS_ENTREGADAS':
-      const entregadas = shipments.filter(s => s.status === ShipmentStatus.DELIVERED);
+      const entregadas = shipments.filter((s) => s.status === ShipmentStatus.DELIVERED);
       if (entregadas.length === 0) {
         return { content: 'No tienes guias entregadas registradas.' };
       }
       return {
         content: `**Guias Entregadas (${entregadas.length})**`,
-        guias: entregadas.slice(0, 20)
+        guias: entregadas.slice(0, 20),
       };
 
     case 'BUSCAR_GUIA':
-      const guia = shipments.find(s => s.id.includes(intencion.query || ''));
+      const guia = shipments.find((s) => s.id.includes(intencion.query || ''));
       if (guia) {
         return {
           content: `**Guia encontrada:**`,
-          guias: [guia]
+          guias: [guia],
         };
       }
       return { content: `No encontre ninguna guia con el numero "${intencion.query}".` };
@@ -125,7 +159,8 @@ const generarRespuestaLocal = (mensaje: string, shipments: Shipment[]): { conten
 
     default:
       return {
-        content: 'Entiendo tu pregunta. Puedo ayudarte con:\n\n- **"Lista de guias"** - Ver tus envios\n- **"Guias pendientes"** - Ver sin entregar\n- **"Como funciona el semaforo?"** - Info del sistema\n- **"Ayuda"** - Ver todas las opciones\n\nQue necesitas?'
+        content:
+          'Entiendo tu pregunta. Puedo ayudarte con:\n\n- **"Lista de guias"** - Ver tus envios\n- **"Guias pendientes"** - Ver sin entregar\n- **"Como funciona el semaforo?"** - Info del sistema\n- **"Ayuda"** - Ver todas las opciones\n\nQue necesitas?',
       };
   }
 };
@@ -136,7 +171,8 @@ export const ChatTab: React.FC<ChatTabProps> = ({ shipmentsContext = [] }) => {
     {
       id: '1',
       role: 'assistant',
-      content: 'Hola! Soy el asistente de Litper. Puedo ayudarte con:\n\n- Como usar la app\n- Procesos de logistica\n- Resolver tus dudas\n- Ejecutar acciones\n\nQue necesitas?',
+      content:
+        'Hola! Soy el asistente de Litper. Puedo ayudarte con:\n\n- Como usar la app\n- Procesos de logistica\n- Resolver tus dudas\n- Ejecutar acciones\n\nQue necesitas?',
       timestamp: new Date(),
     },
   ]);
@@ -445,7 +481,9 @@ const GuiaCard: React.FC<{ guia: Shipment }> = ({ guia }) => {
             {guia.id}
           </span>
         </div>
-        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusColor(guia.status)}`}>
+        <span
+          className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusColor(guia.status)}`}
+        >
           {guia.status}
         </span>
       </div>
@@ -461,7 +499,7 @@ const GuiaCard: React.FC<{ guia: Shipment }> = ({ guia }) => {
               title="WhatsApp"
             >
               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
               </svg>
             </button>
           </div>
@@ -500,13 +538,7 @@ const GuiaCard: React.FC<{ guia: Shipment }> = ({ guia }) => {
 
 // Mini icon component
 const BookIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
     <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
   </svg>

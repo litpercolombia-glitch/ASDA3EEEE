@@ -12,7 +12,7 @@ import {
   Pais,
   DistritoId,
   LlamadaProgramada,
-  CanalComunicacion
+  CanalComunicacion,
 } from '../types/agents';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -23,26 +23,29 @@ const STORAGE_KEY_PEDIDOS = 'litper_pedidos';
 const STORAGE_KEY_LLAMADAS = 'litper_llamadas_programadas';
 
 // Configuración por país
-const CONFIG_PAIS: Record<Pais, {
-  moneda: string;
-  costoEnvioBase: number;
-  tiempoValidacion: number; // minutos
-}> = {
+const CONFIG_PAIS: Record<
+  Pais,
+  {
+    moneda: string;
+    costoEnvioBase: number;
+    tiempoValidacion: number; // minutos
+  }
+> = {
   [Pais.COLOMBIA]: {
     moneda: 'COP',
     costoEnvioBase: 12500,
-    tiempoValidacion: 30
+    tiempoValidacion: 30,
   },
   [Pais.CHILE]: {
     moneda: 'CLP',
     costoEnvioBase: 5000,
-    tiempoValidacion: 30
+    tiempoValidacion: 30,
   },
   [Pais.ECUADOR]: {
     moneda: 'USD',
-    costoEnvioBase: 4.50,
-    tiempoValidacion: 30
-  }
+    costoEnvioBase: 4.5,
+    tiempoValidacion: 30,
+  },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -62,7 +65,11 @@ class OrdersAgentService {
   // PROCESAMIENTO DE PEDIDOS DESDE CHATEA PRO
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async procesarMensajeChateaPro(mensaje: string, telefono: string, pais: Pais): Promise<{
+  async procesarMensajeChateaPro(
+    mensaje: string,
+    telefono: string,
+    pais: Pais
+  ): Promise<{
     respuesta: string;
     pedidoCreado?: Pedido;
     requiereValidacion: boolean;
@@ -73,7 +80,7 @@ class OrdersAgentService {
     if (!analisis.esIntencionCompra) {
       return {
         respuesta: analisis.respuestaSugerida,
-        requiereValidacion: false
+        requiereValidacion: false,
       };
     }
 
@@ -81,7 +88,7 @@ class OrdersAgentService {
     if (analisis.datosFaltantes.length > 0) {
       return {
         respuesta: this.generarPreguntasDatosFaltantes(analisis.datosFaltantes, pais),
-        requiereValidacion: true
+        requiereValidacion: true,
       };
     }
 
@@ -91,17 +98,20 @@ class OrdersAgentService {
       pais,
       productos: analisis.productosDetectados,
       direccion: analisis.direccionDetectada,
-      nombre: analisis.nombreDetectado || ''
+      nombre: analisis.nombreDetectado || '',
     });
 
     return {
       respuesta: this.generarConfirmacionPedido(pedido),
       pedidoCreado: pedido,
-      requiereValidacion: pedido.requiereValidacion
+      requiereValidacion: pedido.requiereValidacion,
     };
   }
 
-  private async analizarMensajeCliente(mensaje: string, pais: Pais): Promise<{
+  private async analizarMensajeCliente(
+    mensaje: string,
+    pais: Pais
+  ): Promise<{
     esIntencionCompra: boolean;
     productosDetectados: Array<{ nombre: string; cantidad: number }>;
     direccionDetectada?: string;
@@ -141,7 +151,7 @@ Responde en JSON:
       esIntencionCompra: false,
       productosDetectados: [],
       datosFaltantes: ['producto', 'dirección', 'ciudad'],
-      respuestaSugerida: '¡Hola! ¿En qué puedo ayudarte hoy?'
+      respuestaSugerida: '¡Hola! ¿En qué puedo ayudarte hoy?',
     };
   }
 
@@ -152,11 +162,11 @@ Responde en JSON:
       direccion: '¿A qué dirección lo enviamos?',
       ciudad: '¿En qué ciudad estás?',
       nombre: '¿A nombre de quién va el pedido?',
-      telefono: '¿Cuál es tu número de contacto?'
+      telefono: '¿Cuál es tu número de contacto?',
     };
 
     const preguntasFormateadas = datosFaltantes
-      .map(d => preguntas[d] || `¿Cuál es tu ${d}?`)
+      .map((d) => preguntas[d] || `¿Cuál es tu ${d}?`)
       .join('\n');
 
     return `Para completar tu pedido necesito:\n${preguntasFormateadas}`;
@@ -173,16 +183,16 @@ Responde en JSON:
 
     // Buscar productos (simulado - en producción conectar con catálogo Dropi)
     const productos: ProductoPedido[] = await Promise.all(
-      datos.productos.map(async p => ({
+      datos.productos.map(async (p) => ({
         id: `PROD_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
         nombre: p.nombre,
         cantidad: p.cantidad,
         precioUnitario: await this.buscarPrecioProducto(p.nombre, datos.pais),
-        disponible: true
+        disponible: true,
       }))
     );
 
-    const subtotal = productos.reduce((sum, p) => sum + (p.precioUnitario * p.cantidad), 0);
+    const subtotal = productos.reduce((sum, p) => sum + p.precioUnitario * p.cantidad, 0);
 
     const pedido: Pedido = {
       id: `ORD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -193,7 +203,7 @@ Responde en JSON:
         telefono: datos.telefono,
         direccion: datos.direccion || '',
         ciudad: '',
-        pais: datos.pais
+        pais: datos.pais,
       },
       productos,
       subtotal,
@@ -202,7 +212,7 @@ Responde en JSON:
       moneda: config.moneda,
       requiereValidacion: !datos.direccion || !datos.nombre,
       datosValidados: false,
-      creadoEn: new Date()
+      creadoEn: new Date(),
     };
 
     this.pedidos.set(pedido.id, pedido);
@@ -213,9 +223,9 @@ Responde en JSON:
       tipo: 'experiencia',
       categoria: 'pedido_chateapro',
       descripcion: `Pedido desde Chatea Pro: ${productos.length} productos`,
-      datos: { productos: productos.map(p => p.nombre), total: pedido.total },
+      datos: { productos: productos.map((p) => p.nombre), total: pedido.total },
       impacto: 'medio',
-      origenPais: datos.pais
+      origenPais: datos.pais,
     });
 
     return pedido;
@@ -230,7 +240,10 @@ Responde en JSON:
 
   private generarConfirmacionPedido(pedido: Pedido): string {
     const productosLista = pedido.productos
-      .map(p => `• ${p.cantidad}x ${p.nombre} - ${pedido.moneda} ${p.precioUnitario.toLocaleString()}`)
+      .map(
+        (p) =>
+          `• ${p.cantidad}x ${p.nombre} - ${pedido.moneda} ${p.precioUnitario.toLocaleString()}`
+      )
       .join('\n');
 
     return `¡Pedido confirmado! 🎉
@@ -276,26 +289,28 @@ ${pedido.requiereValidacion ? '⚠️ Te llamaremos para confirmar la dirección
     const pais = this.detectarPaisPorDireccion(datosShopify.shippingAddress.country);
     const config = CONFIG_PAIS[pais];
 
-    const productos: ProductoPedido[] = datosShopify.lineItems.map(item => ({
+    const productos: ProductoPedido[] = datosShopify.lineItems.map((item) => ({
       id: item.sku || `SKU_${Date.now()}`,
       nombre: item.name,
       sku: item.sku,
       cantidad: item.quantity,
       precioUnitario: item.price,
-      disponible: true
+      disponible: true,
     }));
 
     const direccionCompleta = [
       datosShopify.shippingAddress.address1,
-      datosShopify.shippingAddress.address2
-    ].filter(Boolean).join(', ');
+      datosShopify.shippingAddress.address2,
+    ]
+      .filter(Boolean)
+      .join(', ');
 
     // Validar datos
     const validacion = await this.validarDatosPedido({
       telefono: datosShopify.customer.phone,
       direccion: direccionCompleta,
       ciudad: datosShopify.shippingAddress.city,
-      pais
+      pais,
     });
 
     const pedido: Pedido = {
@@ -309,7 +324,7 @@ ${pedido.requiereValidacion ? '⚠️ Te llamaremos para confirmar la dirección
         email: datosShopify.customer.email,
         direccion: direccionCompleta,
         ciudad: datosShopify.shippingAddress.city,
-        pais
+        pais,
       },
       productos,
       subtotal: datosShopify.totalPrice - config.costoEnvioBase,
@@ -319,7 +334,7 @@ ${pedido.requiereValidacion ? '⚠️ Te llamaremos para confirmar la dirección
       requiereValidacion: !validacion.esValido,
       datosValidados: validacion.esValido,
       validacionNotas: validacion.problemas?.join(', '),
-      creadoEn: new Date()
+      creadoEn: new Date(),
     };
 
     this.pedidos.set(pedido.id, pedido);
@@ -338,12 +353,12 @@ ${pedido.requiereValidacion ? '⚠️ Te llamaremos para confirmar la dirección
 
   private detectarPaisPorDireccion(country: string): Pais {
     const paises: Record<string, Pais> = {
-      'Colombia': Pais.COLOMBIA,
-      'CO': Pais.COLOMBIA,
-      'Chile': Pais.CHILE,
-      'CL': Pais.CHILE,
-      'Ecuador': Pais.ECUADOR,
-      'EC': Pais.ECUADOR
+      Colombia: Pais.COLOMBIA,
+      CO: Pais.COLOMBIA,
+      Chile: Pais.CHILE,
+      CL: Pais.CHILE,
+      Ecuador: Pais.ECUADOR,
+      EC: Pais.ECUADOR,
     };
     return paises[country] || Pais.COLOMBIA;
   }
@@ -364,7 +379,7 @@ ${pedido.requiereValidacion ? '⚠️ Te llamaremos para confirmar la dirección
     const longitudesValidas: Record<Pais, number[]> = {
       [Pais.COLOMBIA]: [10],
       [Pais.CHILE]: [9],
-      [Pais.ECUADOR]: [9, 10]
+      [Pais.ECUADOR]: [9, 10],
     };
 
     if (!longitudesValidas[datos.pais].includes(telefonoLimpio.length)) {
@@ -388,7 +403,7 @@ ${pedido.requiereValidacion ? '⚠️ Te llamaremos para confirmar la dirección
 
     return {
       esValido: problemas.length === 0,
-      problemas: problemas.length > 0 ? problemas : undefined
+      problemas: problemas.length > 0 ? problemas : undefined,
     };
   }
 
@@ -396,17 +411,22 @@ ${pedido.requiereValidacion ? '⚠️ Te llamaremos para confirmar la dirección
   // LLAMADAS DE VALIDACIÓN
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async programarLlamadaValidacion(pedido: Pedido, problemas: string[]): Promise<LlamadaProgramada> {
+  async programarLlamadaValidacion(
+    pedido: Pedido,
+    problemas: string[]
+  ): Promise<LlamadaProgramada> {
     const llamada: LlamadaProgramada = {
       id: `CALL_${Date.now()}`,
       tipo: 'confirmacion',
       clienteNombre: pedido.cliente.nombre,
       clienteTelefono: pedido.cliente.telefono,
       pais: pedido.cliente.pais,
-      programadaPara: new Date(Date.now() + CONFIG_PAIS[pedido.cliente.pais].tiempoValidacion * 60 * 1000),
+      programadaPara: new Date(
+        Date.now() + CONFIG_PAIS[pedido.cliente.pais].tiempoValidacion * 60 * 1000
+      ),
       estado: 'pendiente',
       motivo: `Validar datos de pedido: ${problemas.join(', ')}`,
-      pedidoRelacionado: pedido.id
+      pedidoRelacionado: pedido.id,
     };
 
     this.llamadasProgramadas.set(llamada.id, llamada);
@@ -417,7 +437,7 @@ ${pedido.requiereValidacion ? '⚠️ Te llamaremos para confirmar la dirección
       distrito: DistritoId.ORDERS,
       pais: pedido.cliente.pais,
       titulo: 'Llamada de validación programada',
-      mensaje: `Pedido ${pedido.id} - Llamar a ${pedido.cliente.nombre} para validar ${problemas.join(', ')}`
+      mensaje: `Pedido ${pedido.id} - Llamar a ${pedido.cliente.nombre} para validar ${problemas.join(', ')}`,
     });
 
     return llamada;
@@ -464,7 +484,7 @@ ${pedido.requiereValidacion ? '⚠️ Te llamaremos para confirmar la dirección
 
     return {
       exito: true,
-      resultado: 'Datos validados correctamente'
+      resultado: 'Datos validados correctamente',
     };
   }
 
@@ -512,7 +532,7 @@ Genera solo el script.`;
       // });
 
       // Simular respuesta exitosa
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       const dropiOrderId = `DROPI_${Date.now()}`;
 
@@ -530,15 +550,15 @@ Genera solo el script.`;
         datos: {
           pedidoId: pedido.id,
           dropiId: dropiOrderId,
-          origen: pedido.origenPlataforma
+          origen: pedido.origenPlataforma,
         },
         impacto: 'medio',
-        origenPais: pedido.cliente.pais
+        origenPais: pedido.cliente.pais,
       });
 
       return {
         exito: true,
-        dropiOrderId
+        dropiOrderId,
       };
     } catch (error) {
       pedido.estado = 'error';
@@ -549,17 +569,21 @@ Genera solo el script.`;
         distrito: DistritoId.ORDERS,
         pais: pedido.cliente.pais,
         titulo: 'Error creando pedido en Dropi',
-        mensaje: `Pedido ${pedido.id}: ${error instanceof Error ? error.message : 'Error desconocido'}`
+        mensaje: `Pedido ${pedido.id}: ${error instanceof Error ? error.message : 'Error desconocido'}`,
       });
 
       return {
         exito: false,
-        error: error instanceof Error ? error.message : 'Error desconocido'
+        error: error instanceof Error ? error.message : 'Error desconocido',
       };
     }
   }
 
-  async asignarGuia(pedidoId: string, guiaNumero: string, transportadora: string): Promise<boolean> {
+  async asignarGuia(
+    pedidoId: string,
+    guiaNumero: string,
+    transportadora: string
+  ): Promise<boolean> {
     const pedido = this.pedidos.get(pedidoId);
     if (!pedido) return false;
 
@@ -581,54 +605,52 @@ Genera solo el script.`;
   }
 
   getPedidosPorPais(pais: Pais): Pedido[] {
-    return Array.from(this.pedidos.values())
-      .filter(p => p.cliente.pais === pais);
+    return Array.from(this.pedidos.values()).filter((p) => p.cliente.pais === pais);
   }
 
   getPedidosPendientes(): Pedido[] {
-    return Array.from(this.pedidos.values())
-      .filter(p => ['nuevo', 'validando', 'procesando'].includes(p.estado));
+    return Array.from(this.pedidos.values()).filter((p) =>
+      ['nuevo', 'validando', 'procesando'].includes(p.estado)
+    );
   }
 
   getPedidosPorOrigen(origen: Pedido['origenPlataforma']): Pedido[] {
-    return Array.from(this.pedidos.values())
-      .filter(p => p.origenPlataforma === origen);
+    return Array.from(this.pedidos.values()).filter((p) => p.origenPlataforma === origen);
   }
 
   getLlamadasPendientes(): LlamadaProgramada[] {
-    return Array.from(this.llamadasProgramadas.values())
-      .filter(l => l.estado === 'pendiente');
+    return Array.from(this.llamadasProgramadas.values()).filter((l) => l.estado === 'pendiente');
   }
 
   getEstadisticas(pais?: Pais) {
     let pedidos = Array.from(this.pedidos.values());
     if (pais) {
-      pedidos = pedidos.filter(p => p.cliente.pais === pais);
+      pedidos = pedidos.filter((p) => p.cliente.pais === pais);
     }
 
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
 
-    const pedidosHoy = pedidos.filter(p => p.creadoEn >= hoy);
+    const pedidosHoy = pedidos.filter((p) => p.creadoEn >= hoy);
 
     const porOrigen = {
-      chatea_pro: pedidos.filter(p => p.origenPlataforma === 'chatea_pro').length,
-      shopify: pedidos.filter(p => p.origenPlataforma === 'shopify').length,
-      web: pedidos.filter(p => p.origenPlataforma === 'web').length,
-      manual: pedidos.filter(p => p.origenPlataforma === 'manual').length
+      chatea_pro: pedidos.filter((p) => p.origenPlataforma === 'chatea_pro').length,
+      shopify: pedidos.filter((p) => p.origenPlataforma === 'shopify').length,
+      web: pedidos.filter((p) => p.origenPlataforma === 'web').length,
+      manual: pedidos.filter((p) => p.origenPlataforma === 'manual').length,
     };
 
     const porEstado = {
-      nuevo: pedidos.filter(p => p.estado === 'nuevo').length,
-      validando: pedidos.filter(p => p.estado === 'validando').length,
-      procesando: pedidos.filter(p => p.estado === 'procesando').length,
-      creado_dropi: pedidos.filter(p => p.estado === 'creado_dropi').length,
-      con_guia: pedidos.filter(p => p.estado === 'con_guia').length,
-      error: pedidos.filter(p => p.estado === 'error').length
+      nuevo: pedidos.filter((p) => p.estado === 'nuevo').length,
+      validando: pedidos.filter((p) => p.estado === 'validando').length,
+      procesando: pedidos.filter((p) => p.estado === 'procesando').length,
+      creado_dropi: pedidos.filter((p) => p.estado === 'creado_dropi').length,
+      con_guia: pedidos.filter((p) => p.estado === 'con_guia').length,
+      error: pedidos.filter((p) => p.estado === 'error').length,
     };
 
     const totalValor = pedidos.reduce((sum, p) => sum + p.total, 0);
-    const pedidosValidados = pedidos.filter(p => p.datosValidados).length;
+    const pedidosValidados = pedidos.filter((p) => p.datosValidados).length;
 
     return {
       total: pedidos.length,
@@ -638,10 +660,9 @@ Genera solo el script.`;
       porOrigen,
       porEstado,
       valorTotal: totalValor,
-      tasaValidacion: pedidos.length > 0
-        ? Math.round((pedidosValidados / pedidos.length) * 100)
-        : 100,
-      llamadasPendientes: this.getLlamadasPendientes().length
+      tasaValidacion:
+        pedidos.length > 0 ? Math.round((pedidosValidados / pedidos.length) * 100) : 100,
+      llamadasPendientes: this.getLlamadasPendientes().length,
     };
   }
 
@@ -654,7 +675,7 @@ Genera solo el script.`;
       const data = localStorage.getItem(STORAGE_KEY_PEDIDOS);
       if (data) {
         const pedidos: Pedido[] = JSON.parse(data);
-        pedidos.forEach(p => {
+        pedidos.forEach((p) => {
           p.creadoEn = new Date(p.creadoEn);
           if (p.procesadoEn) p.procesadoEn = new Date(p.procesadoEn);
           this.pedidos.set(p.id, p);
@@ -679,7 +700,7 @@ Genera solo el script.`;
       const data = localStorage.getItem(STORAGE_KEY_LLAMADAS);
       if (data) {
         const llamadas: LlamadaProgramada[] = JSON.parse(data);
-        llamadas.forEach(l => {
+        llamadas.forEach((l) => {
           l.programadaPara = new Date(l.programadaPara);
           this.llamadasProgramadas.set(l.id, l);
         });
@@ -712,32 +733,27 @@ export const ordersService = new OrdersAgentService();
 export const procesarMensajeChateaPro = (mensaje: string, telefono: string, pais: Pais) =>
   ordersService.procesarMensajeChateaPro(mensaje, telefono, pais);
 
-export const procesarPedidoShopify = (datos: Parameters<typeof ordersService.procesarPedidoShopify>[0]) =>
-  ordersService.procesarPedidoShopify(datos);
+export const procesarPedidoShopify = (
+  datos: Parameters<typeof ordersService.procesarPedidoShopify>[0]
+) => ordersService.procesarPedidoShopify(datos);
 
 export const ejecutarLlamadaValidacion = (id: string) =>
   ordersService.ejecutarLlamadaValidacion(id);
 
-export const enviarADropi = (pedido: Pedido) =>
-  ordersService.enviarADropi(pedido);
+export const enviarADropi = (pedido: Pedido) => ordersService.enviarADropi(pedido);
 
 export const asignarGuia = (pedidoId: string, guia: string, transportadora: string) =>
   ordersService.asignarGuia(pedidoId, guia, transportadora);
 
-export const getPedido = (id: string) =>
-  ordersService.getPedido(id);
+export const getPedido = (id: string) => ordersService.getPedido(id);
 
-export const getPedidosPorPais = (pais: Pais) =>
-  ordersService.getPedidosPorPais(pais);
+export const getPedidosPorPais = (pais: Pais) => ordersService.getPedidosPorPais(pais);
 
-export const getPedidosPendientes = () =>
-  ordersService.getPedidosPendientes();
+export const getPedidosPendientes = () => ordersService.getPedidosPendientes();
 
 export const getPedidosPorOrigen = (origen: Pedido['origenPlataforma']) =>
   ordersService.getPedidosPorOrigen(origen);
 
-export const getLlamadasPendientes = () =>
-  ordersService.getLlamadasPendientes();
+export const getLlamadasPendientes = () => ordersService.getLlamadasPendientes();
 
-export const getEstadisticasPedidos = (pais?: Pais) =>
-  ordersService.getEstadisticas(pais);
+export const getEstadisticasPedidos = (pais?: Pais) => ordersService.getEstadisticas(pais);

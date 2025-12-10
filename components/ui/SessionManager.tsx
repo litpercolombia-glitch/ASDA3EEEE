@@ -77,12 +77,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
           ? Object.keys(currentData).length
           : 1;
 
-      documentProcessor.saveSession(
-        tabId,
-        name,
-        currentData,
-        `${recordCount} registros guardados`
-      );
+      documentProcessor.saveSession(tabId, name, currentData, `${recordCount} registros guardados`);
 
       setSavedMessage('Sesion guardada exitosamente');
       setNewSessionName('');
@@ -127,7 +122,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
   };
 
   // Filtrar sesiones
-  const filteredSessions = sessions.filter(s =>
+  const filteredSessions = sessions.filter((s) =>
     s.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -147,8 +142,13 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
     return (
       <div className="flex items-center gap-2">
         {savedMessage && (
-          <span className={`text-xs px-2 py-1 rounded-full animate-fade-in ${savedMessage.includes('Error') ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'
-            }`}>
+          <span
+            className={`text-xs px-2 py-1 rounded-full animate-fade-in ${
+              savedMessage.includes('Error')
+                ? 'bg-red-100 text-red-600'
+                : 'bg-emerald-100 text-emerald-600'
+            }`}
+          >
             {savedMessage}
           </span>
         )}
@@ -219,20 +219,22 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
       <div className="flex border-b border-slate-200 dark:border-navy-700">
         <button
           onClick={() => setActiveTab('save')}
-          className={`flex-1 py-3 text-sm font-medium transition-all ${activeTab === 'save'
+          className={`flex-1 py-3 text-sm font-medium transition-all ${
+            activeTab === 'save'
               ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50 dark:bg-blue-900/20'
               : 'text-slate-500 hover:text-slate-700'
-            }`}
+          }`}
         >
           <Save className="w-4 h-4 inline mr-2" />
           Guardar Nueva
         </button>
         <button
           onClick={() => setActiveTab('load')}
-          className={`flex-1 py-3 text-sm font-medium transition-all ${activeTab === 'load'
+          className={`flex-1 py-3 text-sm font-medium transition-all ${
+            activeTab === 'load'
               ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50 dark:bg-blue-900/20'
               : 'text-slate-500 hover:text-slate-700'
-            }`}
+          }`}
         >
           <History className="w-4 h-4 inline mr-2" />
           Historial ({sessions.length})
@@ -242,10 +244,13 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
       {/* Content */}
       <div className="p-4">
         {savedMessage && (
-          <div className={`mb-4 p-3 rounded-xl flex items-center gap-2 ${savedMessage.includes('Error')
-              ? 'bg-red-50 text-red-600 border border-red-200'
-              : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-            }`}>
+          <div
+            className={`mb-4 p-3 rounded-xl flex items-center gap-2 ${
+              savedMessage.includes('Error')
+                ? 'bg-red-50 text-red-600 border border-red-200'
+                : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+            }`}
+          >
             {savedMessage.includes('Error') ? (
               <AlertCircle className="w-4 h-4" />
             ) : (
@@ -271,7 +276,9 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
             </div>
 
             <div className="bg-slate-50 dark:bg-navy-800 rounded-xl p-4">
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Vista previa de datos:</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                Vista previa de datos:
+              </p>
               <div className="text-sm text-slate-700 dark:text-slate-300">
                 {currentData ? (
                   <div className="flex items-center gap-2">
@@ -328,7 +335,9 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                 <div className="text-center py-8">
                   <History className="w-12 h-12 mx-auto text-slate-300 dark:text-navy-600 mb-3" />
                   <p className="text-slate-500 dark:text-slate-400 text-sm">
-                    {sessions.length === 0 ? 'No hay sesiones guardadas' : 'No se encontraron resultados'}
+                    {sessions.length === 0
+                      ? 'No hay sesiones guardadas'
+                      : 'No se encontraron resultados'}
                   </p>
                 </div>
               ) : (
@@ -398,7 +407,16 @@ const SessionModal: React.FC<{
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   formatDate: (date: Date | string) => string;
-}> = ({ sessions, onClose, onRestore, onDelete, onExport, searchQuery, setSearchQuery, formatDate }) => {
+}> = ({
+  sessions,
+  onClose,
+  onRestore,
+  onDelete,
+  onExport,
+  searchQuery,
+  setSearchQuery,
+  formatDate,
+}) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-navy-900 rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden shadow-2xl animate-scale-in">

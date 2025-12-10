@@ -60,16 +60,16 @@ export const GuideLoadingWizard: React.FC<GuideLoadingWizardProps> = ({
     PHONES: {
       completed: phoneRegistryCount > 0,
       count: phoneRegistryCount,
-      description: phoneRegistryCount > 0
-        ? `${phoneRegistryCount} celulares registrados`
-        : 'Sin celulares cargados',
+      description:
+        phoneRegistryCount > 0
+          ? `${phoneRegistryCount} celulares registrados`
+          : 'Sin celulares cargados',
     },
     REPORT: {
       completed: shipmentsCount > 0,
       count: shipmentsCount,
-      description: shipmentsCount > 0
-        ? `${shipmentsCount} guías con detalle`
-        : 'Sin reportes cargados',
+      description:
+        shipmentsCount > 0 ? `${shipmentsCount} guías con detalle` : 'Sin reportes cargados',
     },
     SUMMARY: {
       completed: shipmentsCount > 0,
@@ -102,11 +102,12 @@ export const GuideLoadingWizard: React.FC<GuideLoadingWizardProps> = ({
         <div
           className={`
             flex flex-col items-center p-4 rounded-xl border-2 transition-all duration-300
-            ${isCurrent
-              ? `${color} border-current shadow-lg`
-              : isCompleted
-                ? 'bg-white dark:bg-navy-900 border-emerald-300 dark:border-emerald-700'
-                : 'bg-slate-50 dark:bg-navy-950 border-slate-200 dark:border-navy-800 hover:border-slate-300'
+            ${
+              isCurrent
+                ? `${color} border-current shadow-lg`
+                : isCompleted
+                  ? 'bg-white dark:bg-navy-900 border-emerald-300 dark:border-emerald-700'
+                  : 'bg-slate-50 dark:bg-navy-950 border-slate-200 dark:border-navy-800 hover:border-slate-300'
             }
           `}
         >
@@ -114,11 +115,12 @@ export const GuideLoadingWizard: React.FC<GuideLoadingWizardProps> = ({
           <div
             className={`
               absolute -top-3 left-1/2 -translate-x-1/2 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
-              ${isCurrent
-                ? 'bg-white dark:bg-navy-800 text-slate-700 dark:text-white shadow-md'
-                : isCompleted
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-slate-300 dark:bg-navy-700 text-slate-600 dark:text-slate-400'
+              ${
+                isCurrent
+                  ? 'bg-white dark:bg-navy-800 text-slate-700 dark:text-white shadow-md'
+                  : isCompleted
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-slate-300 dark:bg-navy-700 text-slate-600 dark:text-slate-400'
               }
             `}
           >
@@ -129,11 +131,12 @@ export const GuideLoadingWizard: React.FC<GuideLoadingWizardProps> = ({
           <div
             className={`
               p-3 rounded-xl mb-2 transition-all
-              ${isCurrent
-                ? 'bg-white/20 dark:bg-navy-800/50'
-                : isCompleted
-                  ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-                  : 'bg-slate-100 dark:bg-navy-800 text-slate-400'
+              ${
+                isCurrent
+                  ? 'bg-white/20 dark:bg-navy-800/50'
+                  : isCompleted
+                    ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-slate-100 dark:bg-navy-800 text-slate-400'
               }
             `}
           >
@@ -144,11 +147,12 @@ export const GuideLoadingWizard: React.FC<GuideLoadingWizardProps> = ({
           <span
             className={`
               text-sm font-bold mb-1
-              ${isCurrent
-                ? 'text-white'
-                : isCompleted
-                  ? 'text-emerald-700 dark:text-emerald-400'
-                  : 'text-slate-600 dark:text-slate-400'
+              ${
+                isCurrent
+                  ? 'text-white'
+                  : isCompleted
+                    ? 'text-emerald-700 dark:text-emerald-400'
+                    : 'text-slate-600 dark:text-slate-400'
               }
             `}
           >
@@ -159,11 +163,12 @@ export const GuideLoadingWizard: React.FC<GuideLoadingWizardProps> = ({
           <span
             className={`
               text-[10px] font-medium
-              ${isCurrent
-                ? 'text-white/80'
-                : isCompleted
-                  ? 'text-emerald-600/70 dark:text-emerald-400/70'
-                  : 'text-slate-400'
+              ${
+                isCurrent
+                  ? 'text-white/80'
+                  : isCompleted
+                    ? 'text-emerald-600/70 dark:text-emerald-400/70'
+                    : 'text-slate-400'
               }
             `}
           >
@@ -193,8 +198,12 @@ export const GuideLoadingWizard: React.FC<GuideLoadingWizardProps> = ({
               <Database className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-800 dark:text-white">Carga Inteligente de Guías</h3>
-              <p className="text-xs text-slate-500">Flujo secuencial de 3 pasos para máxima precisión</p>
+              <h3 className="font-bold text-slate-800 dark:text-white">
+                Carga Inteligente de Guías
+              </h3>
+              <p className="text-xs text-slate-500">
+                Flujo secuencial de 3 pasos para máxima precisión
+              </p>
             </div>
           </div>
           <div className="hidden md:flex items-center gap-2 bg-slate-100 dark:bg-navy-800 px-3 py-1.5 rounded-lg">
@@ -278,20 +287,22 @@ export const GuideLoadingWizard: React.FC<GuideLoadingWizardProps> = ({
             )}
             {activeInputTab === 'REPORT' && (
               <>
-                <strong>Paso 2:</strong> Pegue el reporte completo copiado desde el sistema de la transportadora (Inter, Envía, Coordinadora).
-                Incluye historial, fechas y estados. Los celulares del Paso 1 se vinculan automáticamente.
+                <strong>Paso 2:</strong> Pegue el reporte completo copiado desde el sistema de la
+                transportadora (Inter, Envía, Coordinadora). Incluye historial, fechas y estados.
+                Los celulares del Paso 1 se vinculan automáticamente.
               </>
             )}
             {activeInputTab === 'SUMMARY' && (
               <>
-                <strong>Paso 3 (Opcional):</strong> Si tiene guías que no estaban en el reporte detallado,
-                pegue aquí el resumen de 17TRACK. Las guías duplicadas se ignorarán.
+                <strong>Paso 3 (Opcional):</strong> Si tiene guías que no estaban en el reporte
+                detallado, pegue aquí el resumen de 17TRACK. Las guías duplicadas se ignorarán.
               </>
             )}
             {activeInputTab === 'EXCEL' && (
               <>
-                <strong>Carga Alternativa:</strong> Suba un archivo Excel con columnas: GUIA, ESTADO, TELEFONO, TRANSPORTADORA, DESTINO, DIAS.
-                El sistema normalizará los datos automáticamente.
+                <strong>Carga Alternativa:</strong> Suba un archivo Excel con columnas: GUIA,
+                ESTADO, TELEFONO, TRANSPORTADORA, DESTINO, DIAS. El sistema normalizará los datos
+                automáticamente.
               </>
             )}
           </div>
@@ -342,9 +353,10 @@ export const GuideLoadingWizard: React.FC<GuideLoadingWizardProps> = ({
               className={`
                 inline-flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-lg cursor-pointer
                 transition-all transform hover:scale-105 shadow-lg
-                ${isExcelLoading
-                  ? 'bg-slate-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white hover:shadow-xl'
+                ${
+                  isExcelLoading
+                    ? 'bg-slate-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white hover:shadow-xl'
                 }
               `}
             >
@@ -480,14 +492,19 @@ export const GuideLoadingWizard: React.FC<GuideLoadingWizardProps> = ({
                 {activeInputTab === 'PHONES' && (
                   <div className="flex items-center gap-2 text-xs text-slate-500">
                     <Phone className="w-3 h-3" />
-                    <span>Registrados: <strong className="text-emerald-600">{phoneRegistryCount}</strong></span>
+                    <span>
+                      Registrados:{' '}
+                      <strong className="text-emerald-600">{phoneRegistryCount}</strong>
+                    </span>
                   </div>
                 )}
                 {(activeInputTab === 'REPORT' || activeInputTab === 'SUMMARY') && (
                   <>
                     <div className="flex items-center gap-2 text-xs text-slate-500">
                       <Package className="w-3 h-3" />
-                      <span>Guías cargadas: <strong className="text-blue-600">{shipmentsCount}</strong></span>
+                      <span>
+                        Guías cargadas: <strong className="text-blue-600">{shipmentsCount}</strong>
+                      </span>
                     </div>
                     {phoneRegistryCount > 0 && (
                       <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-lg">

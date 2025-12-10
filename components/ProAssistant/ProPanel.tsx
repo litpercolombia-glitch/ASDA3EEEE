@@ -25,14 +25,8 @@ const tabs = [
 ];
 
 const ProPanel: React.FC = () => {
-  const {
-    setIsOpen,
-    isMaximized,
-    setIsMaximized,
-    activeTab,
-    setActiveTab,
-    isProcessing,
-  } = useProAssistantStore();
+  const { setIsOpen, isMaximized, setIsMaximized, activeTab, setActiveTab, isProcessing } =
+    useProAssistantStore();
 
   const panelSize = isMaximized
     ? 'fixed inset-4 z-[9998]'
@@ -88,11 +82,7 @@ const ProPanel: React.FC = () => {
             className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors text-slate-400 hover:text-white"
             title={isMaximized ? 'Restaurar' : 'Maximizar'}
           >
-            {isMaximized ? (
-              <Minimize2 className="w-4 h-4" />
-            ) : (
-              <Maximize2 className="w-4 h-4" />
-            )}
+            {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
           <button
             onClick={() => setIsOpen(false)}

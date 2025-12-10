@@ -41,7 +41,9 @@ export const AssistantPanelNew: React.FC<AssistantPanelNewProps> = ({
     : 'fixed bottom-24 right-6 z-40 w-[420px] h-[650px]';
 
   return (
-    <div className={`${panelClasses} bg-white dark:bg-navy-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-navy-700 animate-in slide-in-from-bottom-4 duration-300`}>
+    <div
+      className={`${panelClasses} bg-white dark:bg-navy-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-navy-700 animate-in slide-in-from-bottom-4 duration-300`}
+    >
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 text-white p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">

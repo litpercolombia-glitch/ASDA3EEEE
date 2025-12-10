@@ -5,12 +5,36 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  Send, Loader2, Bot, User, Lightbulb, RefreshCw, Package, Phone, Truck, MapPin,
-  Clock, AlertTriangle, Brain, BookOpen, Sparkles, FileText, Database,
-  ChevronDown, ChevronRight, Star, Zap, History, Search
+  Send,
+  Loader2,
+  Bot,
+  User,
+  Lightbulb,
+  RefreshCw,
+  Package,
+  Phone,
+  Truck,
+  MapPin,
+  Clock,
+  AlertTriangle,
+  Brain,
+  BookOpen,
+  Sparkles,
+  FileText,
+  Database,
+  ChevronDown,
+  ChevronRight,
+  Star,
+  Zap,
+  History,
+  Search,
 } from 'lucide-react';
 import { Shipment, ShipmentStatus } from '../../types';
-import { documentProcessor, KnowledgeEntry, ProcessedDocument } from '../../services/documentProcessingService';
+import {
+  documentProcessor,
+  KnowledgeEntry,
+  ProcessedDocument,
+} from '../../services/documentProcessingService';
 import Anthropic from '@anthropic-ai/sdk';
 
 interface Message {
@@ -35,7 +59,7 @@ const API_BASE = import.meta.env.VITE_ML_API_URL || 'http://localhost:8000';
 // CONOCIMIENTO BASE INTEGRADO
 // ===========================================
 const CONOCIMIENTO_LITPER: Record<string, { respuesta: string; tags: string[] }> = {
-  'semaforo': {
+  semaforo: {
     respuesta: `**🚦 Sistema de Semáforo de Rutas LITPER PRO**
 
 El semáforo clasifica las rutas según su tasa de éxito histórica:
@@ -60,10 +84,10 @@ El semáforo clasifica las rutas según su tasa de éxito histórica:
 • Evaluar si vale la pena enviar
 
 **💡 Consejo:** Carga tu archivo Excel con datos históricos para calcular el semáforo automáticamente.`,
-    tags: ['semaforo', 'rutas', 'entregas', 'exito', 'color']
+    tags: ['semaforo', 'rutas', 'entregas', 'exito', 'color'],
   },
 
-  'novedad': {
+  novedad: {
     respuesta: `**📋 Gestión de Novedades LITPER PRO**
 
 **Proceso estándar de novedades:**
@@ -93,10 +117,10 @@ El semáforo clasifica las rutas según su tasa de éxito histórica:
 • Cliente ausente → Reprogramar
 • Rechazado → Evaluar devolución
 • Zona de riesgo → Confirmar entrega segura`,
-    tags: ['novedad', 'novedades', 'problemas', 'gestion', 'entrega']
+    tags: ['novedad', 'novedades', 'problemas', 'gestion', 'entrega'],
   },
 
-  'excel': {
+  excel: {
     respuesta: `**📊 Carga de Archivos Excel**
 
 **Formatos soportados:**
@@ -133,10 +157,10 @@ El semáforo clasifica las rutas según su tasa de éxito histórica:
 3. Análisis IA del contenido
 4. Resumen y recomendaciones
 5. Guardar en base de conocimiento`,
-    tags: ['excel', 'archivo', 'cargar', 'xlsx', 'formato']
+    tags: ['excel', 'archivo', 'cargar', 'xlsx', 'formato'],
   },
 
-  'predicciones': {
+  predicciones: {
     respuesta: `**🔮 Sistema de Predicciones ML**
 
 LITPER PRO usa Machine Learning para predecir éxito de entregas:
@@ -167,10 +191,10 @@ LITPER PRO usa Machine Learning para predecir éxito de entregas:
 • Probabilidad de éxito (%)
 • Recomendación de acción
 • Nivel de riesgo`,
-    tags: ['prediccion', 'ml', 'inteligencia', 'artificial', 'machine', 'learning']
+    tags: ['prediccion', 'ml', 'inteligencia', 'artificial', 'machine', 'learning'],
   },
 
-  'transportadoras': {
+  transportadoras: {
     respuesta: `**🚚 Transportadoras Disponibles**
 
 **Coordinadora**
@@ -199,10 +223,10 @@ LITPER PRO usa Machine Learning para predecir éxito de entregas:
 • Tiempo: 2-4 días
 
 **💡 Usa el semáforo para ver rendimiento por ciudad de cada transportadora.**`,
-    tags: ['transportadora', 'envio', 'coordinadora', 'interrapidisimo', 'tcc', 'envia']
+    tags: ['transportadora', 'envio', 'coordinadora', 'interrapidisimo', 'tcc', 'envia'],
   },
 
-  'dropi': {
+  dropi: {
     respuesta: `**💰 Integración con Dropi**
 
 LITPER PRO se conecta con Dropi para:
@@ -230,10 +254,10 @@ Columnas que analizamos:
 • Ticket promedio
 
 **📊 Carga tu reporte Excel de Dropi para análisis completo.**`,
-    tags: ['dropi', 'dropshipping', 'financiero', 'ganancia', 'reporte']
+    tags: ['dropi', 'dropshipping', 'financiero', 'ganancia', 'reporte'],
   },
 
-  'ayuda': {
+  ayuda: {
     respuesta: `**🤖 Asistente LITPER PRO**
 
 Soy tu asistente inteligente con acceso a:
@@ -258,23 +282,31 @@ Soy tu asistente inteligente con acceso a:
 • Explicar funciones de la app
 
 **Pregúntame lo que necesites!**`,
-    tags: ['ayuda', 'help', 'funciones', 'comandos']
-  }
+    tags: ['ayuda', 'help', 'funciones', 'comandos'],
+  },
 };
 
 // Detectar intención del usuario
 const detectarIntencion = (mensaje: string): { tipo: string; query?: string; tema?: string } => {
-  const msgLower = mensaje.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const msgLower = mensaje
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 
   // Buscar en conocimiento base
   for (const [tema, info] of Object.entries(CONOCIMIENTO_LITPER)) {
-    if (info.tags.some(tag => msgLower.includes(tag))) {
+    if (info.tags.some((tag) => msgLower.includes(tag))) {
       return { tipo: 'CONOCIMIENTO', tema };
     }
   }
 
   // Intenciones de listar guías
-  if (msgLower.includes('lista') || msgLower.includes('guias') || msgLower.includes('envios') || msgLower.includes('pedidos')) {
+  if (
+    msgLower.includes('lista') ||
+    msgLower.includes('guias') ||
+    msgLower.includes('envios') ||
+    msgLower.includes('pedidos')
+  ) {
     if (msgLower.includes('pendiente') || msgLower.includes('sin entregar')) {
       return { tipo: 'LISTAR_GUIAS_PENDIENTES' };
     }
@@ -294,12 +326,20 @@ const detectarIntencion = (mensaje: string): { tipo: string; query?: string; tem
   }
 
   // Buscar documentos procesados
-  if (msgLower.includes('documento') || msgLower.includes('archivo') || msgLower.includes('procesado')) {
+  if (
+    msgLower.includes('documento') ||
+    msgLower.includes('archivo') ||
+    msgLower.includes('procesado')
+  ) {
     return { tipo: 'BUSCAR_DOCUMENTOS' };
   }
 
   // Buscar en base de conocimiento
-  if (msgLower.includes('conocimiento') || msgLower.includes('aprendido') || msgLower.includes('base')) {
+  if (
+    msgLower.includes('conocimiento') ||
+    msgLower.includes('aprendido') ||
+    msgLower.includes('base')
+  ) {
     return { tipo: 'BUSCAR_CONOCIMIENTO' };
   }
 
@@ -314,7 +354,11 @@ const generarRespuestaIA = async (
     knowledge: KnowledgeEntry[];
     documents: ProcessedDocument[];
   }
-): Promise<{ content: string; knowledgeUsed?: KnowledgeEntry[]; documentsUsed?: ProcessedDocument[] }> => {
+): Promise<{
+  content: string;
+  knowledgeUsed?: KnowledgeEntry[];
+  documentsUsed?: ProcessedDocument[];
+}> => {
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
 
   if (!apiKey) {
@@ -327,21 +371,21 @@ const generarRespuestaIA = async (
 
     // Buscar conocimiento relevante
     const relevantKnowledge = documentProcessor.searchKnowledge(mensaje).slice(0, 3);
-    const relevantDocs = contexto.documents.filter(d =>
-      d.rawContent.toLowerCase().includes(mensaje.toLowerCase().split(' ')[0])
-    ).slice(0, 2);
+    const relevantDocs = contexto.documents
+      .filter((d) => d.rawContent.toLowerCase().includes(mensaje.toLowerCase().split(' ')[0]))
+      .slice(0, 2);
 
     // Construir contexto
     let contextInfo = '';
     if (relevantKnowledge.length > 0) {
       contextInfo += '\n\nCONOCIMIENTO RELEVANTE:\n';
-      relevantKnowledge.forEach(k => {
+      relevantKnowledge.forEach((k) => {
         contextInfo += `- ${k.title}: ${k.summary}\n`;
       });
     }
     if (relevantDocs.length > 0) {
       contextInfo += '\n\nDOCUMENTOS RELEVANTES:\n';
-      relevantDocs.forEach(d => {
+      relevantDocs.forEach((d) => {
         if (d.aiAnalysis) {
           contextInfo += `- ${d.fileName}: ${d.aiAnalysis.summary}\n`;
         }
@@ -350,9 +394,9 @@ const generarRespuestaIA = async (
     if (contexto.shipments.length > 0) {
       const stats = {
         total: contexto.shipments.length,
-        delivered: contexto.shipments.filter(s => s.status === ShipmentStatus.DELIVERED).length,
-        pending: contexto.shipments.filter(s => s.status !== ShipmentStatus.DELIVERED).length,
-        issues: contexto.shipments.filter(s => s.status === ShipmentStatus.ISSUE).length,
+        delivered: contexto.shipments.filter((s) => s.status === ShipmentStatus.DELIVERED).length,
+        pending: contexto.shipments.filter((s) => s.status !== ShipmentStatus.DELIVERED).length,
+        issues: contexto.shipments.filter((s) => s.status === ShipmentStatus.ISSUE).length,
       };
       contextInfo += `\n\nESTADÍSTICAS DE GUÍAS: ${stats.total} total, ${stats.delivered} entregadas, ${stats.pending} pendientes, ${stats.issues} con novedad`;
     }
@@ -371,7 +415,7 @@ Responde siempre en español, de manera concisa y profesional.
 Usa markdown para formatear tus respuestas.
 Si tienes contexto relevante, úsalo para dar respuestas más precisas.
 ${contextInfo}`,
-      messages: [{ role: 'user', content: mensaje }]
+      messages: [{ role: 'user', content: mensaje }],
     });
 
     const text = response.content[0].type === 'text' ? response.content[0].text : '';
@@ -379,7 +423,7 @@ ${contextInfo}`,
     return {
       content: text,
       knowledgeUsed: relevantKnowledge.length > 0 ? relevantKnowledge : undefined,
-      documentsUsed: relevantDocs.length > 0 ? relevantDocs : undefined
+      documentsUsed: relevantDocs.length > 0 ? relevantDocs : undefined,
     };
   } catch (error) {
     console.error('Error con IA:', error);
@@ -407,14 +451,17 @@ const generarRespuestaLocal = (
 
     case 'LISTAR_TODAS_GUIAS':
       if (contexto.shipments.length === 0) {
-        return { content: '📦 No tienes guías cargadas actualmente.\n\nPuedes cargar un archivo Excel o agregar guías manualmente desde la pestaña de Seguimiento.' };
+        return {
+          content:
+            '📦 No tienes guías cargadas actualmente.\n\nPuedes cargar un archivo Excel o agregar guías manualmente desde la pestaña de Seguimiento.',
+        };
       }
       return {
         content: `**📦 Lista de Guías (${contexto.shipments.length} total)**\n\nAquí están tus guías actuales:`,
       };
 
     case 'LISTAR_GUIAS_PENDIENTES':
-      const pendientes = contexto.shipments.filter(s => s.status !== ShipmentStatus.DELIVERED);
+      const pendientes = contexto.shipments.filter((s) => s.status !== ShipmentStatus.DELIVERED);
       if (pendientes.length === 0) {
         return { content: '✅ ¡Excelente! No tienes guías pendientes. Todas han sido entregadas.' };
       }
@@ -423,7 +470,7 @@ const generarRespuestaLocal = (
       };
 
     case 'LISTAR_GUIAS_NOVEDAD':
-      const conNovedad = contexto.shipments.filter(s => s.status === ShipmentStatus.ISSUE);
+      const conNovedad = contexto.shipments.filter((s) => s.status === ShipmentStatus.ISSUE);
       if (conNovedad.length === 0) {
         return { content: '✅ ¡Bien! No tienes guías con novedad actualmente.' };
       }
@@ -432,7 +479,7 @@ const generarRespuestaLocal = (
       };
 
     case 'LISTAR_GUIAS_ENTREGADAS':
-      const entregadas = contexto.shipments.filter(s => s.status === ShipmentStatus.DELIVERED);
+      const entregadas = contexto.shipments.filter((s) => s.status === ShipmentStatus.DELIVERED);
       if (entregadas.length === 0) {
         return { content: '📊 No tienes guías entregadas registradas aún.' };
       }
@@ -441,7 +488,7 @@ const generarRespuestaLocal = (
       };
 
     case 'BUSCAR_GUIA':
-      const guia = contexto.shipments.find(s => s.id.includes(intencion.query || ''));
+      const guia = contexto.shipments.find((s) => s.id.includes(intencion.query || ''));
       if (guia) {
         return { content: `**📦 Guía encontrada:**` };
       }
@@ -449,26 +496,34 @@ const generarRespuestaLocal = (
 
     case 'BUSCAR_DOCUMENTOS':
       if (contexto.documents.length === 0) {
-        return { content: '📄 No hay documentos procesados aún.\n\nVe al **Panel Admin Pro** para cargar y procesar archivos Excel o URLs.' };
+        return {
+          content:
+            '📄 No hay documentos procesados aún.\n\nVe al **Panel Admin Pro** para cargar y procesar archivos Excel o URLs.',
+        };
       }
-      const docList = contexto.documents.slice(0, 5).map(d =>
-        `• **${d.fileName}** - ${d.aiAnalysis?.summary || 'Sin análisis'}`
-      ).join('\n');
+      const docList = contexto.documents
+        .slice(0, 5)
+        .map((d) => `• **${d.fileName}** - ${d.aiAnalysis?.summary || 'Sin análisis'}`)
+        .join('\n');
       return {
         content: `**📄 Documentos Procesados (${contexto.documents.length})**\n\n${docList}`,
-        documentsUsed: contexto.documents.slice(0, 3)
+        documentsUsed: contexto.documents.slice(0, 3),
       };
 
     case 'BUSCAR_CONOCIMIENTO':
       if (contexto.knowledge.length === 0) {
-        return { content: '📚 La base de conocimiento está vacía.\n\nProcesa documentos y guárdalos en la base de conocimiento desde el Panel Admin Pro.' };
+        return {
+          content:
+            '📚 La base de conocimiento está vacía.\n\nProcesa documentos y guárdalos en la base de conocimiento desde el Panel Admin Pro.',
+        };
       }
-      const knowledgeList = contexto.knowledge.slice(0, 5).map(k =>
-        `• **${k.title}** - ${k.summary}`
-      ).join('\n');
+      const knowledgeList = contexto.knowledge
+        .slice(0, 5)
+        .map((k) => `• **${k.title}** - ${k.summary}`)
+        .join('\n');
       return {
         content: `**📚 Base de Conocimiento (${contexto.knowledge.length} entradas)**\n\n${knowledgeList}`,
-        knowledgeUsed: contexto.knowledge.slice(0, 3)
+        knowledgeUsed: contexto.knowledge.slice(0, 3),
       };
 
     default:
@@ -477,19 +532,20 @@ const generarRespuestaLocal = (
       if (searchResults.length > 0) {
         return {
           content: `Encontré información relevante:\n\n**${searchResults[0].title}**\n\n${searchResults[0].content}`,
-          knowledgeUsed: [searchResults[0]]
+          knowledgeUsed: [searchResults[0]],
         };
       }
 
       return {
-        content: `🤖 Entiendo tu pregunta. Puedo ayudarte con:\n\n` +
+        content:
+          `🤖 Entiendo tu pregunta. Puedo ayudarte con:\n\n` +
           `• **"Semáforo"** - Sistema de rutas\n` +
           `• **"Novedades"** - Gestión de problemas\n` +
           `• **"Predicciones"** - ML y análisis\n` +
           `• **"Lista de guías"** - Ver envíos\n` +
           `• **"Documentos"** - Ver procesados\n` +
           `• **"Ayuda"** - Todas las opciones\n\n` +
-          `¿Qué información necesitas?`
+          `¿Qué información necesitas?`,
       };
   }
 
@@ -750,9 +806,18 @@ Soy tu asistente inteligente con acceso a:
               <div className="bg-white dark:bg-navy-800 rounded-2xl rounded-bl-md p-4 border border-slate-100 dark:border-navy-700 shadow-sm">
                 <div className="flex items-center gap-3">
                   <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div
+                      className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"
+                      style={{ animationDelay: '0ms' }}
+                    />
+                    <div
+                      className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+                      style={{ animationDelay: '150ms' }}
+                    />
+                    <div
+                      className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce"
+                      style={{ animationDelay: '300ms' }}
+                    />
                   </div>
                   <span className="text-sm text-slate-500">Analizando con IA...</span>
                 </div>

@@ -994,7 +994,7 @@ export const parseDetailedInput = (
       const match = line.match(dateRegex);
       if (match) {
         const fullDate = `${match[1]}T${match[2]}`;
-        let restOfLine = line.replace(match[0], '').trim();
+        const restOfLine = line.replace(match[0], '').trim();
 
         let location = 'Ubicación Logística';
         const locMatch = restOfLine.match(
@@ -1099,9 +1099,10 @@ export const parseDetailedInput = (
         guideNumber: id,
         phone,
         type: carrier === CarrierName.UNKNOWN ? 'CARRIER_NOT_DETECTED' : 'DATA_INCOMPLETE',
-        reason: carrier === CarrierName.UNKNOWN
-          ? 'No se pudo detectar la transportadora automáticamente'
-          : errors.join('; '),
+        reason:
+          carrier === CarrierName.UNKNOWN
+            ? 'No se pudo detectar la transportadora automáticamente'
+            : errors.join('; '),
         rawData: block.substring(0, 200),
         carrier,
       });

@@ -276,9 +276,7 @@ export const KnowledgeTab: React.FC = () => {
                 <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
                   Arrastra un documento o haz clic
                 </p>
-                <p className="text-xs text-slate-400 mt-1">
-                  PDF, DOCX, TXT, MD, CSV, JSON
-                </p>
+                <p className="text-xs text-slate-400 mt-1">PDF, DOCX, TXT, MD, CSV, JSON</p>
               </label>
             </div>
 
@@ -310,11 +308,7 @@ export const KnowledgeTab: React.FC = () => {
                   disabled={!url.trim() || isProcessing}
                   className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-300 dark:disabled:bg-navy-700 text-white rounded-xl text-sm font-medium transition-colors disabled:cursor-not-allowed"
                 >
-                  {isProcessing ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    'Procesar'
-                  )}
+                  {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Procesar'}
                 </button>
               </div>
             </div>
@@ -347,7 +341,8 @@ export const KnowledgeTab: React.FC = () => {
                     </h4>
                     <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">
                       <strong>Tipo:</strong>{' '}
-                      {processingResult.conocimiento_extraido?.tipo_contenido || processingResult.tipo}
+                      {processingResult.conocimiento_extraido?.tipo_contenido ||
+                        processingResult.tipo}
                     </p>
                     {processingResult.conocimiento_extraido?.titulo_sugerido && (
                       <p className="text-sm text-emerald-600 dark:text-emerald-400">
@@ -478,9 +473,7 @@ const KnowledgeItemCard: React.FC<{
             <span className="text-sm font-medium text-slate-800 dark:text-white line-clamp-1">
               {item.titulo || 'Sin titulo'}
             </span>
-            <p className="text-xs text-slate-400">
-              {item.categoria || item.tipo}
-            </p>
+            <p className="text-xs text-slate-400">{item.categoria || item.tipo}</p>
           </div>
         </div>
         {isExpanded ? (

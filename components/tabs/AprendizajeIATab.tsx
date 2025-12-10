@@ -42,7 +42,7 @@ import {
   Layers,
   Database,
   Bot,
-  MessageSquare
+  MessageSquare,
 } from 'lucide-react';
 
 import {
@@ -58,7 +58,7 @@ import {
   agregarContenido,
   procesarContenido,
   implementarRecomendacion,
-  buscarEnConocimiento
+  buscarEnConocimiento,
 } from '../../services/learningSystemService';
 
 import {
@@ -72,7 +72,7 @@ import {
   ConceptoClave,
   RecomendacionLitper,
   AgenteAprendiz,
-  EstadisticasAprendizaje
+  EstadisticasAprendizaje,
 } from '../../types/learning';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -91,7 +91,9 @@ type VistaActiva = 'dashboard' | 'agregar' | 'biblioteca' | 'recomendaciones' | 
 
 export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCountry }) => {
   const [vistaActiva, setVistaActiva] = useState<VistaActiva>('dashboard');
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<CategoriaConocimiento | null>(null);
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<CategoriaConocimiento | null>(
+    null
+  );
   const [busqueda, setBusqueda] = useState('');
   const [mostrarModalAgregar, setMostrarModalAgregar] = useState(false);
 
@@ -148,9 +150,7 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
             </div>
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-3xl font-black text-white">
-                  Centro de Aprendizaje IA
-                </h1>
+                <h1 className="text-3xl font-black text-white">Centro de Aprendizaje IA</h1>
                 <span className="px-3 py-1 bg-gradient-to-r from-green-400 to-emerald-500 text-white text-sm font-bold rounded-full shadow-lg">
                   ACTIVO
                 </span>
@@ -249,8 +249,8 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
         { id: 'agregar', label: 'Agregar Contenido', icon: Upload },
         { id: 'biblioteca', label: 'Biblioteca', icon: Library },
         { id: 'recomendaciones', label: 'Recomendaciones', icon: Lightbulb },
-        { id: 'agentes', label: 'Agentes Aprendices', icon: Bot }
-      ].map(item => {
+        { id: 'agentes', label: 'Agentes Aprendices', icon: Bot },
+      ].map((item) => {
         const Icon = item.icon;
         const isActive = vistaActiva === item.id;
         return (
@@ -307,12 +307,14 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
               </div>
             ) : (
               <div className="space-y-3">
-                {contenidosEnProceso.map(contenido => (
+                {contenidosEnProceso.map((contenido) => (
                   <div key={contenido.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <TipoContenidoIcono tipo={contenido.tipo} />
-                        <span className="font-medium text-gray-800 dark:text-white">{contenido.titulo}</span>
+                        <span className="font-medium text-gray-800 dark:text-white">
+                          {contenido.titulo}
+                        </span>
                       </div>
                       <span className="text-sm text-gray-500">{contenido.estado}</span>
                     </div>
@@ -346,30 +348,32 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
             </div>
 
             <div className="p-4 space-y-3">
-              {Object.values(CategoriaConocimiento).slice(0, 5).map(cat => {
-                const info = baseConocimiento.conocimientoPorCategoria?.[cat];
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => {
-                      setCategoriaSeleccionada(cat);
-                      setVistaActiva('biblioteca');
-                    }}
-                    className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Folder className="w-5 h-5 text-purple-500" />
-                      <span className="font-medium text-gray-800 dark:text-white capitalize">
-                        {cat.replace(/_/g, ' ')}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <span>{info?.fuentes || 0} fuentes</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </div>
-                  </button>
-                );
-              })}
+              {Object.values(CategoriaConocimiento)
+                .slice(0, 5)
+                .map((cat) => {
+                  const info = baseConocimiento.conocimientoPorCategoria?.[cat];
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => {
+                        setCategoriaSeleccionada(cat);
+                        setVistaActiva('biblioteca');
+                      }}
+                      className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Folder className="w-5 h-5 text-purple-500" />
+                        <span className="font-medium text-gray-800 dark:text-white capitalize">
+                          {cat.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <span>{info?.fuentes || 0} fuentes</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                    </button>
+                  );
+                })}
               <button
                 onClick={() => setVistaActiva('biblioteca')}
                 className="w-full text-center text-sm text-emerald-600 hover:text-emerald-700 font-medium py-2"
@@ -397,22 +401,28 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
             </div>
 
             <div className="p-4 space-y-3">
-              {[...recsInmediatas, ...recsAlta].slice(0, 4).map(rec => (
+              {[...recsInmediatas, ...recsAlta].slice(0, 4).map((rec) => (
                 <div key={rec.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                          rec.prioridad === NivelPrioridadRecomendacion.INMEDIATA
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-amber-100 text-amber-700'
-                        }`}>
+                        <span
+                          className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            rec.prioridad === NivelPrioridadRecomendacion.INMEDIATA
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-amber-100 text-amber-700'
+                          }`}
+                        >
                           {rec.prioridad}
                         </span>
                         <span className="text-xs text-gray-500">{rec.esfuerzoEstimado}</span>
                       </div>
-                      <h4 className="font-medium text-gray-800 dark:text-white text-sm">{rec.titulo}</h4>
-                      <p className="text-xs text-emerald-600 font-medium mt-1">{rec.impactoMetrica}</p>
+                      <h4 className="font-medium text-gray-800 dark:text-white text-sm">
+                        {rec.titulo}
+                      </h4>
+                      <p className="text-xs text-emerald-600 font-medium mt-1">
+                        {rec.impactoMetrica}
+                      </p>
                     </div>
                     <button
                       onClick={() => implementarRecomendacion(rec.id)}
@@ -442,23 +452,33 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="text-center">
-                <div className="text-3xl font-bold text-emerald-500">{estadisticas.ultimoMes.contenidosProcesados}</div>
+                <div className="text-3xl font-bold text-emerald-500">
+                  {estadisticas.ultimoMes.contenidosProcesados}
+                </div>
                 <div className="text-sm text-gray-500">Cursos procesados</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-teal-500">{estadisticas.ultimoMes.horasProcesadas}h</div>
+                <div className="text-3xl font-bold text-teal-500">
+                  {estadisticas.ultimoMes.horasProcesadas}h
+                </div>
                 <div className="text-sm text-gray-500">Horas de contenido</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-cyan-500">{estadisticas.ultimoMes.conceptosNuevos}</div>
+                <div className="text-3xl font-bold text-cyan-500">
+                  {estadisticas.ultimoMes.conceptosNuevos}
+                </div>
                 <div className="text-sm text-gray-500">Conceptos nuevos</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-blue-500">{estadisticas.ultimoMes.recomendacionesImplementadas}</div>
+                <div className="text-3xl font-bold text-blue-500">
+                  {estadisticas.ultimoMes.recomendacionesImplementadas}
+                </div>
                 <div className="text-sm text-gray-500">Implementadas</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-green-500">{estadisticas.ultimoMes.impactoMedido}</div>
+                <div className="text-3xl font-bold text-green-500">
+                  {estadisticas.ultimoMes.impactoMedido}
+                </div>
                 <div className="text-sm text-gray-500">Mejora medida</div>
               </div>
             </div>
@@ -505,12 +525,54 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
 
     // Tipos de contenido soportados
     const tiposContenido = [
-      { tipo: TipoContenido.CURSO, icono: Video, label: 'Video/Curso', desc: 'YouTube, Udemy, Platzi', color: 'from-blue-500 to-indigo-500', ext: '.mp4, .webm' },
-      { tipo: TipoContenido.PDF, icono: FileText, label: 'PDF/Documento', desc: 'PDFs, Word, Excel, PPT', color: 'from-red-500 to-pink-500', ext: '.pdf, .docx, .xlsx, .pptx' },
-      { tipo: TipoContenido.AUDIO, icono: Headphones, label: 'Audio/Podcast', desc: 'MP3, podcasts, grabaciones', color: 'from-purple-500 to-violet-500', ext: '.mp3, .wav, .m4a' },
-      { tipo: TipoContenido.ARTICULO, icono: BookOpen, label: 'Artículo/Web', desc: 'Blogs, artículos, wikis', color: 'from-green-500 to-emerald-500', ext: 'URL web' },
-      { tipo: TipoContenido.IMAGEN, icono: Eye, label: 'Imagen/Diagrama', desc: 'Infografías, diagramas', color: 'from-amber-500 to-orange-500', ext: '.png, .jpg, .svg' },
-      { tipo: TipoContenido.PRESENTACION, icono: Layers, label: 'Presentación', desc: 'PowerPoint, Google Slides', color: 'from-cyan-500 to-blue-500', ext: '.pptx, .key' },
+      {
+        tipo: TipoContenido.CURSO,
+        icono: Video,
+        label: 'Video/Curso',
+        desc: 'YouTube, Udemy, Platzi',
+        color: 'from-blue-500 to-indigo-500',
+        ext: '.mp4, .webm',
+      },
+      {
+        tipo: TipoContenido.PDF,
+        icono: FileText,
+        label: 'PDF/Documento',
+        desc: 'PDFs, Word, Excel, PPT',
+        color: 'from-red-500 to-pink-500',
+        ext: '.pdf, .docx, .xlsx, .pptx',
+      },
+      {
+        tipo: TipoContenido.AUDIO,
+        icono: Headphones,
+        label: 'Audio/Podcast',
+        desc: 'MP3, podcasts, grabaciones',
+        color: 'from-purple-500 to-violet-500',
+        ext: '.mp3, .wav, .m4a',
+      },
+      {
+        tipo: TipoContenido.ARTICULO,
+        icono: BookOpen,
+        label: 'Artículo/Web',
+        desc: 'Blogs, artículos, wikis',
+        color: 'from-green-500 to-emerald-500',
+        ext: 'URL web',
+      },
+      {
+        tipo: TipoContenido.IMAGEN,
+        icono: Eye,
+        label: 'Imagen/Diagrama',
+        desc: 'Infografías, diagramas',
+        color: 'from-amber-500 to-orange-500',
+        ext: '.png, .jpg, .svg',
+      },
+      {
+        tipo: TipoContenido.PRESENTACION,
+        icono: Layers,
+        label: 'Presentación',
+        desc: 'PowerPoint, Google Slides',
+        color: 'from-cyan-500 to-blue-500',
+        ext: '.pptx, .key',
+      },
     ];
 
     return (
@@ -528,29 +590,49 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-emerald-800 dark:text-emerald-200">
             <div className="flex items-start gap-2">
-              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
-              <p><strong>Carga cualquier contenido:</strong> Videos, PDFs, enlaces web, audios, presentaciones</p>
+              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                1
+              </span>
+              <p>
+                <strong>Carga cualquier contenido:</strong> Videos, PDFs, enlaces web, audios,
+                presentaciones
+              </p>
             </div>
             <div className="flex items-start gap-2">
-              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
-              <p><strong>IA analiza y extrae:</strong> Conceptos clave, mejores prácticas, metodologías</p>
+              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                2
+              </span>
+              <p>
+                <strong>IA analiza y extrae:</strong> Conceptos clave, mejores prácticas,
+                metodologías
+              </p>
             </div>
             <div className="flex items-start gap-2">
-              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
-              <p><strong>Genera recomendaciones:</strong> Aplicables a tu operación logística</p>
+              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                3
+              </span>
+              <p>
+                <strong>Genera recomendaciones:</strong> Aplicables a tu operación logística
+              </p>
             </div>
             <div className="flex items-start gap-2">
-              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
-              <p><strong>Mejora continua:</strong> Los agentes aprenden y mejoran automáticamente</p>
+              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                4
+              </span>
+              <p>
+                <strong>Mejora continua:</strong> Los agentes aprenden y mejoran automáticamente
+              </p>
             </div>
           </div>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
           {/* Selector de tipo de contenido */}
-          <h3 className="font-semibold text-gray-800 dark:text-white mb-4">1. Selecciona el tipo de contenido</h3>
+          <h3 className="font-semibold text-gray-800 dark:text-white mb-4">
+            1. Selecciona el tipo de contenido
+          </h3>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-            {tiposContenido.map(item => {
+            {tiposContenido.map((item) => {
               const Icon = item.icono;
               const isSelected = tipo === item.tipo;
               return (
@@ -563,13 +645,17 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
                       : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
                 >
-                  <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center mb-2`}>
+                  <div
+                    className={`w-10 h-10 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center mb-2`}
+                  >
                     <Icon className="w-5 h-5 text-white" />
                   </div>
                   <h4 className="font-bold text-gray-800 dark:text-white text-sm">{item.label}</h4>
                   <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
                   {isSelected && (
-                    <span className="text-[10px] text-emerald-600 font-medium mt-1 block">{item.ext}</span>
+                    <span className="text-[10px] text-emerald-600 font-medium mt-1 block">
+                      {item.ext}
+                    </span>
                   )}
                 </button>
               );
@@ -577,7 +663,9 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
           </div>
 
           {/* Selector de modo de entrada */}
-          <h3 className="font-semibold text-gray-800 dark:text-white mb-4 mt-6">2. Proporciona el contenido</h3>
+          <h3 className="font-semibold text-gray-800 dark:text-white mb-4 mt-6">
+            2. Proporciona el contenido
+          </h3>
           <div className="flex gap-2 mb-4">
             <button
               onClick={() => setModoEntrada('url')}
@@ -622,7 +710,8 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
                   </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  ✓ Udemy, Platzi, Coursera, YouTube, Domestika, LinkedIn Learning, Blogs, Wikis, cualquier página web
+                  ✓ Udemy, Platzi, Coursera, YouTube, Domestika, LinkedIn Learning, Blogs, Wikis,
+                  cualquier página web
                 </p>
               </div>
             ) : (
@@ -642,14 +731,22 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
                     {archivoSeleccionado ? (
                       <div className="space-y-2">
                         <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
-                        <p className="font-medium text-gray-800 dark:text-white">{archivoSeleccionado.name}</p>
-                        <p className="text-sm text-gray-500">{(archivoSeleccionado.size / 1024 / 1024).toFixed(2)} MB</p>
+                        <p className="font-medium text-gray-800 dark:text-white">
+                          {archivoSeleccionado.name}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {(archivoSeleccionado.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-2">
                         <Upload className="w-12 h-12 text-gray-400 mx-auto" />
-                        <p className="text-gray-600 dark:text-gray-300">Arrastra un archivo o haz clic para seleccionar</p>
-                        <p className="text-xs text-gray-500">PDF, Word, Excel, PowerPoint, Audio, Video, Imágenes (máx. 50MB)</p>
+                        <p className="text-gray-600 dark:text-gray-300">
+                          Arrastra un archivo o haz clic para seleccionar
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          PDF, Word, Excel, PowerPoint, Audio, Video, Imágenes (máx. 50MB)
+                        </p>
                       </div>
                     )}
                   </label>
@@ -699,19 +796,27 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
               <p className="font-semibold text-gray-800 dark:text-white mb-1">📄 Documentos</p>
-              <p className="text-gray-600 dark:text-gray-400 text-xs">PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx)</p>
+              <p className="text-gray-600 dark:text-gray-400 text-xs">
+                PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx)
+              </p>
             </div>
             <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
               <p className="font-semibold text-gray-800 dark:text-white mb-1">🎬 Video</p>
-              <p className="text-gray-600 dark:text-gray-400 text-xs">MP4, WebM, YouTube, Vimeo, cursos online</p>
+              <p className="text-gray-600 dark:text-gray-400 text-xs">
+                MP4, WebM, YouTube, Vimeo, cursos online
+              </p>
             </div>
             <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
               <p className="font-semibold text-gray-800 dark:text-white mb-1">🎧 Audio</p>
-              <p className="text-gray-600 dark:text-gray-400 text-xs">MP3, WAV, M4A, podcasts, grabaciones</p>
+              <p className="text-gray-600 dark:text-gray-400 text-xs">
+                MP3, WAV, M4A, podcasts, grabaciones
+              </p>
             </div>
             <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
               <p className="font-semibold text-gray-800 dark:text-white mb-1">🌐 Web</p>
-              <p className="text-gray-600 dark:text-gray-400 text-xs">Cualquier URL: blogs, artículos, wikis, documentación</p>
+              <p className="text-gray-600 dark:text-gray-400 text-xs">
+                Cualquier URL: blogs, artículos, wikis, documentación
+              </p>
             </div>
           </div>
         </div>
@@ -726,13 +831,14 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
   const renderBiblioteca = () => {
     const baseConocimiento = getBaseConocimiento();
     const conceptosFiltrados = categoriaSeleccionada
-      ? conceptos.filter(c => c.categoria === categoriaSeleccionada)
+      ? conceptos.filter((c) => c.categoria === categoriaSeleccionada)
       : conceptos;
 
     const conceptosBusqueda = busqueda
-      ? conceptosFiltrados.filter(c =>
-          c.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-          c.descripcion.toLowerCase().includes(busqueda.toLowerCase())
+      ? conceptosFiltrados.filter(
+          (c) =>
+            c.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+            c.descripcion.toLowerCase().includes(busqueda.toLowerCase())
         )
       : conceptosFiltrados;
 
@@ -768,32 +874,38 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
           >
             Todas
           </button>
-          {Object.values(CategoriaConocimiento).slice(0, 8).map(cat => (
-            <button
-              key={cat}
-              onClick={() => setCategoriaSeleccionada(cat)}
-              className={`px-4 py-2 rounded-lg font-medium transition-all capitalize ${
-                categoriaSeleccionada === cat
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
-            >
-              {cat.replace(/_/g, ' ')}
-            </button>
-          ))}
+          {Object.values(CategoriaConocimiento)
+            .slice(0, 8)
+            .map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategoriaSeleccionada(cat)}
+                className={`px-4 py-2 rounded-lg font-medium transition-all capitalize ${
+                  categoriaSeleccionada === cat
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                {cat.replace(/_/g, ' ')}
+              </button>
+            ))}
         </div>
 
         {/* Lista de conceptos */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {conceptosBusqueda.slice(0, 12).map(concepto => (
+          {conceptosBusqueda.slice(0, 12).map((concepto) => (
             <div
               key={concepto.id}
               className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-xl transition-all"
             >
               <div className="flex items-start justify-between mb-2">
-                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                  concepto.aplicableLitper ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                }`}>
+                <span
+                  className={`px-2 py-0.5 rounded text-xs font-medium ${
+                    concepto.aplicableLitper
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-gray-100 text-gray-700'
+                  }`}
+                >
                   {concepto.aplicableLitper ? 'Aplicable' : 'General'}
                 </span>
                 <span className="text-xs text-gray-500 capitalize">
@@ -802,7 +914,9 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
               </div>
 
               <h4 className="font-bold text-gray-800 dark:text-white mb-2">{concepto.nombre}</h4>
-              <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">{concepto.descripcion}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+                {concepto.descripcion}
+              </p>
 
               <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-xs text-gray-500">
                 <span>Fuente: {concepto.fuenteTitulo.slice(0, 20)}...</span>
@@ -831,7 +945,7 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
       inmediatas: getRecomendacionesPorPrioridad(NivelPrioridadRecomendacion.INMEDIATA),
       altas: getRecomendacionesPorPrioridad(NivelPrioridadRecomendacion.ALTA),
       medias: getRecomendacionesPorPrioridad(NivelPrioridadRecomendacion.MEDIA),
-      futuras: getRecomendacionesPorPrioridad(NivelPrioridadRecomendacion.FUTURA)
+      futuras: getRecomendacionesPorPrioridad(NivelPrioridadRecomendacion.FUTURA),
     };
 
     return (
@@ -844,7 +958,9 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
         {/* Resumen */}
         <div className="grid grid-cols-4 gap-4">
           <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
-            <div className="text-3xl font-bold text-red-600">{recsPorPrioridad.inmediatas.length}</div>
+            <div className="text-3xl font-bold text-red-600">
+              {recsPorPrioridad.inmediatas.length}
+            </div>
             <div className="text-sm text-red-600/70">Prioridad Inmediata</div>
           </div>
           <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
@@ -856,70 +972,90 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
             <div className="text-sm text-blue-600/70">Prioridad Media</div>
           </div>
           <div className="bg-gray-50 dark:bg-gray-900/20 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
-            <div className="text-3xl font-bold text-gray-600">{recsPorPrioridad.futuras.length}</div>
+            <div className="text-3xl font-bold text-gray-600">
+              {recsPorPrioridad.futuras.length}
+            </div>
             <div className="text-sm text-gray-600/70">Futuro</div>
           </div>
         </div>
 
         {/* Lista de recomendaciones */}
         <div className="space-y-4">
-          {[...recsPorPrioridad.inmediatas, ...recsPorPrioridad.altas, ...recsPorPrioridad.medias].slice(0, 10).map(rec => (
-            <div
-              key={rec.id}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                      rec.prioridad === NivelPrioridadRecomendacion.INMEDIATA
-                        ? 'bg-red-100 text-red-700'
-                        : rec.prioridad === NivelPrioridadRecomendacion.ALTA
-                        ? 'bg-amber-100 text-amber-700'
-                        : 'bg-blue-100 text-blue-700'
-                    }`}>
-                      {rec.prioridad}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded text-xs ${
-                      rec.esfuerzoEstimado === 'bajo' ? 'bg-green-100 text-green-700' :
-                      rec.esfuerzoEstimado === 'medio' ? 'bg-amber-100 text-amber-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      Esfuerzo {rec.esfuerzoEstimado}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded text-xs ${
-                      rec.estado === EstadoRecomendacion.IMPLEMENTADA ? 'bg-green-100 text-green-700' :
-                      rec.estado === EstadoRecomendacion.IMPLEMENTANDO ? 'bg-blue-100 text-blue-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {rec.estado}
-                    </span>
+          {[...recsPorPrioridad.inmediatas, ...recsPorPrioridad.altas, ...recsPorPrioridad.medias]
+            .slice(0, 10)
+            .map((rec) => (
+              <div
+                key={rec.id}
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs font-bold ${
+                          rec.prioridad === NivelPrioridadRecomendacion.INMEDIATA
+                            ? 'bg-red-100 text-red-700'
+                            : rec.prioridad === NivelPrioridadRecomendacion.ALTA
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-blue-100 text-blue-700'
+                        }`}
+                      >
+                        {rec.prioridad}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs ${
+                          rec.esfuerzoEstimado === 'bajo'
+                            ? 'bg-green-100 text-green-700'
+                            : rec.esfuerzoEstimado === 'medio'
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        Esfuerzo {rec.esfuerzoEstimado}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs ${
+                          rec.estado === EstadoRecomendacion.IMPLEMENTADA
+                            ? 'bg-green-100 text-green-700'
+                            : rec.estado === EstadoRecomendacion.IMPLEMENTANDO
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        {rec.estado}
+                      </span>
+                    </div>
+
+                    <h4 className="font-bold text-gray-800 dark:text-white text-lg mb-1">
+                      {rec.titulo}
+                    </h4>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">
+                      {rec.descripcion}
+                    </p>
+
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="text-emerald-600 font-bold flex items-center gap-1">
+                        <TrendingUp className="w-4 h-4" />
+                        {rec.impactoMetrica}
+                      </span>
+                      <span className="text-gray-500">
+                        Fuente: {rec.fuenteTitulo.slice(0, 30)}...
+                      </span>
+                    </div>
                   </div>
 
-                  <h4 className="font-bold text-gray-800 dark:text-white text-lg mb-1">{rec.titulo}</h4>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">{rec.descripcion}</p>
-
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="text-emerald-600 font-bold flex items-center gap-1">
-                      <TrendingUp className="w-4 h-4" />
-                      {rec.impactoMetrica}
-                    </span>
-                    <span className="text-gray-500">
-                      Fuente: {rec.fuenteTitulo.slice(0, 30)}...
-                    </span>
-                  </div>
+                  <button
+                    onClick={() => implementarRecomendacion(rec.id)}
+                    disabled={rec.estado === EstadoRecomendacion.IMPLEMENTADA}
+                    className="px-4 py-2 bg-emerald-500 text-white font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {rec.estado === EstadoRecomendacion.IMPLEMENTADA
+                      ? 'Implementada'
+                      : 'Implementar'}
+                  </button>
                 </div>
-
-                <button
-                  onClick={() => implementarRecomendacion(rec.id)}
-                  disabled={rec.estado === EstadoRecomendacion.IMPLEMENTADA}
-                  className="px-4 py-2 bg-emerald-500 text-white font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {rec.estado === EstadoRecomendacion.IMPLEMENTADA ? 'Implementada' : 'Implementar'}
-                </button>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       </div>
     );
@@ -937,26 +1073,34 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {agentes.map(agente => (
+        {agentes.map((agente) => (
           <div
             key={agente.id}
             className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4"
           >
             <div className="flex items-center gap-3 mb-3">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                agente.estado === 'procesando' ? 'bg-green-100 text-green-600' :
-                agente.estado === 'activo' ? 'bg-blue-100 text-blue-600' :
-                'bg-gray-100 text-gray-600'
-              }`}>
+              <div
+                className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                  agente.estado === 'procesando'
+                    ? 'bg-green-100 text-green-600'
+                    : agente.estado === 'activo'
+                      ? 'bg-blue-100 text-blue-600'
+                      : 'bg-gray-100 text-gray-600'
+                }`}
+              >
                 <Bot className="w-6 h-6" />
               </div>
               <div>
                 <h4 className="font-bold text-gray-800 dark:text-white">{agente.nombre}</h4>
-                <span className={`text-xs px-2 py-0.5 rounded ${
-                  agente.estado === 'procesando' ? 'bg-green-100 text-green-700' :
-                  agente.estado === 'activo' ? 'bg-blue-100 text-blue-700' :
-                  'bg-gray-100 text-gray-700'
-                }`}>
+                <span
+                  className={`text-xs px-2 py-0.5 rounded ${
+                    agente.estado === 'procesando'
+                      ? 'bg-green-100 text-green-700'
+                      : agente.estado === 'activo'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-gray-100 text-gray-700'
+                  }`}
+                >
                   {agente.estado}
                 </span>
               </div>
@@ -968,11 +1112,15 @@ export const AprendizajeIATab: React.FC<AprendizajeIATabProps> = ({ selectedCoun
 
             <div className="grid grid-cols-2 gap-2 text-center text-xs">
               <div className="bg-gray-50 dark:bg-gray-700 rounded p-2">
-                <div className="font-bold text-gray-800 dark:text-white">{agente.contenidosProcesados}</div>
+                <div className="font-bold text-gray-800 dark:text-white">
+                  {agente.contenidosProcesados}
+                </div>
                 <div className="text-gray-500">Contenidos</div>
               </div>
               <div className="bg-gray-50 dark:bg-gray-700 rounded p-2">
-                <div className="font-bold text-gray-800 dark:text-white">{agente.horasProcesadas.toFixed(0)}h</div>
+                <div className="font-bold text-gray-800 dark:text-white">
+                  {agente.horasProcesadas.toFixed(0)}h
+                </div>
                 <div className="text-gray-500">Horas</div>
               </div>
             </div>
@@ -1039,7 +1187,7 @@ const TipoContenidoIcono: React.FC<{ tipo: TipoContenido }> = ({ tipo }) => {
     [TipoContenido.WEBINAR]: <Video className="w-5 h-5 text-teal-500" />,
     [TipoContenido.ARTICULO]: <FileText className="w-5 h-5 text-green-500" />,
     [TipoContenido.EBOOK]: <Book className="w-5 h-5 text-amber-500" />,
-    [TipoContenido.PRESENTACION]: <FileText className="w-5 h-5 text-cyan-500" />
+    [TipoContenido.PRESENTACION]: <FileText className="w-5 h-5 text-cyan-500" />,
   };
   return <>{iconos[tipo] || <FileText className="w-5 h-5 text-gray-500" />}</>;
 };

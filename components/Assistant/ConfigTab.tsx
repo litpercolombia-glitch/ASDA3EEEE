@@ -27,9 +27,7 @@ interface ConfigOption {
 export const ConfigTab: React.FC = () => {
   const [notifications, setNotifications] = useState(true);
   const [sound, setSound] = useState(true);
-  const [darkMode, setDarkMode] = useState(
-    document.documentElement.classList.contains('dark')
-  );
+  const [darkMode, setDarkMode] = useState(document.documentElement.classList.contains('dark'));
   const [useKnowledge, setUseKnowledge] = useState(true);
 
   const handleDarkModeToggle = () => {
@@ -151,9 +149,7 @@ export const ConfigTab: React.FC = () => {
                     <button
                       onClick={item.onChange}
                       className={`relative w-11 h-6 rounded-full transition-colors ${
-                        item.value
-                          ? 'bg-blue-600'
-                          : 'bg-slate-300 dark:bg-navy-600'
+                        item.value ? 'bg-blue-600' : 'bg-slate-300 dark:bg-navy-600'
                       }`}
                     >
                       <div

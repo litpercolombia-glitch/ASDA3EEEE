@@ -112,7 +112,9 @@ export const AdminPanel: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [reporteFinanciero, setReporteFinanciero] = useState<ReporteFinanciero | null>(null);
   const [isLoadingReporte, setIsLoadingReporte] = useState(false);
-  const [activeTab, setActiveTab] = useState<'upload' | 'documents' | 'financial' | 'integraciones' | 'predicciones' | 'info-logistica'>('upload');
+  const [activeTab, setActiveTab] = useState<
+    'upload' | 'documents' | 'financial' | 'integraciones' | 'predicciones' | 'info-logistica'
+  >('upload');
 
   // Info Logística - Datos sincronizados con Semáforo
   const [infoLogisticaData, setInfoLogisticaData] = useState<SemaforoExcelData | null>(null);
@@ -163,34 +165,40 @@ export const AdminPanel: React.FC = () => {
       tiemposMap.set(key, row.dias);
     });
 
-    return data.tasaEntregas.map((row) => {
-      const key = `${row.ciudad.toUpperCase()}-${row.transportadora.toUpperCase()}`;
-      const tiempoPromedio = tiemposMap.get(key) || 5;
-      const tasaExito = row.total > 0 ? (row.entregas / row.total) * 100 : 0;
-      const tasaDevolucion = row.total > 0 ? (row.devoluciones / row.total) * 100 : 0;
+    return data.tasaEntregas
+      .map((row) => {
+        const key = `${row.ciudad.toUpperCase()}-${row.transportadora.toUpperCase()}`;
+        const tiempoPromedio = tiemposMap.get(key) || 5;
+        const tasaExito = row.total > 0 ? (row.entregas / row.total) * 100 : 0;
+        const tasaDevolucion = row.total > 0 ? (row.devoluciones / row.total) * 100 : 0;
 
-      let semaforo: 'VERDE' | 'AMARILLO' | 'NARANJA' | 'ROJO';
-      if (tasaExito >= 75) semaforo = 'VERDE';
-      else if (tasaExito >= 65) semaforo = 'AMARILLO';
-      else if (tasaExito >= 50) semaforo = 'NARANJA';
-      else semaforo = 'ROJO';
+        let semaforo: 'VERDE' | 'AMARILLO' | 'NARANJA' | 'ROJO';
+        if (tasaExito >= 75) semaforo = 'VERDE';
+        else if (tasaExito >= 65) semaforo = 'AMARILLO';
+        else if (tasaExito >= 50) semaforo = 'NARANJA';
+        else semaforo = 'ROJO';
 
-      return {
-        ciudad: row.ciudad,
-        transportadora: row.transportadora,
-        entregas: row.entregas,
-        devoluciones: row.devoluciones,
-        total: row.total,
-        tasaExito,
-        tasaDevolucion,
-        tiempoPromedio,
-        semaforo,
-        recomendacionIA: generarRecomendacion(tasaExito, tiempoPromedio, tasaDevolucion),
-      };
-    }).sort((a, b) => b.tasaExito - a.tasaExito);
+        return {
+          ciudad: row.ciudad,
+          transportadora: row.transportadora,
+          entregas: row.entregas,
+          devoluciones: row.devoluciones,
+          total: row.total,
+          tasaExito,
+          tasaDevolucion,
+          tiempoPromedio,
+          semaforo,
+          recomendacionIA: generarRecomendacion(tasaExito, tiempoPromedio, tasaDevolucion),
+        };
+      })
+      .sort((a, b) => b.tasaExito - a.tasaExito);
   };
 
-  const generarRecomendacion = (tasaExito: number, tiempoPromedio: number, tasaDevolucion: number): string => {
+  const generarRecomendacion = (
+    tasaExito: number,
+    tiempoPromedio: number,
+    tasaDevolucion: number
+  ): string => {
     if (tasaExito >= 75) return 'Excelente ruta. Ideal para contraentrega.';
     if (tasaExito >= 65) return 'Buen rendimiento. Monitorear tiempos.';
     if (tasaExito >= 50) return 'Alerta. Confirmar datos del cliente. Considerar prepago.';
@@ -216,9 +224,9 @@ export const AdminPanel: React.FC = () => {
   const ciudadesFiltradas = useMemo(() => {
     if (!searchCiudad) return ciudadesLogistica;
     const query = searchCiudad.toLowerCase();
-    return ciudadesLogistica.filter(c =>
-      c.ciudad.toLowerCase().includes(query) ||
-      c.transportadora.toLowerCase().includes(query)
+    return ciudadesLogistica.filter(
+      (c) =>
+        c.ciudad.toLowerCase().includes(query) || c.transportadora.toLowerCase().includes(query)
     );
   }, [ciudadesLogistica, searchCiudad]);
 
@@ -285,14 +293,11 @@ export const AdminPanel: React.FC = () => {
   const loadDocumentos = async () => {
     setIsLoadingDocs(true);
     try {
-      const response = await fetch(
-        `${API_BASE}/api/admin/documents?filtro=${filtroFecha}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(`${API_BASE}/api/admin/documents?filtro=${filtroFecha}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -408,9 +413,7 @@ export const AdminPanel: React.FC = () => {
               <h1 className="text-2xl font-bold text-slate-800 dark:text-white">
                 Modo Administrador
               </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                Acceso restringido
-              </p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Acceso restringido</p>
             </div>
 
             <div className="space-y-4">
@@ -624,9 +627,7 @@ export const AdminPanel: React.FC = () => {
           {activeTab === 'documents' && (
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-slate-800 dark:text-white">
-                  Documentos Cargados
-                </h3>
+                <h3 className="font-bold text-slate-800 dark:text-white">Documentos Cargados</h3>
                 <button
                   onClick={loadDocumentos}
                   className="p-2 hover:bg-slate-100 dark:hover:bg-navy-800 rounded-lg transition-colors"
@@ -694,8 +695,8 @@ export const AdminPanel: React.FC = () => {
                                 doc.estado === 'completado'
                                   ? 'bg-emerald-100 text-emerald-700'
                                   : doc.estado === 'procesando'
-                                  ? 'bg-amber-100 text-amber-700'
-                                  : 'bg-red-100 text-red-700'
+                                    ? 'bg-amber-100 text-amber-700'
+                                    : 'bg-red-100 text-red-700'
                               }`}
                             >
                               {doc.estado}
@@ -880,9 +881,7 @@ export const AdminPanel: React.FC = () => {
                         {reporteFinanciero.recomendaciones.politicas.map((rec, idx) => (
                           <li key={idx} className="flex items-start gap-2">
                             <CheckCircle className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
-                            <span className="text-sm text-blue-700 dark:text-blue-400">
-                              {rec}
-                            </span>
+                            <span className="text-sm text-blue-700 dark:text-blue-400">{rec}</span>
                           </li>
                         ))}
                       </ul>
@@ -959,28 +958,28 @@ export const AdminPanel: React.FC = () => {
                       <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200 dark:border-emerald-800">
                         <p className="text-sm text-emerald-600 font-medium">Rutas VERDE</p>
                         <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">
-                          {ciudadesLogistica.filter(c => c.semaforo === 'VERDE').length}
+                          {ciudadesLogistica.filter((c) => c.semaforo === 'VERDE').length}
                         </p>
                         <p className="text-xs text-emerald-500">+75% éxito</p>
                       </div>
                       <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-xl p-4 border border-yellow-200 dark:border-yellow-800">
                         <p className="text-sm text-yellow-600 font-medium">Rutas AMARILLO</p>
                         <p className="text-3xl font-bold text-yellow-700 dark:text-yellow-400">
-                          {ciudadesLogistica.filter(c => c.semaforo === 'AMARILLO').length}
+                          {ciudadesLogistica.filter((c) => c.semaforo === 'AMARILLO').length}
                         </p>
                         <p className="text-xs text-yellow-500">65-75% éxito</p>
                       </div>
                       <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 border border-orange-200 dark:border-orange-800">
                         <p className="text-sm text-orange-600 font-medium">Rutas NARANJA</p>
                         <p className="text-3xl font-bold text-orange-700 dark:text-orange-400">
-                          {ciudadesLogistica.filter(c => c.semaforo === 'NARANJA').length}
+                          {ciudadesLogistica.filter((c) => c.semaforo === 'NARANJA').length}
                         </p>
                         <p className="text-xs text-orange-500">50-65% éxito</p>
                       </div>
                       <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
                         <p className="text-sm text-red-600 font-medium">Rutas ROJO</p>
                         <p className="text-3xl font-bold text-red-700 dark:text-red-400">
-                          {ciudadesLogistica.filter(c => c.semaforo === 'ROJO').length}
+                          {ciudadesLogistica.filter((c) => c.semaforo === 'ROJO').length}
                         </p>
                         <p className="text-xs text-red-500">&lt;50% éxito</p>
                       </div>
@@ -999,10 +998,30 @@ export const AdminPanel: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[600px] overflow-y-auto">
                       {ciudadesFiltradas.map((ciudad, idx) => {
                         const colorMap = {
-                          VERDE: { bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-300 dark:border-emerald-700', badge: 'bg-emerald-500', text: 'text-emerald-700 dark:text-emerald-400' },
-                          AMARILLO: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-300 dark:border-yellow-700', badge: 'bg-yellow-500', text: 'text-yellow-700 dark:text-yellow-400' },
-                          NARANJA: { bg: 'bg-orange-50 dark:bg-orange-900/20', border: 'border-orange-300 dark:border-orange-700', badge: 'bg-orange-500', text: 'text-orange-700 dark:text-orange-400' },
-                          ROJO: { bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-300 dark:border-red-700', badge: 'bg-red-500', text: 'text-red-700 dark:text-red-400' },
+                          VERDE: {
+                            bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+                            border: 'border-emerald-300 dark:border-emerald-700',
+                            badge: 'bg-emerald-500',
+                            text: 'text-emerald-700 dark:text-emerald-400',
+                          },
+                          AMARILLO: {
+                            bg: 'bg-yellow-50 dark:bg-yellow-900/20',
+                            border: 'border-yellow-300 dark:border-yellow-700',
+                            badge: 'bg-yellow-500',
+                            text: 'text-yellow-700 dark:text-yellow-400',
+                          },
+                          NARANJA: {
+                            bg: 'bg-orange-50 dark:bg-orange-900/20',
+                            border: 'border-orange-300 dark:border-orange-700',
+                            badge: 'bg-orange-500',
+                            text: 'text-orange-700 dark:text-orange-400',
+                          },
+                          ROJO: {
+                            bg: 'bg-red-50 dark:bg-red-900/20',
+                            border: 'border-red-300 dark:border-red-700',
+                            badge: 'bg-red-500',
+                            text: 'text-red-700 dark:text-red-400',
+                          },
                         };
                         const colors = colorMap[ciudad.semaforo];
 
@@ -1022,7 +1041,9 @@ export const AdminPanel: React.FC = () => {
                                   <p className="text-xs text-slate-500">{ciudad.transportadora}</p>
                                 </div>
                               </div>
-                              <span className={`px-2 py-1 rounded-full text-xs font-bold text-white ${colors.badge}`}>
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-bold text-white ${colors.badge}`}
+                              >
                                 {ciudad.semaforo}
                               </span>
                             </div>
@@ -1031,15 +1052,21 @@ export const AdminPanel: React.FC = () => {
                             <div className="grid grid-cols-3 gap-2 mb-3">
                               <div className="text-center p-2 bg-white dark:bg-navy-800 rounded-lg">
                                 <p className="text-xs text-slate-500">Entregas</p>
-                                <p className="text-lg font-bold text-emerald-600">{ciudad.entregas}</p>
+                                <p className="text-lg font-bold text-emerald-600">
+                                  {ciudad.entregas}
+                                </p>
                               </div>
                               <div className="text-center p-2 bg-white dark:bg-navy-800 rounded-lg">
                                 <p className="text-xs text-slate-500">Devoluciones</p>
-                                <p className="text-lg font-bold text-red-600">{ciudad.devoluciones}</p>
+                                <p className="text-lg font-bold text-red-600">
+                                  {ciudad.devoluciones}
+                                </p>
                               </div>
                               <div className="text-center p-2 bg-white dark:bg-navy-800 rounded-lg">
                                 <p className="text-xs text-slate-500">Total</p>
-                                <p className="text-lg font-bold text-slate-700 dark:text-white">{ciudad.total}</p>
+                                <p className="text-lg font-bold text-slate-700 dark:text-white">
+                                  {ciudad.total}
+                                </p>
                               </div>
                             </div>
 
@@ -1086,9 +1113,9 @@ export const AdminPanel: React.FC = () => {
                   Sistema de Predicciones ML
                 </h3>
                 <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-lg mx-auto">
-                  El sistema de predicciones está disponible en la pestaña principal.
-                  Utiliza factores como temporada, día de semana, festivos y datos históricos
-                  para predecir tasas de éxito.
+                  El sistema de predicciones está disponible en la pestaña principal. Utiliza
+                  factores como temporada, día de semana, festivos y datos históricos para predecir
+                  tasas de éxito.
                 </p>
                 <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-6 max-w-2xl mx-auto">
                   <h4 className="font-bold text-purple-800 dark:text-purple-300 mb-4">
@@ -1097,22 +1124,30 @@ export const AdminPanel: React.FC = () => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="bg-white dark:bg-navy-800 rounded-lg p-3">
                       <Calendar className="w-6 h-6 text-blue-500 mx-auto mb-2" />
-                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Temporada</p>
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Temporada
+                      </p>
                       <p className="text-xs text-slate-500">Navidad, Lluvias, Seca</p>
                     </div>
                     <div className="bg-white dark:bg-navy-800 rounded-lg p-3">
                       <Clock className="w-6 h-6 text-amber-500 mx-auto mb-2" />
-                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Día Semana</p>
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Día Semana
+                      </p>
                       <p className="text-xs text-slate-500">Impacto por día</p>
                     </div>
                     <div className="bg-white dark:bg-navy-800 rounded-lg p-3">
                       <Activity className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
-                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Histórico</p>
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Histórico
+                      </p>
                       <p className="text-xs text-slate-500">Datos pasados</p>
                     </div>
                     <div className="bg-white dark:bg-navy-800 rounded-lg p-3">
                       <Truck className="w-6 h-6 text-purple-500 mx-auto mb-2" />
-                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Transportadora</p>
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Transportadora
+                      </p>
                       <p className="text-xs text-slate-500">Rendimiento</p>
                     </div>
                   </div>

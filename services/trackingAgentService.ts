@@ -6,13 +6,7 @@
 
 import { askAssistant } from './claudeService';
 import { ciudadAgentes, registrarAprendizaje, crearAlerta } from './agentCityService';
-import {
-  GuiaRastreada,
-  EventoGuia,
-  Pais,
-  DistritoId,
-  NivelPrioridad
-} from '../types/agents';
+import { GuiaRastreada, EventoGuia, Pais, DistritoId, NivelPrioridad } from '../types/agents';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTES
@@ -25,14 +19,17 @@ const INTERVALO_ACTUALIZACION = 15 * 60 * 1000; // 15 minutos
 const TRANSPORTADORAS: Record<Pais, string[]> = {
   [Pais.COLOMBIA]: ['Interrapidisimo', 'Coordinadora', 'Servientrega', 'Envia', 'TCC', 'Deprisa'],
   [Pais.CHILE]: ['Chilexpress', 'Starken', 'BlueExpress', 'Correos Chile', 'DHL'],
-  [Pais.ECUADOR]: ['Servientrega EC', 'Tramaco', 'Urbano', 'Correos Ecuador', 'DHL']
+  [Pais.ECUADOR]: ['Servientrega EC', 'Tramaco', 'Urbano', 'Correos Ecuador', 'DHL'],
 };
 
 // Tiempos de entrega estimados por país (en días)
-const TIEMPOS_ESTIMADOS: Record<Pais, { mismo_dia: number; otra_ciudad: number; otra_region: number }> = {
+const TIEMPOS_ESTIMADOS: Record<
+  Pais,
+  { mismo_dia: number; otra_ciudad: number; otra_region: number }
+> = {
   [Pais.COLOMBIA]: { mismo_dia: 1, otra_ciudad: 2, otra_region: 4 },
   [Pais.CHILE]: { mismo_dia: 1, otra_ciudad: 2, otra_region: 3 },
-  [Pais.ECUADOR]: { mismo_dia: 1, otra_ciudad: 2, otra_region: 3 }
+  [Pais.ECUADOR]: { mismo_dia: 1, otra_ciudad: 2, otra_region: 3 },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -51,7 +48,11 @@ class TrackingAgentService {
   // RASTREO DE GUÍAS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async rastrearGuia(numeroGuia: string, transportadora: string, pais: Pais): Promise<GuiaRastreada> {
+  async rastrearGuia(
+    numeroGuia: string,
+    transportadora: string,
+    pais: Pais
+  ): Promise<GuiaRastreada> {
     const guiaExistente = this.guiasRastreadas.get(numeroGuia);
 
     if (guiaExistente) {
@@ -78,10 +79,10 @@ class TrackingAgentService {
       validacionTriple: {
         apiConfirma: false,
         gpsConfirma: false,
-        clienteConfirma: false
+        clienteConfirma: false,
       },
       historialEventos: [],
-      probabilidadNovedad: 0
+      probabilidadNovedad: 0,
     };
 
     // Consultar estado con Claude
@@ -107,7 +108,7 @@ class TrackingAgentService {
       descripcion: `Guía ${numeroGuia} añadida a rastreo`,
       datos: { transportadora, pais, estado: nuevaGuia.estadoAPI },
       impacto: 'bajo',
-      origenPais: pais
+      origenPais: pais,
     });
 
     return nuevaGuia;
@@ -130,11 +131,13 @@ class TrackingAgentService {
     if (estadoConsultado.eventos.length > 0) {
       guia.historialEventos = [
         ...guia.historialEventos,
-        ...estadoConsultado.eventos.filter(e =>
-          !guia.historialEventos.some(h =>
-            h.timestamp.getTime() === e.timestamp.getTime() && h.descripcion === e.descripcion
-          )
-        )
+        ...estadoConsultado.eventos.filter(
+          (e) =>
+            !guia.historialEventos.some(
+              (h) =>
+                h.timestamp.getTime() === e.timestamp.getTime() && h.descripcion === e.descripcion
+            )
+        ),
       ];
     }
 
@@ -158,14 +161,14 @@ class TrackingAgentService {
 
   async actualizarTodasLasGuias(): Promise<void> {
     const guias = Array.from(this.guiasRastreadas.values());
-    const guiasActivas = guias.filter(g =>
-      !['Entregado', 'Devuelto', 'Cancelado'].includes(g.estadoReal)
+    const guiasActivas = guias.filter(
+      (g) => !['Entregado', 'Devuelto', 'Cancelado'].includes(g.estadoReal)
     );
 
     for (const guia of guiasActivas) {
       await this.actualizarGuia(guia);
       // Pequeña pausa para no saturar
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
   }
 
@@ -219,8 +222,8 @@ Responde en JSON con este formato:
           eventos: (datos.eventos || []).map((e: any) => ({
             ...e,
             timestamp: new Date(e.timestamp),
-            fuente: 'api' as const
-          }))
+            fuente: 'api' as const,
+          })),
         };
       }
     } catch (error) {
@@ -231,7 +234,10 @@ Responde en JSON con este formato:
     return this.generarEstadoSimulado(transportadora, pais);
   }
 
-  private generarEstadoSimulado(transportadora: string, pais: Pais): {
+  private generarEstadoSimulado(
+    transportadora: string,
+    pais: Pais
+  ): {
     estado: string;
     ubicacion?: string;
     eventos: EventoGuia[];
@@ -242,7 +248,7 @@ Responde en JSON con este formato:
     const ciudades: Record<Pais, string[]> = {
       [Pais.COLOMBIA]: ['Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Bucaramanga'],
       [Pais.CHILE]: ['Santiago', 'Valparaíso', 'Concepción', 'Viña del Mar', 'Temuco'],
-      [Pais.ECUADOR]: ['Quito', 'Guayaquil', 'Cuenca', 'Ambato', 'Manta']
+      [Pais.ECUADOR]: ['Quito', 'Guayaquil', 'Cuenca', 'Ambato', 'Manta'],
     };
 
     const ciudad = ciudades[pais][Math.floor(Math.random() * ciudades[pais].length)];
@@ -256,14 +262,14 @@ Responde en JSON con este formato:
         tipo: estados[i].toLowerCase().replace(' ', '_'),
         descripcion: estados[i],
         ubicacion: ciudades[pais][Math.min(i, ciudades[pais].length - 1)],
-        fuente: 'api'
+        fuente: 'api',
       });
     }
 
     return {
       estado: estados[estadoIdx],
       ubicacion: ciudad,
-      eventos
+      eventos,
     };
   }
 
@@ -273,7 +279,8 @@ Responde en JSON con este formato:
 
   async validarEstatus(guia: GuiaRastreada): Promise<void> {
     // Validación 1: API reporta
-    guia.validacionTriple.apiConfirma = guia.estadoAPI !== 'Error' && guia.estadoAPI !== 'No encontrado';
+    guia.validacionTriple.apiConfirma =
+      guia.estadoAPI !== 'Error' && guia.estadoAPI !== 'No encontrado';
 
     // Validación 2: Lógica temporal (simula GPS/lógica)
     guia.validacionTriple.gpsConfirma = this.validarLogicaTemporal(guia);
@@ -285,10 +292,10 @@ Responde en JSON con este formato:
     const validaciones = [
       guia.validacionTriple.apiConfirma,
       guia.validacionTriple.gpsConfirma,
-      guia.validacionTriple.clienteConfirma
+      guia.validacionTriple.clienteConfirma,
     ];
 
-    const validacionesCiertas = validaciones.filter(v => v).length;
+    const validacionesCiertas = validaciones.filter((v) => v).length;
 
     if (validacionesCiertas >= 2) {
       guia.estadoValidado = guia.estadoAPI;
@@ -310,7 +317,7 @@ Responde en JSON con este formato:
           distrito: DistritoId.TRACKING,
           pais: guia.pais,
           titulo: 'Estatus no confiable',
-          mensaje: `Guía ${guia.numeroGuia} tiene estatus no verificable después de ${guia.diasEnTransito} días`
+          mensaje: `Guía ${guia.numeroGuia} tiene estatus no verificable después de ${guia.diasEnTransito} días`,
         });
       }
     }
@@ -321,14 +328,15 @@ Responde en JSON con este formato:
 
     // Si dice "Entregado" pero no hay evento de reparto previo
     if (guia.estadoAPI === 'Entregado') {
-      const tieneReparto = guia.historialEventos.some(e =>
-        e.tipo === 'reparto' || e.descripcion.toLowerCase().includes('reparto')
+      const tieneReparto = guia.historialEventos.some(
+        (e) => e.tipo === 'reparto' || e.descripcion.toLowerCase().includes('reparto')
       );
       if (!tieneReparto) return false;
     }
 
     // Si lleva muchos días sin actualizar
-    const horasDesdeActualizacion = (Date.now() - guia.ultimaActualizacion.getTime()) / (1000 * 60 * 60);
+    const horasDesdeActualizacion =
+      (Date.now() - guia.ultimaActualizacion.getTime()) / (1000 * 60 * 60);
     if (horasDesdeActualizacion > 48 && guia.estadoAPI === 'En tránsito') {
       return false;
     }
@@ -349,7 +357,7 @@ Responde en JSON con este formato:
       timestamp: new Date(),
       tipo: 'confirmacion',
       descripcion: confirmado ? 'Cliente confirmó recepción' : 'Cliente niega recepción',
-      fuente: 'cliente'
+      fuente: 'cliente',
     });
 
     // Re-validar
@@ -363,7 +371,7 @@ Responde en JSON con este formato:
         pais: guia.pais,
         titulo: 'Discrepancia en entrega',
         mensaje: `Guía ${numeroGuia}: API dice entregado pero cliente niega recepción`,
-        accionRequerida: 'Investigar inmediatamente con transportadora'
+        accionRequerida: 'Investigar inmediatamente con transportadora',
       });
     }
 
@@ -375,7 +383,7 @@ Responde en JSON con este formato:
   // ═══════════════════════════════════════════════════════════════════════════
 
   private calcularDiasEnTransito(guia: GuiaRastreada): number {
-    const primerEvento = guia.historialEventos.find(e => e.tipo === 'recogida');
+    const primerEvento = guia.historialEventos.find((e) => e.tipo === 'recogida');
     if (!primerEvento) return 0;
 
     const inicio = new Date(primerEvento.timestamp);
@@ -393,7 +401,8 @@ Responde en JSON con este formato:
     }
 
     // Factor 2: Sin actualización reciente
-    const horasDesdeActualizacion = (Date.now() - guia.ultimaActualizacion.getTime()) / (1000 * 60 * 60);
+    const horasDesdeActualizacion =
+      (Date.now() - guia.ultimaActualizacion.getTime()) / (1000 * 60 * 60);
     if (horasDesdeActualizacion > 24) {
       riesgo += Math.min(horasDesdeActualizacion / 2, 25);
     }
@@ -418,8 +427,8 @@ Responde en JSON con este formato:
     let probabilidad = 0;
 
     // Historial de novedades previas
-    const novedadesPrevias = guia.historialEventos.filter(e =>
-      e.tipo === 'novedad' || e.descripcion.toLowerCase().includes('novedad')
+    const novedadesPrevias = guia.historialEventos.filter(
+      (e) => e.tipo === 'novedad' || e.descripcion.toLowerCase().includes('novedad')
     ).length;
     probabilidad += novedadesPrevias * 20;
 
@@ -454,7 +463,7 @@ Responde en JSON con este formato:
         distrito: DistritoId.TRACKING,
         pais: guia.pais,
         titulo: 'Estado retrocedió',
-        mensaje: `Guía ${guia.numeroGuia}: Estado cambió de "${estadoAnterior}" a "${guia.estadoAPI}"`
+        mensaje: `Guía ${guia.numeroGuia}: Estado cambió de "${estadoAnterior}" a "${guia.estadoAPI}"`,
       });
     }
 
@@ -465,7 +474,7 @@ Responde en JSON con este formato:
         distrito: DistritoId.TRACKING,
         pais: guia.pais,
         titulo: 'Entrega muy rápida',
-        mensaje: `Guía ${guia.numeroGuia}: Entregada mismo día. Verificar con cliente.`
+        mensaje: `Guía ${guia.numeroGuia}: Entregada mismo día. Verificar con cliente.`,
       });
     }
 
@@ -477,10 +486,10 @@ Responde en JSON con este formato:
       datos: {
         guia: guia.numeroGuia,
         transportadora: guia.transportadora,
-        diasTransito: guia.diasEnTransito
+        diasTransito: guia.diasEnTransito,
       },
       impacto: 'bajo',
-      origenPais: guia.pais
+      origenPais: guia.pais,
     });
   }
 
@@ -489,12 +498,13 @@ Responde en JSON con este formato:
   // ═══════════════════════════════════════════════════════════════════════════
 
   async predecirProblemasProximos(): Promise<GuiaRastreada[]> {
-    const guiasActivas = Array.from(this.guiasRastreadas.values())
-      .filter(g => !['Entregado', 'Devuelto', 'Cancelado'].includes(g.estadoReal));
+    const guiasActivas = Array.from(this.guiasRastreadas.values()).filter(
+      (g) => !['Entregado', 'Devuelto', 'Cancelado'].includes(g.estadoReal)
+    );
 
     // Ordenar por probabilidad de novedad
     return guiasActivas
-      .filter(g => g.probabilidadNovedad > 50)
+      .filter((g) => g.probabilidadNovedad > 50)
       .sort((a, b) => b.probabilidadNovedad - a.probabilidadNovedad);
   }
 
@@ -507,49 +517,51 @@ Responde en JSON con este formato:
   }
 
   getGuiasPorPais(pais: Pais): GuiaRastreada[] {
-    return Array.from(this.guiasRastreadas.values())
-      .filter(g => g.pais === pais);
+    return Array.from(this.guiasRastreadas.values()).filter((g) => g.pais === pais);
   }
 
   getGuiasConNovedad(): GuiaRastreada[] {
-    return Array.from(this.guiasRastreadas.values())
-      .filter(g =>
+    return Array.from(this.guiasRastreadas.values()).filter(
+      (g) =>
         g.riesgoRetraso > 50 ||
         !g.esConfiable ||
         ['En oficina', 'Novedad', 'Devuelto'].includes(g.estadoAPI)
-      );
+    );
   }
 
   getGuiasCriticas(): GuiaRastreada[] {
-    return Array.from(this.guiasRastreadas.values())
-      .filter(g => g.riesgoRetraso > 75 || g.diasEnTransito > g.diasEstimados + 3);
+    return Array.from(this.guiasRastreadas.values()).filter(
+      (g) => g.riesgoRetraso > 75 || g.diasEnTransito > g.diasEstimados + 3
+    );
   }
 
-  getResumenPorTransportadora(pais: Pais): Record<string, {
-    total: number;
-    entregadas: number;
-    enTransito: number;
-    conNovedad: number;
-    tasaExito: number;
-  }> {
+  getResumenPorTransportadora(pais: Pais): Record<
+    string,
+    {
+      total: number;
+      entregadas: number;
+      enTransito: number;
+      conNovedad: number;
+      tasaExito: number;
+    }
+  > {
     const guiasPais = this.getGuiasPorPais(pais);
     const resumen: Record<string, any> = {};
 
     for (const transportadora of TRANSPORTADORAS[pais]) {
-      const guiasTransp = guiasPais.filter(g => g.transportadora === transportadora);
-      const entregadas = guiasTransp.filter(g => g.estadoAPI === 'Entregado').length;
-      const conNovedad = guiasTransp.filter(g =>
-        g.riesgoRetraso > 50 || ['Novedad', 'En oficina'].includes(g.estadoAPI)
+      const guiasTransp = guiasPais.filter((g) => g.transportadora === transportadora);
+      const entregadas = guiasTransp.filter((g) => g.estadoAPI === 'Entregado').length;
+      const conNovedad = guiasTransp.filter(
+        (g) => g.riesgoRetraso > 50 || ['Novedad', 'En oficina'].includes(g.estadoAPI)
       ).length;
 
       resumen[transportadora] = {
         total: guiasTransp.length,
         entregadas,
-        enTransito: guiasTransp.filter(g => g.estadoAPI === 'En tránsito').length,
+        enTransito: guiasTransp.filter((g) => g.estadoAPI === 'En tránsito').length,
         conNovedad,
-        tasaExito: guiasTransp.length > 0
-          ? Math.round((entregadas / guiasTransp.length) * 100)
-          : 100
+        tasaExito:
+          guiasTransp.length > 0 ? Math.round((entregadas / guiasTransp.length) * 100) : 100,
       };
     }
 
@@ -565,11 +577,11 @@ Responde en JSON con este formato:
       const data = localStorage.getItem(STORAGE_KEY_GUIAS);
       if (data) {
         const guias: GuiaRastreada[] = JSON.parse(data);
-        guias.forEach(g => {
+        guias.forEach((g) => {
           g.ultimaActualizacion = new Date(g.ultimaActualizacion);
-          g.historialEventos = g.historialEventos.map(e => ({
+          g.historialEventos = g.historialEventos.map((e) => ({
             ...e,
-            timestamp: new Date(e.timestamp)
+            timestamp: new Date(e.timestamp),
           }));
           if (g.prediccionEntrega) {
             g.prediccionEntrega = new Date(g.prediccionEntrega);
@@ -631,35 +643,26 @@ export const trackingService = new TrackingAgentService();
 export const rastrearGuia = (numero: string, transportadora: string, pais: Pais) =>
   trackingService.rastrearGuia(numero, transportadora, pais);
 
-export const actualizarGuia = (guia: GuiaRastreada) =>
-  trackingService.actualizarGuia(guia);
+export const actualizarGuia = (guia: GuiaRastreada) => trackingService.actualizarGuia(guia);
 
-export const actualizarTodasLasGuias = () =>
-  trackingService.actualizarTodasLasGuias();
+export const actualizarTodasLasGuias = () => trackingService.actualizarTodasLasGuias();
 
 export const confirmarRecepcionCliente = (numero: string, confirmado: boolean) =>
   trackingService.confirmarRecepcionCliente(numero, confirmado);
 
-export const getGuia = (numero: string) =>
-  trackingService.getGuia(numero);
+export const getGuia = (numero: string) => trackingService.getGuia(numero);
 
-export const getGuiasPorPais = (pais: Pais) =>
-  trackingService.getGuiasPorPais(pais);
+export const getGuiasPorPais = (pais: Pais) => trackingService.getGuiasPorPais(pais);
 
-export const getGuiasConNovedad = () =>
-  trackingService.getGuiasConNovedad();
+export const getGuiasConNovedad = () => trackingService.getGuiasConNovedad();
 
-export const getGuiasCriticas = () =>
-  trackingService.getGuiasCriticas();
+export const getGuiasCriticas = () => trackingService.getGuiasCriticas();
 
-export const predecirProblemasProximos = () =>
-  trackingService.predecirProblemasProximos();
+export const predecirProblemasProximos = () => trackingService.predecirProblemasProximos();
 
 export const getResumenPorTransportadora = (pais: Pais) =>
   trackingService.getResumenPorTransportadora(pais);
 
-export const eliminarGuia = (numero: string) =>
-  trackingService.eliminarGuia(numero);
+export const eliminarGuia = (numero: string) => trackingService.eliminarGuia(numero);
 
-export const limpiarGuiasAntiguas = (dias?: number) =>
-  trackingService.limpiarGuiasAntiguas(dias);
+export const limpiarGuiasAntiguas = (dias?: number) => trackingService.limpiarGuiasAntiguas(dias);

@@ -105,7 +105,10 @@ export class DocumentProcessingService {
   }
 
   // Procesar texto con IA
-  async analyzeWithAI(content: string, context: string = 'documento'): Promise<ProcessedDocument['aiAnalysis']> {
+  async analyzeWithAI(
+    content: string,
+    context: string = 'documento'
+  ): Promise<ProcessedDocument['aiAnalysis']> {
     if (!this.anthropic) {
       // Fallback si no hay API key - análisis básico
       return this.basicAnalysis(content);
@@ -138,7 +141,7 @@ Responde SOLO con JSON válido (sin markdown, sin \`\`\`):
       const response = await this.anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 2000,
-        messages: [{ role: 'user', content: prompt }]
+        messages: [{ role: 'user', content: prompt }],
       });
 
       const text = response.content[0].type === 'text' ? response.content[0].text : '';
@@ -159,7 +162,7 @@ Responde SOLO con JSON válido (sin markdown, sin \`\`\`):
   // Análisis básico sin IA
   private basicAnalysis(content: string): ProcessedDocument['aiAnalysis'] {
     const words = content.split(/\s+/).length;
-    const lines = content.split('\n').filter(l => l.trim()).length;
+    const lines = content.split('\n').filter((l) => l.trim()).length;
 
     // Detectar entidades básicas
     const cities = this.extractCities(content);
@@ -193,19 +196,42 @@ Responde SOLO con JSON válido (sin markdown, sin \`\`\`):
   // Extraer ciudades colombianas
   private extractCities(content: string): string[] {
     const colombianCities = [
-      'BOGOTA', 'MEDELLIN', 'CALI', 'BARRANQUILLA', 'CARTAGENA', 'BUCARAMANGA',
-      'CUCUTA', 'PEREIRA', 'SANTA MARTA', 'IBAGUE', 'MANIZALES', 'VILLAVICENCIO',
-      'PASTO', 'NEIVA', 'ARMENIA', 'MONTERIA', 'VALLEDUPAR', 'POPAYAN',
+      'BOGOTA',
+      'MEDELLIN',
+      'CALI',
+      'BARRANQUILLA',
+      'CARTAGENA',
+      'BUCARAMANGA',
+      'CUCUTA',
+      'PEREIRA',
+      'SANTA MARTA',
+      'IBAGUE',
+      'MANIZALES',
+      'VILLAVICENCIO',
+      'PASTO',
+      'NEIVA',
+      'ARMENIA',
+      'MONTERIA',
+      'VALLEDUPAR',
+      'POPAYAN',
     ];
     const upper = content.toUpperCase();
-    return colombianCities.filter(city => upper.includes(city));
+    return colombianCities.filter((city) => upper.includes(city));
   }
 
   // Extraer transportadoras
   private extractCarriers(content: string): string[] {
-    const carriers = ['COORDINADORA', 'INTERRAPIDISIMO', 'ENVIA', 'TCC', 'SERVIENTREGA', 'VELOCES', '472'];
+    const carriers = [
+      'COORDINADORA',
+      'INTERRAPIDISIMO',
+      'ENVIA',
+      'TCC',
+      'SERVIENTREGA',
+      'VELOCES',
+      '472',
+    ];
     const upper = content.toUpperCase();
-    return carriers.filter(carrier => upper.includes(carrier));
+    return carriers.filter((carrier) => upper.includes(carrier));
   }
 
   // Extraer montos
@@ -283,7 +309,7 @@ Responde SOLO con JSON válido (sin markdown, sin \`\`\`):
     // Primeras 100 filas para análisis
     const sampleData = data.slice(0, 100);
     sampleData.forEach((row, idx) => {
-      const values = headers.map(h => `${h}: ${row[h] || ''}`).join(' | ');
+      const values = headers.map((h) => `${h}: ${row[h] || ''}`).join(' | ');
       text += `Fila ${idx + 1}: ${values}\n`;
     });
 
@@ -295,15 +321,19 @@ Responde SOLO con JSON válido (sin markdown, sin \`\`\`):
   private isFinancialExcel(data: any[]): boolean {
     if (!data || data.length === 0) return false;
 
-    const headers = Object.keys(data[0]).map(h => h.toUpperCase());
+    const headers = Object.keys(data[0]).map((h) => h.toUpperCase());
     const financialKeywords = [
-      'VALOR FACTURADO', 'GANANCIA', 'PRECIO FLETE', 'COSTO',
-      'DEVOLUCION', 'ESTADO GUIA', 'TRANSPORTADORA', 'TOTAL'
+      'VALOR FACTURADO',
+      'GANANCIA',
+      'PRECIO FLETE',
+      'COSTO',
+      'DEVOLUCION',
+      'ESTADO GUIA',
+      'TRANSPORTADORA',
+      'TOTAL',
     ];
 
-    return financialKeywords.some(keyword =>
-      headers.some(h => h.includes(keyword))
-    );
+    return financialKeywords.some((keyword) => headers.some((h) => h.includes(keyword)));
   }
 
   // Extraer métricas financieras
@@ -313,13 +343,18 @@ Responde SOLO con JSON válido (sin markdown, sin \`\`\`):
     let deliveredCount = 0;
     let returnedCount = 0;
 
-    data.forEach(row => {
+    data.forEach((row) => {
       // Buscar columnas de valor
       Object.entries(row).forEach(([key, value]) => {
         const keyUpper = key.toUpperCase();
-        const numValue = typeof value === 'number' ? value : parseFloat(String(value).replace(/[,$]/g, '')) || 0;
+        const numValue =
+          typeof value === 'number' ? value : parseFloat(String(value).replace(/[,$]/g, '')) || 0;
 
-        if (keyUpper.includes('FACTURADO') || keyUpper.includes('VENTA') || keyUpper.includes('TOTAL')) {
+        if (
+          keyUpper.includes('FACTURADO') ||
+          keyUpper.includes('VENTA') ||
+          keyUpper.includes('TOTAL')
+        ) {
           totalSales += numValue;
         }
         if (keyUpper.includes('GANANCIA') || keyUpper.includes('UTILIDAD')) {
@@ -399,7 +434,7 @@ Responde SOLO con JSON válido (sin markdown, sin \`\`\`):
   // Extraer texto de HTML
   private extractTextFromHtml(html: string): string {
     // Remover scripts y estilos
-    let text = html
+    const text = html
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
       .replace(/<[^>]+>/g, ' ')
@@ -435,7 +470,7 @@ Responde SOLO con JSON válido (sin markdown, sin \`\`\`):
 
   saveProcessedDocument(doc: ProcessedDocument): void {
     const docs = this.getProcessedDocuments();
-    const existingIndex = docs.findIndex(d => d.id === doc.id);
+    const existingIndex = docs.findIndex((d) => d.id === doc.id);
 
     if (existingIndex >= 0) {
       docs[existingIndex] = doc;
@@ -458,7 +493,7 @@ Responde SOLO con JSON válido (sin markdown, sin \`\`\`):
   }
 
   deleteProcessedDocument(id: string): void {
-    const docs = this.getProcessedDocuments().filter(d => d.id !== id);
+    const docs = this.getProcessedDocuments().filter((d) => d.id !== id);
     localStorage.setItem(STORAGE_KEYS.PROCESSED_DOCS, JSON.stringify(docs));
   }
 
@@ -489,8 +524,8 @@ Responde SOLO con JSON válido (sin markdown, sin \`\`\`):
     sessions.unshift(session);
 
     // Mantener máximo 30 sesiones por pestaña
-    const tabSessions = sessions.filter(s => s.tabId === tabId).slice(0, 30);
-    const otherSessions = sessions.filter(s => s.tabId !== tabId);
+    const tabSessions = sessions.filter((s) => s.tabId === tabId).slice(0, 30);
+    const otherSessions = sessions.filter((s) => s.tabId !== tabId);
     const combined = [...tabSessions, ...otherSessions];
 
     localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(combined));
@@ -504,7 +539,7 @@ Responde SOLO con JSON válido (sin markdown, sin \`\`\`):
       const sessions: SessionData[] = stored ? JSON.parse(stored) : [];
 
       if (tabId) {
-        return sessions.filter(s => s.tabId === tabId);
+        return sessions.filter((s) => s.tabId === tabId);
       }
       return sessions;
     } catch {
@@ -514,11 +549,11 @@ Responde SOLO con JSON válido (sin markdown, sin \`\`\`):
 
   getSession(id: string): SessionData | null {
     const sessions = this.getSessions();
-    return sessions.find(s => s.id === id) || null;
+    return sessions.find((s) => s.id === id) || null;
   }
 
   deleteSession(id: string): void {
-    const sessions = this.getSessions().filter(s => s.id !== id);
+    const sessions = this.getSessions().filter((s) => s.id !== id);
     localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions));
   }
 
@@ -547,7 +582,7 @@ Responde SOLO con JSON válido (sin markdown, sin \`\`\`):
       const knowledge: KnowledgeEntry[] = stored ? JSON.parse(stored) : [];
 
       if (type) {
-        return knowledge.filter(k => k.type === type);
+        return knowledge.filter((k) => k.type === type);
       }
       return knowledge;
     } catch {
@@ -559,16 +594,17 @@ Responde SOLO con JSON válido (sin markdown, sin \`\`\`):
     const knowledge = this.getKnowledge();
     const queryLower = query.toLowerCase();
 
-    return knowledge.filter(k =>
-      k.title.toLowerCase().includes(queryLower) ||
-      k.content.toLowerCase().includes(queryLower) ||
-      k.summary.toLowerCase().includes(queryLower) ||
-      k.tags.some(t => t.toLowerCase().includes(queryLower))
+    return knowledge.filter(
+      (k) =>
+        k.title.toLowerCase().includes(queryLower) ||
+        k.content.toLowerCase().includes(queryLower) ||
+        k.summary.toLowerCase().includes(queryLower) ||
+        k.tags.some((t) => t.toLowerCase().includes(queryLower))
     );
   }
 
   deleteKnowledge(id: string): void {
-    const knowledge = this.getKnowledge().filter(k => k.id !== id);
+    const knowledge = this.getKnowledge().filter((k) => k.id !== id);
     localStorage.setItem(STORAGE_KEYS.KNOWLEDGE_BASE, JSON.stringify(knowledge));
   }
 }

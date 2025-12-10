@@ -159,7 +159,8 @@ interface ProAssistantState {
 // CREAR STORE
 // ============================================
 
-const generateId = () => crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+const generateId = () =>
+  crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 export const useProAssistantStore = create<ProAssistantState>()(
   persist(
@@ -198,46 +199,39 @@ Puedo ayudarte con:
 
 ¿En qué te ayudo?`,
           timestamp: new Date(),
-          suggestions: [
-            'Ver guias con novedad',
-            'Reporte del dia',
-            'Guias en Reclamo Oficina',
-          ],
+          suggestions: ['Ver guias con novedad', 'Reporte del dia', 'Guias en Reclamo Oficina'],
         },
       ],
 
-      addMessage: (message) => set((state) => ({
-        messages: [
-          ...state.messages,
-          {
-            ...message,
-            id: generateId(),
-            timestamp: new Date(),
-          },
-        ],
-      })),
+      addMessage: (message) =>
+        set((state) => ({
+          messages: [
+            ...state.messages,
+            {
+              ...message,
+              id: generateId(),
+              timestamp: new Date(),
+            },
+          ],
+        })),
 
-      updateMessage: (id, updates) => set((state) => ({
-        messages: state.messages.map((m) =>
-          m.id === id ? { ...m, ...updates } : m
-        ),
-      })),
+      updateMessage: (id, updates) =>
+        set((state) => ({
+          messages: state.messages.map((m) => (m.id === id ? { ...m, ...updates } : m)),
+        })),
 
-      clearMessages: () => set({
-        messages: [
-          {
-            id: 'welcome',
-            role: 'assistant' as const,
-            content: `Hola! Soy tu asistente PRO de Litper. ¿En qué te ayudo?`,
-            timestamp: new Date(),
-            suggestions: [
-              'Ver guias con novedad',
-              'Reporte del dia',
-              'Guias en Reclamo Oficina',
-            ],
-          },
-        ],
-      }),
+      clearMessages: () =>
+        set({
+          messages: [
+            {
+              id: 'welcome',
+              role: 'assistant' as const,
+              content: `Hola! Soy tu asistente PRO de Litper. ¿En qué te ayudo?`,
+              timestamp: new Date(),
+              suggestions: ['Ver guias con novedad', 'Reporte del dia', 'Guias en Reclamo Oficina'],
+            },
+          ],
+        }),
 
       isTyping: false,
       setIsTyping: (typing) => set({ isTyping: typing }),
@@ -245,26 +239,27 @@ Puedo ayudarte con:
       // ========== Knowledge State ==========
       knowledge: [],
 
-      addKnowledge: (item) => set((state) => ({
-        knowledge: [
-          {
-            ...item,
-            id: generateId(),
-            createdAt: new Date(),
-          },
-          ...state.knowledge,
-        ],
-      })),
+      addKnowledge: (item) =>
+        set((state) => ({
+          knowledge: [
+            {
+              ...item,
+              id: generateId(),
+              createdAt: new Date(),
+            },
+            ...state.knowledge,
+          ],
+        })),
 
-      updateKnowledge: (id, updates) => set((state) => ({
-        knowledge: state.knowledge.map((k) =>
-          k.id === id ? { ...k, ...updates } : k
-        ),
-      })),
+      updateKnowledge: (id, updates) =>
+        set((state) => ({
+          knowledge: state.knowledge.map((k) => (k.id === id ? { ...k, ...updates } : k)),
+        })),
 
-      removeKnowledge: (id) => set((state) => ({
-        knowledge: state.knowledge.filter((k) => k.id !== id),
-      })),
+      removeKnowledge: (id) =>
+        set((state) => ({
+          knowledge: state.knowledge.filter((k) => k.id !== id),
+        })),
 
       searchKnowledge: (query) => {
         const { knowledge } = get();
@@ -284,51 +279,55 @@ Puedo ayudarte con:
       // ========== Tasks State ==========
       tasks: [],
 
-      addTask: (task) => set((state) => ({
-        tasks: [
-          {
-            ...task,
-            id: generateId(),
-            createdAt: new Date(),
-          },
-          ...state.tasks,
-        ],
-      })),
+      addTask: (task) =>
+        set((state) => ({
+          tasks: [
+            {
+              ...task,
+              id: generateId(),
+              createdAt: new Date(),
+            },
+            ...state.tasks,
+          ],
+        })),
 
-      updateTask: (id, updates) => set((state) => ({
-        tasks: state.tasks.map((t) =>
-          t.id === id ? { ...t, ...updates } : t
-        ),
-      })),
+      updateTask: (id, updates) =>
+        set((state) => ({
+          tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+        })),
 
-      removeTask: (id) => set((state) => ({
-        tasks: state.tasks.filter((t) => t.id !== id),
-      })),
+      removeTask: (id) =>
+        set((state) => ({
+          tasks: state.tasks.filter((t) => t.id !== id),
+        })),
 
-      clearCompletedTasks: () => set((state) => ({
-        tasks: state.tasks.filter((t) => t.status !== 'completed'),
-      })),
+      clearCompletedTasks: () =>
+        set((state) => ({
+          tasks: state.tasks.filter((t) => t.status !== 'completed'),
+        })),
 
       // ========== Recommendations State ==========
       recommendations: [],
 
-      addRecommendation: (rec) => set((state) => ({
-        recommendations: [
-          {
-            ...rec,
-            id: generateId(),
-            createdAt: new Date(),
-            dismissed: false,
-          },
-          ...state.recommendations,
-        ],
-      })),
+      addRecommendation: (rec) =>
+        set((state) => ({
+          recommendations: [
+            {
+              ...rec,
+              id: generateId(),
+              createdAt: new Date(),
+              dismissed: false,
+            },
+            ...state.recommendations,
+          ],
+        })),
 
-      dismissRecommendation: (id) => set((state) => ({
-        recommendations: state.recommendations.map((r) =>
-          r.id === id ? { ...r, dismissed: true } : r
-        ),
-      })),
+      dismissRecommendation: (id) =>
+        set((state) => ({
+          recommendations: state.recommendations.map((r) =>
+            r.id === id ? { ...r, dismissed: true } : r
+          ),
+        })),
 
       clearRecommendations: () => set({ recommendations: [] }),
 
@@ -357,23 +356,26 @@ Puedo ayudarte con:
         },
       },
 
-      updateConfig: (updates) => set((state) => ({
-        config: { ...state.config, ...updates },
-      })),
+      updateConfig: (updates) =>
+        set((state) => ({
+          config: { ...state.config, ...updates },
+        })),
 
-      updateNotificationSettings: (updates) => set((state) => ({
-        config: {
-          ...state.config,
-          notifications: { ...state.config.notifications, ...updates },
-        },
-      })),
+      updateNotificationSettings: (updates) =>
+        set((state) => ({
+          config: {
+            ...state.config,
+            notifications: { ...state.config.notifications, ...updates },
+          },
+        })),
 
-      updatePermissions: (updates) => set((state) => ({
-        config: {
-          ...state.config,
-          permissions: { ...state.config.permissions, ...updates },
-        },
-      })),
+      updatePermissions: (updates) =>
+        set((state) => ({
+          config: {
+            ...state.config,
+            permissions: { ...state.config.permissions, ...updates },
+          },
+        })),
 
       // ========== Context ==========
       shipmentsContext: [],

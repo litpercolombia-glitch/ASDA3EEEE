@@ -2,7 +2,25 @@ import React, { useState } from 'react';
 import { Country, CountryConfig, COUNTRY_CONFIGS } from '../types/country';
 import { saveSelectedCountry } from '../services/countryService';
 import { updateUserCountry } from '../services/gamificationService';
-import { MapPin, Truck, Package, ArrowRight, Check, Crown, Sparkles, Shield, Zap, Brain, Trophy, Star, Users, BarChart3, Rocket, Activity, Target } from 'lucide-react';
+import {
+  MapPin,
+  Truck,
+  Package,
+  ArrowRight,
+  Check,
+  Crown,
+  Sparkles,
+  Shield,
+  Zap,
+  Brain,
+  Trophy,
+  Star,
+  Users,
+  BarChart3,
+  Rocket,
+  Activity,
+  Target,
+} from 'lucide-react';
 
 interface CountrySelectorProps {
   onCountrySelected: (country: Country) => void;
@@ -57,7 +75,11 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
             </div>
             <div>
               <h1 className="text-xl font-bold text-white tracking-tight">
-                LITPER<span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent"> PRO</span>
+                LITPER
+                <span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent">
+                  {' '}
+                  PRO
+                </span>
               </h1>
               <p className="text-[10px] text-slate-400 font-medium tracking-widest uppercase">
                 Enterprise Logistics Platform
@@ -84,7 +106,9 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
             {/* Badge animado */}
             <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-accent-500/10 to-corporate-500/10 rounded-full border border-accent-500/20 mb-8 animate-fade-in">
               <Rocket className="w-4 h-4 text-accent-400 animate-bounce" />
-              <span className="text-sm text-white font-semibold">Plataforma #1 en Latinoamérica</span>
+              <span className="text-sm text-white font-semibold">
+                Plataforma #1 en Latinoamérica
+              </span>
               <div className="flex gap-0.5">
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className="w-3 h-3 text-yellow-400 fill-yellow-400" />
@@ -94,7 +118,9 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
 
             {/* Título principal con efecto */}
             <h1 className="text-5xl md:text-7xl font-black text-white mb-6 leading-tight tracking-tight">
-              <span className="block text-slate-400 text-2xl md:text-3xl font-normal mb-2">Bienvenido a</span>
+              <span className="block text-slate-400 text-2xl md:text-3xl font-normal mb-2">
+                Bienvenido a
+              </span>
               <span className="relative inline-block">
                 <span className="bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 bg-clip-text text-transparent">
                   LITPER PRO
@@ -226,7 +252,9 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
                   <div className="text-6xl">{COUNTRY_FLAGS[selectedConfig.code]}</div>
                   <div>
                     <h2 className="text-4xl font-black text-white">{selectedConfig.name}</h2>
-                    <p className="text-slate-400 text-lg">{selectedConfig.carriers.length} transportadoras disponibles</p>
+                    <p className="text-slate-400 text-lg">
+                      {selectedConfig.carriers.length} transportadoras disponibles
+                    </p>
                   </div>
                 </div>
                 <button
@@ -309,16 +337,38 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
           {/* Features Preview - Más compacto y elegante */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { emoji: '📊', title: 'Intel. Logística', desc: 'Análisis en tiempo real', color: 'from-cyan-500 to-blue-500' },
-              { emoji: '🧠', title: 'IA Predictiva', desc: 'Anticipa tu demanda', color: 'from-purple-500 to-violet-500' },
-              { emoji: '🏆', title: 'Gamificación', desc: 'Gana XP y recompensas', color: 'from-indigo-500 to-purple-500' },
-              { emoji: '🤖', title: 'Asistente IA', desc: 'Soporte inteligente 24/7', color: 'from-pink-500 to-rose-500' },
+              {
+                emoji: '📊',
+                title: 'Intel. Logística',
+                desc: 'Análisis en tiempo real',
+                color: 'from-cyan-500 to-blue-500',
+              },
+              {
+                emoji: '🧠',
+                title: 'IA Predictiva',
+                desc: 'Anticipa tu demanda',
+                color: 'from-purple-500 to-violet-500',
+              },
+              {
+                emoji: '🏆',
+                title: 'Gamificación',
+                desc: 'Gana XP y recompensas',
+                color: 'from-indigo-500 to-purple-500',
+              },
+              {
+                emoji: '🤖',
+                title: 'Asistente IA',
+                desc: 'Soporte inteligente 24/7',
+                color: 'from-pink-500 to-rose-500',
+              },
             ].map((feature, i) => (
               <div
                 key={i}
                 className="group relative overflow-hidden bg-white/[0.03] backdrop-blur rounded-2xl p-5 border border-white/5 hover:border-white/20 transition-all hover:transform hover:scale-105"
               >
-                <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`}
+                />
                 <div className="relative z-10">
                   <div className="text-4xl mb-3">{feature.emoji}</div>
                   <h4 className="font-bold text-white text-sm mb-1">{feature.title}</h4>
@@ -333,9 +383,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
       {/* Footer */}
       <footer className="relative z-10 bg-navy-900/50 border-t border-white/5 py-4">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
-          <p className="text-slate-500 text-xs">
-            © 2025 LITPER PRO Enterprise Logistics
-          </p>
+          <p className="text-slate-500 text-xs">© 2025 LITPER PRO Enterprise Logistics</p>
           <div className="flex items-center gap-4">
             <span className="text-slate-600 text-xs">Tecnología de clase mundial</span>
             <div className="flex gap-1">

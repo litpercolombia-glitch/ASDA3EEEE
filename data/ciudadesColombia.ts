@@ -339,7 +339,12 @@ export const CIUDADES_COLOMBIA: CiudadColombia[] = [
   { nombre: 'Guática', departamento: 'Risaralda', poblacion: 16000 },
 
   // SAN ANDRÉS Y PROVIDENCIA
-  { nombre: 'San Andrés', departamento: 'San Andrés y Providencia', esCapital: true, poblacion: 78000 },
+  {
+    nombre: 'San Andrés',
+    departamento: 'San Andrés y Providencia',
+    esCapital: true,
+    poblacion: 78000,
+  },
   { nombre: 'Providencia', departamento: 'San Andrés y Providencia', poblacion: 5500 },
 
   // SANTANDER
@@ -437,18 +442,32 @@ export const CIUDADES_COLOMBIA: CiudadColombia[] = [
 export const buscarCiudades = (query: string, limite: number = 10): CiudadColombia[] => {
   if (!query || query.length < 2) return [];
 
-  const queryLower = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const queryLower = query
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 
-  return CIUDADES_COLOMBIA
-    .filter(ciudad => {
-      const nombreNorm = ciudad.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      const deptoNorm = ciudad.departamento.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      return nombreNorm.includes(queryLower) || deptoNorm.includes(queryLower);
-    })
+  return CIUDADES_COLOMBIA.filter((ciudad) => {
+    const nombreNorm = ciudad.nombre
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    const deptoNorm = ciudad.departamento
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    return nombreNorm.includes(queryLower) || deptoNorm.includes(queryLower);
+  })
     .sort((a, b) => {
       // Priorizar coincidencias que empiezan con el query
-      const aNorm = a.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      const bNorm = b.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const aNorm = a.nombre
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+      const bNorm = b.nombre
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
 
       const aStartsWith = aNorm.startsWith(queryLower) ? 0 : 1;
       const bStartsWith = bNorm.startsWith(queryLower) ? 0 : 1;
@@ -463,17 +482,19 @@ export const buscarCiudades = (query: string, limite: number = 10): CiudadColomb
 
 // Obtener todas las ciudades capitales
 export const getCiudadesCapitales = (): CiudadColombia[] => {
-  return CIUDADES_COLOMBIA.filter(c => c.esCapital);
+  return CIUDADES_COLOMBIA.filter((c) => c.esCapital);
 };
 
 // Obtener ciudades por departamento
 export const getCiudadesPorDepartamento = (departamento: string): CiudadColombia[] => {
-  return CIUDADES_COLOMBIA.filter(c =>
-    c.departamento.toLowerCase() === departamento.toLowerCase()
+  return CIUDADES_COLOMBIA.filter(
+    (c) => c.departamento.toLowerCase() === departamento.toLowerCase()
   );
 };
 
 // Lista de departamentos únicos
-export const DEPARTAMENTOS_COLOMBIA = [...new Set(CIUDADES_COLOMBIA.map(c => c.departamento))].sort();
+export const DEPARTAMENTOS_COLOMBIA = [
+  ...new Set(CIUDADES_COLOMBIA.map((c) => c.departamento)),
+].sort();
 
 export default CIUDADES_COLOMBIA;

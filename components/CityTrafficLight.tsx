@@ -44,9 +44,10 @@ export function CityTrafficLight({ onBack }: CityTrafficLightProps) {
   const cities = historicalData ? Object.keys(historicalData).sort() : [];
 
   // Calcular métricas de la ciudad seleccionada
-  const cityMetrics: CityMetrics | null = selectedCity && historicalData?.[selectedCity]
-    ? calculateCityMetrics(selectedCity, historicalData[selectedCity])
-    : null;
+  const cityMetrics: CityMetrics | null =
+    selectedCity && historicalData?.[selectedCity]
+      ? calculateCityMetrics(selectedCity, historicalData[selectedCity])
+      : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8 px-4">
@@ -55,12 +56,8 @@ export function CityTrafficLight({ onBack }: CityTrafficLightProps) {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                🚦 Semáforo de Ciudad
-              </h1>
-              <p className="text-gray-600">
-                Análisis de rendimiento logístico por ciudad
-              </p>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">🚦 Semáforo de Ciudad</h1>
+              <p className="text-gray-600">Análisis de rendimiento logístico por ciudad</p>
             </div>
             {onBack && (
               <Button onClick={onBack} variant="secondary">
@@ -159,16 +156,14 @@ export function CityTrafficLight({ onBack }: CityTrafficLightProps) {
             <div className={`rounded-2xl p-6 ${getClassificationBg(cityMetrics.classification)}`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-3xl font-bold mb-2">
-                    Resultados: {cityMetrics.city}
-                  </h2>
-                  <p className={`text-lg font-semibold ${getClassificationTextColor(cityMetrics.classification)}`}>
+                  <h2 className="text-3xl font-bold mb-2">Resultados: {cityMetrics.city}</h2>
+                  <p
+                    className={`text-lg font-semibold ${getClassificationTextColor(cityMetrics.classification)}`}
+                  >
                     {getClassificationLabel(cityMetrics.classification)}
                   </p>
                 </div>
-                <div className="text-6xl">
-                  {getClassificationIcon(cityMetrics.classification)}
-                </div>
+                <div className="text-6xl">{getClassificationIcon(cityMetrics.classification)}</div>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
@@ -256,25 +251,35 @@ function calculateCityMetrics(city: string, carriers: CarrierPerformance[]): Cit
   const recommendations: string[] = [];
 
   if (overallSuccessRate < 60) {
-    recommendations.push(`Tasa de éxito baja (${overallSuccessRate.toFixed(0)}%). Considerar cambio de estrategia logística.`);
+    recommendations.push(
+      `Tasa de éxito baja (${overallSuccessRate.toFixed(0)}%). Considerar cambio de estrategia logística.`
+    );
   }
 
   if (overallReturnRate > 40) {
-    recommendations.push(`Alta tasa de devoluciones (${overallReturnRate.toFixed(0)}%). Revisar procesos de confirmación.`);
+    recommendations.push(
+      `Alta tasa de devoluciones (${overallReturnRate.toFixed(0)}%). Revisar procesos de confirmación.`
+    );
   }
 
   if (avgTime > 7) {
-    recommendations.push(`Tiempo de entrega alto (${avgTime.toFixed(0)} días). Evaluar transportadoras más rápidas.`);
+    recommendations.push(
+      `Tiempo de entrega alto (${avgTime.toFixed(0)} días). Evaluar transportadoras más rápidas.`
+    );
   }
 
   const bestCarrier = carriers.reduce((best, current) =>
     current.deliveryRate > best.deliveryRate ? current : best
   );
 
-  recommendations.push(`Se recomienda usar ${bestCarrier.carrier} con ${bestCarrier.deliveryRate.toFixed(0)}% de efectividad.`);
+  recommendations.push(
+    `Se recomienda usar ${bestCarrier.carrier} con ${bestCarrier.deliveryRate.toFixed(0)}% de efectividad.`
+  );
 
   if (totalShipments < 20) {
-    recommendations.push('Datos limitados. Incrementar volumen de envíos para análisis más preciso.');
+    recommendations.push(
+      'Datos limitados. Incrementar volumen de envíos para análisis más preciso.'
+    );
   }
 
   return {
@@ -313,13 +318,12 @@ function MetricCard({
       <p className="text-sm text-gray-600 mb-1">{label}</p>
       <div className="flex items-center gap-2">
         <p className="text-2xl font-bold text-gray-900">{value}</p>
-        {trend && (
-          trend === 'up' ? (
+        {trend &&
+          (trend === 'up' ? (
             <TrendingUp className="w-5 h-5 text-green-600" />
           ) : (
             <TrendingDown className="w-5 h-5 text-red-600" />
-          )
-        )}
+          ))}
       </div>
     </div>
   );
@@ -339,7 +343,9 @@ function CarrierCard({ carrier, rank }: { carrier: CarrierPerformance; rank: num
   };
 
   return (
-    <div className={`${getRatingBg(carrier.deliveryRate)} border-2 rounded-2xl p-6 relative overflow-hidden transition-transform hover:scale-105`}>
+    <div
+      className={`${getRatingBg(carrier.deliveryRate)} border-2 rounded-2xl p-6 relative overflow-hidden transition-transform hover:scale-105`}
+    >
       {/* Rank Badge */}
       {rank <= 3 && (
         <div className="absolute top-4 right-4">
@@ -350,12 +356,12 @@ function CarrierCard({ carrier, rank }: { carrier: CarrierPerformance; rank: num
       )}
 
       {/* Carrier Name */}
-      <h4 className="text-xl font-bold text-gray-900 mb-4 pr-12">
-        {carrier.carrier}
-      </h4>
+      <h4 className="text-xl font-bold text-gray-900 mb-4 pr-12">{carrier.carrier}</h4>
 
       {/* Rating Badge */}
-      <div className={`${getRatingColor(carrier.deliveryRate)} text-white inline-block px-4 py-2 rounded-full font-bold text-lg mb-4`}>
+      <div
+        className={`${getRatingColor(carrier.deliveryRate)} text-white inline-block px-4 py-2 rounded-full font-bold text-lg mb-4`}
+      >
         {carrier.deliveryRate.toFixed(1)}/10
       </div>
 

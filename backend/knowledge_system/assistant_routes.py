@@ -19,9 +19,8 @@ Version: 1.0.0
 import os
 import uuid
 from typing import Optional, List
-from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from loguru import logger
 import anthropic
@@ -270,7 +269,7 @@ async def obtener_contexto(request: ContextoRequest):
         # Formatear para agente
         contexto = ""
         for item in resultados:
-            contexto += f"\n---\n"
+            contexto += "\n---\n"
             contexto += f"[{item.get('categoria', 'GENERAL').upper()}] {item.get('titulo', 'Sin titulo')}\n"
             contexto += f"{item.get('resumen') or item.get('contenido', '')[:500]}\n"
 

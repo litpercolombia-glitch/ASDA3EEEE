@@ -69,7 +69,12 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import { Shipment, ShipmentStatus, CarrierName } from '../../types';
-import { MensajeAsistente, STORAGE_KEYS, PatronDetectado, GuiaRetrasada } from '../../types/logistics';
+import {
+  MensajeAsistente,
+  STORAGE_KEYS,
+  PatronDetectado,
+  GuiaRetrasada,
+} from '../../types/logistics';
 import { detectarGuiasRetrasadas, detectarPatrones } from '../../utils/patternDetection';
 import { saveTabData, loadTabData } from '../../utils/tabStorage';
 import { v4 as uuidv4 } from 'uuid';
@@ -111,7 +116,11 @@ interface ProcesoAprendido {
   nombre: string;
   objetivo: string;
   prioridad: 'CRITICA' | 'ALTA' | 'MEDIA' | 'BAJA';
-  pasos: { numero: number; accion: string; decision?: { pregunta: string; si: string; no: string } }[];
+  pasos: {
+    numero: number;
+    accion: string;
+    decision?: { pregunta: string; si: string; no: string };
+  }[];
   reglas: { siempre: string[]; nunca: string[] };
   plantillas: { nombre: string; texto: string; cuando: string }[];
   herramientas: string[];
@@ -163,15 +172,48 @@ const CATEGORIAS_CONSULTA: CategoriaConsulta[] = [
     nombre: 'Procesos',
     icono: '📋',
     color: 'from-amber-500 to-orange-600',
-    ejemplos: ['Proceso de novedades', 'Cómo crear pedido', 'Flujo de seguimiento', 'Ver plantillas'],
+    ejemplos: [
+      'Proceso de novedades',
+      'Cómo crear pedido',
+      'Flujo de seguimiento',
+      'Ver plantillas',
+    ],
   },
 ];
 
 const TRANSPORTADORAS_STATS = [
-  { nombre: 'Coordinadora', guias: 4521, entregadas: 4298, retrasos: 156, tasaExito: 95.1, tiempoProm: 2.3 },
-  { nombre: 'Servientrega', guias: 3892, entregadas: 3543, retrasos: 234, tasaExito: 91.0, tiempoProm: 2.8 },
-  { nombre: 'Interrapidísimo', guias: 2987, entregadas: 2689, retrasos: 198, tasaExito: 90.0, tiempoProm: 3.1 },
-  { nombre: 'Envía', guias: 2156, entregadas: 1897, retrasos: 178, tasaExito: 88.0, tiempoProm: 3.5 },
+  {
+    nombre: 'Coordinadora',
+    guias: 4521,
+    entregadas: 4298,
+    retrasos: 156,
+    tasaExito: 95.1,
+    tiempoProm: 2.3,
+  },
+  {
+    nombre: 'Servientrega',
+    guias: 3892,
+    entregadas: 3543,
+    retrasos: 234,
+    tasaExito: 91.0,
+    tiempoProm: 2.8,
+  },
+  {
+    nombre: 'Interrapidísimo',
+    guias: 2987,
+    entregadas: 2689,
+    retrasos: 198,
+    tasaExito: 90.0,
+    tiempoProm: 3.1,
+  },
+  {
+    nombre: 'Envía',
+    guias: 2156,
+    entregadas: 1897,
+    retrasos: 178,
+    tasaExito: 88.0,
+    tiempoProm: 3.5,
+  },
   { nombre: 'TCC', guias: 1845, entregadas: 1567, retrasos: 189, tasaExito: 85.0, tiempoProm: 4.2 },
 ];
 
@@ -201,7 +243,10 @@ const GuiasModal: React.FC<{
           ) : (
             <div className="space-y-3">
               {guias.map((guia) => (
-                <div key={guia.id} className="bg-slate-50 dark:bg-navy-950 rounded-xl p-4 border border-slate-200 dark:border-navy-700">
+                <div
+                  key={guia.id}
+                  className="bg-slate-50 dark:bg-navy-950 rounded-xl p-4 border border-slate-200 dark:border-navy-700"
+                >
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <p className="font-bold text-slate-800 dark:text-white">{guia.id}</p>
@@ -210,12 +255,17 @@ const GuiasModal: React.FC<{
                         {guia.carrier}
                       </p>
                     </div>
-                    <span className={`px-2 py-1 rounded text-xs font-bold ${
-                      guia.status === ShipmentStatus.DELIVERED ? 'bg-emerald-100 text-emerald-700'
-                      : guia.status === ShipmentStatus.ISSUE ? 'bg-red-100 text-red-700'
-                      : guia.status === ShipmentStatus.IN_OFFICE ? 'bg-orange-100 text-orange-700'
-                      : 'bg-blue-100 text-blue-700'
-                    }`}>
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-bold ${
+                        guia.status === ShipmentStatus.DELIVERED
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : guia.status === ShipmentStatus.ISSUE
+                            ? 'bg-red-100 text-red-700'
+                            : guia.status === ShipmentStatus.IN_OFFICE
+                              ? 'bg-orange-100 text-orange-700'
+                              : 'bg-blue-100 text-blue-700'
+                      }`}
+                    >
                       {guia.status}
                     </span>
                   </div>
@@ -245,7 +295,9 @@ const GuiasModal: React.FC<{
                     <div className="mt-3 pt-3 border-t border-slate-200 dark:border-navy-700">
                       <button
                         onClick={() => {
-                          const msg = encodeURIComponent(`Hola! Le escribo de Litper sobre su pedido con guía ${guia.id}.`);
+                          const msg = encodeURIComponent(
+                            `Hola! Le escribo de Litper sobre su pedido con guía ${guia.id}.`
+                          );
                           window.open(`https://wa.me/57${guia.phone}?text=${msg}`, '_blank');
                         }}
                         className="flex items-center gap-2 px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs font-medium hover:bg-green-600 transition-colors"
@@ -276,9 +328,11 @@ const MetricCard: React.FC<{
 }> = ({ value, label, icon: Icon, color, onClick }) => {
   const colorClasses: Record<string, string> = {
     blue: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-600',
-    emerald: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-600',
+    emerald:
+      'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-600',
     amber: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-600',
-    orange: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-600',
+    orange:
+      'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-600',
     red: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600',
   };
 
@@ -326,32 +380,45 @@ export const AsistenteIAUnificado: React.FC<AsistenteIAUnificadoProps> = ({ ship
 
   const guiasData = useMemo(() => {
     if (shipments.length === 0) return [];
-    return shipments.map(s => ({
+    return shipments.map((s) => ({
       id: s.id,
-      estado: s.status === ShipmentStatus.DELIVERED ? 'ENTREGADO' :
-              s.status === ShipmentStatus.IN_TRANSIT ? 'EN TRÁNSITO' :
-              s.status === ShipmentStatus.IN_OFFICE ? 'EN OFICINA' :
-              s.status === ShipmentStatus.ISSUE ? 'NOVEDAD' :
-              s.status === ShipmentStatus.OUT_FOR_DELIVERY ? 'EN REPARTO' :
-              s.status === ShipmentStatus.RETURNED ? 'DEVUELTO' : 'PENDIENTE',
+      estado:
+        s.status === ShipmentStatus.DELIVERED
+          ? 'ENTREGADO'
+          : s.status === ShipmentStatus.IN_TRANSIT
+            ? 'EN TRÁNSITO'
+            : s.status === ShipmentStatus.IN_OFFICE
+              ? 'EN OFICINA'
+              : s.status === ShipmentStatus.ISSUE
+                ? 'NOVEDAD'
+                : s.status === ShipmentStatus.OUT_FOR_DELIVERY
+                  ? 'EN REPARTO'
+                  : s.status === ShipmentStatus.RETURNED
+                    ? 'DEVUELTO'
+                    : 'PENDIENTE',
       transportadora: s.carrier,
       ciudad: s.detailedInfo?.destination || 'N/A',
       telefono: s.phone,
       diasTransito: s.detailedInfo?.daysInTransit || 0,
-      nivelRiesgo: (s.detailedInfo?.daysInTransit || 0) >= 5 ? 'CRITICO' as const :
-                   (s.detailedInfo?.daysInTransit || 0) >= 3 ? 'ALTO' as const :
-                   (s.detailedInfo?.daysInTransit || 0) >= 2 ? 'MEDIO' as const : 'BAJO' as const,
+      nivelRiesgo:
+        (s.detailedInfo?.daysInTransit || 0) >= 5
+          ? ('CRITICO' as const)
+          : (s.detailedInfo?.daysInTransit || 0) >= 3
+            ? ('ALTO' as const)
+            : (s.detailedInfo?.daysInTransit || 0) >= 2
+              ? ('MEDIO' as const)
+              : ('BAJO' as const),
       ultimaActualizacion: s.lastUpdate || new Date().toISOString(),
     }));
   }, [shipments]);
 
   const stats = useMemo(() => {
     const total = shipments.length;
-    const delivered = shipments.filter(s => s.status === ShipmentStatus.DELIVERED).length;
-    const inTransit = shipments.filter(s => s.status === ShipmentStatus.IN_TRANSIT).length;
-    const inOffice = shipments.filter(s => s.status === ShipmentStatus.IN_OFFICE).length;
-    const issues = shipments.filter(s => s.status === ShipmentStatus.ISSUE).length;
-    const pending = shipments.filter(s => s.status === ShipmentStatus.PENDING).length;
+    const delivered = shipments.filter((s) => s.status === ShipmentStatus.DELIVERED).length;
+    const inTransit = shipments.filter((s) => s.status === ShipmentStatus.IN_TRANSIT).length;
+    const inOffice = shipments.filter((s) => s.status === ShipmentStatus.IN_OFFICE).length;
+    const issues = shipments.filter((s) => s.status === ShipmentStatus.ISSUE).length;
+    const pending = shipments.filter((s) => s.status === ShipmentStatus.PENDING).length;
 
     return {
       total,
@@ -368,7 +435,10 @@ export const AsistenteIAUnificado: React.FC<AsistenteIAUnificadoProps> = ({ ship
   const patrones = useMemo(() => detectarPatrones(shipments), [shipments]);
 
   const carrierPerformance = useMemo(() => {
-    const byCarrier: Record<string, { total: number; delivered: number; avgDays: number; daysSum: number }> = {};
+    const byCarrier: Record<
+      string,
+      { total: number; delivered: number; avgDays: number; daysSum: number }
+    > = {};
 
     shipments.forEach((s) => {
       if (!byCarrier[s.carrier]) {
@@ -401,7 +471,7 @@ export const AsistenteIAUnificado: React.FC<AsistenteIAUnificadoProps> = ({ ship
       accion: string;
     }> = [];
 
-    const guiasConNovedad = shipments.filter(s => s.status === ShipmentStatus.ISSUE);
+    const guiasConNovedad = shipments.filter((s) => s.status === ShipmentStatus.ISSUE);
     if (guiasConNovedad.length > 0) {
       acc.push({
         prioridad: 1,
@@ -412,7 +482,7 @@ export const AsistenteIAUnificado: React.FC<AsistenteIAUnificadoProps> = ({ ship
       });
     }
 
-    const enOficina = shipments.filter(s => s.status === ShipmentStatus.IN_OFFICE);
+    const enOficina = shipments.filter((s) => s.status === ShipmentStatus.IN_OFFICE);
     if (enOficina.length > 0) {
       acc.push({
         prioridad: 2,
@@ -423,13 +493,13 @@ export const AsistenteIAUnificado: React.FC<AsistenteIAUnificadoProps> = ({ ship
       });
     }
 
-    const criticas = guiasRetrasadas.filter(g => g.nivelAlerta === 'CRITICO');
+    const criticas = guiasRetrasadas.filter((g) => g.nivelAlerta === 'CRITICO');
     if (criticas.length > 0) {
       acc.push({
         prioridad: 3,
         titulo: `Monitorear ${criticas.length} guías críticas (+5 días)`,
         descripcion: 'Posible pérdida de paquete',
-        guias: criticas.map(g => g.guia),
+        guias: criticas.map((g) => g.guia),
         accion: 'Escalar con transportadora',
       });
     }
@@ -438,8 +508,8 @@ export const AsistenteIAUnificado: React.FC<AsistenteIAUnificadoProps> = ({ ship
   }, [shipments, guiasRetrasadas]);
 
   const resumenEjecutivo = useMemo(() => {
-    const criticas = guiasRetrasadas.filter(g => g.nivelAlerta === 'CRITICO').length;
-    const issues = shipments.filter(s => s.status === ShipmentStatus.ISSUE).length;
+    const criticas = guiasRetrasadas.filter((g) => g.nivelAlerta === 'CRITICO').length;
+    const issues = shipments.filter((s) => s.status === ShipmentStatus.ISSUE).length;
 
     if (stats.total === 0) {
       return 'No hay guías cargadas para generar reporte.';
@@ -479,18 +549,44 @@ Estoy aquí para ayudarte con todo lo relacionado a tu logística. Puedo:
 📋 **Guiarte en los procesos** de LITPER
 📚 **Aprender nuevos procesos** de documentos, links o texto
 
-${shipments.length > 0
-  ? `\n**📊 Datos cargados:** ${shipments.length} guías activas`
-  : '\n**⚠️ Sin datos:** Carga guías para análisis completo'}
+${
+  shipments.length > 0
+    ? `\n**📊 Datos cargados:** ${shipments.length} guías activas`
+    : '\n**⚠️ Sin datos:** Carga guías para análisis completo'
+}
 
 **¿Qué necesitas saber?** Usa las categorías de abajo o escribe tu pregunta.`,
       timestamp: new Date(),
       tipo: 'texto',
       acciones: [
-        { id: 'guias-hoy', label: 'Ver guías', icon: '📦', comando: 'Muéstrame todas las guías', tipo: 'info' },
-        { id: 'resumen', label: 'Resumen del día', icon: '📊', comando: 'Dame el resumen del día', tipo: 'info' },
-        { id: 'novedades', label: 'Novedades', icon: '🚨', comando: 'Lista las novedades activas', tipo: 'info' },
-        { id: 'ml', label: 'Sistema ML', icon: '🧠', comando: 'Estado del sistema ML', tipo: 'info' },
+        {
+          id: 'guias-hoy',
+          label: 'Ver guías',
+          icon: '📦',
+          comando: 'Muéstrame todas las guías',
+          tipo: 'info',
+        },
+        {
+          id: 'resumen',
+          label: 'Resumen del día',
+          icon: '📊',
+          comando: 'Dame el resumen del día',
+          tipo: 'info',
+        },
+        {
+          id: 'novedades',
+          label: 'Novedades',
+          icon: '🚨',
+          comando: 'Lista las novedades activas',
+          tipo: 'info',
+        },
+        {
+          id: 'ml',
+          label: 'Sistema ML',
+          icon: '🧠',
+          comando: 'Estado del sistema ML',
+          tipo: 'info',
+        },
       ],
     };
     setMensajes([welcomeMessage]);
@@ -510,49 +606,69 @@ ${shipments.length > 0
 
   // ==================== FUNCIONES DEL CHAT ====================
 
-  const generateResponse = useCallback(async (userMessage: string): Promise<MensajeChat> => {
-    const lowerMessage = userMessage.toLowerCase();
-    await new Promise(resolve => setTimeout(resolve, 600 + Math.random() * 800));
+  const generateResponse = useCallback(
+    async (userMessage: string): Promise<MensajeChat> => {
+      const lowerMessage = userMessage.toLowerCase();
+      await new Promise((resolve) => setTimeout(resolve, 600 + Math.random() * 800));
 
-    const total = shipments.length || guiasData.length || 8;
-    const entregadas = shipments.filter(s => s.status === ShipmentStatus.DELIVERED).length || 1;
-    const enReparto = shipments.filter(s => s.status === ShipmentStatus.OUT_FOR_DELIVERY).length || 2;
-    const enOficina = shipments.filter(s => s.status === ShipmentStatus.IN_OFFICE).length || 1;
-    const novedades = shipments.filter(s => s.status === ShipmentStatus.ISSUE).length || 2;
-    const enTransito = shipments.filter(s => s.status === ShipmentStatus.IN_TRANSIT).length || 1;
-    const criticas = guiasRetrasadas.filter(g => g.nivelAlerta === 'CRITICO').length || 1;
+      const total = shipments.length || guiasData.length || 8;
+      const entregadas = shipments.filter((s) => s.status === ShipmentStatus.DELIVERED).length || 1;
+      const enReparto =
+        shipments.filter((s) => s.status === ShipmentStatus.OUT_FOR_DELIVERY).length || 2;
+      const enOficina = shipments.filter((s) => s.status === ShipmentStatus.IN_OFFICE).length || 1;
+      const novedades = shipments.filter((s) => s.status === ShipmentStatus.ISSUE).length || 2;
+      const enTransito =
+        shipments.filter((s) => s.status === ShipmentStatus.IN_TRANSIT).length || 1;
+      const criticas = guiasRetrasadas.filter((g) => g.nivelAlerta === 'CRITICO').length || 1;
 
-    // Consultas de guías
-    if (lowerMessage.includes('guía') || lowerMessage.includes('guias') || lowerMessage.includes('lista')) {
-      if (lowerMessage.includes('retrasad') || lowerMessage.includes('retraso')) {
-        const retrasadas = guiasData.filter(g => g.diasTransito > 3 || g.nivelRiesgo === 'ALTO' || g.nivelRiesgo === 'CRITICO');
-        return {
-          id: uuidv4(),
-          rol: 'assistant',
-          contenido: `⚠️ **GUÍAS RETRASADAS (${retrasadas.length})**
+      // Consultas de guías
+      if (
+        lowerMessage.includes('guía') ||
+        lowerMessage.includes('guias') ||
+        lowerMessage.includes('lista')
+      ) {
+        if (lowerMessage.includes('retrasad') || lowerMessage.includes('retraso')) {
+          const retrasadas = guiasData.filter(
+            (g) => g.diasTransito > 3 || g.nivelRiesgo === 'ALTO' || g.nivelRiesgo === 'CRITICO'
+          );
+          return {
+            id: uuidv4(),
+            rol: 'assistant',
+            contenido: `⚠️ **GUÍAS RETRASADAS (${retrasadas.length})**
 
 Estas guías necesitan atención prioritaria:
 
-${retrasadas.slice(0, 6).map((g, i) => `**${i + 1}. ${g.id}**
+${retrasadas
+  .slice(0, 6)
+  .map(
+    (g, i) => `**${i + 1}. ${g.id}**
    • Estado: ${g.estado} | ${g.transportadora}
    • Ciudad: ${g.ciudad} | ${g.diasTransito} días
    • Riesgo: ${g.nivelRiesgo === 'CRITICO' ? '🔴' : g.nivelRiesgo === 'ALTO' ? '🟠' : '🟡'} ${g.nivelRiesgo}
-`).join('\n')}
+`
+  )
+  .join('\n')}
 
 💡 **Acción recomendada:** Contacta primero las guías CRÍTICAS (🔴)`,
-          timestamp: new Date(),
-          tipo: 'guias',
-          acciones: [
-            { id: 'contactar-todos', label: 'Contactar clientes', icon: '📞', comando: 'Cómo contactar clientes', tipo: 'accion' },
-          ],
-          confianza: 0.95,
-        };
-      }
+            timestamp: new Date(),
+            tipo: 'guias',
+            acciones: [
+              {
+                id: 'contactar-todos',
+                label: 'Contactar clientes',
+                icon: '📞',
+                comando: 'Cómo contactar clientes',
+                tipo: 'accion',
+              },
+            ],
+            confianza: 0.95,
+          };
+        }
 
-      return {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: `📦 **LISTADO DE GUÍAS (${total} total)**
+        return {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: `📦 **LISTADO DE GUÍAS (${total} total)**
 
 | Estado | Cantidad | Porcentaje |
 |--------|----------|------------|
@@ -564,21 +680,31 @@ ${retrasadas.slice(0, 6).map((g, i) => `**${i + 1}. ${g.id}**
 
 **🔴 Guías críticas:** ${criticas}
 **📈 Tasa de entrega:** ${((entregadas / total) * 100).toFixed(1)}%`,
-        timestamp: new Date(),
-        tipo: 'estadisticas',
-        acciones: [
-          { id: 'retrasadas', label: 'Ver retrasadas', icon: '⚠️', comando: 'Muéstrame las guías retrasadas', tipo: 'info' },
-        ],
-        confianza: 0.99,
-      };
-    }
+          timestamp: new Date(),
+          tipo: 'estadisticas',
+          acciones: [
+            {
+              id: 'retrasadas',
+              label: 'Ver retrasadas',
+              icon: '⚠️',
+              comando: 'Muéstrame las guías retrasadas',
+              tipo: 'info',
+            },
+          ],
+          confianza: 0.99,
+        };
+      }
 
-    // Consultas de resumen/estadísticas
-    if (lowerMessage.includes('resumen') || lowerMessage.includes('estadística') || lowerMessage.includes('día')) {
-      return {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: `📊 **RESUMEN DEL DÍA**
+      // Consultas de resumen/estadísticas
+      if (
+        lowerMessage.includes('resumen') ||
+        lowerMessage.includes('estadística') ||
+        lowerMessage.includes('día')
+      ) {
+        return {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: `📊 **RESUMEN DEL DÍA**
 *${new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}*
 
 | Métrica | Valor | Estado |
@@ -591,18 +717,22 @@ ${retrasadas.slice(0, 6).map((g, i) => `**${i + 1}. ${g.id}**
 | 🔴 Críticas | ${criticas} | ${criticas > 0 ? '🔴' : '🟢'} |
 
 **📈 Tasa de entrega:** ${stats.deliveryRate.toFixed(1)}%`,
-        timestamp: new Date(),
-        tipo: 'estadisticas',
-        confianza: 0.98,
-      };
-    }
+          timestamp: new Date(),
+          tipo: 'estadisticas',
+          confianza: 0.98,
+        };
+      }
 
-    // Consultas de ML
-    if (lowerMessage.includes('ml') || lowerMessage.includes('predicción') || lowerMessage.includes('modelo')) {
-      return {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: `🧠 **SISTEMA DE MACHINE LEARNING**
+      // Consultas de ML
+      if (
+        lowerMessage.includes('ml') ||
+        lowerMessage.includes('predicción') ||
+        lowerMessage.includes('modelo')
+      ) {
+        return {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: `🧠 **SISTEMA DE MACHINE LEARNING**
 
 **📊 MODELOS ACTIVOS:**
 
@@ -612,17 +742,17 @@ ${retrasadas.slice(0, 6).map((g, i) => `**${i + 1}. ${g.id}**
 | Detector Novedades | 87.6% | ${mlActivo ? '🟢 Activo' : '🔴 Off'} |
 
 Estado del sistema: ${mlActivo ? '✅ **ACTIVO**' : '⚠️ **INACTIVO**'}`,
-        timestamp: new Date(),
-        tipo: 'reporte',
-        confianza: 0.93,
-      };
-    }
+          timestamp: new Date(),
+          tipo: 'reporte',
+          confianza: 0.93,
+        };
+      }
 
-    // Respuesta por defecto
-    return {
-      id: uuidv4(),
-      rol: 'assistant',
-      contenido: `Entiendo tu consulta.
+      // Respuesta por defecto
+      return {
+        id: uuidv4(),
+        rol: 'assistant',
+        contenido: `Entiendo tu consulta.
 
 **📊 Estado actual:**
 • ${total} guías activas
@@ -634,11 +764,13 @@ Estado del sistema: ${mlActivo ? '✅ **ACTIVO**' : '⚠️ **INACTIVO**'}`,
 🚨 **Novedades:** "Ver novedades"
 📊 **Estadísticas:** "Resumen del día"
 🧠 **ML:** "Estado del sistema ML"`,
-      timestamp: new Date(),
-      tipo: 'texto',
-      confianza: 0.85,
-    };
-  }, [shipments, guiasData, mlActivo, stats, guiasRetrasadas]);
+        timestamp: new Date(),
+        tipo: 'texto',
+        confianza: 0.85,
+      };
+    },
+    [shipments, guiasData, mlActivo, stats, guiasRetrasadas]
+  );
 
   const handleSend = async (message?: string) => {
     const texto = message || inputValue.trim();
@@ -651,21 +783,24 @@ Estado del sistema: ${mlActivo ? '✅ **ACTIVO**' : '⚠️ **INACTIVO**'}`,
       timestamp: new Date(),
     };
 
-    setMensajes(prev => [...prev, userMessage]);
+    setMensajes((prev) => [...prev, userMessage]);
     setInputValue('');
     setMostrarSugerencias(false);
     setIsLoading(true);
 
     try {
       const response = await generateResponse(texto);
-      setMensajes(prev => [...prev, response]);
+      setMensajes((prev) => [...prev, response]);
     } catch (error) {
-      setMensajes(prev => [...prev, {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: '❌ Error procesando solicitud. Intenta de nuevo.',
-        timestamp: new Date(),
-      }]);
+      setMensajes((prev) => [
+        ...prev,
+        {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: '❌ Error procesando solicitud. Intenta de nuevo.',
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -673,12 +808,14 @@ Estado del sistema: ${mlActivo ? '✅ **ACTIVO**' : '⚠️ **INACTIVO**'}`,
 
   const handleClear = () => {
     if (confirm('¿Limpiar conversación?')) {
-      setMensajes([{
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: '¡Conversación reiniciada! 🔄 ¿En qué puedo ayudarte?',
-        timestamp: new Date(),
-      }]);
+      setMensajes([
+        {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: '¡Conversación reiniciada! 🔄 ¿En qué puedo ayudarte?',
+          timestamp: new Date(),
+        },
+      ]);
       setMostrarSugerencias(true);
     }
   };
@@ -690,7 +827,7 @@ Estado del sistema: ${mlActivo ? '✅ **ACTIVO**' : '⚠️ **INACTIVO**'}`,
       setSelectedGuias(shipments);
       setModalTitle('Todas las Guías');
     } else {
-      const filtered = shipments.filter(s => s.status === status);
+      const filtered = shipments.filter((s) => s.status === status);
       setSelectedGuias(filtered);
       setModalTitle(`Guías: ${status}`);
     }
@@ -703,7 +840,7 @@ Estado del sistema: ${mlActivo ? '✅ **ACTIVO**' : '⚠️ **INACTIVO**'}`,
     if (!textoAprendizaje.trim() && !urlAprendizaje.trim()) return;
 
     setProcesandoAprendizaje(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
     const contenido = tipoAprendizaje === 'link' ? urlAprendizaje : textoAprendizaje;
 
@@ -738,25 +875,28 @@ Estado del sistema: ${mlActivo ? '✅ **ACTIVO**' : '⚠️ **INACTIVO**'}`,
     setProcesandoAprendizaje(false);
 
     // Agregar mensaje al chat
-    setMensajes(prev => [...prev, {
-      id: uuidv4(),
-      rol: 'assistant',
-      contenido: `📚 **PROCESO APRENDIDO**
+    setMensajes((prev) => [
+      ...prev,
+      {
+        id: uuidv4(),
+        rol: 'assistant',
+        contenido: `📚 **PROCESO APRENDIDO**
 
 **Nombre:** ${nuevoProceso.nombre}
 **Objetivo:** ${nuevoProceso.objetivo}
 
 **Pasos identificados:**
-${nuevoProceso.pasos.map(p => `${p.numero}. ${p.accion}`).join('\n')}
+${nuevoProceso.pasos.map((p) => `${p.numero}. ${p.accion}`).join('\n')}
 
 **Reglas:**
 ✅ SIEMPRE: ${nuevoProceso.reglas.siempre.join(', ')}
 ❌ NUNCA: ${nuevoProceso.reglas.nunca.join(', ')}
 
 ✅ Proceso guardado. ¿Quieres que te explique cómo ejecutarlo?`,
-      timestamp: new Date(),
-      tipo: 'texto',
-    }]);
+        timestamp: new Date(),
+        tipo: 'texto',
+      },
+    ]);
     setActiveSubTab('chat');
   };
 
@@ -769,7 +909,10 @@ ${nuevoProceso.pasos.map(p => `${p.numero}. ${p.accion}`).join('\n')}
           <div className="max-w-[85%] bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl rounded-br-sm px-4 py-3 shadow-lg">
             <p className="text-sm whitespace-pre-wrap">{mensaje.contenido}</p>
             <p className="text-xs text-white/60 mt-1 text-right">
-              {new Date(mensaje.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+              {new Date(mensaje.timestamp).toLocaleTimeString('es-CO', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
             </p>
           </div>
         </div>
@@ -783,7 +926,9 @@ ${nuevoProceso.pasos.map(p => `${p.numero}. ${p.accion}`).join('\n')}
             <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
               <Bot className="w-4 h-4 text-white" />
             </div>
-            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">Asistente LITPER</span>
+            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+              Asistente LITPER
+            </span>
           </div>
 
           <div className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">
@@ -794,7 +939,7 @@ ${nuevoProceso.pasos.map(p => `${p.numero}. ${p.accion}`).join('\n')}
             <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
               <p className="text-xs text-gray-400 mb-2">Acciones sugeridas:</p>
               <div className="flex flex-wrap gap-2">
-                {mensaje.acciones.map(accion => (
+                {mensaje.acciones.map((accion) => (
                   <button
                     key={accion.id}
                     onClick={() => handleSend(accion.comando)}
@@ -809,7 +954,10 @@ ${nuevoProceso.pasos.map(p => `${p.numero}. ${p.accion}`).join('\n')}
           )}
 
           <p className="text-xs text-gray-400 mt-2 text-right">
-            {new Date(mensaje.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+            {new Date(mensaje.timestamp).toLocaleTimeString('es-CO', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
           </p>
         </div>
       </div>
@@ -831,16 +979,16 @@ ${nuevoProceso.pasos.map(p => `${p.numero}. ${p.accion}`).join('\n')}
                   Asistente IA
                   <Sparkles className="w-5 h-5 text-yellow-300" />
                 </h1>
-                <p className="text-indigo-100 text-sm">
-                  Chat inteligente + Reportes + Aprendizaje
-                </p>
+                <p className="text-indigo-100 text-sm">Chat inteligente + Reportes + Aprendizaje</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <span className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
-                mlActivo ? 'bg-green-500/40 border border-green-400/50' : 'bg-yellow-500/30'
-              }`}>
+              <span
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
+                  mlActivo ? 'bg-green-500/40 border border-green-400/50' : 'bg-yellow-500/30'
+                }`}
+              >
                 <Brain className="w-4 h-4" />
                 ML {mlActivo ? 'Activo' : 'Off'}
               </span>
@@ -856,7 +1004,7 @@ ${nuevoProceso.pasos.map(p => `${p.numero}. ${p.accion}`).join('\n')}
               { id: 'chat', icon: MessageCircle, label: 'Chat IA' },
               { id: 'reporte', icon: BarChart3, label: 'Reporte' },
               { id: 'aprendizaje', icon: GraduationCap, label: 'Aprendizaje' },
-            ].map(tab => (
+            ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveSubTab(tab.id as SubTab)}
@@ -882,12 +1030,16 @@ ${nuevoProceso.pasos.map(p => `${p.numero}. ${p.accion}`).join('\n')}
             {/* Categorías */}
             {mostrarSugerencias && (
               <div className="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-100 dark:border-indigo-800">
-                <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-2">CONSULTAS RÁPIDAS:</p>
+                <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-2">
+                  CONSULTAS RÁPIDAS:
+                </p>
                 <div className="flex flex-wrap gap-2">
-                  {CATEGORIAS_CONSULTA.map(cat => (
+                  {CATEGORIAS_CONSULTA.map((cat) => (
                     <button
                       key={cat.id}
-                      onClick={() => setCategoriaSeleccionada(cat.id === categoriaSeleccionada ? null : cat.id)}
+                      onClick={() =>
+                        setCategoriaSeleccionada(cat.id === categoriaSeleccionada ? null : cat.id)
+                      }
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                         categoriaSeleccionada === cat.id
                           ? `bg-gradient-to-r ${cat.color} text-white shadow-lg`
@@ -902,15 +1054,17 @@ ${nuevoProceso.pasos.map(p => `${p.numero}. ${p.accion}`).join('\n')}
 
                 {categoriaSeleccionada && (
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {CATEGORIAS_CONSULTA.find(c => c.id === categoriaSeleccionada)?.ejemplos.map((ejemplo, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => handleSend(ejemplo)}
-                        className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-indigo-100 transition-colors"
-                      >
-                        "{ejemplo}"
-                      </button>
-                    ))}
+                    {CATEGORIAS_CONSULTA.find((c) => c.id === categoriaSeleccionada)?.ejemplos.map(
+                      (ejemplo, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleSend(ejemplo)}
+                          className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-indigo-100 transition-colors"
+                        >
+                          "{ejemplo}"
+                        </button>
+                      )
+                    )}
                   </div>
                 )}
               </div>
@@ -939,7 +1093,11 @@ ${nuevoProceso.pasos.map(p => `${p.numero}. ${p.accion}`).join('\n')}
                   onClick={() => setMostrarSugerencias(!mostrarSugerencias)}
                   className="p-2 text-gray-400 hover:text-indigo-500 rounded-lg transition-colors"
                 >
-                  {mostrarSugerencias ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                  {mostrarSugerencias ? (
+                    <ChevronUp className="w-5 h-5" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5" />
+                  )}
                 </button>
 
                 <input
@@ -991,12 +1149,48 @@ ${nuevoProceso.pasos.map(p => `${p.numero}. ${p.accion}`).join('\n')}
                 MÉTRICAS CLAVE (Click para ver guías)
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                <MetricCard value={stats.total} label="TOTAL" icon={Package} color="blue" onClick={() => handleMetricClick('ALL' as any)} />
-                <MetricCard value={stats.delivered} label="ENTREGADO" icon={CheckCircle} color="emerald" onClick={() => handleMetricClick(ShipmentStatus.DELIVERED)} />
-                <MetricCard value={stats.inTransit} label="EN CAMINO" icon={Truck} color="amber" onClick={() => handleMetricClick(ShipmentStatus.IN_TRANSIT)} />
-                <MetricCard value={stats.inOffice} label="EN OFICINA" icon={MapPin} color="orange" onClick={() => handleMetricClick(ShipmentStatus.IN_OFFICE)} />
-                <MetricCard value={stats.issues} label="NOVEDAD" icon={AlertTriangle} color="red" onClick={() => handleMetricClick(ShipmentStatus.ISSUE)} />
-                <MetricCard value={stats.pending} label="PENDIENTE" icon={Clock} color="blue" onClick={() => handleMetricClick(ShipmentStatus.PENDING)} />
+                <MetricCard
+                  value={stats.total}
+                  label="TOTAL"
+                  icon={Package}
+                  color="blue"
+                  onClick={() => handleMetricClick('ALL' as any)}
+                />
+                <MetricCard
+                  value={stats.delivered}
+                  label="ENTREGADO"
+                  icon={CheckCircle}
+                  color="emerald"
+                  onClick={() => handleMetricClick(ShipmentStatus.DELIVERED)}
+                />
+                <MetricCard
+                  value={stats.inTransit}
+                  label="EN CAMINO"
+                  icon={Truck}
+                  color="amber"
+                  onClick={() => handleMetricClick(ShipmentStatus.IN_TRANSIT)}
+                />
+                <MetricCard
+                  value={stats.inOffice}
+                  label="EN OFICINA"
+                  icon={MapPin}
+                  color="orange"
+                  onClick={() => handleMetricClick(ShipmentStatus.IN_OFFICE)}
+                />
+                <MetricCard
+                  value={stats.issues}
+                  label="NOVEDAD"
+                  icon={AlertTriangle}
+                  color="red"
+                  onClick={() => handleMetricClick(ShipmentStatus.ISSUE)}
+                />
+                <MetricCard
+                  value={stats.pending}
+                  label="PENDIENTE"
+                  icon={Clock}
+                  color="blue"
+                  onClick={() => handleMetricClick(ShipmentStatus.PENDING)}
+                />
               </div>
             </div>
 
@@ -1017,16 +1211,22 @@ ${nuevoProceso.pasos.map(p => `${p.numero}. ${p.accion}`).join('\n')}
                         setIsModalOpen(true);
                       }}
                       className={`w-full text-left p-4 rounded-xl border transition-all hover:shadow-md ${
-                        accion.prioridad === 1 ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                        : accion.prioridad === 2 ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'
-                        : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                        accion.prioridad === 1
+                          ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                          : accion.prioridad === 2
+                            ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'
+                            : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <span>{accion.prioridad === 1 ? '🔴' : accion.prioridad === 2 ? '🟠' : '🟡'}</span>
+                          <span>
+                            {accion.prioridad === 1 ? '🔴' : accion.prioridad === 2 ? '🟠' : '🟡'}
+                          </span>
                           <div>
-                            <p className="font-bold text-slate-800 dark:text-white">{accion.titulo}</p>
+                            <p className="font-bold text-slate-800 dark:text-white">
+                              {accion.titulo}
+                            </p>
                             <p className="text-sm text-slate-500">{accion.descripcion}</p>
                           </div>
                         </div>
@@ -1049,27 +1249,54 @@ ${nuevoProceso.pasos.map(p => `${p.numero}. ${p.accion}`).join('\n')}
                   <table className="w-full text-sm">
                     <thead className="bg-slate-50 dark:bg-gray-900">
                       <tr>
-                        <th className="px-4 py-3 text-left font-bold text-slate-600 dark:text-slate-400">Transportadora</th>
-                        <th className="px-4 py-3 text-center font-bold text-slate-600 dark:text-slate-400">Total</th>
-                        <th className="px-4 py-3 text-center font-bold text-slate-600 dark:text-slate-400">Entregadas</th>
-                        <th className="px-4 py-3 text-center font-bold text-slate-600 dark:text-slate-400">Tasa Éxito</th>
-                        <th className="px-4 py-3 text-center font-bold text-slate-600 dark:text-slate-400">Días Prom.</th>
+                        <th className="px-4 py-3 text-left font-bold text-slate-600 dark:text-slate-400">
+                          Transportadora
+                        </th>
+                        <th className="px-4 py-3 text-center font-bold text-slate-600 dark:text-slate-400">
+                          Total
+                        </th>
+                        <th className="px-4 py-3 text-center font-bold text-slate-600 dark:text-slate-400">
+                          Entregadas
+                        </th>
+                        <th className="px-4 py-3 text-center font-bold text-slate-600 dark:text-slate-400">
+                          Tasa Éxito
+                        </th>
+                        <th className="px-4 py-3 text-center font-bold text-slate-600 dark:text-slate-400">
+                          Días Prom.
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {carrierPerformance.map((carrier) => (
-                        <tr key={carrier.name} className="border-t border-slate-100 dark:border-gray-700">
-                          <td className="px-4 py-3 font-medium text-slate-800 dark:text-white">{carrier.name}</td>
-                          <td className="px-4 py-3 text-center text-slate-600 dark:text-slate-400">{carrier.total}</td>
-                          <td className="px-4 py-3 text-center text-emerald-600">{carrier.delivered}</td>
+                        <tr
+                          key={carrier.name}
+                          className="border-t border-slate-100 dark:border-gray-700"
+                        >
+                          <td className="px-4 py-3 font-medium text-slate-800 dark:text-white">
+                            {carrier.name}
+                          </td>
+                          <td className="px-4 py-3 text-center text-slate-600 dark:text-slate-400">
+                            {carrier.total}
+                          </td>
+                          <td className="px-4 py-3 text-center text-emerald-600">
+                            {carrier.delivered}
+                          </td>
                           <td className="px-4 py-3 text-center">
-                            <span className={`font-bold ${
-                              carrier.rate >= 80 ? 'text-emerald-600' : carrier.rate >= 60 ? 'text-yellow-600' : 'text-red-600'
-                            }`}>
+                            <span
+                              className={`font-bold ${
+                                carrier.rate >= 80
+                                  ? 'text-emerald-600'
+                                  : carrier.rate >= 60
+                                    ? 'text-yellow-600'
+                                    : 'text-red-600'
+                              }`}
+                            >
                               {carrier.rate.toFixed(0)}%
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center text-slate-600 dark:text-slate-400">{carrier.avgDays.toFixed(1)}d</td>
+                          <td className="px-4 py-3 text-center text-slate-600 dark:text-slate-400">
+                            {carrier.avgDays.toFixed(1)}d
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1090,15 +1317,25 @@ ${nuevoProceso.pasos.map(p => `${p.numero}. ${p.accion}`).join('\n')}
                     <div
                       key={patron.id}
                       className={`p-4 rounded-xl border ${
-                        patron.impacto === 'CRITICO' ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                        : patron.impacto === 'ALTO' ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'
-                        : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                        patron.impacto === 'CRITICO'
+                          ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                          : patron.impacto === 'ALTO'
+                            ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'
+                            : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
                       }`}
                     >
                       <div className="flex items-start gap-3">
-                        <span>{patron.impacto === 'CRITICO' ? '🔴' : patron.impacto === 'ALTO' ? '🟠' : '🟡'}</span>
+                        <span>
+                          {patron.impacto === 'CRITICO'
+                            ? '🔴'
+                            : patron.impacto === 'ALTO'
+                              ? '🟠'
+                              : '🟡'}
+                        </span>
                         <div>
-                          <p className="font-bold text-slate-800 dark:text-white">{patron.titulo}</p>
+                          <p className="font-bold text-slate-800 dark:text-white">
+                            {patron.titulo}
+                          </p>
                           <p className="text-sm text-slate-500 mb-2">{patron.descripcion}</p>
                           <p className="text-sm text-slate-700 dark:text-slate-300 flex items-center gap-1">
                             <ChevronRight className="w-4 h-4 text-amber-500" />
@@ -1137,7 +1374,7 @@ ${nuevoProceso.pasos.map(p => `${p.numero}. ${p.accion}`).join('\n')}
                     { id: 'texto', icon: FileText, label: 'Texto' },
                     { id: 'link', icon: Link, label: 'Link/URL' },
                     { id: 'documento', icon: Upload, label: 'Documento' },
-                  ].map(tipo => (
+                  ].map((tipo) => (
                     <button
                       key={tipo.id}
                       onClick={() => setTipoAprendizaje(tipo.id as any)}
@@ -1193,7 +1430,9 @@ Regla: siempre confirmar antes"
                 {tipoAprendizaje === 'documento' && (
                   <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-xl">
                     <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-500">Arrastra un documento o haz clic para seleccionar</p>
+                    <p className="text-gray-500">
+                      Arrastra un documento o haz clic para seleccionar
+                    </p>
                     <p className="text-xs text-gray-400 mt-2">Soporta .docx, .pdf, .txt</p>
                     <input type="file" accept=".docx,.pdf,.txt" className="hidden" />
                   </div>
@@ -1202,7 +1441,9 @@ Regla: siempre confirmar antes"
                 {/* Botón procesar */}
                 <button
                   onClick={procesarAprendizaje}
-                  disabled={procesandoAprendizaje || (!textoAprendizaje.trim() && !urlAprendizaje.trim())}
+                  disabled={
+                    procesandoAprendizaje || (!textoAprendizaje.trim() && !urlAprendizaje.trim())
+                  }
                   className="w-full mt-6 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold rounded-xl flex items-center justify-center gap-3 hover:from-emerald-600 hover:to-teal-700 disabled:opacity-50 transition-all shadow-lg"
                 >
                   {procesandoAprendizaje ? (
@@ -1228,21 +1469,32 @@ Regla: siempre confirmar antes"
                   Procesos Aprendidos ({procesosAprendidos.length})
                 </h3>
                 <div className="space-y-3">
-                  {procesosAprendidos.map(proceso => (
-                    <div key={proceso.id} className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200 dark:border-emerald-800">
+                  {procesosAprendidos.map((proceso) => (
+                    <div
+                      key={proceso.id}
+                      className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200 dark:border-emerald-800"
+                    >
                       <div className="flex items-start justify-between">
                         <div>
-                          <p className="font-bold text-gray-800 dark:text-white">{proceso.nombre}</p>
+                          <p className="font-bold text-gray-800 dark:text-white">
+                            {proceso.nombre}
+                          </p>
                           <p className="text-sm text-gray-500">{proceso.objetivo}</p>
                           <p className="text-xs text-gray-400 mt-1">
-                            Aprendido: {new Date(proceso.fechaAprendido).toLocaleDateString('es-CO')} | Fuente: {proceso.fuente}
+                            Aprendido:{' '}
+                            {new Date(proceso.fechaAprendido).toLocaleDateString('es-CO')} | Fuente:{' '}
+                            {proceso.fuente}
                           </p>
                         </div>
-                        <span className={`px-2 py-1 text-xs font-bold rounded ${
-                          proceso.prioridad === 'CRITICA' ? 'bg-red-100 text-red-700'
-                          : proceso.prioridad === 'ALTA' ? 'bg-orange-100 text-orange-700'
-                          : 'bg-blue-100 text-blue-700'
-                        }`}>
+                        <span
+                          className={`px-2 py-1 text-xs font-bold rounded ${
+                            proceso.prioridad === 'CRITICA'
+                              ? 'bg-red-100 text-red-700'
+                              : proceso.prioridad === 'ALTA'
+                                ? 'bg-orange-100 text-orange-700'
+                                : 'bg-blue-100 text-blue-700'
+                          }`}
+                        >
                           {proceso.prioridad}
                         </span>
                       </div>

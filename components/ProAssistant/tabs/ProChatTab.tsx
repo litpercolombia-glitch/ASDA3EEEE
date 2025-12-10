@@ -73,7 +73,9 @@ const MessageBubble: React.FC<{ message: ProMessage }> = ({ message }) => {
                   <p key={i} className="mb-1">
                     {parts.map((part, j) =>
                       j % 2 === 1 ? (
-                        <strong key={j} className="font-bold">{part}</strong>
+                        <strong key={j} className="font-bold">
+                          {part}
+                        </strong>
                       ) : (
                         part
                       )
@@ -90,7 +92,11 @@ const MessageBubble: React.FC<{ message: ProMessage }> = ({ message }) => {
                   </p>
                 );
               }
-              return <p key={i} className="mb-1">{line}</p>;
+              return (
+                <p key={i} className="mb-1">
+                  {line}
+                </p>
+              );
             })}
           </div>
 
@@ -99,18 +105,26 @@ const MessageBubble: React.FC<{ message: ProMessage }> = ({ message }) => {
             <div className="mt-3 p-3 bg-slate-900/50 rounded-xl border border-slate-700/50">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-slate-300">{message.action.label}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  message.action.status === 'completed'
-                    ? 'bg-emerald-500/20 text-emerald-400'
-                    : message.action.status === 'error'
-                    ? 'bg-red-500/20 text-red-400'
-                    : message.action.status === 'executing'
-                    ? 'bg-amber-500/20 text-amber-400'
-                    : 'bg-slate-500/20 text-slate-400'
-                }`}>
-                  {message.action.status === 'completed' && <CheckCircle className="w-3 h-3 inline mr-1" />}
-                  {message.action.status === 'error' && <AlertTriangle className="w-3 h-3 inline mr-1" />}
-                  {message.action.status === 'executing' && <Loader2 className="w-3 h-3 inline mr-1 animate-spin" />}
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full ${
+                    message.action.status === 'completed'
+                      ? 'bg-emerald-500/20 text-emerald-400'
+                      : message.action.status === 'error'
+                        ? 'bg-red-500/20 text-red-400'
+                        : message.action.status === 'executing'
+                          ? 'bg-amber-500/20 text-amber-400'
+                          : 'bg-slate-500/20 text-slate-400'
+                  }`}
+                >
+                  {message.action.status === 'completed' && (
+                    <CheckCircle className="w-3 h-3 inline mr-1" />
+                  )}
+                  {message.action.status === 'error' && (
+                    <AlertTriangle className="w-3 h-3 inline mr-1" />
+                  )}
+                  {message.action.status === 'executing' && (
+                    <Loader2 className="w-3 h-3 inline mr-1 animate-spin" />
+                  )}
                   {message.action.status}
                 </span>
               </div>
@@ -261,25 +275,32 @@ const ProChatTab: React.FC = () => {
       addMessage({
         role: 'assistant',
         content: response,
-        suggestions: novedadesGuias.length > 0
-          ? ['Filtrar por ciudad', 'Programar llamadas', 'Exportar a Excel']
-          : ['Cargar datos', 'Ver todas las guias'],
-        attachments: novedadesGuias.length > 0 ? [{
-          type: 'card',
-          data: {
-            title: 'Total Novedades',
-            subtitle: 'Guias con incidencias',
-            value: novedadesGuias.length,
-          },
-        }] : undefined,
+        suggestions:
+          novedadesGuias.length > 0
+            ? ['Filtrar por ciudad', 'Programar llamadas', 'Exportar a Excel']
+            : ['Cargar datos', 'Ver todas las guias'],
+        attachments:
+          novedadesGuias.length > 0
+            ? [
+                {
+                  type: 'card',
+                  data: {
+                    title: 'Total Novedades',
+                    subtitle: 'Guias con incidencias',
+                    value: novedadesGuias.length,
+                  },
+                },
+              ]
+            : undefined,
       });
     }
 
     // RECLAMO EN OFICINA
     else if (lowerText.includes('reclamo') || lowerText.includes('oficina')) {
       const reclamoGuias = shipmentsContext.filter(
-        (s) => s.novelty?.toLowerCase().includes('reclamo') ||
-               s.status?.toLowerCase().includes('reclamo')
+        (s) =>
+          s.novelty?.toLowerCase().includes('reclamo') ||
+          s.status?.toLowerCase().includes('reclamo')
       );
 
       let response = `Tengo **${reclamoGuias.length}** guias en Reclamo en Oficina.\n\n`;
@@ -294,24 +315,32 @@ const ProChatTab: React.FC = () => {
       addMessage({
         role: 'assistant',
         content: response,
-        suggestions: reclamoGuias.length > 0
-          ? ['Programar llamadas', 'Ver lista completa', 'Enviar WhatsApp']
-          : ['Ver otras novedades', 'Cargar datos'],
+        suggestions:
+          reclamoGuias.length > 0
+            ? ['Programar llamadas', 'Ver lista completa', 'Enviar WhatsApp']
+            : ['Ver otras novedades', 'Cargar datos'],
       });
     }
 
     // REPORTE
-    else if (lowerText.includes('reporte') || lowerText.includes('informe') || lowerText.includes('resumen')) {
+    else if (
+      lowerText.includes('reporte') ||
+      lowerText.includes('informe') ||
+      lowerText.includes('resumen')
+    ) {
       const total = shipmentsContext.length;
-      const entregados = shipmentsContext.filter((s) =>
-        s.status?.toLowerCase().includes('entreg') ||
-        s.status?.toLowerCase().includes('delivered')
+      const entregados = shipmentsContext.filter(
+        (s) =>
+          s.status?.toLowerCase().includes('entreg') ||
+          s.status?.toLowerCase().includes('delivered')
       ).length;
-      const enTransito = shipmentsContext.filter((s) =>
-        s.status?.toLowerCase().includes('transit') ||
-        s.status?.toLowerCase().includes('ruta')
+      const enTransito = shipmentsContext.filter(
+        (s) =>
+          s.status?.toLowerCase().includes('transit') || s.status?.toLowerCase().includes('ruta')
       ).length;
-      const conNovedad = shipmentsContext.filter((s) => s.novelty && s.novelty !== 'Sin novedad').length;
+      const conNovedad = shipmentsContext.filter(
+        (s) => s.novelty && s.novelty !== 'Sin novedad'
+      ).length;
 
       const tasaEntrega = total > 0 ? Math.round((entregados / total) * 100) : 0;
 
@@ -343,8 +372,13 @@ const ProChatTab: React.FC = () => {
     }
 
     // TRANSPORTADORA
-    else if (lowerText.includes('transportadora') || lowerText.includes('inter') ||
-             lowerText.includes('coordinadora') || lowerText.includes('envia') || lowerText.includes('tcc')) {
+    else if (
+      lowerText.includes('transportadora') ||
+      lowerText.includes('inter') ||
+      lowerText.includes('coordinadora') ||
+      lowerText.includes('envia') ||
+      lowerText.includes('tcc')
+    ) {
       const porTransportadora: Record<string, number> = {};
       shipmentsContext.forEach((s) => {
         const carrier = s.carrier || 'Sin asignar';
@@ -356,9 +390,8 @@ const ProChatTab: React.FC = () => {
       Object.entries(porTransportadora)
         .sort((a, b) => b[1] - a[1])
         .forEach(([carrier, count]) => {
-          const pct = shipmentsContext.length > 0
-            ? Math.round((count / shipmentsContext.length) * 100)
-            : 0;
+          const pct =
+            shipmentsContext.length > 0 ? Math.round((count / shipmentsContext.length) * 100) : 0;
           response += `- **${carrier}**: ${count} guias (${pct}%)\n`;
         });
 
@@ -370,7 +403,11 @@ const ProChatTab: React.FC = () => {
     }
 
     // LLAMADAS
-    else if (lowerText.includes('llamar') || lowerText.includes('llamada') || lowerText.includes('contactar')) {
+    else if (
+      lowerText.includes('llamar') ||
+      lowerText.includes('llamada') ||
+      lowerText.includes('contactar')
+    ) {
       addMessage({
         role: 'assistant',
         content: `Puedo programar llamadas automaticas a los clientes.\n\n¿A que grupo de guias quieres llamar?`,
@@ -379,7 +416,11 @@ const ProChatTab: React.FC = () => {
     }
 
     // AYUDA / SALUDO
-    else if (lowerText.includes('hola') || lowerText.includes('ayuda') || lowerText.includes('help')) {
+    else if (
+      lowerText.includes('hola') ||
+      lowerText.includes('ayuda') ||
+      lowerText.includes('help')
+    ) {
       addMessage({
         role: 'assistant',
         content: `Hola! Soy tu asistente PRO de Litper.\n\nPuedo ayudarte con:\n\n- **Logistica** - Ver guias, novedades, estados\n- **Reportes** - Generar analisis y metricas\n- **Acciones** - Programar llamadas, enviar mensajes\n- **Conocimiento** - Consultar base de datos\n- **Ejecutar** - Tareas automaticas en la app\n\n¿Que necesitas?`,
@@ -388,7 +429,11 @@ const ProChatTab: React.FC = () => {
     }
 
     // EXPORTAR
-    else if (lowerText.includes('exportar') || lowerText.includes('excel') || lowerText.includes('descargar')) {
+    else if (
+      lowerText.includes('exportar') ||
+      lowerText.includes('excel') ||
+      lowerText.includes('descargar')
+    ) {
       addMessage({
         role: 'assistant',
         content: `Puedo exportar los datos a Excel.\n\n¿Que datos quieres exportar?`,
@@ -462,10 +507,7 @@ const ProChatTab: React.FC = () => {
       {/* ============================================ */}
       {suggestions && suggestions.length > 0 && !isTyping && (
         <div className="px-4 pb-2">
-          <QuickSuggestions
-            suggestions={suggestions}
-            onSelect={(s) => processUserMessage(s)}
-          />
+          <QuickSuggestions suggestions={suggestions} onSelect={(s) => processUserMessage(s)} />
         </div>
       )}
 
@@ -516,11 +558,7 @@ const ProChatTab: React.FC = () => {
             }`}
             title="Enviar mensaje"
           >
-            {isTyping ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Send className="w-5 h-5" />
-            )}
+            {isTyping ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </button>
         </div>
       </div>

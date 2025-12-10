@@ -17,11 +17,9 @@ Uso:
 
 import asyncio
 from datetime import datetime, timedelta
-import subprocess
 import hashlib
 import os
-from typing import Optional, Dict, Any, List
-from pathlib import Path
+from typing import Dict, Any
 
 
 class BackupManager:
@@ -258,7 +256,7 @@ class BackupManager:
 
         # 3. Configurar recovery para PITR
         # Esto requiere configuración específica del servidor PostgreSQL
-        recovery_conf = f"""
+        f"""
 recovery_target_time = '{target_time.isoformat()}'
 recovery_target_action = 'promote'
 restore_command = 'aws s3 cp s3://{self.config['backup_bucket']}/wal/%f %p'

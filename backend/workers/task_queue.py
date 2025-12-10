@@ -25,7 +25,6 @@ Uso:
 import asyncio
 from typing import Callable, Dict, Any, Optional, List
 from datetime import datetime, timedelta
-import json
 from pydantic import BaseModel
 from enum import Enum
 import uuid

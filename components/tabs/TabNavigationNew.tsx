@@ -1,5 +1,16 @@
 import React from 'react';
-import { Package, Activity, Target, Bot, Brain, TrendingUp, Trophy, Building2, ShieldCheck, BarChart2 } from 'lucide-react';
+import {
+  Package,
+  Activity,
+  Target,
+  Bot,
+  Brain,
+  TrendingUp,
+  Trophy,
+  Building2,
+  ShieldCheck,
+  BarChart2,
+} from 'lucide-react';
 import { MainTabNew } from '../../types/logistics';
 
 interface TabNavigationNewProps {
@@ -19,8 +30,8 @@ interface TabNavigationNewProps {
     'ciudad-agentes'?: number;
     'aprendizaje-ia'?: number;
     'mcp-connections'?: number;
-    'conexiones'?: number;
-    'admin'?: number;
+    conexiones?: number;
+    admin?: number;
   };
 }
 

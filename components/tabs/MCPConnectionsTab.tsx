@@ -14,7 +14,7 @@ import {
   MessageSquare,
   ShoppingCart,
   Clock,
-  Trash2
+  Trash2,
 } from 'lucide-react';
 
 interface ConnectionCard {
@@ -55,22 +55,23 @@ const CONNECTIONS: ConnectionCard[] = [
     icon: <Zap className="w-6 h-6" />,
     description: 'Automatización de flujos de trabajo',
     urlPlaceholder: 'https://tu-instancia-n8n.com/webhook/...',
-    defaultUrl: 'https://n8n.srv1103164.hstgr.cloud/prueba-de-webhook/240bf3b5-7689-4997-8001-0f1183eb79e9'
+    defaultUrl:
+      'https://n8n.srv1103164.hstgr.cloud/prueba-de-webhook/240bf3b5-7689-4997-8001-0f1183eb79e9',
   },
   {
     id: 'chatea-pro',
     name: 'Chatea Pro',
     icon: <MessageSquare className="w-6 h-6" />,
     description: 'Integración con WhatsApp Business',
-    urlPlaceholder: 'https://api.chateapro.com/v1/...'
+    urlPlaceholder: 'https://api.chateapro.com/v1/...',
   },
   {
     id: 'dropi',
     name: 'Dropi',
     icon: <ShoppingCart className="w-6 h-6" />,
     description: 'Plataforma de dropshipping',
-    urlPlaceholder: 'https://api.dropi.co/v1/...'
-  }
+    urlPlaceholder: 'https://api.dropi.co/v1/...',
+  },
 ];
 
 const APP_WEBHOOKS: Webhook[] = [
@@ -78,37 +79,37 @@ const APP_WEBHOOKS: Webhook[] = [
     id: 'new-order',
     name: 'Nuevo Pedido',
     url: '/api/webhooks/new-order',
-    description: 'Se dispara cuando se crea un nuevo pedido'
+    description: 'Se dispara cuando se crea un nuevo pedido',
   },
   {
     id: 'status-change',
     name: 'Cambio de Estado',
     url: '/api/webhooks/status-change',
-    description: 'Se dispara cuando cambia el estado de un envío'
+    description: 'Se dispara cuando cambia el estado de un envío',
   },
   {
     id: 'delivery-complete',
     name: 'Entrega Completada',
     url: '/api/webhooks/delivery-complete',
-    description: 'Se dispara cuando se completa una entrega'
+    description: 'Se dispara cuando se completa una entrega',
   },
   {
     id: 'return-request',
     name: 'Solicitud de Devolución',
     url: '/api/webhooks/return-request',
-    description: 'Se dispara cuando se solicita una devolución'
-  }
+    description: 'Se dispara cuando se solicita una devolución',
+  },
 ];
 
 export const MCPConnectionsTab: React.FC = () => {
   const [connections, setConnections] = useState<Record<string, ConnectionState>>({
-    'n8n': {
+    n8n: {
       url: CONNECTIONS[0].defaultUrl || '',
       apiKey: '',
-      status: 'idle'
+      status: 'idle',
     },
     'chatea-pro': { url: '', apiKey: '', status: 'idle' },
-    'dropi': { url: '', apiKey: '', status: 'idle' }
+    dropi: { url: '', apiKey: '', status: 'idle' },
   });
 
   const [logs, setLogs] = useState<LogEntry[]>([
@@ -116,8 +117,8 @@ export const MCPConnectionsTab: React.FC = () => {
       id: '1',
       timestamp: new Date(),
       type: 'info',
-      message: 'Sistema de conexiones MCP iniciado'
-    }
+      message: 'Sistema de conexiones MCP iniciado',
+    },
   ]);
 
   const [copiedWebhook, setCopiedWebhook] = useState<string | null>(null);
@@ -128,23 +129,23 @@ export const MCPConnectionsTab: React.FC = () => {
       timestamp: new Date(),
       type,
       message,
-      connection
+      connection,
     };
-    setLogs(prev => [newLog, ...prev].slice(0, 50)); // Máximo 50 logs
+    setLogs((prev) => [newLog, ...prev].slice(0, 50)); // Máximo 50 logs
   }, []);
 
   const testConnection = async (connectionId: string) => {
     const connection = connections[connectionId];
-    const connectionInfo = CONNECTIONS.find(c => c.id === connectionId);
+    const connectionInfo = CONNECTIONS.find((c) => c.id === connectionId);
 
     if (!connection.url) {
       addLog('error', `URL no configurada para ${connectionInfo?.name}`, connectionId);
       return;
     }
 
-    setConnections(prev => ({
+    setConnections((prev) => ({
       ...prev,
-      [connectionId]: { ...prev[connectionId], status: 'testing' }
+      [connectionId]: { ...prev[connectionId], status: 'testing' },
     }));
 
     addLog('info', `Probando conexión con ${connectionInfo?.name}...`, connectionId);
@@ -155,32 +156,36 @@ export const MCPConnectionsTab: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(connection.apiKey && { 'Authorization': `Bearer ${connection.apiKey}` })
+          ...(connection.apiKey && { Authorization: `Bearer ${connection.apiKey}` }),
         },
         body: JSON.stringify({ test: true, timestamp: new Date().toISOString() }),
-        mode: 'no-cors' // Para evitar problemas CORS en pruebas
+        mode: 'no-cors', // Para evitar problemas CORS en pruebas
       });
 
       // Si llegamos aquí sin error, consideramos éxito (no-cors no da acceso a response)
-      setConnections(prev => ({
+      setConnections((prev) => ({
         ...prev,
         [connectionId]: {
           ...prev[connectionId],
           status: 'connected',
-          lastTested: new Date()
-        }
+          lastTested: new Date(),
+        },
       }));
       addLog('success', `Conexión exitosa con ${connectionInfo?.name}`, connectionId);
     } catch (error) {
-      setConnections(prev => ({
+      setConnections((prev) => ({
         ...prev,
         [connectionId]: {
           ...prev[connectionId],
           status: 'error',
-          lastTested: new Date()
-        }
+          lastTested: new Date(),
+        },
       }));
-      addLog('error', `Error al conectar con ${connectionInfo?.name}: ${error instanceof Error ? error.message : 'Error desconocido'}`, connectionId);
+      addLog(
+        'error',
+        `Error al conectar con ${connectionInfo?.name}: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        connectionId
+      );
     }
   };
 
@@ -274,17 +279,18 @@ export const MCPConnectionsTab: React.FC = () => {
               className="rounded-xl p-6 border transition-all hover:border-orange-500/50"
               style={{
                 backgroundColor: '#1E293B',
-                borderColor: state.status === 'connected' ? '#22C55E' :
-                            state.status === 'error' ? '#EF4444' : '#334155'
+                borderColor:
+                  state.status === 'connected'
+                    ? '#22C55E'
+                    : state.status === 'error'
+                      ? '#EF4444'
+                      : '#334155',
               }}
             >
               {/* Card Header */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div
-                    className="p-2 rounded-lg"
-                    style={{ backgroundColor: '#F97316' }}
-                  >
+                  <div className="p-2 rounded-lg" style={{ backgroundColor: '#F97316' }}>
                     {conn.icon}
                   </div>
                   <div>
@@ -304,10 +310,12 @@ export const MCPConnectionsTab: React.FC = () => {
                   <input
                     type="text"
                     value={state.url}
-                    onChange={(e) => setConnections(prev => ({
-                      ...prev,
-                      [conn.id]: { ...prev[conn.id], url: e.target.value, status: 'idle' }
-                    }))}
+                    onChange={(e) =>
+                      setConnections((prev) => ({
+                        ...prev,
+                        [conn.id]: { ...prev[conn.id], url: e.target.value, status: 'idle' },
+                      }))
+                    }
                     placeholder={conn.urlPlaceholder}
                     className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-sm"
                   />
@@ -321,10 +329,12 @@ export const MCPConnectionsTab: React.FC = () => {
                   <input
                     type="password"
                     value={state.apiKey}
-                    onChange={(e) => setConnections(prev => ({
-                      ...prev,
-                      [conn.id]: { ...prev[conn.id], apiKey: e.target.value }
-                    }))}
+                    onChange={(e) =>
+                      setConnections((prev) => ({
+                        ...prev,
+                        [conn.id]: { ...prev[conn.id], apiKey: e.target.value },
+                      }))
+                    }
                     placeholder="••••••••••••••••"
                     className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-sm"
                   />
@@ -409,16 +419,21 @@ export const MCPConnectionsTab: React.FC = () => {
                           className="px-1.5 py-0.5 rounded text-xs font-medium"
                           style={{ backgroundColor: '#F97316', color: 'white' }}
                         >
-                          {CONNECTIONS.find(c => c.id === log.connection)?.name}
+                          {CONNECTIONS.find((c) => c.id === log.connection)?.name}
                         </span>
                       )}
                     </div>
-                    <p className={`text-sm mt-0.5 ${
-                      log.type === 'error' ? 'text-red-400' :
-                      log.type === 'success' ? 'text-green-400' :
-                      log.type === 'warning' ? 'text-yellow-400' :
-                      'text-slate-300'
-                    }`}>
+                    <p
+                      className={`text-sm mt-0.5 ${
+                        log.type === 'error'
+                          ? 'text-red-400'
+                          : log.type === 'success'
+                            ? 'text-green-400'
+                            : log.type === 'warning'
+                              ? 'text-yellow-400'
+                              : 'text-slate-300'
+                      }`}
+                    >
                       {log.message}
                     </p>
                   </div>
@@ -455,16 +470,14 @@ export const MCPConnectionsTab: React.FC = () => {
                     <span className="font-medium text-white">{webhook.name}</span>
                   </div>
                   <p className="text-xs text-slate-500 mt-1">{webhook.description}</p>
-                  <code className="text-xs text-orange-400 mt-1 block truncate">
-                    {webhook.url}
-                  </code>
+                  <code className="text-xs text-orange-400 mt-1 block truncate">{webhook.url}</code>
                 </div>
                 <button
                   onClick={() => copyWebhook(webhook)}
                   className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all shrink-0"
                   style={{
                     backgroundColor: copiedWebhook === webhook.id ? '#22C55E' : '#F97316',
-                    color: 'white'
+                    color: 'white',
                   }}
                 >
                   {copiedWebhook === webhook.id ? (
@@ -495,16 +508,18 @@ export const MCPConnectionsTab: React.FC = () => {
             <Wifi className="w-5 h-5 text-green-500" />
             <span className="text-slate-300">
               <span className="font-semibold text-white">
-                {Object.values(connections).filter(c => c.status === 'connected').length}
-              </span> conectadas
+                {Object.values(connections).filter((c) => c.status === 'connected').length}
+              </span>{' '}
+              conectadas
             </span>
           </div>
           <div className="flex items-center gap-2">
             <WifiOff className="w-5 h-5 text-red-500" />
             <span className="text-slate-300">
               <span className="font-semibold text-white">
-                {Object.values(connections).filter(c => c.status === 'error').length}
-              </span> con error
+                {Object.values(connections).filter((c) => c.status === 'error').length}
+              </span>{' '}
+              con error
             </span>
           </div>
         </div>

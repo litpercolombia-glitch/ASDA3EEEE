@@ -57,10 +57,7 @@ export const AssistantButton: React.FC<AssistantButtonProps> = ({
 
       {/* Panel del asistente */}
       {isOpen && (
-        <AssistantPanelNew
-          onClose={() => setIsOpen(false)}
-          shipmentsContext={shipmentsContext}
-        />
+        <AssistantPanelNew onClose={() => setIsOpen(false)} shipmentsContext={shipmentsContext} />
       )}
     </>
   );

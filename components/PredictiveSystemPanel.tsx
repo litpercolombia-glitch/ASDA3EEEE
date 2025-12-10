@@ -176,9 +176,7 @@ export function PredictiveSystemPanel({ onClose }: PredictiveSystemPanelProps) {
               {!parseResult && !historicalData && (
                 <div className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center">
                   <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-gray-700 mb-2">
-                    Sube tu archivo Excel
-                  </h3>
+                  <h3 className="text-xl font-bold text-gray-700 mb-2">Sube tu archivo Excel</h3>
                   <p className="text-gray-500 mb-6">
                     Arrastra tu archivo aquí o haz clic para seleccionar
                   </p>
@@ -194,7 +192,9 @@ export function PredictiveSystemPanel({ onClose }: PredictiveSystemPanelProps) {
                     <Button
                       as="span"
                       variant="primary"
-                      icon={isLoading ? <LoadingSpinner size="sm" /> : <Upload className="w-4 h-4" />}
+                      icon={
+                        isLoading ? <LoadingSpinner size="sm" /> : <Upload className="w-4 h-4" />
+                      }
                       disabled={isLoading}
                     >
                       {isLoading ? 'Procesando...' : 'Seleccionar Archivo'}
@@ -276,9 +276,7 @@ export function PredictiveSystemPanel({ onClose }: PredictiveSystemPanelProps) {
 
               {historicalData && !parseResult && (
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-                  <h3 className="text-xl font-bold text-blue-900 mb-2">
-                    ℹ️ Datos Ya Cargados
-                  </h3>
+                  <h3 className="text-xl font-bold text-blue-900 mb-2">ℹ️ Datos Ya Cargados</h3>
                   <p className="text-blue-700 mb-4">
                     Ya tienes datos históricos cargados. Puedes cargar un nuevo archivo para
                     reemplazarlos.
@@ -297,10 +295,7 @@ export function PredictiveSystemPanel({ onClose }: PredictiveSystemPanelProps) {
                         Cargar Nuevo Archivo
                       </Button>
                     </label>
-                    <Button
-                      onClick={() => setActiveTab('predict')}
-                      variant="secondary"
-                    >
+                    <Button onClick={() => setActiveTab('predict')} variant="secondary">
                       Ir a Predicción →
                     </Button>
                   </div>
@@ -414,7 +409,9 @@ export function PredictiveSystemPanel({ onClose }: PredictiveSystemPanelProps) {
                     </div>
                     <div className="bg-white bg-opacity-50 rounded-lg p-3">
                       <p className="text-xs opacity-70 mb-1">Tiempo Promedio</p>
-                      <p className="text-xl font-bold">{riskAnalysis.factors.tiempoPromedio} días</p>
+                      <p className="text-xl font-bold">
+                        {riskAnalysis.factors.tiempoPromedio} días
+                      </p>
                     </div>
                     <div className="bg-white bg-opacity-50 rounded-lg p-3">
                       <p className="text-xs opacity-70 mb-1">Datos Históricos</p>

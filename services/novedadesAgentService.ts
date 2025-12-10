@@ -14,7 +14,7 @@ import {
   DistritoId,
   NivelPrioridad,
   CanalComunicacion,
-  ESTRATEGIAS_NOVEDAD
+  ESTRATEGIAS_NOVEDAD,
 } from '../types/agents';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -50,7 +50,7 @@ Responde con el número de tu opción 😊`,
 2️⃣ Cambiar dirección
 3️⃣ Recoger en punto cercano
 
-Responde con el número de tu opción 😊`
+Responde con el número de tu opción 😊`,
   },
   [TipoNovedad.DIRECCION_INCORRECTA]: {
     [Pais.COLOMBIA]: `Hola! 📍 No pudimos encontrar la dirección que nos diste.
@@ -73,7 +73,7 @@ Por favor envíame tu dirección completa:
 • Calle y número
 • Sector/Barrio
 • Ciudad
-• Referencias`
+• Referencias`,
   },
   [TipoNovedad.TELEFONO_NO_CONTESTA]: {
     [Pais.COLOMBIA]: `Hola! 📞 Hemos intentado llamarte pero no hemos podido contactarte.
@@ -96,7 +96,7 @@ Tu paquete está listo. ¿Puedes confirmar:
 1️⃣ Tu número de teléfono correcto
 2️⃣ El mejor horario para llamarte
 
-¡Queremos entregarte lo antes posible! 📦`
+¡Queremos entregarte lo antes posible! 📦`,
   },
   [TipoNovedad.REHUSADO]: {
     [Pais.COLOMBIA]: `Hola 👋 Vimos que no pudiste recibir el paquete.
@@ -128,7 +128,7 @@ Podemos:
 2️⃣ Hacer devolución fácil
 3️⃣ Resolver cualquier duda
 
-Estamos para ayudarte 😊`
+Estamos para ayudarte 😊`,
   },
   [TipoNovedad.PAQUETE_DANADO]: {
     [Pais.COLOMBIA]: `Hola 😔 Lamentamos mucho que tu paquete llegó dañado.
@@ -157,7 +157,7 @@ Esto NO debería pasar:
 2️⃣ Sin necesidad de devolver el dañado
 3️⃣ Prioridad en la entrega
 
-¿Te parece bien?`
+¿Te parece bien?`,
   },
   [TipoNovedad.RECLAMO_OFICINA]: {
     [Pais.COLOMBIA]: `Hola! 📦 Tu paquete está en oficina esperándote:
@@ -192,7 +192,7 @@ Esto NO debería pasar:
 
 ¿Prefieres que te lo llevemos? Responde:
 1️⃣ Recoger en oficina
-2️⃣ Programar nueva entrega`
+2️⃣ Programar nueva entrega`,
   },
   [TipoNovedad.OTRO]: {
     [Pais.COLOMBIA]: `Hola! 📦 Tenemos una novedad con tu envío.
@@ -206,8 +206,8 @@ Estamos para ayudarte 😊`,
     [Pais.ECUADOR]: `Hola! 📦 Tenemos una novedad con tu envío.
 
 Por favor contáctanos para resolverlo.
-Estamos para ayudarte 😊`
-  }
+Estamos para ayudarte 😊`,
+  },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -252,7 +252,7 @@ class NovedadesAgentService {
       clienteTelefono: datos.clienteTelefono,
       clienteContactado: false,
       creadaEn: new Date(),
-      ultimaActualizacion: new Date()
+      ultimaActualizacion: new Date(),
     };
 
     this.novedades.set(novedad.id, novedad);
@@ -265,7 +265,7 @@ class NovedadesAgentService {
         distrito: DistritoId.CRISIS,
         pais: datos.pais,
         titulo: `Nueva novedad: ${datos.tipo}`,
-        mensaje: `Guía ${datos.guiaId} - ${datos.clienteNombre} - ${datos.ciudad}`
+        mensaje: `Guía ${datos.guiaId} - ${datos.clienteNombre} - ${datos.ciudad}`,
       });
     }
 
@@ -305,7 +305,7 @@ class NovedadesAgentService {
       agenteId: `SOLVER_${novedad.pais.toUpperCase()}_AUTO`,
       accion: descripcionAccion,
       canal,
-      resultado: 'pendiente'
+      resultado: 'pendiente',
     };
 
     // Simular envío según canal
@@ -339,10 +339,10 @@ class NovedadesAgentService {
         tipo: novedad.tipo,
         canal,
         intento: novedad.intentoActual,
-        pais: novedad.pais
+        pais: novedad.pais,
       },
       impacto: 'medio',
-      origenPais: novedad.pais
+      origenPais: novedad.pais,
     });
 
     return gestion;
@@ -425,7 +425,7 @@ Genera solo el script, sin explicaciones.`;
       accion: `Cliente respondió: "${respuesta}"`,
       canal,
       resultado: analisis.esPositiva ? 'exitoso' : 'pendiente',
-      notas: analisis.interpretacion
+      notas: analisis.interpretacion,
     };
 
     novedad.gestiones.push(gestion);
@@ -452,7 +452,7 @@ Genera solo el script, sin explicaciones.`;
           distrito: DistritoId.CRISIS,
           pais: novedad.pais,
           titulo: 'Novedad escalada',
-          mensaje: `${novedad.guiaId} - Cliente no acepta soluciones después de ${novedad.maxIntentos} intentos`
+          mensaje: `${novedad.guiaId} - Cliente no acepta soluciones después de ${novedad.maxIntentos} intentos`,
         });
       } else {
         novedad.intentoActual++;
@@ -467,11 +467,14 @@ Genera solo el script, sin explicaciones.`;
 
     return {
       accion: analisis.accion,
-      siguientePaso: gestion.siguientePaso
+      siguientePaso: gestion.siguientePaso,
     };
   }
 
-  private async analizarRespuesta(novedad: Novedad, respuesta: string): Promise<{
+  private async analizarRespuesta(
+    novedad: Novedad,
+    respuesta: string
+  ): Promise<{
     esPositiva: boolean;
     esNegativa: boolean;
     interpretacion: string;
@@ -514,11 +517,11 @@ Responde en JSON:
     const palabrasNegativas = ['no', 'nunca', 'cancelar', 'devolver', 'malo'];
 
     return {
-      esPositiva: palabrasPositivas.some(p => respuestaLower.includes(p)),
-      esNegativa: palabrasNegativas.some(p => respuestaLower.includes(p)),
+      esPositiva: palabrasPositivas.some((p) => respuestaLower.includes(p)),
+      esNegativa: palabrasNegativas.some((p) => respuestaLower.includes(p)),
       interpretacion: 'Análisis automático de respuesta',
       accion: 'procesar_manualmente',
-      requiereAccionAdicional: true
+      requiereAccionAdicional: true,
     };
   }
 
@@ -544,7 +547,11 @@ Responde en JSON:
     const accion = estrategia.acciones[accionIdx];
 
     if (accion) {
-      await this.ejecutarAccion(novedad, accion.canal, `Reintento ${novedad.intentoActual}: ${accion.mensaje}`);
+      await this.ejecutarAccion(
+        novedad,
+        accion.canal,
+        `Reintento ${novedad.intentoActual}: ${accion.mensaje}`
+      );
     }
 
     this.guardarNovedades();
@@ -583,7 +590,7 @@ Responde en JSON:
       pais: novedad.pais,
       titulo: 'Llamada de recuperación programada',
       mensaje: `${novedad.guiaId} - Llamar ${fechaLlamada.toLocaleDateString()} para recuperar paquete en oficina`,
-      accionRequerida: 'Ejecutar llamada de recuperación'
+      accionRequerida: 'Ejecutar llamada de recuperación',
     });
 
     registrarAprendizaje({
@@ -593,10 +600,10 @@ Responde en JSON:
       datos: {
         guiaId: novedad.guiaId,
         intentos: novedad.intentoActual,
-        ciudad: novedad.ciudad
+        ciudad: novedad.ciudad,
       },
       impacto: 'alto',
-      origenPais: novedad.pais
+      origenPais: novedad.pais,
     });
   }
 
@@ -619,7 +626,7 @@ Responde en JSON:
       accion: 'Llamada de recuperación de paquete',
       canal: CanalComunicacion.LLAMADA,
       resultado: 'pendiente',
-      notas: script
+      notas: script,
     };
 
     novedad.gestiones.push(gestion);
@@ -628,7 +635,7 @@ Responde en JSON:
 
     return {
       exito: true,
-      resultado: 'Llamada de recuperación ejecutada'
+      resultado: 'Llamada de recuperación ejecutada',
     };
   }
 
@@ -676,7 +683,7 @@ Genera solo el script.`;
       agenteId: 'RESOLVER',
       accion: `Novedad resuelta: ${solucion}`,
       canal: CanalComunicacion.CHAT_WEB,
-      resultado: 'exitoso'
+      resultado: 'exitoso',
     });
 
     // Registrar aprendizaje de éxito
@@ -687,10 +694,11 @@ Genera solo el script.`;
       datos: {
         tipo: novedad.tipo,
         intentos: novedad.intentoActual,
-        tiempoResolucion: (novedad.fechaResolucion.getTime() - novedad.creadaEn.getTime()) / (1000 * 60 * 60)
+        tiempoResolucion:
+          (novedad.fechaResolucion.getTime() - novedad.creadaEn.getTime()) / (1000 * 60 * 60),
       },
       impacto: 'medio',
-      origenPais: novedad.pais
+      origenPais: novedad.pais,
     });
 
     this.guardarNovedades();
@@ -710,7 +718,7 @@ Genera solo el script.`;
       agenteId: 'SYSTEM',
       accion: `Marcado como perdido: ${motivo}`,
       canal: CanalComunicacion.CHAT_WEB,
-      resultado: 'exitoso'
+      resultado: 'exitoso',
     });
 
     // Registrar para análisis
@@ -721,10 +729,10 @@ Genera solo el script.`;
       datos: {
         tipo: novedad.tipo,
         intentos: novedad.intentoActual,
-        ciudad: novedad.ciudad
+        ciudad: novedad.ciudad,
       },
       impacto: 'alto',
-      origenPais: novedad.pais
+      origenPais: novedad.pais,
     });
 
     crearAlerta({
@@ -732,7 +740,7 @@ Genera solo el script.`;
       distrito: DistritoId.CRISIS,
       pais: novedad.pais,
       titulo: 'Paquete perdido',
-      mensaje: `${novedad.guiaId} - ${motivo}`
+      mensaje: `${novedad.guiaId} - ${motivo}`,
     });
 
     this.guardarNovedades();
@@ -748,40 +756,40 @@ Genera solo el script.`;
   }
 
   getNovedadesPorPais(pais: Pais): Novedad[] {
-    return Array.from(this.novedades.values())
-      .filter(n => n.pais === pais);
+    return Array.from(this.novedades.values()).filter((n) => n.pais === pais);
   }
 
   getNovedadesActivas(): Novedad[] {
-    return Array.from(this.novedades.values())
-      .filter(n => ['nueva', 'en_gestion'].includes(n.estado));
+    return Array.from(this.novedades.values()).filter((n) =>
+      ['nueva', 'en_gestion'].includes(n.estado)
+    );
   }
 
   getNovedadesPorEstado(estado: Novedad['estado']): Novedad[] {
-    return Array.from(this.novedades.values())
-      .filter(n => n.estado === estado);
+    return Array.from(this.novedades.values()).filter((n) => n.estado === estado);
   }
 
   getNovedadesEnOficina(): Novedad[] {
-    return Array.from(this.novedades.values())
-      .filter(n => n.tipo === TipoNovedad.RECLAMO_OFICINA && n.estado !== 'resuelta');
+    return Array.from(this.novedades.values()).filter(
+      (n) => n.tipo === TipoNovedad.RECLAMO_OFICINA && n.estado !== 'resuelta'
+    );
   }
 
   getEstadisticas(pais?: Pais) {
     let novedades = Array.from(this.novedades.values());
     if (pais) {
-      novedades = novedades.filter(n => n.pais === pais);
+      novedades = novedades.filter((n) => n.pais === pais);
     }
 
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
 
-    const novedadesHoy = novedades.filter(n => n.creadaEn >= hoy);
-    const resueltasHoy = novedades.filter(n =>
-      n.estado === 'resuelta' && n.fechaResolucion && n.fechaResolucion >= hoy
+    const novedadesHoy = novedades.filter((n) => n.creadaEn >= hoy);
+    const resueltasHoy = novedades.filter(
+      (n) => n.estado === 'resuelta' && n.fechaResolucion && n.fechaResolucion >= hoy
     );
 
-    const activas = novedades.filter(n => ['nueva', 'en_gestion'].includes(n.estado));
+    const activas = novedades.filter((n) => ['nueva', 'en_gestion'].includes(n.estado));
 
     const porTipo: Record<TipoNovedad, number> = {
       [TipoNovedad.CLIENTE_NO_ESTABA]: 0,
@@ -790,18 +798,24 @@ Genera solo el script.`;
       [TipoNovedad.REHUSADO]: 0,
       [TipoNovedad.PAQUETE_DANADO]: 0,
       [TipoNovedad.RECLAMO_OFICINA]: 0,
-      [TipoNovedad.OTRO]: 0
+      [TipoNovedad.OTRO]: 0,
     };
 
-    activas.forEach(n => {
+    activas.forEach((n) => {
       porTipo[n.tipo]++;
     });
 
     // Calcular tasa de éxito de reintentos
-    const conReintentos = novedades.filter(n => n.intentoActual > 1);
-    const exitosReintento1 = novedades.filter(n => n.intentoActual === 1 && n.estado === 'resuelta').length;
-    const exitosReintento2 = novedades.filter(n => n.intentoActual === 2 && n.estado === 'resuelta').length;
-    const exitosReintento3 = novedades.filter(n => n.intentoActual === 3 && n.estado === 'resuelta').length;
+    const conReintentos = novedades.filter((n) => n.intentoActual > 1);
+    const exitosReintento1 = novedades.filter(
+      (n) => n.intentoActual === 1 && n.estado === 'resuelta'
+    ).length;
+    const exitosReintento2 = novedades.filter(
+      (n) => n.intentoActual === 2 && n.estado === 'resuelta'
+    ).length;
+    const exitosReintento3 = novedades.filter(
+      (n) => n.intentoActual === 3 && n.estado === 'resuelta'
+    ).length;
 
     return {
       total: novedades.length,
@@ -809,17 +823,24 @@ Genera solo el script.`;
       nuevasHoy: novedadesHoy.length,
       resueltasHoy: resueltasHoy.length,
       enOficina: this.getNovedadesEnOficina().length,
-      escaladas: novedades.filter(n => n.estado === 'escalada').length,
-      perdidas: novedades.filter(n => n.estado === 'perdida').length,
-      tasaResolucion: novedades.length > 0
-        ? ((novedades.filter(n => n.estado === 'resuelta').length / novedades.length) * 100).toFixed(1)
-        : '100',
+      escaladas: novedades.filter((n) => n.estado === 'escalada').length,
+      perdidas: novedades.filter((n) => n.estado === 'perdida').length,
+      tasaResolucion:
+        novedades.length > 0
+          ? (
+              (novedades.filter((n) => n.estado === 'resuelta').length / novedades.length) *
+              100
+            ).toFixed(1)
+          : '100',
       porTipo,
       tasasReintento: {
-        reintento1: conReintentos.length > 0 ? Math.round(exitosReintento1 / novedades.length * 100) : 0,
-        reintento2: conReintentos.length > 0 ? Math.round(exitosReintento2 / novedades.length * 100) : 0,
-        reintento3: conReintentos.length > 0 ? Math.round(exitosReintento3 / novedades.length * 100) : 0
-      }
+        reintento1:
+          conReintentos.length > 0 ? Math.round((exitosReintento1 / novedades.length) * 100) : 0,
+        reintento2:
+          conReintentos.length > 0 ? Math.round((exitosReintento2 / novedades.length) * 100) : 0,
+        reintento3:
+          conReintentos.length > 0 ? Math.round((exitosReintento3 / novedades.length) * 100) : 0,
+      },
     };
   }
 
@@ -832,13 +853,13 @@ Genera solo el script.`;
       const data = localStorage.getItem(STORAGE_KEY_NOVEDADES);
       if (data) {
         const novedades: Novedad[] = JSON.parse(data);
-        novedades.forEach(n => {
+        novedades.forEach((n) => {
           n.creadaEn = new Date(n.creadaEn);
           n.ultimaActualizacion = new Date(n.ultimaActualizacion);
           if (n.fechaResolucion) n.fechaResolucion = new Date(n.fechaResolucion);
-          n.gestiones = n.gestiones.map(g => ({
+          n.gestiones = n.gestiones.map((g) => ({
             ...g,
-            timestamp: new Date(g.timestamp)
+            timestamp: new Date(g.timestamp),
           }));
           this.novedades.set(n.id, n);
         });
@@ -883,8 +904,7 @@ export const ejecutarAccion = (novedad: Novedad, canal: CanalComunicacion, descr
 export const procesarRespuestaCliente = (id: string, respuesta: string, canal: CanalComunicacion) =>
   novedadesService.procesarRespuestaCliente(id, respuesta, canal);
 
-export const ejecutarReintento = (id: string) =>
-  novedadesService.ejecutarReintento(id);
+export const ejecutarReintento = (id: string) => novedadesService.ejecutarReintento(id);
 
 export const ejecutarLlamadaRecuperacion = (id: string) =>
   novedadesService.ejecutarLlamadaRecuperacion(id);
@@ -895,20 +915,15 @@ export const resolverNovedad = (id: string, solucion: string) =>
 export const marcarComoPerdida = (id: string, motivo: string) =>
   novedadesService.marcarComoPerdida(id, motivo);
 
-export const getNovedad = (id: string) =>
-  novedadesService.getNovedad(id);
+export const getNovedad = (id: string) => novedadesService.getNovedad(id);
 
-export const getNovedadesPorPais = (pais: Pais) =>
-  novedadesService.getNovedadesPorPais(pais);
+export const getNovedadesPorPais = (pais: Pais) => novedadesService.getNovedadesPorPais(pais);
 
-export const getNovedadesActivas = () =>
-  novedadesService.getNovedadesActivas();
+export const getNovedadesActivas = () => novedadesService.getNovedadesActivas();
 
 export const getNovedadesPorEstado = (estado: Novedad['estado']) =>
   novedadesService.getNovedadesPorEstado(estado);
 
-export const getNovedadesEnOficina = () =>
-  novedadesService.getNovedadesEnOficina();
+export const getNovedadesEnOficina = () => novedadesService.getNovedadesEnOficina();
 
-export const getEstadisticasNovedades = (pais?: Pais) =>
-  novedadesService.getEstadisticas(pais);
+export const getEstadisticasNovedades = (pais?: Pais) => novedadesService.getEstadisticas(pais);

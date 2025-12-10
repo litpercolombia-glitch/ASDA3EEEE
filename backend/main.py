@@ -5,16 +5,14 @@ Proporciona endpoints para todas las funcionalidades del sistema.
 
 import os
 import sys
-import time
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import func, and_, or_, Integer, cast, extract
+from sqlalchemy import func, Integer, cast
 from sqlalchemy.orm import Session
 from loguru import logger
 from dotenv import load_dotenv
@@ -38,11 +36,10 @@ logger.add(
 
 # Imports del proyecto
 from database import (
-    get_session, get_db_session, init_database, crear_configuraciones_default,
-    verificar_conexion, get_config, set_config, get_all_configs, get_db_stats,
-    GuiaHistorica, ArchivoCargado, MetricaModelo, ConversacionChat,
-    PrediccionTiempoReal, ConfiguracionSistema, AlertaSistema,
-    EstadoArchivo, NivelRiesgo, SeveridadAlerta, TipoAlerta
+    get_session, init_database, crear_configuraciones_default,
+    verificar_conexion, set_config, get_all_configs, GuiaHistorica, ArchivoCargado, MetricaModelo, ConversacionChat,
+    PrediccionTiempoReal, AlertaSistema,
+    NivelRiesgo, SeveridadAlerta, TipoAlerta
 )
 from excel_processor import excel_processor
 from chat_inteligente import chat_inteligente
@@ -418,7 +415,7 @@ async def prediccion_masiva(
 async def get_metricas_modelos(session: Session = Depends(get_session)):
     """Obtiene métricas de los modelos activos"""
     metricas = session.query(MetricaModelo).filter(
-        MetricaModelo.esta_activo == True
+        MetricaModelo.esta_activo
     ).all()
 
     return [
@@ -506,17 +503,17 @@ async def get_dashboard_resumen(session: Session = Depends(get_session)):
         GuiaHistorica.estatus.ilike('%entregad%')
     ).scalar() or 0
     guias_retraso = session.query(func.count(GuiaHistorica.id)).filter(
-        GuiaHistorica.tiene_retraso == True
+        GuiaHistorica.tiene_retraso
     ).scalar() or 0
     guias_novedad = session.query(func.count(GuiaHistorica.id)).filter(
-        GuiaHistorica.tiene_novedad == True
+        GuiaHistorica.tiene_novedad
     ).scalar() or 0
 
     # Rendimiento por transportadora
     transportadoras = session.query(
         GuiaHistorica.transportadora,
         func.count(GuiaHistorica.id).label('total'),
-        func.sum(func.cast(GuiaHistorica.tiene_retraso == True, Integer)).label('retrasos'),
+        func.sum(func.cast(GuiaHistorica.tiene_retraso, Integer)).label('retrasos'),
         func.avg(GuiaHistorica.dias_transito).label('avg_dias')
     ).filter(
         GuiaHistorica.transportadora.isnot(None)
@@ -565,7 +562,7 @@ async def get_dashboard_resumen(session: Session = Depends(get_session)):
 
     # Modelos activos
     modelos = session.query(MetricaModelo).filter(
-        MetricaModelo.esta_activo == True
+        MetricaModelo.esta_activo
     ).all()
 
     modelos_activos = [
@@ -581,7 +578,7 @@ async def get_dashboard_resumen(session: Session = Depends(get_session)):
 
     # Alertas pendientes
     alertas_pendientes = session.query(func.count(AlertaSistema.id)).filter(
-        AlertaSistema.esta_activa == True
+        AlertaSistema.esta_activa
     ).scalar() or 0
 
     return {
@@ -606,8 +603,8 @@ async def get_transportadoras_detalle(session: Session = Depends(get_session)):
     transportadoras = session.query(
         GuiaHistorica.transportadora,
         func.count(GuiaHistorica.id).label('total'),
-        func.sum(func.cast(GuiaHistorica.tiene_retraso == True, Integer)).label('retrasos'),
-        func.sum(func.cast(GuiaHistorica.tiene_novedad == True, Integer)).label('novedades'),
+        func.sum(func.cast(GuiaHistorica.tiene_retraso, Integer)).label('retrasos'),
+        func.sum(func.cast(GuiaHistorica.tiene_novedad, Integer)).label('novedades'),
         func.avg(GuiaHistorica.dias_transito).label('avg_dias')
     ).filter(
         GuiaHistorica.transportadora.isnot(None)
@@ -665,7 +662,7 @@ async def listar_alertas(
     query = session.query(AlertaSistema)
 
     if activas:
-        query = query.filter(AlertaSistema.esta_activa == True)
+        query = query.filter(AlertaSistema.esta_activa)
 
     alertas = query.order_by(AlertaSistema.fecha_creacion.desc()).limit(50).all()
 
@@ -746,8 +743,8 @@ async def get_tendencias(
         func.date(GuiaHistorica.fecha_envio).label('fecha'),
         func.count(GuiaHistorica.id).label('total'),
         func.sum(cast(GuiaHistorica.estatus.ilike('%entregad%'), Integer)).label('entregas'),
-        func.sum(cast(GuiaHistorica.tiene_retraso == True, Integer)).label('retrasos'),
-        func.sum(cast(GuiaHistorica.tiene_novedad == True, Integer)).label('novedades')
+        func.sum(cast(GuiaHistorica.tiene_retraso, Integer)).label('retrasos'),
+        func.sum(cast(GuiaHistorica.tiene_novedad, Integer)).label('novedades')
     ).filter(
         GuiaHistorica.fecha_envio >= fecha_inicio,
         GuiaHistorica.fecha_envio.isnot(None)
@@ -877,10 +874,10 @@ async def get_kpis_avanzados(session: Session = Depends(get_session)):
         GuiaHistorica.estatus.ilike('%entregad%')
     ).scalar() or 0
     guias_retraso = session.query(func.count(GuiaHistorica.id)).filter(
-        GuiaHistorica.tiene_retraso == True
+        GuiaHistorica.tiene_retraso
     ).scalar() or 0
     guias_novedad = session.query(func.count(GuiaHistorica.id)).filter(
-        GuiaHistorica.tiene_novedad == True
+        GuiaHistorica.tiene_novedad
     ).scalar() or 0
 
     # OTIF: On-Time In-Full
@@ -962,7 +959,7 @@ def limpiar_alertas_resueltas(session: Session):
     """Limpia alertas resueltas antiguas"""
     fecha_limite = datetime.now() - timedelta(days=30)
     eliminadas = session.query(AlertaSistema).filter(
-        AlertaSistema.esta_activa == False,
+        not AlertaSistema.esta_activa,
         AlertaSistema.fecha_resolucion < fecha_limite
     ).delete()
     session.commit()
