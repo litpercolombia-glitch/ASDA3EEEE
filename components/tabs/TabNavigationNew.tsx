@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, Activity, Target, FileBarChart, Bot, Brain, Zap, TrendingUp, Trophy, Building2, GraduationCap, Plug, ShieldCheck, BarChart2 } from 'lucide-react';
+import { Package, Activity, Target, FileBarChart, Bot, Brain, TrendingUp, Trophy, Building2, GraduationCap, Plug, ShieldCheck, BarChart2 } from 'lucide-react';
 import { MainTabNew } from '../../types/logistics';
 
 interface TabNavigationNewProps {
@@ -7,9 +7,9 @@ interface TabNavigationNewProps {
   onTabChange: (tab: MainTabNew) => void;
   notifications?: {
     seguimiento?: number;
-    flash?: number;
     demanda?: number;
     gamificacion?: number;
+    'inteligencia-logistica'?: number;
     semaforo?: number;
     predicciones?: number;
     reporte?: number;
@@ -21,8 +21,6 @@ interface TabNavigationNewProps {
     'mcp-connections'?: number;
     'conexiones'?: number;
     'admin'?: number;
-    'reporte'?: number;
-    'inteligencia-logistica'?: number;
   };
 }
 
@@ -46,15 +44,6 @@ const tabs: TabConfig[] = [
     activeColor: 'bg-emerald-500',
   },
   {
-    id: 'flash',
-    icon: Zap,
-    label: 'Litper Flash',
-    shortLabel: 'Flash',
-    color: 'text-orange-500',
-    activeColor: 'bg-gradient-to-r from-orange-500 to-red-500',
-    isNew: true,
-  },
-  {
     id: 'demanda',
     icon: TrendingUp,
     label: 'Predicción',
@@ -70,6 +59,15 @@ const tabs: TabConfig[] = [
     shortLabel: 'XP',
     color: 'text-gold-500',
     activeColor: 'bg-gradient-to-r from-indigo-500 to-purple-500',
+    isNew: true,
+  },
+  {
+    id: 'inteligencia-logistica',
+    icon: BarChart2,
+    label: 'Intel. Logística',
+    shortLabel: 'Intel.',
+    color: 'text-cyan-500',
+    activeColor: 'bg-gradient-to-r from-cyan-500 to-blue-600',
     isNew: true,
   },
   {
@@ -154,15 +152,6 @@ const tabs: TabConfig[] = [
     shortLabel: 'Admin',
     color: 'text-rose-500',
     activeColor: 'bg-gradient-to-r from-rose-500 to-pink-600',
-    isNew: true,
-  },
-  {
-    id: 'inteligencia-logistica',
-    icon: BarChart2,
-    label: 'Intel. Logística',
-    shortLabel: 'Intel.',
-    color: 'text-cyan-500',
-    activeColor: 'bg-gradient-to-r from-cyan-500 to-blue-600',
     isNew: true,
   },
 ];

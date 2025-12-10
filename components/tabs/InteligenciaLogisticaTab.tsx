@@ -1,18 +1,15 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   Package,
   Search,
-  Filter,
   AlertTriangle,
   Clock,
   MapPin,
-  Phone,
   ChevronDown,
   ChevronUp,
   Truck,
   Calendar,
   AlertCircle,
-  Download,
   CheckCircle2,
   XCircle,
   Eye,
@@ -21,7 +18,6 @@ import {
   BarChart3,
   FileSpreadsheet,
   Bell,
-  Target,
   Lightbulb,
   Activity,
   Zap,
@@ -33,42 +29,39 @@ import {
   ArrowDownRight,
   Minus,
   Building2,
-  Users,
   Timer,
   AlertOctagon,
   ShieldAlert,
   Info,
   ChevronRight,
   X,
+  Upload,
+  FileUp,
+  Table,
 } from 'lucide-react';
-import { Shipment, ShipmentStatus, CarrierName, ShipmentEvent } from '../../types';
-import { AlertLevel } from '../../types/logistics';
-import {
-  detectarGuiasRetrasadas,
-  calcularDiasSinMovimiento,
-} from '../../utils/patternDetection';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-
-interface InteligenciaLogisticaTabProps {
-  shipments: Shipment[];
-}
 
 // =====================================
 // INTERFACES
 // =====================================
+interface EventoLogistico {
+  fecha: string;
+  ubicacion: string;
+  descripcion: string;
+}
+
 interface GuiaLogistica {
-  guia: Shipment;
   numeroGuia: string;
+  telefono?: string;
   transportadora: string;
   ciudadOrigen: string;
   ciudadDestino: string;
   estadoActual: string;
   diasTranscurridos: number;
-  novedad: string | null;
-  novedadSolucionada: boolean;
-  ultimos2Estados: { fecha: string; estado: string; ubicacion: string }[];
-  historialCompleto: ShipmentEvent[];
+  tieneNovedad: boolean;
+  ultimos2Estados: EventoLogistico[];
+  historialCompleto: EventoLogistico[];
 }
 
 interface AlertaLogistica {
@@ -106,13 +99,13 @@ const getStatusColor = (status: string): { bg: string; text: string; border: str
   if (statusLower.includes('entregado') || statusLower === 'delivered') {
     return { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400', border: 'border-emerald-200 dark:border-emerald-800', dot: 'bg-emerald-500' };
   }
-  if (statusLower.includes('reparto') || statusLower.includes('tránsito') || statusLower.includes('transito')) {
+  if (statusLower.includes('reparto') || statusLower.includes('tránsito') || statusLower.includes('transito') || statusLower.includes('viajando') || statusLower.includes('camino')) {
     return { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-400', border: 'border-blue-200 dark:border-blue-800', dot: 'bg-blue-500' };
   }
-  if (statusLower.includes('oficina') || statusLower.includes('centro')) {
+  if (statusLower.includes('oficina') || statusLower.includes('centro') || statusLower.includes('recogido')) {
     return { bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-700 dark:text-purple-400', border: 'border-purple-200 dark:border-purple-800', dot: 'bg-purple-500' };
   }
-  if (statusLower.includes('novedad') || statusLower.includes('devuelto') || statusLower.includes('rechaz')) {
+  if (statusLower.includes('novedad') || statusLower.includes('devuelto') || statusLower.includes('rechaz') || statusLower.includes('alerta') || statusLower.includes('no logramos')) {
     return { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-400', border: 'border-red-200 dark:border-red-800', dot: 'bg-red-500' };
   }
   if (statusLower.includes('pendiente') || statusLower.includes('reclamo')) {
@@ -123,18 +116,124 @@ const getStatusColor = (status: string): { bg: string; text: string; border: str
 
 const formatDate = (dateStr: string): string => {
   try {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    // Manejar formato "2025-11-29 10:20"
+    const parts = dateStr.split(' ');
+    if (parts.length >= 2) {
+      const datePart = parts[0];
+      const timePart = parts[1];
+      const [year, month, day] = datePart.split('-');
+      const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      return `${day} de ${months[parseInt(month) - 1]} de ${year}, ${timePart}`;
+    }
+    return dateStr;
   } catch {
     return dateStr;
   }
 };
 
 // =====================================
+// PARSER DE TEXTO DE TRACKING
+// =====================================
+const parseTrackingText = (text: string): GuiaLogistica[] => {
+  const guias: GuiaLogistica[] = [];
+  const blocks = text.split('======================================').filter(b => b.trim());
+
+  for (const block of blocks) {
+    const lines = block.trim().split('\n').filter(l => l.trim());
+    if (lines.length < 3) continue;
+
+    let numeroGuia = '';
+    let estadoPaquete = '';
+    let diasTranscurridos = 0;
+    let ciudadOrigen = 'Colombia';
+    let ciudadDestino = 'Desconocido';
+    let transportadora = '';
+    const eventos: EventoLogistico[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      // Número de guía
+      if (line.startsWith('Número:')) {
+        numeroGuia = line.replace('Número:', '').trim();
+      }
+      // Estatus del paquete
+      else if (line.startsWith('Estatus del paquete:')) {
+        const match = line.match(/Estatus del paquete:\s*(.+?)\s*\((\d+)\s*Días?\)/i);
+        if (match) {
+          estadoPaquete = match[1].trim();
+          diasTranscurridos = parseInt(match[2]);
+        } else {
+          estadoPaquete = line.replace('Estatus del paquete:', '').trim();
+        }
+      }
+      // País (ruta)
+      else if (line.startsWith('País:')) {
+        const rutaMatch = line.match(/País:\s*(.+?)\s*->\s*(.+)/);
+        if (rutaMatch) {
+          ciudadOrigen = rutaMatch[1].trim();
+          ciudadDestino = rutaMatch[2].trim();
+        }
+      }
+      // Transportadora
+      else if (line.includes('(') && line.includes(')') && !line.match(/^\d{4}-\d{2}-\d{2}/)) {
+        transportadora = line.split('(')[0].trim();
+      }
+      // Eventos de tracking (líneas que empiezan con fecha)
+      else if (line.match(/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/)) {
+        const eventoMatch = line.match(/^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})\s+(.+?)\s+(.+)$/);
+        if (eventoMatch) {
+          eventos.push({
+            fecha: eventoMatch[1],
+            ubicacion: eventoMatch[2].trim(),
+            descripcion: eventoMatch[3].trim(),
+          });
+        }
+      }
+    }
+
+    if (numeroGuia) {
+      // Detectar novedad
+      const tieneNovedad = estadoPaquete.toLowerCase().includes('alerta') ||
+                          estadoPaquete.toLowerCase().includes('novedad') ||
+                          estadoPaquete.toLowerCase().includes('devuelto') ||
+                          eventos.some(e => e.descripcion.toLowerCase().includes('devuelto') ||
+                                           e.descripcion.toLowerCase().includes('no logramos'));
+
+      // Determinar estado actual basado en el último evento
+      let estadoActual = estadoPaquete;
+      if (eventos.length > 0) {
+        const ultimoEvento = eventos[0].descripcion.toLowerCase();
+        if (ultimoEvento.includes('entregado')) estadoActual = 'Entregado';
+        else if (ultimoEvento.includes('devuelto')) estadoActual = 'Tu envío Fue devuelto';
+        else if (ultimoEvento.includes('centro logístico destino') || ultimoEvento.includes('recoger')) estadoActual = 'En Centro Logístico Destino';
+        else if (ultimoEvento.includes('viajando') || ultimoEvento.includes('camino')) estadoActual = 'En Reparto';
+        else if (ultimoEvento.includes('recibimos')) estadoActual = 'Recibido';
+      }
+
+      guias.push({
+        numeroGuia,
+        transportadora: transportadora || 'Desconocido',
+        ciudadOrigen,
+        ciudadDestino,
+        estadoActual,
+        diasTranscurridos,
+        tieneNovedad,
+        ultimos2Estados: eventos.slice(0, 2),
+        historialCompleto: eventos,
+      });
+    }
+  }
+
+  return guias;
+};
+
+// =====================================
 // COMPONENTE PRINCIPAL
 // =====================================
-export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> = ({ shipments }) => {
+export const InteligenciaLogisticaTab: React.FC = () => {
   // Estados
+  const [guiasLogisticas, setGuiasLogisticas] = useState<GuiaLogistica[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filtroTransportadora, setFiltroTransportadora] = useState<string>('ALL');
   const [filtroEstado, setFiltroEstado] = useState<string>('ALL');
@@ -146,41 +245,48 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [activeMetricFilter, setActiveMetricFilter] = useState<string | null>(null);
   const [showAlertas, setShowAlertas] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [textInput, setTextInput] = useState('');
 
-  // Procesar guías con información logística
-  const guiasLogisticas = useMemo((): GuiaLogistica[] => {
-    return shipments.map(shipment => {
-      const eventos = shipment.detailedInfo?.events || [];
-      const diasTranscurridos = shipment.detailedInfo?.daysInTransit || calcularDiasSinMovimiento(shipment);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-      // Obtener últimos 2 estados
-      const ultimos2Estados = eventos.slice(0, 2).map(e => ({
-        fecha: e.date,
-        estado: e.description,
-        ubicacion: e.location
-      }));
+  // Cargar datos desde texto
+  const handleLoadFromText = () => {
+    if (!textInput.trim()) return;
+    setIsLoading(true);
+    try {
+      const guias = parseTrackingText(textInput);
+      setGuiasLogisticas(guias);
+      setShowUploadModal(false);
+      setTextInput('');
+    } catch (error) {
+      console.error('Error parsing text:', error);
+      alert('Error al procesar el texto. Verifica el formato.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      // Detectar novedad
-      const estadoActual = shipment.detailedInfo?.rawStatus || shipment.status;
-      const tieneNovedad = estadoActual.toLowerCase().includes('novedad') ||
-                          estadoActual.toLowerCase().includes('devuelto') ||
-                          estadoActual.toLowerCase().includes('rechaz');
+  // Cargar datos desde archivo Excel/TXT
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-      return {
-        guia: shipment,
-        numeroGuia: shipment.id,
-        transportadora: shipment.carrier,
-        ciudadOrigen: shipment.detailedInfo?.origin || 'N/A',
-        ciudadDestino: shipment.detailedInfo?.destination || 'N/A',
-        estadoActual: estadoActual,
-        diasTranscurridos,
-        novedad: tieneNovedad ? estadoActual : null,
-        novedadSolucionada: false,
-        ultimos2Estados,
-        historialCompleto: eventos,
-      };
-    });
-  }, [shipments]);
+    setIsLoading(true);
+    try {
+      const text = await file.text();
+      const guias = parseTrackingText(text);
+      setGuiasLogisticas(guias);
+      setShowUploadModal(false);
+    } catch (error) {
+      console.error('Error reading file:', error);
+      alert('Error al leer el archivo.');
+    } finally {
+      setIsLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   // Estadísticas en tiempo real
   const estadisticas = useMemo(() => {
@@ -189,12 +295,11 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
       g.estadoActual.toLowerCase().includes('entregado')
     ).length;
     const enReparto = guiasLogisticas.filter(g =>
-      g.estadoActual.toLowerCase().includes('reparto')
+      g.estadoActual.toLowerCase().includes('reparto') || g.estadoActual.toLowerCase().includes('viajando')
     ).length;
-    const conNovedad = guiasLogisticas.filter(g => g.novedad !== null).length;
-    const enReclamo = guiasLogisticas.filter(g =>
-      g.estadoActual.toLowerCase().includes('reclamo') ||
-      g.estadoActual.toLowerCase().includes('oficina')
+    const conNovedad = guiasLogisticas.filter(g => g.tieneNovedad).length;
+    const enCentro = guiasLogisticas.filter(g =>
+      g.estadoActual.toLowerCase().includes('centro') || g.estadoActual.toLowerCase().includes('oficina')
     ).length;
     const devueltas = guiasLogisticas.filter(g =>
       g.estadoActual.toLowerCase().includes('devuelto')
@@ -215,7 +320,7 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
       tasaEntrega,
       tasaDevolucion,
       conNovedadSinResolver: conNovedad,
-      enReclamoOficina: enReclamo,
+      enReclamoOficina: enCentro,
       promedioDiasEntrega,
       total,
       entregadas,
@@ -236,73 +341,41 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
       alertasGeneradas.push({
         id: 'critico-sin-movimiento',
         tipo: 'critico',
-        titulo: `${sinMovimiento5Dias.length} guías sin movimiento (+5 días)`,
-        descripcion: 'Guías estancadas que requieren acción inmediata',
+        titulo: `${sinMovimiento5Dias.length} guías con +5 días`,
+        descripcion: 'Guías que requieren acción inmediata',
         guiasAfectadas: sinMovimiento5Dias.map(g => g.numeroGuia),
         accion: 'Contactar transportadora urgente',
         icono: AlertOctagon
       });
     }
 
-    // Alertas URGENTES: Reclamo en oficina > 3 días
-    const reclamoOficina3Dias = guiasLogisticas.filter(g =>
-      (g.estadoActual.toLowerCase().includes('reclamo') || g.estadoActual.toLowerCase().includes('oficina')) &&
-      g.diasTranscurridos > 3
+    // Alertas URGENTES: Guías devueltas
+    const devueltas = guiasLogisticas.filter(g =>
+      g.estadoActual.toLowerCase().includes('devuelto')
     );
-    if (reclamoOficina3Dias.length > 0) {
+    if (devueltas.length > 0) {
       alertasGeneradas.push({
-        id: 'urgente-reclamo-oficina',
+        id: 'urgente-devueltas',
         tipo: 'urgente',
-        titulo: `${reclamoOficina3Dias.length} guías en Reclamo/Oficina (+3 días)`,
-        descripcion: 'Cliente debe recoger o gestionar novedad',
-        guiasAfectadas: reclamoOficina3Dias.map(g => g.numeroGuia),
-        accion: 'Llamar al cliente',
+        titulo: `${devueltas.length} guías devueltas`,
+        descripcion: 'Envíos que fueron devueltos',
+        guiasAfectadas: devueltas.map(g => g.numeroGuia),
+        accion: 'Gestionar reenvío o contactar cliente',
         icono: ShieldAlert
       });
     }
 
-    // Alertas ATENCIÓN: Novedades sin solucionar > 24h
-    const novedadesSinResolver = guiasLogisticas.filter(g =>
-      g.novedad !== null && g.diasTranscurridos > 1
-    );
-    if (novedadesSinResolver.length > 0) {
+    // Alertas ATENCIÓN: Novedades
+    const novedades = guiasLogisticas.filter(g => g.tieneNovedad && !g.estadoActual.toLowerCase().includes('devuelto'));
+    if (novedades.length > 0) {
       alertasGeneradas.push({
         id: 'atencion-novedades',
         tipo: 'atencion',
-        titulo: `${novedadesSinResolver.length} novedades sin resolver (+24h)`,
+        titulo: `${novedades.length} guías con novedad`,
         descripcion: 'Novedades que necesitan gestión',
-        guiasAfectadas: novedadesSinResolver.map(g => g.numeroGuia),
+        guiasAfectadas: novedades.map(g => g.numeroGuia),
         accion: 'Gestionar novedad',
         icono: AlertTriangle
-      });
-    }
-
-    // Alertas ADVERTENCIA: Ciudades con baja tasa de entrega
-    const ciudadesConGuias: Record<string, { total: number; entregadas: number }> = {};
-    guiasLogisticas.forEach(g => {
-      const ciudad = g.ciudadDestino;
-      if (!ciudadesConGuias[ciudad]) ciudadesConGuias[ciudad] = { total: 0, entregadas: 0 };
-      ciudadesConGuias[ciudad].total++;
-      if (g.estadoActual.toLowerCase().includes('entregado')) {
-        ciudadesConGuias[ciudad].entregadas++;
-      }
-    });
-
-    const ciudadesProblematicas = Object.entries(ciudadesConGuias)
-      .filter(([, data]) => data.total >= 3 && (data.entregadas / data.total) < 0.5)
-      .map(([ciudad]) => ciudad);
-
-    if (ciudadesProblematicas.length > 0) {
-      alertasGeneradas.push({
-        id: 'advertencia-ciudades',
-        tipo: 'advertencia',
-        titulo: `${ciudadesProblematicas.length} ciudades con tasa de entrega <50%`,
-        descripcion: `Ciudades: ${ciudadesProblematicas.slice(0, 3).join(', ')}${ciudadesProblematicas.length > 3 ? '...' : ''}`,
-        guiasAfectadas: guiasLogisticas
-          .filter(g => ciudadesProblematicas.includes(g.ciudadDestino))
-          .map(g => g.numeroGuia),
-        accion: 'Revisar rutas',
-        icono: Info
       });
     }
 
@@ -311,51 +384,38 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
 
   // Análisis de patrones
   const patrones = useMemo((): PatronAnalisis[] => {
-    const transportadorasCount: Record<string, { total: number; entregadas: number; tiempoTotal: number }> = {};
-    const novedadesCount: Record<string, number> = {};
-    const diasSemanaEntregas: Record<string, number> = { Lun: 0, Mar: 0, Mie: 0, Jue: 0, Vie: 0, Sab: 0, Dom: 0 };
+    if (guiasLogisticas.length === 0) return [];
+
+    const transportadorasCount: Record<string, { total: number; entregadas: number }> = {};
+    const ciudadesProblemas: Record<string, number> = {};
 
     guiasLogisticas.forEach(g => {
       // Transportadoras
       if (!transportadorasCount[g.transportadora]) {
-        transportadorasCount[g.transportadora] = { total: 0, entregadas: 0, tiempoTotal: 0 };
+        transportadorasCount[g.transportadora] = { total: 0, entregadas: 0 };
       }
       transportadorasCount[g.transportadora].total++;
       if (g.estadoActual.toLowerCase().includes('entregado')) {
         transportadorasCount[g.transportadora].entregadas++;
-        transportadorasCount[g.transportadora].tiempoTotal += g.diasTranscurridos;
       }
 
-      // Novedades
-      if (g.novedad) {
-        const tipoNovedad = g.novedad.split(' ').slice(0, 2).join(' ');
-        novedadesCount[tipoNovedad] = (novedadesCount[tipoNovedad] || 0) + 1;
+      // Ciudades problemáticas
+      if (g.tieneNovedad || g.diasTranscurridos > 5) {
+        ciudadesProblemas[g.ciudadDestino] = (ciudadesProblemas[g.ciudadDestino] || 0) + 1;
       }
     });
 
-    // Mejor transportadora (mayor tasa de entrega)
     const mejorTransportadora = Object.entries(transportadorasCount)
       .filter(([, d]) => d.total >= 2)
       .sort((a, b) => (b[1].entregadas / b[1].total) - (a[1].entregadas / a[1].total))[0];
 
-    // Transportadora con más retrasos
     const peorTransportadora = Object.entries(transportadorasCount)
       .filter(([, d]) => d.total >= 2)
       .sort((a, b) => (a[1].entregadas / a[1].total) - (b[1].entregadas / b[1].total))[0];
 
-    // Ciudad más problemática
-    const ciudadesProblemas: Record<string, number> = {};
-    guiasLogisticas.forEach(g => {
-      if (g.novedad || g.diasTranscurridos > 5) {
-        ciudadesProblemas[g.ciudadDestino] = (ciudadesProblemas[g.ciudadDestino] || 0) + 1;
-      }
-    });
     const ciudadProblematica = Object.entries(ciudadesProblemas).sort((a, b) => b[1] - a[1])[0];
 
-    // Novedad más frecuente
-    const novedadFrecuente = Object.entries(novedadesCount).sort((a, b) => b[1] - a[1])[0];
-
-    const patronesResult: PatronAnalisis[] = [
+    return [
       {
         titulo: 'Mejor Transportadora',
         valor: mejorTransportadora ? mejorTransportadora[0] : 'N/A',
@@ -380,104 +440,42 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
         icono: MapPin,
         color: 'amber'
       },
-      {
-        titulo: 'Novedad Frecuente',
-        valor: novedadFrecuente ? novedadFrecuente[0] : 'N/A',
-        detalle: novedadFrecuente ? `${novedadFrecuente[1]} casos` : '',
-        tendencia: 'stable',
-        icono: AlertCircle,
-        color: 'purple'
-      },
     ];
-
-    return patronesResult;
   }, [guiasLogisticas]);
 
   // Recomendaciones IA
   const recomendaciones = useMemo((): RecomendacionIA[] => {
+    if (guiasLogisticas.length === 0) return [];
     const recs: RecomendacionIA[] = [];
 
-    // Analizar patrones y generar recomendaciones
-    const transportadorasStats: Record<string, { total: number; entregadas: number; ciudad: string }> = {};
-    guiasLogisticas.forEach(g => {
-      const key = `${g.transportadora}-${g.ciudadDestino}`;
-      if (!transportadorasStats[key]) {
-        transportadorasStats[key] = { total: 0, entregadas: 0, ciudad: g.ciudadDestino };
-      }
-      transportadorasStats[key].total++;
-      if (g.estadoActual.toLowerCase().includes('entregado')) {
-        transportadorasStats[key].entregadas++;
-      }
-    });
-
-    // Recomendación por baja tasa de entrega
-    Object.entries(transportadorasStats)
-      .filter(([, d]) => d.total >= 3 && (d.entregadas / d.total) < 0.4)
-      .slice(0, 2)
-      .forEach(([key, data]) => {
-        const [transportadora, ciudad] = key.split('-');
-        recs.push({
-          id: `rec-evitar-${key}`,
-          texto: `Considera evitar ${transportadora} para ${ciudad}, tasa de entrega ${Math.round((data.entregadas / data.total) * 100)}%`,
-          impacto: 'alto',
-          guiasRelacionadas: data.total
-        });
-      });
-
-    // Guías que requieren llamada urgente
     const guiasUrgentes = guiasLogisticas.filter(g =>
-      g.diasTranscurridos > 3 &&
-      !g.estadoActual.toLowerCase().includes('entregado') &&
-      (g.estadoActual.toLowerCase().includes('oficina') || g.estadoActual.toLowerCase().includes('novedad'))
+      g.diasTranscurridos > 3 && !g.estadoActual.toLowerCase().includes('entregado')
     ).length;
 
     if (guiasUrgentes > 0) {
       recs.push({
         id: 'rec-llamadas-urgentes',
-        texto: `${guiasUrgentes} guías requieren llamada urgente hoy`,
+        texto: `${guiasUrgentes} guías requieren seguimiento urgente hoy`,
         impacto: 'alto',
         guiasRelacionadas: guiasUrgentes
       });
     }
 
-    // Comparación de transportadoras
-    const transportadorasTiempo: Record<string, { total: number; tiempoTotal: number }> = {};
-    guiasLogisticas.forEach(g => {
-      if (g.estadoActual.toLowerCase().includes('entregado')) {
-        if (!transportadorasTiempo[g.transportadora]) {
-          transportadorasTiempo[g.transportadora] = { total: 0, tiempoTotal: 0 };
-        }
-        transportadorasTiempo[g.transportadora].total++;
-        transportadorasTiempo[g.transportadora].tiempoTotal += g.diasTranscurridos;
-      }
-    });
-
-    const transportadorasOrdenadas = Object.entries(transportadorasTiempo)
-      .filter(([, d]) => d.total >= 2)
-      .map(([t, d]) => ({ transportadora: t, promedio: d.tiempoTotal / d.total }))
-      .sort((a, b) => a.promedio - b.promedio);
-
-    if (transportadorasOrdenadas.length >= 2) {
-      const mejor = transportadorasOrdenadas[0];
-      const peor = transportadorasOrdenadas[transportadorasOrdenadas.length - 1];
-      const diferencia = Math.round(peor.promedio - mejor.promedio);
-      if (diferencia >= 1) {
-        recs.push({
-          id: 'rec-comparativa',
-          texto: `${mejor.transportadora} entrega ${diferencia} días más rápido que ${peor.transportadora} en promedio`,
-          impacto: 'medio'
-        });
-      }
+    const devueltas = guiasLogisticas.filter(g => g.estadoActual.toLowerCase().includes('devuelto')).length;
+    if (devueltas > 0) {
+      recs.push({
+        id: 'rec-devueltas',
+        texto: `Hay ${devueltas} guías devueltas pendientes de gestión`,
+        impacto: 'alto',
+        guiasRelacionadas: devueltas
+      });
     }
 
-    // Tendencia general
-    const guiasActivas = guiasLogisticas.filter(g => !g.estadoActual.toLowerCase().includes('entregado')).length;
-    if (guiasActivas > 10 && estadisticas.conNovedadSinResolver > guiasActivas * 0.3) {
+    if (estadisticas.tasaEntrega < 70 && guiasLogisticas.length >= 5) {
       recs.push({
-        id: 'rec-novedades-alta',
-        texto: `Alto porcentaje de novedades (${Math.round((estadisticas.conNovedadSinResolver / guiasActivas) * 100)}%), revisar proceso de validación de direcciones`,
-        impacto: 'medio',
-        guiasRelacionadas: estadisticas.conNovedadSinResolver
+        id: 'rec-tasa-baja',
+        texto: `Tasa de entrega baja (${estadisticas.tasaEntrega}%), revisar procesos`,
+        impacto: 'medio'
       });
     }
 
@@ -496,7 +494,6 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
   const guiasFiltradas = useMemo(() => {
     let resultado = [...guiasLogisticas];
 
-    // Filtro por métrica activa
     if (activeMetricFilter) {
       switch (activeMetricFilter) {
         case 'activas':
@@ -506,18 +503,17 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
           );
           break;
         case 'conNovedad':
-          resultado = resultado.filter(g => g.novedad !== null);
+          resultado = resultado.filter(g => g.tieneNovedad);
           break;
-        case 'enReclamo':
+        case 'enCentro':
           resultado = resultado.filter(g =>
-            g.estadoActual.toLowerCase().includes('reclamo') ||
+            g.estadoActual.toLowerCase().includes('centro') ||
             g.estadoActual.toLowerCase().includes('oficina')
           );
           break;
       }
     }
 
-    // Búsqueda
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       resultado = resultado.filter(g =>
@@ -527,7 +523,6 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
       );
     }
 
-    // Filtros
     if (filtroTransportadora !== 'ALL') {
       resultado = resultado.filter(g => g.transportadora === filtroTransportadora);
     }
@@ -542,12 +537,11 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
       resultado = resultado.filter(g => g.diasTranscurridos >= dias);
     }
     if (filtroNovedad === 'CON') {
-      resultado = resultado.filter(g => g.novedad !== null);
+      resultado = resultado.filter(g => g.tieneNovedad);
     } else if (filtroNovedad === 'SIN') {
-      resultado = resultado.filter(g => g.novedad === null);
+      resultado = resultado.filter(g => !g.tieneNovedad);
     }
 
-    // Ordenamiento
     resultado.sort((a, b) => {
       let comparison = 0;
       switch (sortColumn) {
@@ -574,25 +568,63 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
 
   // Exportar a Excel
   const exportarExcel = useCallback(() => {
-    const datosExport = guiasFiltradas.map(g => ({
+    const fechaExport = new Date().toLocaleDateString('es-CO').replace(/\//g, '-');
+
+    // Hoja 1: Resumen
+    const datosResumen = guiasFiltradas.map(g => ({
       'Número de Guía': g.numeroGuia,
       'Transportadora': g.transportadora,
       'Ciudad Origen': g.ciudadOrigen,
       'Ciudad Destino': g.ciudadDestino,
       'Estado Actual': g.estadoActual,
       'Días Transcurridos': g.diasTranscurridos,
-      'Novedad': g.novedad || 'Sin novedad',
-      'Último Estado 1': g.ultimos2Estados[0]?.estado || '',
-      'Fecha Estado 1': g.ultimos2Estados[0]?.fecha || '',
-      'Último Estado 2': g.ultimos2Estados[1]?.estado || '',
-      'Fecha Estado 2': g.ultimos2Estados[1]?.fecha || '',
+      'Novedad': g.tieneNovedad ? 'Sí' : 'No',
+      'Último Estado': g.ultimos2Estados[0]?.descripcion || '',
+      'Fecha Último Estado': g.ultimos2Estados[0]?.fecha || '',
+      'Ubicación': g.ultimos2Estados[0]?.ubicacion || '',
     }));
 
-    const ws = XLSX.utils.json_to_sheet(datosExport);
+    // Hoja 2: Historial detallado
+    const datosHistorial: any[] = [];
+    guiasFiltradas.forEach(g => {
+      g.historialCompleto.forEach((evento, idx) => {
+        datosHistorial.push({
+          'Número de Guía': g.numeroGuia,
+          'Transportadora': g.transportadora,
+          'Orden': idx + 1,
+          'Fecha': evento.fecha,
+          'Ubicación': evento.ubicacion,
+          'Descripción': evento.descripcion,
+        });
+      });
+    });
+
+    // Hoja 3: Estadísticas
+    const datosEstadisticas = [
+      { 'Métrica': 'Total de Guías', 'Valor': guiasFiltradas.length },
+      { 'Métrica': 'Guías Entregadas', 'Valor': estadisticas.entregadas },
+      { 'Métrica': 'Tasa de Entrega', 'Valor': `${estadisticas.tasaEntrega}%` },
+      { 'Métrica': 'Guías con Novedad', 'Valor': estadisticas.conNovedadSinResolver },
+      { 'Métrica': 'Promedio Días Entrega', 'Valor': estadisticas.promedioDiasEntrega },
+      { 'Métrica': 'Fecha de Generación', 'Valor': new Date().toLocaleString('es-CO') },
+    ];
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Inteligencia Logística');
-    XLSX.writeFile(wb, `inteligencia_logistica_${new Date().toISOString().split('T')[0]}.xlsx`);
-  }, [guiasFiltradas]);
+    const wsResumen = XLSX.utils.json_to_sheet(datosResumen);
+    const wsHistorial = XLSX.utils.json_to_sheet(datosHistorial);
+    const wsEstadisticas = XLSX.utils.json_to_sheet(datosEstadisticas);
+
+    wsResumen['!cols'] = [
+      { wch: 18 }, { wch: 18 }, { wch: 15 }, { wch: 20 }, { wch: 25 },
+      { wch: 8 }, { wch: 8 }, { wch: 40 }, { wch: 18 }, { wch: 25 },
+    ];
+
+    XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen Logístico');
+    XLSX.utils.book_append_sheet(wb, wsHistorial, 'Historial Detallado');
+    XLSX.utils.book_append_sheet(wb, wsEstadisticas, 'Estadísticas');
+
+    XLSX.writeFile(wb, `Inteligencia_Logistica_${fechaExport}.xlsx`);
+  }, [guiasFiltradas, estadisticas]);
 
   // Exportar alertas a PDF
   const exportarAlertasPDF = useCallback(() => {
@@ -609,9 +641,7 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
         y = 20;
       }
       doc.setFontSize(12);
-      doc.setTextColor(alerta.tipo === 'critico' ? 255 : alerta.tipo === 'urgente' ? 200 : 100, 0, 0);
       doc.text(`${index + 1}. [${alerta.tipo.toUpperCase()}] ${alerta.titulo}`, 20, y);
-      doc.setTextColor(0, 0, 0);
       doc.setFontSize(10);
       y += 7;
       doc.text(`   ${alerta.descripcion}`, 20, y);
@@ -653,6 +683,132 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
 
   const tieneFilrosActivos = searchQuery || filtroTransportadora !== 'ALL' || filtroEstado !== 'ALL' || filtroCiudad !== 'ALL' || filtroDias !== 'ALL' || filtroNovedad !== 'ALL' || activeMetricFilter;
 
+  // Vista cuando no hay datos
+  if (guiasLogisticas.length === 0) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl">
+                <Activity className="w-6 h-6 text-white" />
+              </div>
+              Inteligencia Logística
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">
+              Vista operativa de análisis de guías - Solo lectura
+            </p>
+          </div>
+        </div>
+
+        {/* Panel de carga */}
+        <div className="bg-white dark:bg-navy-900 rounded-2xl border-2 border-dashed border-slate-300 dark:border-navy-600 p-12 text-center">
+          <div className="w-20 h-20 bg-gradient-to-br from-cyan-100 to-blue-100 dark:from-cyan-900/30 dark:to-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Upload className="w-10 h-10 text-cyan-600 dark:text-cyan-400" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
+            Cargar Datos de Tracking
+          </h3>
+          <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
+            Carga un archivo con los datos de seguimiento de guías o pega el texto directamente
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl font-bold hover:from-cyan-600 hover:to-blue-700 transition-all shadow-lg"
+            >
+              <FileUp className="w-5 h-5" />
+              Cargar Datos
+            </button>
+          </div>
+        </div>
+
+        {/* Modal de carga */}
+        {showUploadModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-navy-900 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-2xl">
+              <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-navy-700">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <FileUp className="w-5 h-5 text-cyan-500" />
+                  Cargar Datos de Tracking
+                </h3>
+                <button
+                  onClick={() => setShowUploadModal(false)}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-navy-800 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-4 space-y-4">
+                {/* Subir archivo */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Subir archivo (.txt)
+                  </label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".txt,.csv"
+                    onChange={handleFileUpload}
+                    className="w-full px-4 py-3 border-2 border-dashed border-slate-300 dark:border-navy-600 rounded-xl cursor-pointer hover:border-cyan-400 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-cyan-500 file:text-white file:font-medium"
+                  />
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 h-px bg-slate-200 dark:bg-navy-700"></div>
+                  <span className="text-sm text-slate-400">o pega el texto</span>
+                  <div className="flex-1 h-px bg-slate-200 dark:bg-navy-700"></div>
+                </div>
+
+                {/* Pegar texto */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Pegar datos de tracking
+                  </label>
+                  <textarea
+                    value={textInput}
+                    onChange={(e) => setTextInput(e.target.value)}
+                    placeholder={`Número:  240040701342
+Estatus del paquete:  Entregado (4 Días)
+País:  Colombia -> Desconocido
+Inter Rapidisimo (INTER RAPIDÍSIMO):
+2025-11-29 10:20 ROZO PAL VALL Tú envío fue entregado
+2025-11-28 09:53 ROZO PAL VALL En Centro Logístico Destino
+======================================`}
+                    className="w-full h-48 px-4 py-3 bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-700 rounded-xl text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  />
+                </div>
+
+                <button
+                  onClick={handleLoadFromText}
+                  disabled={!textInput.trim() || isLoading}
+                  className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
+                    textInput.trim() && !isLoading
+                      ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700'
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  }`}
+                >
+                  {isLoading ? (
+                    <>
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                      Procesando...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-5 h-5" />
+                      Cargar Datos
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -665,16 +821,23 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
             Inteligencia Logística
           </h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1">
-            Vista operativa de análisis de guías - Solo lectura
+            {guiasLogisticas.length} guías cargadas - Vista de solo lectura
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-medium transition-all"
+          >
+            <Upload className="w-4 h-4" />
+            Cargar Datos
+          </button>
           <button
             onClick={exportarExcel}
             className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition-all"
           >
-            <FileSpreadsheet className="w-4 h-4" />
+            <Table className="w-4 h-4" />
             Exportar Excel
           </button>
           <button
@@ -683,6 +846,13 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
           >
             <FileText className="w-4 h-4" />
             Alertas PDF
+          </button>
+          <button
+            onClick={() => setGuiasLogisticas([])}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-200 dark:bg-navy-700 text-slate-600 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-300 dark:hover:bg-navy-600 transition-all"
+          >
+            <X className="w-4 h-4" />
+            Limpiar
           </button>
         </div>
       </div>
@@ -704,9 +874,7 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
           <p className="text-2xl font-bold text-slate-800 dark:text-white">{estadisticas.totalActivas}</p>
         </div>
 
-        <div
-          className="p-4 rounded-xl border bg-white dark:bg-navy-900 border-slate-200 dark:border-navy-700"
-        >
+        <div className="p-4 rounded-xl border bg-white dark:bg-navy-900 border-slate-200 dark:border-navy-700">
           <div className="flex items-center gap-2 mb-2">
             <CheckCircle2 className="w-5 h-5 text-emerald-500" />
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Tasa Entrega</span>
@@ -714,12 +882,10 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
           <p className="text-2xl font-bold text-emerald-600">{estadisticas.tasaEntrega}%</p>
         </div>
 
-        <div
-          className="p-4 rounded-xl border bg-white dark:bg-navy-900 border-slate-200 dark:border-navy-700"
-        >
+        <div className="p-4 rounded-xl border bg-white dark:bg-navy-900 border-slate-200 dark:border-navy-700">
           <div className="flex items-center gap-2 mb-2">
             <XCircle className="w-5 h-5 text-red-500" />
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Tasa Devolución</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Devolución</span>
           </div>
           <p className="text-2xl font-bold text-red-600">{estadisticas.tasaDevolucion}%</p>
         </div>
@@ -740,23 +906,21 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
         </div>
 
         <div
-          onClick={() => handleMetricClick('enReclamo')}
+          onClick={() => handleMetricClick('enCentro')}
           className={`p-4 rounded-xl border cursor-pointer transition-all ${
-            activeMetricFilter === 'enReclamo'
+            activeMetricFilter === 'enCentro'
               ? 'bg-purple-100 dark:bg-purple-900/40 border-purple-400 ring-2 ring-purple-400'
               : 'bg-white dark:bg-navy-900 border-slate-200 dark:border-navy-700 hover:border-purple-300'
           }`}
         >
           <div className="flex items-center gap-2 mb-2">
             <Building2 className="w-5 h-5 text-purple-500" />
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">En Oficina</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">En Centro</span>
           </div>
           <p className="text-2xl font-bold text-purple-600">{estadisticas.enReclamoOficina}</p>
         </div>
 
-        <div
-          className="p-4 rounded-xl border bg-white dark:bg-navy-900 border-slate-200 dark:border-navy-700"
-        >
+        <div className="p-4 rounded-xl border bg-white dark:bg-navy-900 border-slate-200 dark:border-navy-700">
           <div className="flex items-center gap-2 mb-2">
             <Timer className="w-5 h-5 text-cyan-500" />
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Prom. Días</span>
@@ -780,10 +944,6 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
                 <h3 className="font-bold text-slate-800 dark:text-white">
                   {alertas.length} Alertas Activas
                 </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {alertas.filter(a => a.tipo === 'critico').length} críticas,
-                  {alertas.filter(a => a.tipo === 'urgente').length} urgentes
-                </p>
               </div>
             </div>
             {showAlertas ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
@@ -793,13 +953,13 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
             <div className="px-4 pb-4 space-y-3">
               {alertas.map(alerta => {
                 const AlertIcon = alerta.icono;
-                const colors = {
+                const colors: Record<string, string> = {
                   critico: 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700',
                   urgente: 'bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700',
                   atencion: 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700',
                   advertencia: 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700',
                 };
-                const textColors = {
+                const textColors: Record<string, string> = {
                   critico: 'text-red-700 dark:text-red-400',
                   urgente: 'text-orange-700 dark:text-orange-400',
                   atencion: 'text-amber-700 dark:text-amber-400',
@@ -807,10 +967,7 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
                 };
 
                 return (
-                  <div
-                    key={alerta.id}
-                    className={`p-4 rounded-lg border ${colors[alerta.tipo]} flex items-start gap-4`}
-                  >
+                  <div key={alerta.id} className={`p-4 rounded-lg border ${colors[alerta.tipo]} flex items-start gap-4`}>
                     <AlertIcon className={`w-5 h-5 ${textColors[alerta.tipo]} flex-shrink-0 mt-0.5`} />
                     <div className="flex-1 min-w-0">
                       <h4 className={`font-bold ${textColors[alerta.tipo]}`}>{alerta.titulo}</h4>
@@ -833,88 +990,85 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
       )}
 
       {/* Análisis de Patrones y Recomendaciones */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Patrones */}
-        <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <PieChart className="w-5 h-5 text-purple-500" />
-            <h3 className="font-bold text-slate-800 dark:text-white">Análisis de Patrones</h3>
-          </div>
-          <div className="space-y-3">
-            {patrones.map((patron, idx) => {
-              const Icon = patron.icono;
-              return (
-                <div key={idx} className={`p-3 rounded-lg bg-${patron.color}-50 dark:bg-${patron.color}-900/20 border border-${patron.color}-200 dark:border-${patron.color}-800`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Icon className={`w-4 h-4 text-${patron.color}-600 dark:text-${patron.color}-400`} />
-                      <span className="text-sm font-medium text-slate-600 dark:text-slate-400">{patron.titulo}</span>
-                    </div>
-                    {patron.tendencia && (
-                      <span className="text-xs">
-                        {patron.tendencia === 'up' && <ArrowUpRight className="w-4 h-4 text-emerald-500" />}
-                        {patron.tendencia === 'down' && <ArrowDownRight className="w-4 h-4 text-red-500" />}
-                        {patron.tendencia === 'stable' && <Minus className="w-4 h-4 text-slate-400" />}
-                      </span>
-                    )}
-                  </div>
-                  <p className={`text-lg font-bold text-${patron.color}-700 dark:text-${patron.color}-300 mt-1`}>{patron.valor}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{patron.detalle}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Recomendaciones IA */}
-        <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Lightbulb className="w-5 h-5 text-amber-500" />
-            <h3 className="font-bold text-slate-800 dark:text-white">Recomendaciones IA</h3>
-          </div>
-          <div className="space-y-3">
-            {recomendaciones.length === 0 ? (
-              <div className="text-center py-8 text-slate-400">
-                <Lightbulb className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                <p>Sin recomendaciones por ahora</p>
-              </div>
-            ) : (
-              recomendaciones.map(rec => {
-                const impactoColors = {
-                  alto: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-                  medio: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-                  bajo: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-                };
+      {patrones.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <PieChart className="w-5 h-5 text-purple-500" />
+              <h3 className="font-bold text-slate-800 dark:text-white">Análisis de Patrones</h3>
+            </div>
+            <div className="space-y-3">
+              {patrones.map((patron, idx) => {
+                const Icon = patron.icono;
                 return (
-                  <div key={rec.id} className="p-3 rounded-lg bg-slate-50 dark:bg-navy-800 border border-slate-200 dark:border-navy-700">
-                    <div className="flex items-start gap-3">
-                      <Zap className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm text-slate-700 dark:text-slate-300">{rec.texto}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className={`text-xs px-2 py-0.5 rounded font-medium ${impactoColors[rec.impacto]}`}>
-                            Impacto {rec.impacto}
-                          </span>
-                          {rec.guiasRelacionadas && (
-                            <span className="text-xs text-slate-400">
-                              {rec.guiasRelacionadas} guías
+                  <div key={idx} className="p-3 rounded-lg bg-slate-50 dark:bg-navy-800 border border-slate-200 dark:border-navy-700">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Icon className="w-4 h-4 text-slate-500" />
+                        <span className="text-sm font-medium text-slate-600 dark:text-slate-400">{patron.titulo}</span>
+                      </div>
+                      {patron.tendencia && (
+                        <span className="text-xs">
+                          {patron.tendencia === 'up' && <ArrowUpRight className="w-4 h-4 text-emerald-500" />}
+                          {patron.tendencia === 'down' && <ArrowDownRight className="w-4 h-4 text-red-500" />}
+                          {patron.tendencia === 'stable' && <Minus className="w-4 h-4 text-slate-400" />}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-lg font-bold text-slate-800 dark:text-white mt-1">{patron.valor}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{patron.detalle}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Lightbulb className="w-5 h-5 text-amber-500" />
+              <h3 className="font-bold text-slate-800 dark:text-white">Recomendaciones IA</h3>
+            </div>
+            <div className="space-y-3">
+              {recomendaciones.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">
+                  <Lightbulb className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                  <p>Sin recomendaciones por ahora</p>
+                </div>
+              ) : (
+                recomendaciones.map(rec => {
+                  const impactoColors: Record<string, string> = {
+                    alto: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+                    medio: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+                    bajo: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                  };
+                  return (
+                    <div key={rec.id} className="p-3 rounded-lg bg-slate-50 dark:bg-navy-800 border border-slate-200 dark:border-navy-700">
+                      <div className="flex items-start gap-3">
+                        <Zap className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm text-slate-700 dark:text-slate-300">{rec.texto}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className={`text-xs px-2 py-0.5 rounded font-medium ${impactoColors[rec.impacto]}`}>
+                              Impacto {rec.impacto}
                             </span>
-                          )}
+                            {rec.guiasRelacionadas && (
+                              <span className="text-xs text-slate-400">{rec.guiasRelacionadas} guías</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Filtros */}
       <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
         <div className="flex flex-wrap items-center gap-4">
-          {/* Búsqueda */}
           <div className="relative flex-1 min-w-[250px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
@@ -926,7 +1080,6 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
             />
           </div>
 
-          {/* Filtro Transportadora */}
           <select
             value={filtroTransportadora}
             onChange={(e) => setFiltroTransportadora(e.target.value)}
@@ -938,7 +1091,6 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
             ))}
           </select>
 
-          {/* Filtro Estado */}
           <select
             value={filtroEstado}
             onChange={(e) => setFiltroEstado(e.target.value)}
@@ -950,7 +1102,6 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
             ))}
           </select>
 
-          {/* Filtro Ciudad */}
           <select
             value={filtroCiudad}
             onChange={(e) => setFiltroCiudad(e.target.value)}
@@ -962,7 +1113,6 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
             ))}
           </select>
 
-          {/* Filtro Días */}
           <select
             value={filtroDias}
             onChange={(e) => setFiltroDias(e.target.value)}
@@ -975,7 +1125,6 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
             <option value="10">+10 días</option>
           </select>
 
-          {/* Filtro Novedad */}
           <select
             value={filtroNovedad}
             onChange={(e) => setFiltroNovedad(e.target.value)}
@@ -986,7 +1135,6 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
             <option value="SIN">Sin Novedad</option>
           </select>
 
-          {/* Limpiar filtros */}
           {tieneFilrosActivos && (
             <button
               onClick={limpiarFiltros}
@@ -1009,57 +1157,33 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 dark:bg-navy-800 border-b border-slate-200 dark:border-navy-700">
-                <th
-                  className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-navy-700"
-                  onClick={() => handleSort('numeroGuia')}
-                >
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-navy-700" onClick={() => handleSort('numeroGuia')}>
                   <div className="flex items-center gap-1">
                     Guía
                     {sortColumn === 'numeroGuia' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
                   </div>
                 </th>
-                <th
-                  className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-navy-700"
-                  onClick={() => handleSort('transportadora')}
-                >
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-navy-700" onClick={() => handleSort('transportadora')}>
                   <div className="flex items-center gap-1">
                     Transportadora
                     {sortColumn === 'transportadora' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
                   </div>
                 </th>
-                <th
-                  className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-navy-700"
-                  onClick={() => handleSort('ciudadDestino')}
-                >
-                  <div className="flex items-center gap-1">
-                    Ruta
-                    {sortColumn === 'ciudadDestino' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                  </div>
-                </th>
-                <th
-                  className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-navy-700"
-                  onClick={() => handleSort('estadoActual')}
-                >
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Ruta</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-navy-700" onClick={() => handleSort('estadoActual')}>
                   <div className="flex items-center gap-1">
                     Estado
                     {sortColumn === 'estadoActual' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
                   </div>
                 </th>
-                <th
-                  className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-navy-700"
-                  onClick={() => handleSort('diasTranscurridos')}
-                >
-                  <div className="flex items-center gap-1">
+                <th className="text-center px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-navy-700" onClick={() => handleSort('diasTranscurridos')}>
+                  <div className="flex items-center justify-center gap-1">
                     Días
                     {sortColumn === 'diasTranscurridos' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
                   </div>
                 </th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">
-                  Últimos Estados
-                </th>
-                <th className="text-center px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">
-                  Ver
-                </th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Últimos Estados</th>
+                <th className="text-center px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Ver</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-navy-800">
@@ -1082,7 +1206,7 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <span className="font-mono font-bold text-slate-800 dark:text-white">{guia.numeroGuia}</span>
-                            {guia.novedad && (
+                            {guia.tieneNovedad && (
                               <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs rounded font-medium">
                                 Novedad
                               </span>
@@ -1109,7 +1233,7 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-center gap-2">
                             <Clock className={`w-4 h-4 ${guia.diasTranscurridos > 5 ? 'text-red-500' : guia.diasTranscurridos > 3 ? 'text-amber-500' : 'text-slate-400'}`} />
                             <span className={`font-bold ${guia.diasTranscurridos > 5 ? 'text-red-600' : guia.diasTranscurridos > 3 ? 'text-amber-600' : 'text-slate-600 dark:text-slate-300'}`}>
                               {guia.diasTranscurridos}
@@ -1119,11 +1243,14 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
                         <td className="px-4 py-3">
                           <div className="space-y-1">
                             {guia.ultimos2Estados.slice(0, 2).map((estado, idx) => (
-                              <div key={idx} className="flex items-center gap-2 text-xs">
-                                <span className="text-slate-400 font-mono">{formatDate(estado.fecha)}</span>
-                                <span className="text-slate-600 dark:text-slate-400 truncate max-w-[200px]">
-                                  {estado.estado}
-                                </span>
+                              <div key={idx} className="flex items-start gap-2 text-xs">
+                                <span className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${idx === 0 ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+                                <div>
+                                  <span className="text-slate-400 font-mono">{formatDate(estado.fecha)}</span>
+                                  <p className="text-slate-600 dark:text-slate-400 truncate max-w-[200px]" title={estado.descripcion}>
+                                    {estado.descripcion}
+                                  </p>
+                                </div>
                               </div>
                             ))}
                             {guia.ultimos2Estados.length === 0 && (
@@ -1145,7 +1272,6 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
                         </td>
                       </tr>
 
-                      {/* Fila expandida con historial completo */}
                       {isExpanded && (
                         <tr className="bg-cyan-50/50 dark:bg-cyan-900/10">
                           <td colSpan={7} className="px-4 py-4">
@@ -1153,6 +1279,9 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
                               <h4 className="font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
                                 <Calendar className="w-4 h-4 text-cyan-500" />
                                 Historial Completo de Movimientos
+                                <span className="text-xs bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 px-2 py-0.5 rounded-full">
+                                  {guia.historialCompleto.length} eventos
+                                </span>
                               </h4>
                               {guia.historialCompleto.length === 0 ? (
                                 <p className="text-sm text-slate-400">No hay historial de movimientos disponible</p>
@@ -1164,23 +1293,21 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
                                       <div className="flex-1">
                                         <div className="flex items-center gap-2">
                                           <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
-                                            {formatDate(evento.date)}
+                                            {formatDate(evento.fecha)}
                                           </span>
-                                          {evento.isRecent && (
+                                          {idx === 0 && (
                                             <span className="px-1.5 py-0.5 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 text-xs rounded">
-                                              Reciente
+                                              Actual
                                             </span>
                                           )}
                                         </div>
                                         <p className="text-sm text-slate-700 dark:text-slate-300 mt-1">
-                                          {evento.description}
+                                          {evento.descripcion}
                                         </p>
-                                        {evento.location && (
-                                          <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                                            <MapPin className="w-3 h-3" />
-                                            {evento.location}
-                                          </p>
-                                        )}
+                                        <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                                          <MapPin className="w-3 h-3" />
+                                          {evento.ubicacion}
+                                        </p>
                                       </div>
                                     </div>
                                   ))}
@@ -1199,9 +1326,88 @@ export const InteligenciaLogisticaTab: React.FC<InteligenciaLogisticaTabProps> =
         </div>
       </div>
 
+      {/* Modal de carga */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-navy-900 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-navy-700">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                <FileUp className="w-5 h-5 text-cyan-500" />
+                Cargar Datos de Tracking
+              </h3>
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-navy-800 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Subir archivo (.txt)
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".txt,.csv"
+                  onChange={handleFileUpload}
+                  className="w-full px-4 py-3 border-2 border-dashed border-slate-300 dark:border-navy-600 rounded-xl cursor-pointer hover:border-cyan-400 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-cyan-500 file:text-white file:font-medium"
+                />
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="flex-1 h-px bg-slate-200 dark:bg-navy-700"></div>
+                <span className="text-sm text-slate-400">o pega el texto</span>
+                <div className="flex-1 h-px bg-slate-200 dark:bg-navy-700"></div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Pegar datos de tracking
+                </label>
+                <textarea
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  placeholder={`Número:  240040701342
+Estatus del paquete:  Entregado (4 Días)
+País:  Colombia -> Desconocido
+Inter Rapidisimo (INTER RAPIDÍSIMO):
+2025-11-29 10:20 ROZO PAL VALL Tú envío fue entregado
+======================================`}
+                  className="w-full h-48 px-4 py-3 bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-700 rounded-xl text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                />
+              </div>
+
+              <button
+                onClick={handleLoadFromText}
+                disabled={!textInput.trim() || isLoading}
+                className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
+                  textInput.trim() && !isLoading
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                }`}
+              >
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-5 h-5" />
+                    Cargar Datos
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Footer info */}
       <div className="text-center text-sm text-slate-400">
-        <p>Vista de solo lectura - Los datos se sincronizan con el módulo de Seguimiento de Guías</p>
+        <p>Vista de solo lectura - Datos independientes del módulo de Seguimiento</p>
       </div>
     </div>
   );
