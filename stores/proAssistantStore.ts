@@ -93,6 +93,32 @@ export interface ProConfig {
 }
 
 // ============================================
+// INTERFACES ADICIONALES PARA MÉTRICAS
+// ============================================
+
+export interface ProMetrics {
+  tasaDevolucion: number;
+  tasaMeta: number;
+  guiasEnRiesgo: number;
+  guiasRescatadas: number;
+  dineroSalvado: number;
+  potencialRescate: number;
+  lastUpdated: Date;
+}
+
+export interface ProActiveNotification {
+  id: string;
+  type: 'critical' | 'warning' | 'info' | 'success';
+  title: string;
+  message: string;
+  count?: number;
+  timestamp: Date;
+  dismissed: boolean;
+  actionLabel?: string;
+  actionType?: string;
+}
+
+// ============================================
 // ESTADO DEL STORE
 // ============================================
 
@@ -110,6 +136,18 @@ interface ProAssistantState {
   setIsProcessing: (processing: boolean) => void;
   activeTab: 'chat' | 'knowledge' | 'tasks' | 'config';
   setActiveTab: (tab: 'chat' | 'knowledge' | 'tasks' | 'config') => void;
+
+  // Metrics State
+  metrics: ProMetrics;
+  updateMetrics: (metrics: Partial<ProMetrics>) => void;
+  calculateMetricsFromShipments: () => void;
+
+  // Proactive Notifications
+  proactiveNotifications: ProActiveNotification[];
+  addProactiveNotification: (notification: Omit<ProActiveNotification, 'id' | 'timestamp' | 'dismissed'>) => void;
+  dismissProactiveNotification: (id: string) => void;
+  clearProactiveNotifications: () => void;
+  generateProactiveAlerts: () => void;
 
   // Chat State
   messages: ProMessage[];
@@ -377,7 +415,164 @@ Puedo ayudarte con:
 
       // ========== Context ==========
       shipmentsContext: [],
-      setShipmentsContext: (shipments) => set({ shipmentsContext: shipments }),
+      setShipmentsContext: (shipments) => {
+        set({ shipmentsContext: shipments });
+        // Recalcular métricas cuando cambian los shipments
+        get().calculateMetricsFromShipments();
+        get().generateProactiveAlerts();
+      },
+
+      // ========== Metrics ==========
+      metrics: {
+        tasaDevolucion: 0,
+        tasaMeta: 8,
+        guiasEnRiesgo: 0,
+        guiasRescatadas: 0,
+        dineroSalvado: 0,
+        potencialRescate: 0,
+        lastUpdated: new Date(),
+      },
+
+      updateMetrics: (updates) => set((state) => ({
+        metrics: { ...state.metrics, ...updates, lastUpdated: new Date() },
+      })),
+
+      calculateMetricsFromShipments: () => {
+        const { shipmentsContext } = get();
+        if (shipmentsContext.length === 0) {
+          set((state) => ({
+            metrics: {
+              ...state.metrics,
+              tasaDevolucion: 0,
+              guiasEnRiesgo: 0,
+              potencialRescate: 0,
+              lastUpdated: new Date(),
+            },
+          }));
+          return;
+        }
+
+        // Calcular métricas basadas en los shipments
+        const total = shipmentsContext.length;
+        const entregados = shipmentsContext.filter((s: any) =>
+          s.status?.toLowerCase().includes('entreg') ||
+          s.status?.toLowerCase().includes('delivered')
+        ).length;
+
+        const conNovedad = shipmentsContext.filter((s: any) =>
+          s.status?.toLowerCase().includes('novedad') ||
+          s.status?.toLowerCase().includes('issue') ||
+          s.status?.toLowerCase().includes('oficina') ||
+          s.detailedInfo?.rawStatus?.toLowerCase().includes('reclam')
+        ).length;
+
+        const tasaDevolucion = total > 0 ? ((total - entregados) / total) * 100 : 0;
+        const potencialRescate = conNovedad * 0.75; // 75% de recuperación estimada
+
+        set((state) => ({
+          metrics: {
+            ...state.metrics,
+            tasaDevolucion,
+            guiasEnRiesgo: conNovedad,
+            potencialRescate,
+            lastUpdated: new Date(),
+          },
+        }));
+      },
+
+      // ========== Proactive Notifications ==========
+      proactiveNotifications: [],
+
+      addProactiveNotification: (notification) => {
+        const id = generateId();
+        set((state) => ({
+          proactiveNotifications: [
+            {
+              ...notification,
+              id,
+              timestamp: new Date(),
+              dismissed: false,
+            },
+            ...state.proactiveNotifications,
+          ].slice(0, 20), // Mantener máximo 20 notificaciones
+        }));
+        // Incrementar contador de notificaciones
+        get().incrementNotifications();
+      },
+
+      dismissProactiveNotification: (id) => set((state) => ({
+        proactiveNotifications: state.proactiveNotifications.map((n) =>
+          n.id === id ? { ...n, dismissed: true } : n
+        ),
+      })),
+
+      clearProactiveNotifications: () => set({ proactiveNotifications: [] }),
+
+      generateProactiveAlerts: () => {
+        const { shipmentsContext, proactiveNotifications, addProactiveNotification } = get();
+        if (shipmentsContext.length === 0) return;
+
+        // Evitar duplicados - solo generar si no hay alertas recientes
+        const recentAlerts = proactiveNotifications.filter(
+          (n) => !n.dismissed && (new Date().getTime() - new Date(n.timestamp).getTime()) < 300000 // 5 minutos
+        );
+        if (recentAlerts.length >= 3) return;
+
+        // Contar guías en Reclamo en Oficina
+        const reclamoOficina = shipmentsContext.filter((s: any) =>
+          s.status?.toLowerCase().includes('oficina') ||
+          s.detailedInfo?.rawStatus?.toLowerCase().includes('reclam')
+        );
+        if (reclamoOficina.length > 0 && !recentAlerts.some((a) => a.type === 'critical' && a.title.includes('Reclamo'))) {
+          addProactiveNotification({
+            type: 'critical',
+            title: `${reclamoOficina.length} guías en Reclamo en Oficina`,
+            message: 'Requieren gestión urgente antes de devolución',
+            count: reclamoOficina.length,
+            actionLabel: 'Gestionar ahora',
+            actionType: 'filter-reclamo',
+          });
+        }
+
+        // Contar guías sin movimiento +5 días
+        const sinMovimiento = shipmentsContext.filter((s: any) => {
+          const days = s.detailedInfo?.daysInTransit || 0;
+          return days >= 5 && !s.status?.toLowerCase().includes('entreg');
+        });
+        if (sinMovimiento.length > 0 && !recentAlerts.some((a) => a.type === 'warning' && a.title.includes('movimiento'))) {
+          addProactiveNotification({
+            type: 'warning',
+            title: `${sinMovimiento.length} guías sin movimiento +5 días`,
+            message: 'Alta probabilidad de devolución',
+            count: sinMovimiento.length,
+            actionLabel: 'Ver lista',
+            actionType: 'filter-sin-movimiento',
+          });
+        }
+
+        // Calcular tasa actual
+        const total = shipmentsContext.length;
+        const entregados = shipmentsContext.filter((s: any) =>
+          s.status?.toLowerCase().includes('entreg')
+        ).length;
+        const tasaActual = total > 0 ? ((total - entregados) / total) * 100 : 0;
+
+        if (tasaActual > 12 && !recentAlerts.some((a) => a.title.includes('Tasa'))) {
+          addProactiveNotification({
+            type: 'warning',
+            title: `Tu tasa de devolución va en ${tasaActual.toFixed(1)}%`,
+            message: 'Meta: 8%. Revisa las guías críticas.',
+            actionLabel: 'Ver recomendaciones',
+            actionType: 'ai-recommendations',
+          });
+        } else if (tasaActual <= 8 && !recentAlerts.some((a) => a.type === 'success')) {
+          addProactiveNotification({
+            type: 'success',
+            title: `¡Vas muy bien! Tasa actual: ${tasaActual.toFixed(1)}%`,
+            message: 'Estás cumpliendo la meta del 8%',
+          });
+        }
+      },
 
       // ========== Quick Actions ==========
       executeQuickAction: async (actionId) => {

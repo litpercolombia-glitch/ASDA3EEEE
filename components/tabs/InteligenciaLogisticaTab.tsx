@@ -38,6 +38,11 @@ import {
   Upload,
   FileUp,
   Table,
+  Phone,
+  Copy,
+  CheckCircle,
+  MessageSquare,
+  PhoneCall,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -248,8 +253,36 @@ export const InteligenciaLogisticaTab: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [textInput, setTextInput] = useState('');
+  const [copiedGuide, setCopiedGuide] = useState<string | null>(null);
+  const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Función para copiar al portapapeles
+  const copyToClipboard = (text: string, type: 'guide' | 'phone', id: string) => {
+    navigator.clipboard.writeText(text);
+    if (type === 'guide') {
+      setCopiedGuide(id);
+      setTimeout(() => setCopiedGuide(null), 2000);
+    } else {
+      setCopiedPhone(id);
+      setTimeout(() => setCopiedPhone(null), 2000);
+    }
+  };
+
+  // Abrir WhatsApp
+  const openWhatsApp = (phone: string, guideNumber: string) => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    const message = encodeURIComponent(
+      `Hola! Te contactamos respecto a tu pedido con guía ${guideNumber}. ¿Podrías confirmar tu disponibilidad para la entrega?`
+    );
+    window.open(`https://wa.me/57${cleanPhone}?text=${message}`, '_blank');
+  };
+
+  // Llamar
+  const makeCall = (phone: string) => {
+    window.open(`tel:${phone}`, '_self');
+  };
 
   // Cargar datos desde texto
   const handleLoadFromText = () => {
@@ -573,6 +606,7 @@ export const InteligenciaLogisticaTab: React.FC = () => {
     // Hoja 1: Resumen
     const datosResumen = guiasFiltradas.map(g => ({
       'Número de Guía': g.numeroGuia,
+      'Teléfono': g.telefono || 'N/A',
       'Transportadora': g.transportadora,
       'Ciudad Origen': g.ciudadOrigen,
       'Ciudad Destino': g.ciudadDestino,
@@ -1204,12 +1238,67 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
                     <React.Fragment key={guia.numeroGuia}>
                       <tr className={`hover:bg-slate-50 dark:hover:bg-navy-800/50 ${isExpanded ? 'bg-cyan-50 dark:bg-cyan-900/20' : ''}`}>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold text-slate-800 dark:text-white">{guia.numeroGuia}</span>
-                            {guia.tieneNovedad && (
-                              <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs rounded font-medium">
-                                Novedad
-                              </span>
+                          <div className="space-y-1.5">
+                            {/* Número de guía con botón de copiar */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-mono font-bold text-slate-800 dark:text-white">{guia.numeroGuia}</span>
+                              <button
+                                onClick={() => copyToClipboard(guia.numeroGuia, 'guide', guia.numeroGuia)}
+                                className={`p-1 rounded transition-all ${
+                                  copiedGuide === guia.numeroGuia
+                                    ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600'
+                                    : 'hover:bg-slate-100 dark:hover:bg-navy-700 text-slate-400'
+                                }`}
+                                title="Copiar número de guía"
+                              >
+                                {copiedGuide === guia.numeroGuia ? (
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                              {guia.tieneNovedad && (
+                                <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs rounded font-medium">
+                                  Novedad
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Teléfono con acciones */}
+                            {guia.telefono && (
+                              <div className="flex items-center gap-2">
+                                <Phone className="w-3.5 h-3.5 text-green-500" />
+                                <span className="font-mono text-sm text-green-600 dark:text-green-400">{guia.telefono}</span>
+                                <button
+                                  onClick={() => copyToClipboard(guia.telefono!, 'phone', guia.numeroGuia)}
+                                  className={`p-1 rounded transition-all ${
+                                    copiedPhone === guia.numeroGuia
+                                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600'
+                                      : 'hover:bg-slate-100 dark:hover:bg-navy-700 text-slate-400'
+                                  }`}
+                                  title="Copiar teléfono"
+                                >
+                                  {copiedPhone === guia.numeroGuia ? (
+                                    <CheckCircle className="w-3 h-3" />
+                                  ) : (
+                                    <Copy className="w-3 h-3" />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => makeCall(guia.telefono!)}
+                                  className="p-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                                  title="Llamar"
+                                >
+                                  <PhoneCall className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={() => openWhatsApp(guia.telefono!, guia.numeroGuia)}
+                                  className="p-1 rounded bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+                                  title="WhatsApp"
+                                >
+                                  <MessageSquare className="w-3 h-3" />
+                                </button>
+                              </div>
                             )}
                           </div>
                         </td>
