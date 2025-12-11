@@ -30,7 +30,6 @@ import {
 import { CiudadAgentesTab } from './components/tabs/CiudadAgentesTab';
 import { InteligenciaLogisticaTab } from './components/tabs/InteligenciaLogisticaTab';
 import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
-import { AssistantButton } from './components/Assistant';
 import ProBubble from './components/ProAssistant/ProBubble';
 import { AdminPanelPro } from './components/Admin/AdminPanelPro';
 import CountrySelector from './components/CountrySelector';
@@ -322,7 +321,7 @@ const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, cou
 // ============================================
 // MAIN APP COMPONENT
 // ============================================
-const AppNew: React.FC = () => {
+const App: React.FC = () => {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [phoneRegistry, setPhoneRegistry] = useState<Record<string, string>>({});
 
@@ -1010,4 +1009,4 @@ const AppNew: React.FC = () => {
   );
 };
 
-export default AppNew;
+export default App;

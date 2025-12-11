@@ -6,3 +6,4 @@
 export { GuideFilterPanel } from './GuideFilterPanel';
 export { GuideTimeline } from './GuideTimeline';
 export { MetricsDashboard } from './MetricsDashboard';
+export { SessionComparisonPanel } from './SessionComparisonPanel';
