@@ -140,7 +140,7 @@ const formatDate = (dateStr: string): string => {
 // =====================================
 // PARSER DE TEXTO DE TRACKING
 // =====================================
-const parseTrackingText = (text: string): GuiaLogistica[] => {
+const parseTrackingText = (text: string, phoneRegistry?: Map<string, string>): GuiaLogistica[] => {
   const guias: GuiaLogistica[] = [];
   const blocks = text.split('======================================').filter(b => b.trim());
 
@@ -217,8 +217,12 @@ const parseTrackingText = (text: string): GuiaLogistica[] => {
         else if (ultimoEvento.includes('recibimos')) estadoActual = 'Recibido';
       }
 
+      // Buscar teléfono en el registro
+      const telefono = phoneRegistry?.get(numeroGuia);
+
       guias.push({
         numeroGuia,
+        telefono,
         transportadora: transportadora || 'Desconocido',
         ciudadOrigen,
         ciudadDestino,
@@ -232,6 +236,65 @@ const parseTrackingText = (text: string): GuiaLogistica[] => {
   }
 
   return guias;
+};
+
+// Parser de registro de teléfonos
+// Formatos soportados:
+// - guía,teléfono (CSV)
+// - guía teléfono (separado por espacio/tab)
+// - teléfono guía (detecta automáticamente)
+const parsePhoneRegistry = (text: string): Map<string, string> => {
+  const registry = new Map<string, string>();
+  const lines = text.trim().split('\n').filter(l => l.trim());
+
+  for (const line of lines) {
+    // Limpiar la línea
+    const cleanLine = line.trim();
+    if (!cleanLine) continue;
+
+    // Detectar separador (coma, tab, o espacios)
+    let parts: string[] = [];
+    if (cleanLine.includes(',')) {
+      parts = cleanLine.split(',').map(p => p.trim());
+    } else if (cleanLine.includes('\t')) {
+      parts = cleanLine.split('\t').map(p => p.trim());
+    } else {
+      parts = cleanLine.split(/\s+/).map(p => p.trim());
+    }
+
+    if (parts.length >= 2) {
+      const part1 = parts[0].replace(/\D/g, ''); // Solo dígitos
+      const part2 = parts[1].replace(/\D/g, '');
+
+      // Detectar cuál es guía y cuál es teléfono
+      // Guías suelen tener 12+ dígitos, teléfonos colombianos 10 dígitos
+      let guia = '';
+      let telefono = '';
+
+      if (part1.length >= 10 && part1.length <= 11) {
+        // part1 parece teléfono
+        telefono = part1;
+        guia = part2;
+      } else if (part2.length >= 10 && part2.length <= 11) {
+        // part2 parece teléfono
+        guia = part1;
+        telefono = part2;
+      } else if (part1.length > part2.length) {
+        // El más largo es probablemente la guía
+        guia = part1;
+        telefono = part2;
+      } else {
+        guia = part2;
+        telefono = part1;
+      }
+
+      if (guia && telefono) {
+        registry.set(guia, telefono);
+      }
+    }
+  }
+
+  return registry;
 };
 
 // =====================================
@@ -254,6 +317,7 @@ export const InteligenciaLogisticaTab: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [textInput, setTextInput] = useState('');
+  const [phoneInput, setPhoneInput] = useState(''); // Registro de teléfonos
   const [copiedGuide, setCopiedGuide] = useState<string | null>(null);
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
 
@@ -290,16 +354,32 @@ export const InteligenciaLogisticaTab: React.FC = () => {
     if (!textInput.trim()) return;
     setIsLoading(true);
     try {
-      const guias = parseTrackingText(textInput);
+      // Parsear registro de teléfonos si existe
+      const phoneRegistry = phoneInput.trim() ? parsePhoneRegistry(phoneInput) : undefined;
+      const guias = parseTrackingText(textInput, phoneRegistry);
       setGuiasLogisticas(guias);
       setShowUploadModal(false);
       setTextInput('');
+      setPhoneInput('');
     } catch (error) {
       console.error('Error parsing text:', error);
       alert('Error al procesar el texto. Verifica el formato.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Actualizar teléfonos de guías existentes
+  const handleUpdatePhones = () => {
+    if (!phoneInput.trim() || guiasLogisticas.length === 0) return;
+    const phoneRegistry = parsePhoneRegistry(phoneInput);
+    const updatedGuias = guiasLogisticas.map(guia => ({
+      ...guia,
+      telefono: phoneRegistry.get(guia.numeroGuia) || guia.telefono
+    }));
+    setGuiasLogisticas(updatedGuias);
+    setPhoneInput('');
+    alert(`Teléfonos actualizados: ${phoneRegistry.size} registros procesados`);
   };
 
   // Cargar datos desde archivo Excel/TXT
@@ -830,8 +910,29 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
 2025-11-29 10:20 ROZO PAL VALL Tú envío fue entregado
 2025-11-28 09:53 ROZO PAL VALL En Centro Logístico Destino
 ======================================`}
-                    className="w-full h-48 px-4 py-3 bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-700 rounded-xl text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    className="w-full h-40 px-4 py-3 bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-700 rounded-xl text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500"
                   />
+                </div>
+
+                {/* Registro de teléfonos */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-4 h-4 text-green-500" />
+                      Registro de teléfonos (opcional)
+                    </div>
+                  </label>
+                  <textarea
+                    value={phoneInput}
+                    onChange={(e) => setPhoneInput(e.target.value)}
+                    placeholder={`240040759898,3176544064
+240040759899,3185223311
+240040759900 3123456789`}
+                    className="w-full h-24 px-4 py-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">
+                    Formato: guía,teléfono o guía teléfono (uno por línea)
+                  </p>
                 </div>
 
                 <button
@@ -1645,31 +1746,64 @@ País:  Colombia -> Desconocido
 Inter Rapidisimo (INTER RAPIDÍSIMO):
 2025-11-29 10:20 ROZO PAL VALL Tú envío fue entregado
 ======================================`}
-                  className="w-full h-48 px-4 py-3 bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-700 rounded-xl text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  className="w-full h-40 px-4 py-3 bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-700 rounded-xl text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500"
                 />
               </div>
 
-              <button
-                onClick={handleLoadFromText}
-                disabled={!textInput.trim() || isLoading}
-                className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
-                  textInput.trim() && !isLoading
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700'
-                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                }`}
-              >
-                {isLoading ? (
-                  <>
-                    <RefreshCw className="w-5 h-5 animate-spin" />
-                    Procesando...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-5 h-5" />
-                    Cargar Datos
-                  </>
+              {/* Registro de teléfonos */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-green-500" />
+                    Registro de teléfonos (opcional)
+                  </div>
+                </label>
+                <textarea
+                  value={phoneInput}
+                  onChange={(e) => setPhoneInput(e.target.value)}
+                  placeholder={`240040759898,3176544064
+240040759899,3185223311
+240040759900 3123456789`}
+                  className="w-full h-24 px-4 py-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+                <p className="text-xs text-slate-400 mt-1">
+                  Formato: guía,teléfono o guía teléfono (uno por línea)
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={handleLoadFromText}
+                  disabled={!textInput.trim() || isLoading}
+                  className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
+                    textInput.trim() && !isLoading
+                      ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700'
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  }`}
+                >
+                  {isLoading ? (
+                    <>
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                      Procesando...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-5 h-5" />
+                      Cargar Datos
+                    </>
+                  )}
+                </button>
+                {guiasLogisticas.length > 0 && phoneInput.trim() && (
+                  <button
+                    onClick={handleUpdatePhones}
+                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold bg-green-500 hover:bg-green-600 text-white transition-all"
+                    title="Solo actualizar teléfonos sin recargar guías"
+                  >
+                    <Phone className="w-5 h-5" />
+                    Solo Teléfonos
+                  </button>
                 )}
-              </button>
+              </div>
             </div>
           </div>
         </div>
