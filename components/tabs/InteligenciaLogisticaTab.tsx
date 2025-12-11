@@ -99,6 +99,9 @@ interface RecomendacionIA {
   texto: string;
   impacto: 'alto' | 'medio' | 'bajo';
   guiasRelacionadas?: number;
+  guiasDetalle?: GuiaLogistica[];
+  analisisIA?: string;
+  accionRecomendada?: string;
 }
 
 // =====================================
@@ -419,6 +422,10 @@ export const InteligenciaLogisticaTab: React.FC = () => {
   const [phoneInput, setPhoneInput] = useState(''); // Registro de teléfonos
   const [copiedGuide, setCopiedGuide] = useState<string | null>(null);
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
+  const [selectedAlerta, setSelectedAlerta] = useState<string | null>(null);
+  const [selectedRecomendacion, setSelectedRecomendacion] = useState<string | null>(null);
+  const [showAlertaModal, setShowAlertaModal] = useState(false);
+  const [showRecomendacionModal, setShowRecomendacionModal] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -764,43 +771,127 @@ export const InteligenciaLogisticaTab: React.FC = () => {
     ];
   }, [guiasLogisticas]);
 
-  // Recomendaciones IA
+  // Recomendaciones IA - Mejoradas con análisis detallado
   const recomendaciones = useMemo((): RecomendacionIA[] => {
     if (guiasLogisticas.length === 0) return [];
     const recs: RecomendacionIA[] = [];
 
-    const guiasUrgentes = guiasLogisticas.filter(g =>
+    // Guías urgentes (más de 3 días sin entregar)
+    const guiasUrgentesData = guiasLogisticas.filter(g =>
       g.diasTranscurridos > 3 && !g.estadoActual.toLowerCase().includes('entregado')
-    ).length;
+    );
 
-    if (guiasUrgentes > 0) {
+    if (guiasUrgentesData.length > 0) {
+      const transportadorasAfectadas = [...new Set(guiasUrgentesData.map(g => g.transportadora))];
+      const ciudadesAfectadas = [...new Set(guiasUrgentesData.map(g => g.ciudadDestino))];
       recs.push({
         id: 'rec-llamadas-urgentes',
-        texto: `${guiasUrgentes} guías requieren seguimiento urgente hoy`,
+        texto: `${guiasUrgentesData.length} guías requieren seguimiento urgente hoy`,
         impacto: 'alto',
-        guiasRelacionadas: guiasUrgentes
+        guiasRelacionadas: guiasUrgentesData.length,
+        guiasDetalle: guiasUrgentesData,
+        analisisIA: `Análisis de IA: Se detectaron ${guiasUrgentesData.length} envíos con más de 3 días sin entrega. Las transportadoras involucradas son: ${transportadorasAfectadas.join(', ')}. Ciudades de destino más afectadas: ${ciudadesAfectadas.slice(0, 3).join(', ')}. El promedio de días de estas guías es ${Math.round(guiasUrgentesData.reduce((acc, g) => acc + g.diasTranscurridos, 0) / guiasUrgentesData.length)} días.`,
+        accionRecomendada: 'Contactar inmediatamente a las transportadoras y clientes para acelerar entregas'
       });
     }
 
-    const devueltas = guiasLogisticas.filter(g => g.estadoActual.toLowerCase().includes('devuelto')).length;
-    if (devueltas > 0) {
+    // Guías devueltas
+    const devueltasData = guiasLogisticas.filter(g => g.estadoActual.toLowerCase().includes('devuelto'));
+    if (devueltasData.length > 0) {
+      const razonesComunes = devueltasData.map(g => g.ultimos2Estados[0]?.descripcion || 'Sin información').slice(0, 5);
       recs.push({
         id: 'rec-devueltas',
-        texto: `Hay ${devueltas} guías devueltas pendientes de gestión`,
+        texto: `Hay ${devueltasData.length} guías devueltas pendientes de gestión`,
         impacto: 'alto',
-        guiasRelacionadas: devueltas
+        guiasRelacionadas: devueltasData.length,
+        guiasDetalle: devueltasData,
+        analisisIA: `Análisis de IA: ${devueltasData.length} paquetes fueron devueltos. Esto representa el ${estadisticas.tasaDevolucion}% de devoluciones. Razones detectadas en últimos movimientos: ${[...new Set(razonesComunes)].join('; ')}. Impacto económico estimado: alto.`,
+        accionRecomendada: 'Contactar clientes para reprogramar envíos y verificar direcciones'
       });
     }
 
+    // Guías en centro/oficina mucho tiempo
+    const enCentroData = guiasLogisticas.filter(g =>
+      (g.estadoActual.toLowerCase().includes('centro') || g.estadoActual.toLowerCase().includes('oficina')) &&
+      g.diasTranscurridos >= 2
+    );
+    if (enCentroData.length > 0) {
+      recs.push({
+        id: 'rec-en-centro',
+        texto: `${enCentroData.length} guías en centro/oficina esperando retiro`,
+        impacto: 'medio',
+        guiasRelacionadas: enCentroData.length,
+        guiasDetalle: enCentroData,
+        analisisIA: `Análisis de IA: ${enCentroData.length} paquetes están en centros logísticos o oficinas de entrega sin ser recogidos. El tiempo promedio de espera es ${Math.round(enCentroData.reduce((acc, g) => acc + g.diasTranscurridos, 0) / enCentroData.length)} días. ${enCentroData.filter(g => g.telefono).length} de estas guías tienen teléfono disponible para contacto.`,
+        accionRecomendada: 'Llamar a clientes para coordinar retiro antes de que sean devueltas'
+      });
+    }
+
+    // Guías con novedad sin resolver
+    const conNovedadData = guiasLogisticas.filter(g =>
+      g.tieneNovedad &&
+      !g.estadoActual.toLowerCase().includes('devuelto') &&
+      !g.estadoActual.toLowerCase().includes('entregado')
+    );
+    if (conNovedadData.length > 0) {
+      recs.push({
+        id: 'rec-novedades',
+        texto: `${conNovedadData.length} guías con novedad requieren gestión`,
+        impacto: 'alto',
+        guiasRelacionadas: conNovedadData.length,
+        guiasDetalle: conNovedadData,
+        analisisIA: `Análisis de IA: Se detectaron ${conNovedadData.length} envíos con novedades activas sin resolver. Las novedades más comunes incluyen intentos de entrega fallidos y problemas de dirección. El ${Math.round((conNovedadData.filter(g => g.telefono).length / conNovedadData.length) * 100)}% tienen teléfono para gestión directa.`,
+        accionRecomendada: 'Gestionar novedades con transportadoras y contactar clientes'
+      });
+    }
+
+    // Tasa de entrega baja
     if (estadisticas.tasaEntrega < 70 && guiasLogisticas.length >= 5) {
+      const sinEntregar = guiasLogisticas.filter(g => !g.estadoActual.toLowerCase().includes('entregado'));
       recs.push({
         id: 'rec-tasa-baja',
         texto: `Tasa de entrega baja (${estadisticas.tasaEntrega}%), revisar procesos`,
-        impacto: 'medio'
+        impacto: 'medio',
+        guiasRelacionadas: sinEntregar.length,
+        guiasDetalle: sinEntregar,
+        analisisIA: `Análisis de IA: La tasa de entrega actual es del ${estadisticas.tasaEntrega}%, por debajo del objetivo del 70%. De ${guiasLogisticas.length} guías totales, ${sinEntregar.length} aún no han sido entregadas. Las transportadoras con peor rendimiento deben ser evaluadas. Recomendación: revisar tiempos de despacho y zonas de cobertura.`,
+        accionRecomendada: 'Evaluar transportadoras y optimizar rutas de entrega'
       });
     }
 
-    return recs.slice(0, 5);
+    // Transportadora problemática
+    const transportadorasStats: Record<string, { total: number; entregadas: number; problemas: number }> = {};
+    guiasLogisticas.forEach(g => {
+      if (!transportadorasStats[g.transportadora]) {
+        transportadorasStats[g.transportadora] = { total: 0, entregadas: 0, problemas: 0 };
+      }
+      transportadorasStats[g.transportadora].total++;
+      if (g.estadoActual.toLowerCase().includes('entregado')) {
+        transportadorasStats[g.transportadora].entregadas++;
+      }
+      if (g.tieneNovedad || g.diasTranscurridos > 5) {
+        transportadorasStats[g.transportadora].problemas++;
+      }
+    });
+
+    const peorTransportadora = Object.entries(transportadorasStats)
+      .filter(([, stats]) => stats.total >= 3)
+      .sort((a, b) => (a[1].entregadas / a[1].total) - (b[1].entregadas / b[1].total))[0];
+
+    if (peorTransportadora && (peorTransportadora[1].entregadas / peorTransportadora[1].total) < 0.5) {
+      const guiasProblematicas = guiasLogisticas.filter(g => g.transportadora === peorTransportadora[0]);
+      recs.push({
+        id: 'rec-transportadora-problematica',
+        texto: `${peorTransportadora[0]} tiene ${Math.round((peorTransportadora[1].entregadas / peorTransportadora[1].total) * 100)}% de entrega`,
+        impacto: 'medio',
+        guiasRelacionadas: peorTransportadora[1].total,
+        guiasDetalle: guiasProblematicas,
+        analisisIA: `Análisis de IA: La transportadora ${peorTransportadora[0]} tiene el rendimiento más bajo con solo ${Math.round((peorTransportadora[1].entregadas / peorTransportadora[1].total) * 100)}% de entregas exitosas de ${peorTransportadora[1].total} guías. ${peorTransportadora[1].problemas} guías presentan problemas. Se recomienda evaluar alternativas o escalar con el proveedor.`,
+        accionRecomendada: 'Contactar transportadora para mejorar servicio o evaluar alternativas'
+      });
+    }
+
+    return recs.slice(0, 6);
   }, [guiasLogisticas, estadisticas]);
 
   // Obtener opciones únicas para filtros
@@ -976,6 +1067,30 @@ export const InteligenciaLogisticaTab: React.FC = () => {
 
     doc.save(`alertas_logisticas_${new Date().toISOString().split('T')[0]}.pdf`);
   }, [alertas]);
+
+  // Manejar click en alertas para mostrar detalle
+  const handleAlertaClick = (alertaId: string) => {
+    setSelectedAlerta(alertaId);
+    setShowAlertaModal(true);
+  };
+
+  // Manejar click en recomendaciones para mostrar detalle
+  const handleRecomendacionClick = (recId: string) => {
+    setSelectedRecomendacion(recId);
+    setShowRecomendacionModal(true);
+  };
+
+  // Obtener guías de alerta seleccionada
+  const getGuiasDeAlerta = useCallback((alertaId: string): GuiaLogistica[] => {
+    const alerta = alertas.find(a => a.id === alertaId);
+    if (!alerta) return [];
+    return guiasLogisticas.filter(g => alerta.guiasAfectadas.includes(g.numeroGuia));
+  }, [alertas, guiasLogisticas]);
+
+  // Obtener recomendación seleccionada
+  const getRecomendacionSeleccionada = useCallback(() => {
+    return recomendaciones.find(r => r.id === selectedRecomendacion);
+  }, [recomendaciones, selectedRecomendacion]);
 
   // Manejar click en métricas
   const handleMetricClick = (metricId: string) => {
@@ -1182,13 +1297,6 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
           >
             <Table className="w-4 h-4" />
             Exportar Excel
-          </button>
-          <button
-            onClick={exportarAlertasPDF}
-            className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-all"
-          >
-            <FileText className="w-4 h-4" />
-            Alertas PDF
           </button>
           <button
             onClick={() => setGuiasLogisticas([])}
@@ -1540,63 +1648,74 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
         </div>
       </div>
 
-      {/* Sistema de Alertas */}
+      {/* Sistema de Alertas - BOTONES DINÁMICOS CLICKEABLES */}
       {alertas.length > 0 && (
         <div className="bg-gradient-to-r from-red-50 to-amber-50 dark:from-red-900/20 dark:to-amber-900/20 rounded-xl border border-red-200 dark:border-red-800 overflow-hidden">
-          <button
-            onClick={() => setShowAlertas(!showAlertas)}
-            className="w-full flex items-center justify-between p-4 hover:bg-white/50 dark:hover:bg-white/5 transition-colors"
-          >
+          <div className="p-4 border-b border-red-200 dark:border-red-800">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-500 rounded-lg">
+              <div className="p-2 bg-red-500 rounded-lg animate-pulse">
                 <Bell className="w-5 h-5 text-white" />
               </div>
-              <div className="text-left">
+              <div>
                 <h3 className="font-bold text-slate-800 dark:text-white">
-                  {alertas.length} Alertas Activas
+                  {alertas.length} Alertas Activas - Click para ver detalles
                 </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Haz clic en cada alerta para ver las guías afectadas</p>
               </div>
             </div>
-            {showAlertas ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-          </button>
+          </div>
 
-          {showAlertas && (
-            <div className="px-4 pb-4 space-y-3">
-              {alertas.map(alerta => {
-                const AlertIcon = alerta.icono;
-                const colors: Record<string, string> = {
-                  critico: 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700',
-                  urgente: 'bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700',
-                  atencion: 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700',
-                  advertencia: 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700',
-                };
-                const textColors: Record<string, string> = {
-                  critico: 'text-red-700 dark:text-red-400',
-                  urgente: 'text-orange-700 dark:text-orange-400',
-                  atencion: 'text-amber-700 dark:text-amber-400',
-                  advertencia: 'text-blue-700 dark:text-blue-400',
-                };
+          <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {alertas.map(alerta => {
+              const AlertIcon = alerta.icono;
+              const colors: Record<string, string> = {
+                critico: 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-900/50',
+                urgente: 'bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700 hover:bg-orange-200 dark:hover:bg-orange-900/50',
+                atencion: 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 hover:bg-amber-200 dark:hover:bg-amber-900/50',
+                advertencia: 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/50',
+              };
+              const textColors: Record<string, string> = {
+                critico: 'text-red-700 dark:text-red-400',
+                urgente: 'text-orange-700 dark:text-orange-400',
+                atencion: 'text-amber-700 dark:text-amber-400',
+                advertencia: 'text-blue-700 dark:text-blue-400',
+              };
+              const iconBg: Record<string, string> = {
+                critico: 'bg-red-500',
+                urgente: 'bg-orange-500',
+                atencion: 'bg-amber-500',
+                advertencia: 'bg-blue-500',
+              };
 
-                return (
-                  <div key={alerta.id} className={`p-4 rounded-lg border ${colors[alerta.tipo]} flex items-start gap-4`}>
-                    <AlertIcon className={`w-5 h-5 ${textColors[alerta.tipo]} flex-shrink-0 mt-0.5`} />
-                    <div className="flex-1 min-w-0">
-                      <h4 className={`font-bold ${textColors[alerta.tipo]}`}>{alerta.titulo}</h4>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">{alerta.descripcion}</p>
-                      <div className="flex items-center gap-4 mt-2">
-                        <span className="text-xs bg-white/50 dark:bg-black/20 px-2 py-1 rounded">
-                          {alerta.guiasAfectadas.length} guías
-                        </span>
-                        <span className={`text-xs font-medium ${textColors[alerta.tipo]}`}>
-                          {alerta.accion}
-                        </span>
-                      </div>
+              return (
+                <button
+                  key={alerta.id}
+                  onClick={() => handleAlertaClick(alerta.id)}
+                  className={`p-4 rounded-xl border-2 ${colors[alerta.tipo]} cursor-pointer transition-all transform hover:scale-[1.02] hover:shadow-lg text-left w-full`}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`p-2 ${iconBg[alerta.tipo]} rounded-lg`}>
+                      <AlertIcon className="w-4 h-4 text-white" />
                     </div>
+                    <span className={`text-xs font-bold uppercase ${textColors[alerta.tipo]}`}>
+                      {alerta.tipo}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                  <h4 className={`font-bold text-lg ${textColors[alerta.tipo]}`}>{alerta.titulo}</h4>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{alerta.descripcion}</p>
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-current/10">
+                    <span className="flex items-center gap-1 text-xs font-medium bg-white/60 dark:bg-black/20 px-2 py-1 rounded-full">
+                      <Package className="w-3 h-3" />
+                      {alerta.guiasAfectadas.length} guías
+                    </span>
+                    <span className="flex items-center gap-1 text-xs font-bold text-cyan-600 dark:text-cyan-400">
+                      Ver lista <ChevronRight className="w-3 h-3" />
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -1634,10 +1753,16 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
             </div>
           </div>
 
+          {/* Recomendaciones IA - BOTONES DINÁMICOS CLICKEABLES */}
           <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-5">
             <div className="flex items-center gap-2 mb-4">
-              <Lightbulb className="w-5 h-5 text-amber-500" />
-              <h3 className="font-bold text-slate-800 dark:text-white">Recomendaciones IA</h3>
+              <div className="p-2 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg">
+                <Brain className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800 dark:text-white">Recomendaciones IA</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Click en cada recomendación para ver análisis completo</p>
+              </div>
             </div>
             <div className="space-y-3">
               {recomendaciones.length === 0 ? (
@@ -1647,28 +1772,64 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
                 </div>
               ) : (
                 recomendaciones.map(rec => {
-                  const impactoColors: Record<string, string> = {
-                    alto: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-                    medio: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-                    bajo: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                  const impactoColors: Record<string, { bg: string; border: string; hover: string; text: string; icon: string }> = {
+                    alto: {
+                      bg: 'bg-red-50 dark:bg-red-900/20',
+                      border: 'border-red-200 dark:border-red-800',
+                      hover: 'hover:bg-red-100 dark:hover:bg-red-900/40',
+                      text: 'text-red-700 dark:text-red-400',
+                      icon: 'bg-red-500'
+                    },
+                    medio: {
+                      bg: 'bg-amber-50 dark:bg-amber-900/20',
+                      border: 'border-amber-200 dark:border-amber-800',
+                      hover: 'hover:bg-amber-100 dark:hover:bg-amber-900/40',
+                      text: 'text-amber-700 dark:text-amber-400',
+                      icon: 'bg-amber-500'
+                    },
+                    bajo: {
+                      bg: 'bg-blue-50 dark:bg-blue-900/20',
+                      border: 'border-blue-200 dark:border-blue-800',
+                      hover: 'hover:bg-blue-100 dark:hover:bg-blue-900/40',
+                      text: 'text-blue-700 dark:text-blue-400',
+                      icon: 'bg-blue-500'
+                    },
                   };
+                  const colors = impactoColors[rec.impacto];
                   return (
-                    <div key={rec.id} className="p-3 rounded-lg bg-slate-50 dark:bg-navy-800 border border-slate-200 dark:border-navy-700">
+                    <button
+                      key={rec.id}
+                      onClick={() => handleRecomendacionClick(rec.id)}
+                      className={`w-full p-4 rounded-xl border-2 ${colors.bg} ${colors.border} ${colors.hover} cursor-pointer transition-all transform hover:scale-[1.01] hover:shadow-md text-left`}
+                    >
                       <div className="flex items-start gap-3">
-                        <Zap className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                          <p className="text-sm text-slate-700 dark:text-slate-300">{rec.texto}</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className={`text-xs px-2 py-0.5 rounded font-medium ${impactoColors[rec.impacto]}`}>
+                        <div className={`p-2 ${colors.icon} rounded-lg flex-shrink-0`}>
+                          <Zap className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-xs font-bold uppercase ${colors.text}`}>
                               Impacto {rec.impacto}
                             </span>
                             {rec.guiasRelacionadas && (
-                              <span className="text-xs text-slate-400">{rec.guiasRelacionadas} guías</span>
+                              <span className="text-xs bg-white/60 dark:bg-black/20 px-2 py-0.5 rounded-full">
+                                {rec.guiasRelacionadas} guías
+                              </span>
                             )}
+                          </div>
+                          <p className="text-sm font-medium text-slate-800 dark:text-white">{rec.texto}</p>
+                          {rec.accionRecomendada && (
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">
+                              {rec.accionRecomendada}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-1 mt-2 text-xs font-bold text-cyan-600 dark:text-cyan-400">
+                            <Brain className="w-3 h-3" />
+                            Ver análisis IA completo <ChevronRight className="w-3 h-3" />
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </button>
                   );
                 })
               )}
@@ -2108,6 +2269,342 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
       <div className="text-center text-sm text-slate-400">
         <p>Vista de solo lectura - Datos independientes del módulo de Seguimiento</p>
       </div>
+
+      {/* ====================================== */}
+      {/* MODAL DE ALERTA - Lista de guías afectadas */}
+      {/* ====================================== */}
+      {showAlertaModal && selectedAlerta && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAlertaModal(false)}>
+          <div className="bg-white dark:bg-navy-900 rounded-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            {(() => {
+              const alerta = alertas.find(a => a.id === selectedAlerta);
+              const guiasDeAlerta = getGuiasDeAlerta(selectedAlerta);
+              if (!alerta) return null;
+
+              const AlertIcon = alerta.icono;
+              const colorBg: Record<string, string> = {
+                critico: 'bg-red-500',
+                urgente: 'bg-orange-500',
+                atencion: 'bg-amber-500',
+                advertencia: 'bg-blue-500',
+              };
+
+              return (
+                <>
+                  {/* Header del modal */}
+                  <div className={`${colorBg[alerta.tipo]} p-4 text-white`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <AlertIcon className="w-6 h-6" />
+                        <div>
+                          <span className="text-xs font-bold uppercase opacity-80">{alerta.tipo}</span>
+                          <h3 className="text-lg font-bold">{alerta.titulo}</h3>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setShowAlertaModal(false)}
+                        className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                    <p className="mt-2 text-sm opacity-90">{alerta.descripcion}</p>
+                    <div className="flex items-center gap-4 mt-3">
+                      <span className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded">
+                        <Package className="w-3 h-3" />
+                        {guiasDeAlerta.length} guías afectadas
+                      </span>
+                      <span className="text-xs font-medium bg-white/20 px-2 py-1 rounded">
+                        Acción: {alerta.accion}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Lista de guías */}
+                  <div className="p-4 max-h-[60vh] overflow-y-auto">
+                    <h4 className="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                      <Package className="w-5 h-5 text-cyan-500" />
+                      Lista de Guías Afectadas
+                    </h4>
+
+                    {guiasDeAlerta.length === 0 ? (
+                      <div className="text-center py-8 text-slate-400">
+                        <Package className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                        <p>No hay guías para mostrar</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {guiasDeAlerta.map((guia) => {
+                          const statusColors = getStatusColor(guia.estadoActual);
+                          const ultimoMovimiento = guia.ultimos2Estados[0];
+
+                          return (
+                            <div key={guia.numeroGuia} className="p-4 bg-slate-50 dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700">
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                {/* Columna 1: Fecha y Teléfono */}
+                                <div>
+                                  <div className="text-xs text-slate-500 dark:text-slate-400 uppercase font-medium mb-1">Fecha / Teléfono</div>
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <Calendar className="w-4 h-4 text-blue-500" />
+                                      <span className="font-mono text-sm">{ultimoMovimiento?.fecha?.split(' ')[0] || 'N/A'}</span>
+                                    </div>
+                                    {guia.telefono ? (
+                                      <div className="flex items-center gap-2">
+                                        <Phone className="w-4 h-4 text-green-500" />
+                                        <span className="font-mono text-sm text-green-600 dark:text-green-400">{guia.telefono}</span>
+                                        <button
+                                          onClick={() => openWhatsApp(guia.telefono!, guia.numeroGuia)}
+                                          className="p-1 rounded bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 transition-colors"
+                                          title="WhatsApp"
+                                        >
+                                          <MessageSquare className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs text-slate-400">Sin teléfono</span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Columna 2: Número de Guía y Estatus */}
+                                <div>
+                                  <div className="text-xs text-slate-500 dark:text-slate-400 uppercase font-medium mb-1">Guía / Estatus</div>
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono font-bold text-slate-800 dark:text-white">{guia.numeroGuia}</span>
+                                      <button
+                                        onClick={() => copyToClipboard(guia.numeroGuia, 'guide', guia.numeroGuia)}
+                                        className="p-1 rounded hover:bg-slate-200 dark:hover:bg-navy-700 text-slate-400"
+                                        title="Copiar"
+                                      >
+                                        <Copy className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${statusColors.bg} ${statusColors.text}`}>
+                                      <span className={`w-1.5 h-1.5 rounded-full ${statusColors.dot}`}></span>
+                                      {guia.estadoActual}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Columna 3: Ciudad Destino y Transportadora */}
+                                <div>
+                                  <div className="text-xs text-slate-500 dark:text-slate-400 uppercase font-medium mb-1">Destino / Transportadora</div>
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <MapPin className="w-4 h-4 text-purple-500" />
+                                      <span className="text-sm font-medium">{guia.ciudadDestino}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Truck className="w-4 h-4 text-slate-400" />
+                                      <span className="text-sm">{guia.transportadora}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Columna 4: Último Movimiento y Hora */}
+                                <div>
+                                  <div className="text-xs text-slate-500 dark:text-slate-400 uppercase font-medium mb-1">Último Movimiento</div>
+                                  {ultimoMovimiento ? (
+                                    <div className="space-y-1">
+                                      <p className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2">{ultimoMovimiento.descripcion}</p>
+                                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                                        <Clock className="w-3 h-3" />
+                                        <span>{ultimoMovimiento.fecha?.split(' ')[1] || 'N/A'}</span>
+                                        <span>• {guia.diasTranscurridos} días</span>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-slate-400">Sin información</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* ====================================== */}
+      {/* MODAL DE RECOMENDACIÓN IA - Análisis detallado */}
+      {/* ====================================== */}
+      {showRecomendacionModal && selectedRecomendacion && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowRecomendacionModal(false)}>
+          <div className="bg-white dark:bg-navy-900 rounded-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            {(() => {
+              const rec = getRecomendacionSeleccionada();
+              if (!rec) return null;
+
+              const impactoColors: Record<string, { bg: string; text: string }> = {
+                alto: { bg: 'bg-gradient-to-r from-red-500 to-rose-600', text: 'text-red-600 dark:text-red-400' },
+                medio: { bg: 'bg-gradient-to-r from-amber-500 to-orange-600', text: 'text-amber-600 dark:text-amber-400' },
+                bajo: { bg: 'bg-gradient-to-r from-blue-500 to-cyan-600', text: 'text-blue-600 dark:text-blue-400' },
+              };
+              const colors = impactoColors[rec.impacto];
+
+              return (
+                <>
+                  {/* Header del modal */}
+                  <div className={`${colors.bg} p-4 text-white`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white/20 rounded-lg">
+                          <Brain className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold uppercase opacity-80">Recomendación IA - Impacto {rec.impacto}</span>
+                          <h3 className="text-lg font-bold">{rec.texto}</h3>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setShowRecomendacionModal(false)}
+                        className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                    {rec.accionRecomendada && (
+                      <div className="mt-3 p-3 bg-white/10 rounded-lg">
+                        <div className="flex items-center gap-2 text-xs font-bold mb-1">
+                          <Zap className="w-4 h-4" />
+                          Acción Recomendada
+                        </div>
+                        <p className="text-sm">{rec.accionRecomendada}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contenido del modal */}
+                  <div className="p-4 max-h-[60vh] overflow-y-auto space-y-4">
+                    {/* Análisis de IA */}
+                    {rec.analisisIA && (
+                      <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="p-2 bg-purple-500 rounded-lg">
+                            <Brain className="w-4 h-4 text-white" />
+                          </div>
+                          <h4 className="font-bold text-purple-700 dark:text-purple-400">Análisis de Inteligencia Artificial</h4>
+                        </div>
+                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{rec.analisisIA}</p>
+                      </div>
+                    )}
+
+                    {/* Lista de guías relacionadas */}
+                    {rec.guiasDetalle && rec.guiasDetalle.length > 0 && (
+                      <>
+                        <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                          <Package className="w-5 h-5 text-cyan-500" />
+                          Guías Relacionadas ({rec.guiasDetalle.length})
+                        </h4>
+
+                        <div className="space-y-3">
+                          {rec.guiasDetalle.map((guia) => {
+                            const statusColors = getStatusColor(guia.estadoActual);
+                            const ultimoMovimiento = guia.ultimos2Estados[0];
+
+                            return (
+                              <div key={guia.numeroGuia} className="p-4 bg-slate-50 dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                  {/* Columna 1: Fecha y Teléfono */}
+                                  <div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 uppercase font-medium mb-1">Fecha / Teléfono</div>
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2">
+                                        <Calendar className="w-4 h-4 text-blue-500" />
+                                        <span className="font-mono text-sm">{ultimoMovimiento?.fecha?.split(' ')[0] || 'N/A'}</span>
+                                      </div>
+                                      {guia.telefono ? (
+                                        <div className="flex items-center gap-2">
+                                          <Phone className="w-4 h-4 text-green-500" />
+                                          <span className="font-mono text-sm text-green-600 dark:text-green-400">{guia.telefono}</span>
+                                          <button
+                                            onClick={() => openWhatsApp(guia.telefono!, guia.numeroGuia)}
+                                            className="p-1 rounded bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 transition-colors"
+                                            title="WhatsApp"
+                                          >
+                                            <MessageSquare className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <span className="text-xs text-slate-400">Sin teléfono</span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Columna 2: Número de Guía y Estatus */}
+                                  <div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 uppercase font-medium mb-1">Guía / Estatus</div>
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-mono font-bold text-slate-800 dark:text-white">{guia.numeroGuia}</span>
+                                        <button
+                                          onClick={() => copyToClipboard(guia.numeroGuia, 'guide', guia.numeroGuia)}
+                                          className="p-1 rounded hover:bg-slate-200 dark:hover:bg-navy-700 text-slate-400"
+                                          title="Copiar"
+                                        >
+                                          <Copy className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${statusColors.bg} ${statusColors.text}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${statusColors.dot}`}></span>
+                                        {guia.estadoActual}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* Columna 3: Ciudad Destino y Transportadora */}
+                                  <div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 uppercase font-medium mb-1">Destino / Transportadora</div>
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2">
+                                        <MapPin className="w-4 h-4 text-purple-500" />
+                                        <span className="text-sm font-medium">{guia.ciudadDestino}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Truck className="w-4 h-4 text-slate-400" />
+                                        <span className="text-sm">{guia.transportadora}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Columna 4: Último Movimiento y Hora */}
+                                  <div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 uppercase font-medium mb-1">Último Movimiento</div>
+                                    {ultimoMovimiento ? (
+                                      <div className="space-y-1">
+                                        <p className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2">{ultimoMovimiento.descripcion}</p>
+                                        <div className="flex items-center gap-2 text-xs text-slate-400">
+                                          <Clock className="w-3 h-3" />
+                                          <span>{ultimoMovimiento.fecha?.split(' ')[1] || 'N/A'}</span>
+                                          <span>• {guia.diasTranscurridos} días</span>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs text-slate-400">Sin información</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
