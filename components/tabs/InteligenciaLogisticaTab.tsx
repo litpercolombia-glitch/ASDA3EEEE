@@ -481,6 +481,79 @@ export const InteligenciaLogisticaTab: React.FC = () => {
     alert(`Teléfonos actualizados: ${phoneRegistry.size} registros procesados`);
   };
 
+  // Parsear archivo Excel
+  const parseExcelFile = async (file: File): Promise<GuiaLogistica[]> => {
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+
+    const guias: GuiaLogistica[] = [];
+
+    // Detectar columnas por encabezados (primera fila)
+    const headers = jsonData[0]?.map((h: any) => String(h).toLowerCase().trim()) || [];
+
+    // Mapeo flexible de columnas
+    const colMap = {
+      guia: headers.findIndex((h: string) => h.includes('guia') || h.includes('guía') || h.includes('numero') || h.includes('número') || h.includes('tracking')),
+      telefono: headers.findIndex((h: string) => h.includes('telefono') || h.includes('teléfono') || h.includes('celular') || h.includes('phone') || h.includes('movil')),
+      transportadora: headers.findIndex((h: string) => h.includes('transportadora') || h.includes('carrier') || h.includes('empresa')),
+      origen: headers.findIndex((h: string) => h.includes('origen') || h.includes('from') || h.includes('remitente')),
+      destino: headers.findIndex((h: string) => h.includes('destino') || h.includes('ciudad') || h.includes('to') || h.includes('destinatario')),
+      estado: headers.findIndex((h: string) => h.includes('estado') || h.includes('status') || h.includes('estatus')),
+      dias: headers.findIndex((h: string) => h.includes('dias') || h.includes('días') || h.includes('days') || h.includes('tiempo')),
+      novedad: headers.findIndex((h: string) => h.includes('novedad') || h.includes('issue') || h.includes('problema')),
+      cliente: headers.findIndex((h: string) => h.includes('cliente') || h.includes('nombre') || h.includes('customer')),
+    };
+
+    // Si no hay encabezados reconocidos, intentar usar índices por defecto
+    if (colMap.guia === -1) colMap.guia = 0;
+    if (colMap.estado === -1 && headers.length > 1) colMap.estado = 1;
+    if (colMap.destino === -1 && headers.length > 2) colMap.destino = 2;
+
+    // Procesar filas (empezar desde 1 si hay encabezados)
+    const startRow = headers.some((h: string) => h.includes('guia') || h.includes('estado') || h.includes('tracking')) ? 1 : 0;
+
+    for (let i = startRow; i < jsonData.length; i++) {
+      const row = jsonData[i];
+      if (!row || row.length === 0) continue;
+
+      const numeroGuia = String(row[colMap.guia] || '').trim();
+      if (!numeroGuia || numeroGuia.length < 5) continue;
+
+      const estadoActual = String(row[colMap.estado] || 'Pendiente').trim();
+      const ciudadDestino = String(row[colMap.destino] || 'Desconocido').trim();
+      const transportadora = String(row[colMap.transportadora] || 'Desconocido').trim();
+      const telefono = colMap.telefono !== -1 ? String(row[colMap.telefono] || '').trim() : undefined;
+      const diasTranscurridos = colMap.dias !== -1 ? parseInt(String(row[colMap.dias] || '0')) || 0 : 0;
+      const ciudadOrigen = colMap.origen !== -1 ? String(row[colMap.origen] || 'Colombia').trim() : 'Colombia';
+
+      // Detectar novedad
+      const tieneNovedad =
+        estadoActual.toLowerCase().includes('novedad') ||
+        estadoActual.toLowerCase().includes('devuelto') ||
+        estadoActual.toLowerCase().includes('rechaz') ||
+        estadoActual.toLowerCase().includes('problema') ||
+        (colMap.novedad !== -1 && row[colMap.novedad]);
+
+      guias.push({
+        numeroGuia,
+        telefono: telefono || undefined,
+        transportadora,
+        ciudadOrigen,
+        ciudadDestino,
+        estadoActual,
+        diasTranscurridos,
+        tieneNovedad,
+        ultimos2Estados: [],
+        historialCompleto: [],
+      });
+    }
+
+    return guias;
+  };
+
   // Cargar datos desde archivo Excel/TXT
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -488,13 +561,29 @@ export const InteligenciaLogisticaTab: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const text = await file.text();
-      const guias = parseTrackingText(text);
-      setGuiasLogisticas(guias);
-      setShowUploadModal(false);
+      const fileName = file.name.toLowerCase();
+      let guias: GuiaLogistica[] = [];
+
+      if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+        // Archivo Excel
+        guias = await parseExcelFile(file);
+      } else {
+        // Archivo de texto (TXT/CSV)
+        const text = await file.text();
+        const phoneRegistry = phoneInput.trim() ? parsePhoneRegistry(phoneInput) : undefined;
+        guias = parseTrackingText(text, phoneRegistry);
+      }
+
+      if (guias.length === 0) {
+        alert('No se encontraron guías en el archivo. Verifica el formato.');
+      } else {
+        setGuiasLogisticas(guias);
+        setShowUploadModal(false);
+        alert(`${guias.length} guías cargadas correctamente`);
+      }
     } catch (error) {
       console.error('Error reading file:', error);
-      alert('Error al leer el archivo.');
+      alert('Error al leer el archivo. Verifica el formato.');
     } finally {
       setIsLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -977,12 +1066,12 @@ export const InteligenciaLogisticaTab: React.FC = () => {
                 {/* Subir archivo */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Subir archivo (.txt)
+                    Subir archivo (Excel, TXT, CSV)
                   </label>
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".txt,.csv"
+                    accept=".txt,.csv,.xlsx,.xls"
                     onChange={handleFileUpload}
                     className="w-full px-4 py-3 border-2 border-dashed border-slate-300 dark:border-navy-600 rounded-xl cursor-pointer hover:border-cyan-400 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-cyan-500 file:text-white file:font-medium"
                   />
@@ -1922,12 +2011,12 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
             <div className="p-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Subir archivo (.txt)
+                  Subir archivo (Excel, TXT, CSV)
                 </label>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".txt,.csv"
+                  accept=".txt,.csv,.xlsx,.xls"
                   onChange={handleFileUpload}
                   className="w-full px-4 py-3 border-2 border-dashed border-slate-300 dark:border-navy-600 rounded-xl cursor-pointer hover:border-cyan-400 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-cyan-500 file:text-white file:font-medium"
                 />
