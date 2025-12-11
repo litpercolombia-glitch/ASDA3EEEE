@@ -44,6 +44,11 @@ import {
   MessageSquare,
   PhoneCall,
   Target,
+  Brain,
+  Sun,
+  Cloud,
+  Snowflake,
+  Shield,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -95,6 +100,100 @@ interface RecomendacionIA {
   impacto: 'alto' | 'medio' | 'bajo';
   guiasRelacionadas?: number;
 }
+
+// =====================================
+// FUNCIONES DE ANÁLISIS ML
+// =====================================
+const FESTIVOS_COLOMBIA_IL = [
+  '2025-01-01', '2025-01-06', '2025-03-24', '2025-04-17', '2025-04-18',
+  '2025-05-01', '2025-06-02', '2025-06-23', '2025-06-30', '2025-07-20',
+  '2025-08-07', '2025-08-18', '2025-10-13', '2025-11-03', '2025-11-17',
+  '2025-12-08', '2025-12-25',
+  '2026-01-01', '2026-01-12', '2026-03-23', '2026-04-02', '2026-04-03',
+];
+
+const getSeasonInfoIL = (): { season: string; impact: number; icon: React.ReactNode; color: string } => {
+  const month = new Date().getMonth();
+  if (month >= 10 || month <= 1) {
+    return { season: 'Alta (Navidad)', impact: -15, icon: <Snowflake className="w-3.5 h-3.5" />, color: 'text-blue-500' };
+  }
+  if (month >= 3 && month <= 5) {
+    return { season: 'Lluvias', impact: -10, icon: <Cloud className="w-3.5 h-3.5" />, color: 'text-slate-500' };
+  }
+  if (month >= 6 && month <= 8) {
+    return { season: 'Seca', impact: 5, icon: <Sun className="w-3.5 h-3.5" />, color: 'text-yellow-500' };
+  }
+  return { season: 'Normal', impact: 0, icon: <Sun className="w-3.5 h-3.5" />, color: 'text-amber-500' };
+};
+
+const isNearHolidayIL = (): boolean => {
+  const today = new Date();
+  const threeDaysBefore = new Date(today);
+  threeDaysBefore.setDate(today.getDate() - 3);
+  const threeDaysAfter = new Date(today);
+  threeDaysAfter.setDate(today.getDate() + 3);
+
+  return FESTIVOS_COLOMBIA_IL.some(holiday => {
+    const h = new Date(holiday);
+    return h >= threeDaysBefore && h <= threeDaysAfter;
+  });
+};
+
+interface AnomaliaIL {
+  guia: GuiaLogistica;
+  tipo: 'SIN_MOVIMIENTO' | 'TRANSITO_LARGO' | 'OFICINA_MUCHO' | 'NOVEDAD_ABIERTA';
+  severidad: 'CRITICO' | 'ALTO' | 'MEDIO';
+  descripcion: string;
+  recomendacion: string;
+}
+
+const detectarAnomaliasIL = (guias: GuiaLogistica[]): AnomaliaIL[] => {
+  const anomalias: AnomaliaIL[] = [];
+
+  guias.forEach(g => {
+    if (g.estadoActual.toLowerCase().includes('entregado')) return;
+
+    // Sin movimiento > 3 días
+    if (g.diasTranscurridos >= 3) {
+      const ultimoEvento = g.ultimos2Estados[0]?.descripcion?.toLowerCase() || '';
+      if (!ultimoEvento.includes('entregado')) {
+        anomalias.push({
+          guia: g,
+          tipo: 'SIN_MOVIMIENTO',
+          severidad: g.diasTranscurridos >= 5 ? 'CRITICO' : 'ALTO',
+          descripcion: `${g.diasTranscurridos} días sin movimiento`,
+          recomendacion: 'Contactar transportadora urgente'
+        });
+      }
+    }
+
+    // En oficina/centro mucho tiempo
+    const estado = g.estadoActual.toLowerCase();
+    if ((estado.includes('oficina') || estado.includes('centro')) && g.diasTranscurridos >= 3) {
+      anomalias.push({
+        guia: g,
+        tipo: 'OFICINA_MUCHO',
+        severidad: g.diasTranscurridos >= 5 ? 'CRITICO' : 'MEDIO',
+        descripcion: `${g.diasTranscurridos} días en oficina sin retiro`,
+        recomendacion: 'Llamar cliente para coordinar retiro'
+      });
+    }
+
+    // Novedad sin gestión
+    if (g.tieneNovedad && g.diasTranscurridos >= 2) {
+      anomalias.push({
+        guia: g,
+        tipo: 'NOVEDAD_ABIERTA',
+        severidad: 'ALTO',
+        descripcion: 'Novedad abierta sin resolver',
+        recomendacion: 'Gestionar novedad con transportadora'
+      });
+    }
+  });
+
+  const orden = { CRITICO: 0, ALTO: 1, MEDIO: 2 };
+  return anomalias.sort((a, b) => orden[a.severidad] - orden[b.severidad]);
+};
 
 // =====================================
 // HELPERS
@@ -1168,6 +1267,113 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ====================================== */}
+      {/* PANEL DE ANÁLISIS ML COMPACTO */}
+      {/* ====================================== */}
+      {(() => {
+        const total = guiasLogisticas.length;
+        if (total === 0) return null;
+
+        const anomalias = detectarAnomaliasIL(guiasLogisticas);
+        const anomaliasCriticas = anomalias.filter(a => a.severidad === 'CRITICO').length;
+        const anomaliasAltas = anomalias.filter(a => a.severidad === 'ALTO').length;
+        const season = getSeasonInfoIL();
+        const nearHoliday = isNearHolidayIL();
+
+        // Score de salud logística
+        let scoreBase = 70;
+        scoreBase += (estadisticas.tasaEntrega - 50) * 0.3;
+        scoreBase -= estadisticas.guiasEnRiesgo * 0.5;
+        scoreBase -= anomaliasCriticas * 5;
+        scoreBase += season.impact;
+        if (nearHoliday) scoreBase -= 10;
+        const score = Math.min(100, Math.max(0, Math.round(scoreBase)));
+
+        const getScoreColor = (s: number) => {
+          if (s >= 80) return 'text-emerald-500 bg-emerald-100 dark:bg-emerald-900/30';
+          if (s >= 60) return 'text-amber-500 bg-amber-100 dark:bg-amber-900/30';
+          return 'text-red-500 bg-red-100 dark:bg-red-900/30';
+        };
+
+        const getScoreLabel = (s: number) => {
+          if (s >= 80) return 'Excelente';
+          if (s >= 60) return 'Regular';
+          return 'Crítico';
+        };
+
+        return (
+          <div className="bg-gradient-to-r from-slate-50 to-cyan-50 dark:from-navy-900 dark:to-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-3">
+            <div className="flex flex-wrap items-center gap-3 justify-between">
+              {/* Score de Salud */}
+              <div className="flex items-center gap-2">
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold ${getScoreColor(score)}`}>
+                  <Brain className="w-4 h-4" />
+                  <span className="text-lg">{score}</span>
+                  <span className="text-xs font-normal">/ 100</span>
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  <span className="font-medium">{getScoreLabel(score)}</span>
+                </div>
+              </div>
+
+              {/* Indicadores Rápidos */}
+              <div className="flex items-center gap-4 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <Target className={`w-3.5 h-3.5 ${estadisticas.tasaEntrega >= 70 ? 'text-emerald-500' : 'text-amber-500'}`} />
+                  <span className="text-slate-600 dark:text-slate-300">
+                    <span className="font-bold">{estadisticas.tasaEntrega}%</span> entrega
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <Truck className="w-3.5 h-3.5 text-blue-500" />
+                  <span className="text-slate-600 dark:text-slate-300">
+                    <span className="font-bold">{estadisticas.totalActivas}</span> activas
+                  </span>
+                </div>
+
+                {estadisticas.guiasEnRiesgo > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-orange-500" />
+                    <span className="text-orange-600 dark:text-orange-400">
+                      <span className="font-bold">{estadisticas.guiasEnRiesgo}</span> en riesgo
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-1.5">
+                  <span className={season.color}>{season.icon}</span>
+                  <span className="text-slate-500 dark:text-slate-400">{season.season}</span>
+                  {nearHoliday && (
+                    <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded text-[10px] font-medium">
+                      Festivo
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Anomalías */}
+              {(anomaliasCriticas > 0 || anomaliasAltas > 0) && (
+                <div className="flex items-center gap-2">
+                  {anomaliasCriticas > 0 && (
+                    <span className="flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-xs font-medium">
+                      <Zap className="w-3 h-3" />
+                      {anomaliasCriticas} críticos
+                    </span>
+                  )}
+                  {anomaliasAltas > 0 && (
+                    <span className="flex items-center gap-1 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-lg text-xs font-medium">
+                      <AlertCircle className="w-3 h-3" />
+                      {anomaliasAltas} alertas
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         );

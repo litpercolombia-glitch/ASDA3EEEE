@@ -39,6 +39,14 @@ import {
   FileSpreadsheet,
   X,
   Table,
+  Brain,
+  Zap,
+  Activity,
+  Target,
+  Shield,
+  Sun,
+  Cloud,
+  Snowflake,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { AlertDashboard } from '../AlertDashboard';
@@ -125,6 +133,241 @@ const getStatusIcon = (status: string): string => {
   if (statusLower.includes('novedad') || statusLower.includes('rechazado') || statusLower.includes('devuelto') || statusLower.includes('problema')) return '🔴';
   if (statusLower.includes('pendiente')) return '🟡';
   return '⚪';
+};
+
+// =====================================
+// FUNCIONES DE ANÁLISIS ML
+// =====================================
+const FESTIVOS_COLOMBIA = [
+  '2025-01-01', '2025-01-06', '2025-03-24', '2025-04-17', '2025-04-18',
+  '2025-05-01', '2025-06-02', '2025-06-23', '2025-06-30', '2025-07-20',
+  '2025-08-07', '2025-08-18', '2025-10-13', '2025-11-03', '2025-11-17',
+  '2025-12-08', '2025-12-25',
+  '2026-01-01', '2026-01-12', '2026-03-23', '2026-04-02', '2026-04-03',
+];
+
+const getSeasonInfo = (): { season: string; impact: number; icon: React.ReactNode; color: string } => {
+  const month = new Date().getMonth();
+  if (month >= 10 || month <= 1) {
+    return { season: 'Alta (Navidad)', impact: -15, icon: <Snowflake className="w-3.5 h-3.5" />, color: 'text-blue-500' };
+  }
+  if (month >= 3 && month <= 5) {
+    return { season: 'Lluvias', impact: -10, icon: <Cloud className="w-3.5 h-3.5" />, color: 'text-slate-500' };
+  }
+  if (month >= 6 && month <= 8) {
+    return { season: 'Seca', impact: 5, icon: <Sun className="w-3.5 h-3.5" />, color: 'text-yellow-500' };
+  }
+  return { season: 'Normal', impact: 0, icon: <Sun className="w-3.5 h-3.5" />, color: 'text-amber-500' };
+};
+
+const isNearHoliday = (): boolean => {
+  const today = new Date();
+  const dateStr = today.toISOString().split('T')[0];
+  const threeDaysBefore = new Date(today);
+  threeDaysBefore.setDate(today.getDate() - 3);
+  const threeDaysAfter = new Date(today);
+  threeDaysAfter.setDate(today.getDate() + 3);
+
+  return FESTIVOS_COLOMBIA.some(holiday => {
+    const h = new Date(holiday);
+    return h >= threeDaysBefore && h <= threeDaysAfter;
+  });
+};
+
+interface AnomaliaDetectada {
+  guia: GuiaProcesada;
+  tipo: 'SIN_MOVIMIENTO' | 'TRANSITO_LARGO' | 'OFICINA_MUCHO' | 'NOVEDAD_ABIERTA';
+  severidad: 'CRITICO' | 'ALTO' | 'MEDIO';
+  descripcion: string;
+  recomendacion: string;
+}
+
+const detectarAnomalias = (guias: GuiaProcesada[]): AnomaliaDetectada[] => {
+  const anomalias: AnomaliaDetectada[] = [];
+
+  guias.forEach(g => {
+    if (g.estadoGeneral.toLowerCase().includes('entregado')) return;
+
+    // Sin movimiento > 3 días
+    if (g.dias >= 3 && g.tieneTracking) {
+      const ultimoEvento = g.ultimoEvento?.descripcion?.toLowerCase() || '';
+      if (!ultimoEvento.includes('entregado')) {
+        anomalias.push({
+          guia: g,
+          tipo: 'SIN_MOVIMIENTO',
+          severidad: g.dias >= 5 ? 'CRITICO' : 'ALTO',
+          descripcion: `${g.dias} días sin movimiento`,
+          recomendacion: 'Contactar transportadora urgente'
+        });
+      }
+    }
+
+    // En oficina mucho tiempo
+    if (g.estadoGeneral.toLowerCase().includes('oficina') && g.dias >= 3) {
+      anomalias.push({
+        guia: g,
+        tipo: 'OFICINA_MUCHO',
+        severidad: g.dias >= 5 ? 'CRITICO' : 'MEDIO',
+        descripcion: `${g.dias} días en oficina sin retiro`,
+        recomendacion: 'Llamar cliente para coordinar retiro'
+      });
+    }
+
+    // Novedad sin gestión
+    if (g.tieneNovedad && g.dias >= 2) {
+      anomalias.push({
+        guia: g,
+        tipo: 'NOVEDAD_ABIERTA',
+        severidad: 'ALTO',
+        descripcion: 'Novedad abierta sin resolver',
+        recomendacion: 'Gestionar novedad con transportadora'
+      });
+    }
+  });
+
+  // Ordenar por severidad
+  const orden = { CRITICO: 0, ALTO: 1, MEDIO: 2 };
+  return anomalias.sort((a, b) => orden[a.severidad] - orden[b.severidad]);
+};
+
+// =====================================
+// PANEL DE ANÁLISIS COMPACTO
+// =====================================
+const AnalysisPanel: React.FC<{
+  guiasProcesadas: GuiaProcesada[];
+}> = ({ guiasProcesadas }) => {
+  const analisis = useMemo(() => {
+    const total = guiasProcesadas.length;
+    if (total === 0) return null;
+
+    const entregados = guiasProcesadas.filter(g => g.estadoGeneral.toLowerCase().includes('entregado')).length;
+    const conNovedad = guiasProcesadas.filter(g => g.tieneNovedad).length;
+    const enTransito = guiasProcesadas.filter(g =>
+      g.estadoGeneral.toLowerCase().includes('tránsito') ||
+      g.estadoGeneral.toLowerCase().includes('transito') ||
+      g.estadoGeneral.toLowerCase().includes('reparto')
+    ).length;
+    const conProblema = guiasProcesadas.filter(g => g.dias > 5 && !g.estadoGeneral.toLowerCase().includes('entregado')).length;
+
+    const tasaEntrega = total > 0 ? Math.round((entregados / total) * 100) : 0;
+    const anomalias = detectarAnomalias(guiasProcesadas);
+    const season = getSeasonInfo();
+    const nearHoliday = isNearHoliday();
+
+    // Score de salud logística (0-100)
+    let scoreBase = 70;
+    scoreBase += (tasaEntrega - 50) * 0.3; // Ajuste por tasa de entrega
+    scoreBase -= conProblema * 2; // Penalización por guías problemáticas
+    scoreBase -= anomalias.filter(a => a.severidad === 'CRITICO').length * 5;
+    scoreBase += season.impact;
+    if (nearHoliday) scoreBase -= 10;
+    const score = Math.min(100, Math.max(0, Math.round(scoreBase)));
+
+    return {
+      total,
+      entregados,
+      tasaEntrega,
+      conNovedad,
+      enTransito,
+      conProblema,
+      anomalias: anomalias.slice(0, 5), // Top 5
+      anomaliasCriticas: anomalias.filter(a => a.severidad === 'CRITICO').length,
+      anomaliasAltas: anomalias.filter(a => a.severidad === 'ALTO').length,
+      season,
+      nearHoliday,
+      score
+    };
+  }, [guiasProcesadas]);
+
+  if (!analisis || analisis.total === 0) return null;
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-emerald-500 bg-emerald-100 dark:bg-emerald-900/30';
+    if (score >= 60) return 'text-amber-500 bg-amber-100 dark:bg-amber-900/30';
+    return 'text-red-500 bg-red-100 dark:bg-red-900/30';
+  };
+
+  const getScoreLabel = (score: number) => {
+    if (score >= 80) return 'Excelente';
+    if (score >= 60) return 'Regular';
+    return 'Crítico';
+  };
+
+  return (
+    <div className="bg-gradient-to-r from-slate-50 to-blue-50 dark:from-navy-900 dark:to-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-3 mb-4">
+      <div className="flex flex-wrap items-center gap-3 justify-between">
+        {/* Score de Salud */}
+        <div className="flex items-center gap-2">
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold ${getScoreColor(analisis.score)}`}>
+            <Brain className="w-4 h-4" />
+            <span className="text-lg">{analisis.score}</span>
+            <span className="text-xs font-normal">/ 100</span>
+          </div>
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            <span className="font-medium">{getScoreLabel(analisis.score)}</span>
+          </div>
+        </div>
+
+        {/* Indicadores Rápidos */}
+        <div className="flex items-center gap-4 text-xs">
+          {/* Tasa Entrega */}
+          <div className="flex items-center gap-1.5">
+            <Target className={`w-3.5 h-3.5 ${analisis.tasaEntrega >= 70 ? 'text-emerald-500' : 'text-amber-500'}`} />
+            <span className="text-slate-600 dark:text-slate-300">
+              <span className="font-bold">{analisis.tasaEntrega}%</span> entrega
+            </span>
+          </div>
+
+          {/* En Tránsito */}
+          <div className="flex items-center gap-1.5">
+            <Truck className="w-3.5 h-3.5 text-blue-500" />
+            <span className="text-slate-600 dark:text-slate-300">
+              <span className="font-bold">{analisis.enTransito}</span> en ruta
+            </span>
+          </div>
+
+          {/* Con Problema */}
+          {analisis.conProblema > 0 && (
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+              <span className="text-red-600 dark:text-red-400">
+                <span className="font-bold">{analisis.conProblema}</span> críticos
+              </span>
+            </div>
+          )}
+
+          {/* Temporada */}
+          <div className="flex items-center gap-1.5">
+            <span className={analisis.season.color}>{analisis.season.icon}</span>
+            <span className="text-slate-500 dark:text-slate-400">{analisis.season.season}</span>
+            {analisis.nearHoliday && (
+              <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded text-[10px] font-medium">
+                Festivo
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Anomalías Rápidas */}
+        {(analisis.anomaliasCriticas > 0 || analisis.anomaliasAltas > 0) && (
+          <div className="flex items-center gap-2">
+            {analisis.anomaliasCriticas > 0 && (
+              <span className="flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-xs font-medium">
+                <Zap className="w-3 h-3" />
+                {analisis.anomaliasCriticas} críticos
+              </span>
+            )}
+            {analisis.anomaliasAltas > 0 && (
+              <span className="flex items-center gap-1 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-lg text-xs font-medium">
+                <AlertCircle className="w-3 h-3" />
+                {analisis.anomaliasAltas} alertas
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 // =====================================
@@ -1457,6 +1700,9 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({ shipments, onRef
           </div>
         </div>
       )}
+
+      {/* Panel de Análisis Compacto */}
+      <AnalysisPanel guiasProcesadas={guiasProcesadas} />
 
       {/* Tarjetas de Resumen Dinámico */}
       <SummaryCards
