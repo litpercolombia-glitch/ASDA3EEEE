@@ -43,6 +43,7 @@ import {
   CheckCircle,
   MessageSquare,
   PhoneCall,
+  Target,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -339,7 +340,7 @@ export const InteligenciaLogisticaTab: React.FC = () => {
     ).length;
 
     const tasaEntrega = total > 0 ? Math.round((entregadas / total) * 100) : 0;
-    const tasaDevolucion = total > 0 ? Math.round((devueltas / total) * 100) : 0;
+    const tasaDevolucion = total > 0 ? Math.round((devueltas / total) * 1000) / 10 : 0; // 1 decimal
 
     const guiasEntregadas = guiasLogisticas.filter(g =>
       g.estadoActual.toLowerCase().includes('entregado')
@@ -347,6 +348,23 @@ export const InteligenciaLogisticaTab: React.FC = () => {
     const promedioDiasEntrega = guiasEntregadas.length > 0
       ? Math.round(guiasEntregadas.reduce((acc, g) => acc + g.diasTranscurridos, 0) / guiasEntregadas.length)
       : 0;
+
+    // Guías en riesgo: guías que pueden ser rescatadas (con novedad recuperable o en situación crítica)
+    // Incluye: guías con novedad, en centro/oficina sin recoger, sin movimiento >48h
+    const guiasEnRiesgo = guiasLogisticas.filter(g => {
+      const estado = g.estadoActual.toLowerCase();
+      const esEntregado = estado.includes('entregado');
+      const esDevuelto = estado.includes('devuelto');
+      if (esEntregado || esDevuelto) return false;
+
+      // Criterios de riesgo rescatable
+      const tieneNovedadRecuperable = g.tieneNovedad;
+      const enCentroSinRecoger = estado.includes('centro') || estado.includes('oficina') || estado.includes('reclamo');
+      const sinMovimientoMucho = g.diasTranscurridos > 2;
+      const intentoFallido = estado.includes('no logramos') || estado.includes('no estaba');
+
+      return tieneNovedadRecuperable || enCentroSinRecoger || sinMovimientoMucho || intentoFallido;
+    }).length;
 
     return {
       totalActivas: total - entregadas - devueltas,
@@ -358,7 +376,9 @@ export const InteligenciaLogisticaTab: React.FC = () => {
       total,
       entregadas,
       enReparto,
-      devueltas
+      devueltas,
+      guiasEnRiesgo,
+      metaDevolucion: 8 // Meta fija de 8%
     };
   }, [guiasLogisticas]);
 
@@ -890,6 +910,167 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
           </button>
         </div>
       </div>
+
+      {/* ====================================== */}
+      {/* BARRA DE PROGRESO GLOBAL - Devoluciones */}
+      {/* ====================================== */}
+      {(() => {
+        // Determinar color según tasa de devolución
+        const tasa = estadisticas.tasaDevolucion;
+        const meta = estadisticas.metaDevolucion;
+        let colorClasses = {
+          bg: 'bg-emerald-500',
+          bgLight: 'bg-emerald-100 dark:bg-emerald-900/30',
+          text: 'text-emerald-600 dark:text-emerald-400',
+          border: 'border-emerald-200 dark:border-emerald-800',
+          glow: 'shadow-emerald-500/20',
+          label: 'En Meta'
+        };
+
+        if (tasa >= 12) {
+          colorClasses = {
+            bg: 'bg-red-500',
+            bgLight: 'bg-red-100 dark:bg-red-900/30',
+            text: 'text-red-600 dark:text-red-400',
+            border: 'border-red-200 dark:border-red-800',
+            glow: 'shadow-red-500/20',
+            label: 'Crítico'
+          };
+        } else if (tasa >= 10) {
+          colorClasses = {
+            bg: 'bg-amber-500',
+            bgLight: 'bg-amber-100 dark:bg-amber-900/30',
+            text: 'text-amber-600 dark:text-amber-400',
+            border: 'border-amber-200 dark:border-amber-800',
+            glow: 'shadow-amber-500/20',
+            label: 'Alerta'
+          };
+        }
+
+        // Calcular porcentaje visual (máximo 100% basado en un límite de 20% para la barra)
+        const maxVisual = 20;
+        const porcentajeVisual = Math.min((tasa / maxVisual) * 100, 100);
+        const porcentajeMeta = (meta / maxVisual) * 100;
+
+        return (
+          <div className={`relative overflow-hidden rounded-xl border-2 ${colorClasses.border} ${colorClasses.bgLight} p-4 shadow-lg ${colorClasses.glow}`}>
+            {/* Fondo con patrón */}
+            <div className="absolute inset-0 opacity-5">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,0,0,0.1)_1px,transparent_1px)] bg-[length:20px_20px]"></div>
+            </div>
+
+            <div className="relative z-10">
+              {/* Header de la barra */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${colorClasses.bg} shadow-lg`}>
+                    <Target className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800 dark:text-white text-lg">
+                      Tasa de Devoluciones
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Objetivo: Reducir del 15% al 8%
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="flex items-center gap-2 bg-white/50 dark:bg-black/20 px-3 py-1.5 rounded-lg">
+                    <AlertTriangle className={`w-4 h-4 ${colorClasses.text}`} />
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                      Guías en riesgo: <span className={`font-bold ${colorClasses.text}`}>{estadisticas.guiasEnRiesgo}</span>
+                    </span>
+                  </div>
+                  <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${colorClasses.bg} text-white`}>
+                    {colorClasses.label}
+                  </span>
+                </div>
+              </div>
+
+              {/* Barra de progreso principal */}
+              <div className="relative">
+                {/* Fondo de la barra */}
+                <div className="h-8 bg-slate-200 dark:bg-navy-700 rounded-full overflow-hidden relative">
+                  {/* Barra de progreso actual */}
+                  <div
+                    className={`absolute inset-y-0 left-0 ${colorClasses.bg} transition-all duration-1000 ease-out rounded-full flex items-center justify-end pr-2`}
+                    style={{ width: `${porcentajeVisual}%` }}
+                  >
+                    {porcentajeVisual > 20 && (
+                      <span className="text-white text-sm font-bold drop-shadow">
+                        {tasa}%
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Indicador de meta */}
+                  <div
+                    className="absolute inset-y-0 w-1 bg-emerald-600 dark:bg-emerald-400 z-10"
+                    style={{ left: `${porcentajeMeta}%` }}
+                  >
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-white dark:bg-navy-800 px-1.5 py-0.5 rounded shadow-sm">
+                        Meta {meta}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Bloques visuales estilo ASCII */}
+                  <div className="absolute inset-0 flex items-center px-2 pointer-events-none">
+                    {Array.from({ length: 20 }).map((_, i) => {
+                      const blockPercent = ((i + 1) / 20) * 100;
+                      const isFilled = blockPercent <= porcentajeVisual;
+                      return (
+                        <div
+                          key={i}
+                          className={`flex-1 h-4 mx-0.5 rounded-sm transition-all duration-500 ${
+                            isFilled ? 'bg-white/30' : 'bg-slate-300/30 dark:bg-navy-600/30'
+                          }`}
+                          style={{ transitionDelay: `${i * 30}ms` }}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Info inferior */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-3 gap-2">
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="text-slate-500 dark:text-slate-400">
+                    Devoluciones: <span className={`font-bold ${colorClasses.text}`}>{estadisticas.tasaDevolucion}%</span>
+                  </span>
+                  <span className="text-slate-400 dark:text-slate-500">|</span>
+                  <span className="text-slate-500 dark:text-slate-400">
+                    Meta: <span className="font-bold text-emerald-600 dark:text-emerald-400">{meta}%</span>
+                  </span>
+                  <span className="text-slate-400 dark:text-slate-500">|</span>
+                  <span className="text-slate-500 dark:text-slate-400">
+                    Diferencia: <span className={`font-bold ${tasa > meta ? colorClasses.text : 'text-emerald-600'}`}>
+                      {tasa > meta ? `+${(tasa - meta).toFixed(1)}%` : `${(tasa - meta).toFixed(1)}%`}
+                    </span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded bg-emerald-500"></div>
+                    <span>&lt;10%</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded bg-amber-500"></div>
+                    <span>10-12%</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded bg-red-500"></div>
+                    <span>&gt;12%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Panel de Métricas */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
