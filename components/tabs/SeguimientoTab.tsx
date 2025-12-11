@@ -634,36 +634,66 @@ const GuiaTableRow: React.FC<{
       }`}
       onClick={onExpand}
     >
-      {/* GUÍA + Badge Novedad */}
+      {/* GUÍA + CELULAR + Badge Novedad */}
       <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="font-mono font-bold text-blue-600 dark:text-blue-400 text-sm hover:underline">
-            {guia.guia.id}
-          </span>
-          <button
-            onClick={handleCopyGuia}
-            className="p-1 hover:bg-slate-200 dark:hover:bg-navy-700 rounded transition-colors"
-            title="Copiar guía"
-          >
-            {copiedGuia ? (
-              <Check className="w-3.5 h-3.5 text-green-500" />
-            ) : (
-              <Copy className="w-3.5 h-3.5 text-slate-400" />
-            )}
-          </button>
-          {guia.celular && (
-            <button
-              onClick={handleWhatsApp}
-              className="p-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-              title="WhatsApp"
-            >
-              <MessageCircle className="w-3.5 h-3.5" />
-            </button>
-          )}
-          {guia.tieneNovedad && (
-            <span className="px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-xs font-bold rounded">
-              Novedad
+        <div className="flex flex-col gap-1.5">
+          {/* Número de Guía */}
+          <div className="flex items-center gap-2">
+            <span className="font-mono font-bold text-blue-600 dark:text-blue-400 text-sm hover:underline">
+              {guia.guia.id}
             </span>
+            <button
+              onClick={handleCopyGuia}
+              className="p-1 hover:bg-slate-200 dark:hover:bg-navy-700 rounded transition-colors"
+              title="Copiar guía"
+            >
+              {copiedGuia ? (
+                <Check className="w-3.5 h-3.5 text-green-500" />
+              ) : (
+                <Copy className="w-3.5 h-3.5 text-slate-400" />
+              )}
+            </button>
+            {guia.tieneNovedad && (
+              <span className="px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-xs font-bold rounded">
+                Novedad
+              </span>
+            )}
+          </div>
+
+          {/* Número de Celular - VISIBLE */}
+          {guia.celular && (
+            <div className="flex items-center gap-1.5 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg border border-green-200 dark:border-green-800">
+              <Phone className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+              <span className="font-mono text-xs font-medium text-green-700 dark:text-green-400">
+                {guia.celular}
+              </span>
+              <button
+                onClick={handleCopyPhone}
+                className="p-0.5 hover:bg-green-200 dark:hover:bg-green-800 rounded transition-colors"
+                title="Copiar teléfono"
+              >
+                {copiedPhone ? (
+                  <Check className="w-3 h-3 text-green-600" />
+                ) : (
+                  <Copy className="w-3 h-3 text-green-500" />
+                )}
+              </button>
+              <a
+                href={`tel:+57${guia.celular}`}
+                onClick={(e) => e.stopPropagation()}
+                className="p-0.5 hover:bg-blue-200 dark:hover:bg-blue-800 rounded transition-colors"
+                title="Llamar"
+              >
+                <Phone className="w-3 h-3 text-blue-500" />
+              </a>
+              <button
+                onClick={handleWhatsApp}
+                className="p-0.5 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+                title="WhatsApp"
+              >
+                <MessageCircle className="w-3 h-3" />
+              </button>
+            </div>
           )}
         </div>
       </td>
