@@ -93,6 +93,19 @@ export interface ProConfig {
 }
 
 // ============================================
+// MULTI-CONVERSACIÓN (Sistema de Pestañas)
+// ============================================
+
+export interface Conversation {
+  id: string;
+  title: string;
+  messages: ProMessage[];
+  createdAt: Date;
+  updatedAt: Date;
+  isPinned: boolean;
+}
+
+// ============================================
 // INTERFACES ADICIONALES PARA MÉTRICAS
 // ============================================
 
@@ -134,8 +147,18 @@ interface ProAssistantState {
   clearNotifications: () => void;
   isProcessing: boolean;
   setIsProcessing: (processing: boolean) => void;
-  activeTab: 'chat' | 'knowledge' | 'tasks' | 'config';
-  setActiveTab: (tab: 'chat' | 'knowledge' | 'tasks' | 'config') => void;
+  activeTab: 'chat' | 'rescue' | 'knowledge' | 'tasks' | 'config';
+  setActiveTab: (tab: 'chat' | 'rescue' | 'knowledge' | 'tasks' | 'config') => void;
+
+  // Multi-Conversación State (Máximo 5 pestañas)
+  conversations: Conversation[];
+  activeConversationId: string;
+  setActiveConversationId: (id: string) => void;
+  createConversation: (title?: string) => string;
+  closeConversation: (id: string) => void;
+  renameConversation: (id: string, title: string) => void;
+  pinConversation: (id: string) => void;
+  getActiveConversation: () => Conversation | undefined;
 
   // Metrics State
   metrics: ProMetrics;
@@ -220,6 +243,113 @@ export const useProAssistantStore = create<ProAssistantState>()(
       activeTab: 'chat',
       setActiveTab: (tab) => set({ activeTab: tab }),
 
+      // ========== Multi-Conversación ==========
+      conversations: [
+        {
+          id: 'default',
+          title: 'Chat Principal',
+          messages: [
+            {
+              id: 'welcome',
+              role: 'assistant' as const,
+              content: `Hola! Soy tu asistente PRO de Litper.
+
+Puedo ayudarte con:
+- **Logistica** - Ver guias, novedades, estados
+- **Reportes** - Generar analisis y metricas
+- **Acciones** - Programar llamadas, enviar mensajes
+- **Conocimiento** - Consultar base de datos
+- **Ejecutar** - Tareas automaticas en la app
+
+¿En qué te ayudo?`,
+              timestamp: new Date(),
+              suggestions: [
+                'Ver guias con novedad',
+                'Reporte del dia',
+                'Guias en Reclamo Oficina',
+              ],
+            },
+          ],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isPinned: true,
+        },
+      ],
+      activeConversationId: 'default',
+
+      setActiveConversationId: (id) => set({ activeConversationId: id }),
+
+      createConversation: (title) => {
+        const { conversations } = get();
+        if (conversations.length >= 5) {
+          // Cerrar la conversación más antigua no fijada
+          const unpinned = conversations.filter(c => !c.isPinned);
+          if (unpinned.length > 0) {
+            const oldest = unpinned.reduce((a, b) =>
+              new Date(a.updatedAt) < new Date(b.updatedAt) ? a : b
+            );
+            get().closeConversation(oldest.id);
+          }
+        }
+
+        const id = generateId();
+        const newConversation: Conversation = {
+          id,
+          title: title || `Chat ${conversations.length + 1}`,
+          messages: [
+            {
+              id: generateId(),
+              role: 'assistant' as const,
+              content: `Nueva conversación iniciada. ¿En qué te ayudo?`,
+              timestamp: new Date(),
+              suggestions: ['Ver críticos', 'Reporte del día', 'Recomendación IA'],
+            },
+          ],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isPinned: false,
+        };
+
+        set((state) => ({
+          conversations: [...state.conversations, newConversation],
+          activeConversationId: id,
+        }));
+
+        return id;
+      },
+
+      closeConversation: (id) => {
+        const { conversations, activeConversationId } = get();
+        if (conversations.length <= 1) return; // No cerrar la última
+
+        const filtered = conversations.filter(c => c.id !== id);
+        const newActiveId = id === activeConversationId
+          ? filtered[filtered.length - 1].id
+          : activeConversationId;
+
+        set({
+          conversations: filtered,
+          activeConversationId: newActiveId,
+        });
+      },
+
+      renameConversation: (id, title) => set((state) => ({
+        conversations: state.conversations.map(c =>
+          c.id === id ? { ...c, title, updatedAt: new Date() } : c
+        ),
+      })),
+
+      pinConversation: (id) => set((state) => ({
+        conversations: state.conversations.map(c =>
+          c.id === id ? { ...c, isPinned: !c.isPinned, updatedAt: new Date() } : c
+        ),
+      })),
+
+      getActiveConversation: () => {
+        const { conversations, activeConversationId } = get();
+        return conversations.find(c => c.id === activeConversationId);
+      },
+
       // ========== Chat State ==========
       messages: [
         {
@@ -244,16 +374,37 @@ Puedo ayudarte con:
         },
       ],
 
-      addMessage: (message) => set((state) => ({
-        messages: [
-          ...state.messages,
-          {
-            ...message,
-            id: generateId(),
-            timestamp: new Date(),
-          },
-        ],
-      })),
+      addMessage: (message) => set((state) => {
+        const newMessage = {
+          ...message,
+          id: generateId(),
+          timestamp: new Date(),
+        };
+
+        // Añadir al array global de mensajes
+        const updatedMessages = [...state.messages, newMessage];
+
+        // Añadir a la conversación activa
+        const updatedConversations = state.conversations.map(c =>
+          c.id === state.activeConversationId
+            ? {
+                ...c,
+                messages: [...c.messages, newMessage],
+                updatedAt: new Date(),
+                title: c.title === 'Chat Principal' || c.messages.length <= 1
+                  ? (message.role === 'user' && message.content.length < 30
+                    ? message.content
+                    : c.title)
+                  : c.title,
+              }
+            : c
+        );
+
+        return {
+          messages: updatedMessages,
+          conversations: updatedConversations,
+        };
+      }),
 
       updateMessage: (id, updates) => set((state) => ({
         messages: state.messages.map((m) =>
@@ -606,12 +757,18 @@ Puedo ayudarte con:
       },
     }),
     {
-      name: 'litper-pro-assistant-v2',
+      name: 'litper-pro-assistant-v3',
       partialize: (state) => ({
         messages: state.messages.slice(-100),
         knowledge: state.knowledge,
         tasks: state.tasks.filter((t) => t.status !== 'completed').slice(0, 50),
         config: state.config,
+        // Multi-conversación: guardar últimas 5 conversaciones con últimos 50 mensajes cada una
+        conversations: state.conversations.slice(0, 5).map(c => ({
+          ...c,
+          messages: c.messages.slice(-50),
+        })),
+        activeConversationId: state.activeConversationId,
       }),
     }
   )

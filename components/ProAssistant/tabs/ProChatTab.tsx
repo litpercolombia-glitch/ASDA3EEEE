@@ -483,7 +483,6 @@ const GuideListModal: React.FC<GuideListModalProps> = ({
 // ============================================
 const ProChatTab: React.FC = () => {
   const {
-    messages,
     addMessage,
     isTyping,
     setIsTyping,
@@ -491,7 +490,13 @@ const ProChatTab: React.FC = () => {
     shipmentsContext,
     addTask,
     updateTask,
+    getActiveConversation,
+    activeConversationId,
   } = useProAssistantStore();
+
+  // Obtener mensajes de la conversación activa
+  const activeConversation = getActiveConversation();
+  const messages = activeConversation?.messages || [];
 
   const [inputValue, setInputValue] = useState('');
   const [isListening, setIsListening] = useState(false);
