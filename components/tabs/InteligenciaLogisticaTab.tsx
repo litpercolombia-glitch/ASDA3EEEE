@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   Package,
   Search,
@@ -49,6 +49,9 @@ import {
   Cloud,
   Snowflake,
   Shield,
+  Save,
+  FolderOpen,
+  Trash2,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -102,6 +105,16 @@ interface RecomendacionIA {
   guiasDetalle?: GuiaLogistica[];
   analisisIA?: string;
   accionRecomendada?: string;
+}
+
+// Interface para sesiones guardadas
+interface SesionGuardada {
+  id: string;
+  fecha: string;
+  hora: string;
+  nombre: string;
+  totalGuias: number;
+  guias: GuiaLogistica[];
 }
 
 // =====================================
@@ -426,8 +439,75 @@ export const InteligenciaLogisticaTab: React.FC = () => {
   const [selectedRecomendacion, setSelectedRecomendacion] = useState<string | null>(null);
   const [showAlertaModal, setShowAlertaModal] = useState(false);
   const [showRecomendacionModal, setShowRecomendacionModal] = useState(false);
+  const [sesionesGuardadas, setSesionesGuardadas] = useState<SesionGuardada[]>([]);
+  const [showSesionesModal, setShowSesionesModal] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Cargar sesiones guardadas al iniciar
+  useEffect(() => {
+    const sesionesStorage = localStorage.getItem('inteligencia_logistica_sesiones');
+    if (sesionesStorage) {
+      try {
+        const sesiones = JSON.parse(sesionesStorage);
+        setSesionesGuardadas(sesiones);
+      } catch (e) {
+        console.error('Error al cargar sesiones:', e);
+      }
+    }
+  }, []);
+
+  // Guardar sesión actual
+  const guardarSesion = () => {
+    if (guiasLogisticas.length === 0) {
+      alert('No hay guías para guardar');
+      return;
+    }
+
+    const ahora = new Date();
+    const fecha = ahora.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const hora = ahora.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+
+    const nuevaSesion: SesionGuardada = {
+      id: `sesion_${Date.now()}`,
+      fecha,
+      hora,
+      nombre: `Sesión ${fecha} ${hora}`,
+      totalGuias: guiasLogisticas.length,
+      guias: guiasLogisticas,
+    };
+
+    const nuevasSesiones = [nuevaSesion, ...sesionesGuardadas];
+    setSesionesGuardadas(nuevasSesiones);
+    localStorage.setItem('inteligencia_logistica_sesiones', JSON.stringify(nuevasSesiones));
+    alert(`Sesión guardada: ${nuevaSesion.nombre}`);
+  };
+
+  // Cargar una sesión
+  const cargarSesion = (sesion: SesionGuardada) => {
+    setGuiasLogisticas(sesion.guias);
+    setShowSesionesModal(false);
+    alert(`Sesión cargada: ${sesion.nombre}`);
+  };
+
+  // Eliminar una sesión
+  const eliminarSesion = (id: string) => {
+    const nuevasSesiones = sesionesGuardadas.filter(s => s.id !== id);
+    setSesionesGuardadas(nuevasSesiones);
+    localStorage.setItem('inteligencia_logistica_sesiones', JSON.stringify(nuevasSesiones));
+  };
+
+  // Obtener sesiones agrupadas por fecha
+  const sesionesAgrupadas = useMemo(() => {
+    const grupos: Record<string, SesionGuardada[]> = {};
+    sesionesGuardadas.forEach(sesion => {
+      if (!grupos[sesion.fecha]) {
+        grupos[sesion.fecha] = [];
+      }
+      grupos[sesion.fecha].push(sesion);
+    });
+    return grupos;
+  }, [sesionesGuardadas]);
 
   // Función para copiar al portapapeles
   const copyToClipboard = (text: string, type: 'guide' | 'phone', id: string) => {
@@ -1292,6 +1372,20 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
             Cargar Datos
           </button>
           <button
+            onClick={guardarSesion}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium transition-all"
+          >
+            <Save className="w-4 h-4" />
+            Guardar Sesión
+          </button>
+          <button
+            onClick={() => setShowSesionesModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium transition-all"
+          >
+            <FolderOpen className="w-4 h-4" />
+            Sesiones ({sesionesGuardadas.length})
+          </button>
+          <button
             onClick={exportarExcel}
             className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition-all"
           >
@@ -2113,12 +2207,7 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
 
                         {/* HORA DE ÚLTIMO MOVIMIENTO */}
                         <td className="px-4 py-3 text-center">
-                          <div className="flex flex-col items-center">
-                            <span className="font-mono text-sm font-medium text-slate-700 dark:text-slate-300">{horaUltimo}</span>
-                            <span className={`text-xs mt-0.5 ${guia.diasTranscurridos > 5 ? 'text-red-500 font-bold' : guia.diasTranscurridos > 3 ? 'text-amber-500' : 'text-slate-400'}`}>
-                              {guia.diasTranscurridos} días
-                            </span>
-                          </div>
+                          <span className="font-mono text-sm font-bold text-slate-700 dark:text-slate-300">{horaUltimo}</span>
                         </td>
 
                         {/* VER */}
@@ -2639,6 +2728,124 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
                 </>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* ====================================== */}
+      {/* MODAL DE SESIONES GUARDADAS */}
+      {/* ====================================== */}
+      {showSesionesModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowSesionesModal(false)}>
+          <div className="bg-white dark:bg-navy-900 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-4 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-lg">
+                    <FolderOpen className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold">Sesiones Guardadas</h3>
+                    <p className="text-sm opacity-90">{sesionesGuardadas.length} sesiones disponibles</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowSesionesModal(false)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Contenido */}
+            <div className="p-4 max-h-[60vh] overflow-y-auto">
+              {sesionesGuardadas.length === 0 ? (
+                <div className="text-center py-12 text-slate-400">
+                  <FolderOpen className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                  <p className="font-medium text-lg">No hay sesiones guardadas</p>
+                  <p className="text-sm mt-2">Carga datos y presiona "Guardar Sesión" para crear una</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(sesionesAgrupadas).map(([fecha, sesiones]) => (
+                    <div key={fecha} className="space-y-2">
+                      {/* Fecha como encabezado */}
+                      <div className="flex items-center gap-2 py-2 border-b border-slate-200 dark:border-navy-700">
+                        <Calendar className="w-4 h-4 text-amber-500" />
+                        <span className="font-bold text-slate-700 dark:text-slate-300">{fecha}</span>
+                        <span className="text-xs text-slate-400 bg-slate-100 dark:bg-navy-800 px-2 py-0.5 rounded-full">
+                          {sesiones.length} {sesiones.length === 1 ? 'sesión' : 'sesiones'}
+                        </span>
+                      </div>
+
+                      {/* Sesiones de esa fecha */}
+                      <div className="space-y-2 pl-6">
+                        {sesiones.map((sesion) => (
+                          <div
+                            key={sesion.id}
+                            className="flex items-center justify-between p-3 bg-slate-50 dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 hover:border-amber-300 dark:hover:border-amber-700 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                                <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-slate-800 dark:text-white">{sesion.hora}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                  <Package className="w-3 h-3" />
+                                  {sesion.totalGuias} guías
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => cargarSesion(sesion)}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-medium transition-colors"
+                              >
+                                <FolderOpen className="w-3.5 h-3.5" />
+                                Cargar
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (confirm('¿Eliminar esta sesión?')) {
+                                    eliminarSesion(sesion.id);
+                                  }
+                                }}
+                                className="p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                                title="Eliminar sesión"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            {sesionesGuardadas.length > 0 && (
+              <div className="p-4 border-t border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-800">
+                <button
+                  onClick={() => {
+                    if (confirm('¿Eliminar TODAS las sesiones guardadas?')) {
+                      setSesionesGuardadas([]);
+                      localStorage.removeItem('inteligencia_logistica_sesiones');
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-sm font-medium transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Eliminar todas las sesiones
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
