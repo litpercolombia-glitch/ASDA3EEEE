@@ -1929,39 +1929,64 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 dark:bg-navy-800 border-b border-slate-200 dark:border-navy-700">
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5" />
+                    Fecha
+                  </div>
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">
+                  <div className="flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5" />
+                    Teléfono
+                  </div>
+                </th>
                 <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-navy-700" onClick={() => handleSort('numeroGuia')}>
                   <div className="flex items-center gap-1">
-                    Guía
+                    <Package className="w-3.5 h-3.5" />
+                    Número Guía
                     {sortColumn === 'numeroGuia' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                  </div>
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-navy-700" onClick={() => handleSort('estadoActual')}>
+                  <div className="flex items-center gap-1">
+                    Estatus
+                    {sortColumn === 'estadoActual' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                  </div>
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-navy-700" onClick={() => handleSort('ciudadDestino')}>
+                  <div className="flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5" />
+                    Ciudad Destino
+                    {sortColumn === 'ciudadDestino' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
                   </div>
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-navy-700" onClick={() => handleSort('transportadora')}>
                   <div className="flex items-center gap-1">
+                    <Truck className="w-3.5 h-3.5" />
                     Transportadora
                     {sortColumn === 'transportadora' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
                   </div>
                 </th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Ruta</th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-navy-700" onClick={() => handleSort('estadoActual')}>
+                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">
                   <div className="flex items-center gap-1">
-                    Estado
-                    {sortColumn === 'estadoActual' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    <Activity className="w-3.5 h-3.5" />
+                    Último Movimiento
                   </div>
                 </th>
-                <th className="text-center px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase cursor-pointer hover:bg-slate-100 dark:hover:bg-navy-700" onClick={() => handleSort('diasTranscurridos')}>
+                <th className="text-center px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">
                   <div className="flex items-center justify-center gap-1">
-                    Días
-                    {sortColumn === 'diasTranscurridos' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    <Clock className="w-3.5 h-3.5" />
+                    Hora
                   </div>
                 </th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Últimos Estados</th>
                 <th className="text-center px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Ver</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-navy-800">
               {guiasFiltradas.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-slate-400">
+                  <td colSpan={9} className="px-4 py-12 text-center text-slate-400">
                     <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
                     <p className="font-medium">No hay guías que mostrar</p>
                     <p className="text-sm">Ajusta los filtros o carga nuevos datos</p>
@@ -1971,120 +1996,132 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
                 guiasFiltradas.map(guia => {
                   const statusColors = getStatusColor(guia.estadoActual);
                   const isExpanded = expandedGuia === guia.numeroGuia;
+                  const ultimoMovimiento = guia.ultimos2Estados[0];
+                  const fechaUltimo = ultimoMovimiento?.fecha?.split(' ')[0] || 'N/A';
+                  const horaUltimo = ultimoMovimiento?.fecha?.split(' ')[1] || 'N/A';
 
                   return (
                     <React.Fragment key={guia.numeroGuia}>
                       <tr className={`hover:bg-slate-50 dark:hover:bg-navy-800/50 ${isExpanded ? 'bg-cyan-50 dark:bg-cyan-900/20' : ''}`}>
+                        {/* FECHA */}
                         <td className="px-4 py-3">
-                          <div className="space-y-1.5">
-                            {/* Número de guía con botón de copiar */}
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-mono font-bold text-slate-800 dark:text-white">{guia.numeroGuia}</span>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-blue-500" />
+                            <span className="font-mono text-sm text-slate-700 dark:text-slate-300">{fechaUltimo}</span>
+                          </div>
+                        </td>
+
+                        {/* TELÉFONO */}
+                        <td className="px-4 py-3">
+                          {guia.telefono ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-sm text-green-600 dark:text-green-400">{guia.telefono}</span>
                               <button
-                                onClick={() => copyToClipboard(guia.numeroGuia, 'guide', guia.numeroGuia)}
+                                onClick={() => copyToClipboard(guia.telefono!, 'phone', guia.numeroGuia)}
                                 className={`p-1 rounded transition-all ${
-                                  copiedGuide === guia.numeroGuia
+                                  copiedPhone === guia.numeroGuia
                                     ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600'
                                     : 'hover:bg-slate-100 dark:hover:bg-navy-700 text-slate-400'
                                 }`}
-                                title="Copiar número de guía"
+                                title="Copiar"
                               >
-                                {copiedGuide === guia.numeroGuia ? (
-                                  <CheckCircle className="w-3.5 h-3.5" />
-                                ) : (
-                                  <Copy className="w-3.5 h-3.5" />
-                                )}
+                                {copiedPhone === guia.numeroGuia ? <CheckCircle className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                               </button>
-                              {guia.tieneNovedad && (
-                                <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs rounded font-medium">
-                                  Novedad
-                                </span>
-                              )}
+                              <button
+                                onClick={() => makeCall(guia.telefono!)}
+                                className="p-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 hover:bg-blue-200 transition-colors"
+                                title="Llamar"
+                              >
+                                <PhoneCall className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={() => openWhatsApp(guia.telefono!, guia.numeroGuia)}
+                                className="p-1 rounded bg-green-100 dark:bg-green-900/30 text-green-600 hover:bg-green-200 transition-colors"
+                                title="WhatsApp"
+                              >
+                                <MessageSquare className="w-3 h-3" />
+                              </button>
                             </div>
+                          ) : (
+                            <span className="text-xs text-slate-400">Sin teléfono</span>
+                          )}
+                        </td>
 
-                            {/* Teléfono con acciones */}
-                            {guia.telefono && (
-                              <div className="flex items-center gap-2">
-                                <Phone className="w-3.5 h-3.5 text-green-500" />
-                                <span className="font-mono text-sm text-green-600 dark:text-green-400">{guia.telefono}</span>
-                                <button
-                                  onClick={() => copyToClipboard(guia.telefono!, 'phone', guia.numeroGuia)}
-                                  className={`p-1 rounded transition-all ${
-                                    copiedPhone === guia.numeroGuia
-                                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600'
-                                      : 'hover:bg-slate-100 dark:hover:bg-navy-700 text-slate-400'
-                                  }`}
-                                  title="Copiar teléfono"
-                                >
-                                  {copiedPhone === guia.numeroGuia ? (
-                                    <CheckCircle className="w-3 h-3" />
-                                  ) : (
-                                    <Copy className="w-3 h-3" />
-                                  )}
-                                </button>
-                                <button
-                                  onClick={() => makeCall(guia.telefono!)}
-                                  className="p-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
-                                  title="Llamar"
-                                >
-                                  <PhoneCall className="w-3 h-3" />
-                                </button>
-                                <button
-                                  onClick={() => openWhatsApp(guia.telefono!, guia.numeroGuia)}
-                                  className="p-1 rounded bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
-                                  title="WhatsApp"
-                                >
-                                  <MessageSquare className="w-3 h-3" />
-                                </button>
-                              </div>
+                        {/* NÚMERO DE GUÍA */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-slate-800 dark:text-white">{guia.numeroGuia}</span>
+                            <button
+                              onClick={() => copyToClipboard(guia.numeroGuia, 'guide', guia.numeroGuia)}
+                              className={`p-1 rounded transition-all ${
+                                copiedGuide === guia.numeroGuia
+                                  ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600'
+                                  : 'hover:bg-slate-100 dark:hover:bg-navy-700 text-slate-400'
+                              }`}
+                              title="Copiar"
+                            >
+                              {copiedGuide === guia.numeroGuia ? <CheckCircle className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                            </button>
+                            {guia.tieneNovedad && (
+                              <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs rounded font-medium">
+                                Novedad
+                              </span>
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <Truck className="w-4 h-4 text-slate-400" />
-                            <span className="text-sm text-slate-600 dark:text-slate-300">{guia.transportadora}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1 text-sm text-slate-600 dark:text-slate-300">
-                            <span>{guia.ciudadOrigen}</span>
-                            <ChevronRight className="w-3 h-3 text-slate-400" />
-                            <span className="font-medium">{guia.ciudadDestino}</span>
-                          </div>
-                        </td>
+
+                        {/* ESTATUS */}
                         <td className="px-4 py-3">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${statusColors.bg} ${statusColors.text} border ${statusColors.border}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${statusColors.dot}`}></span>
                             {guia.estadoActual}
                           </span>
                         </td>
+
+                        {/* CIUDAD DESTINO */}
                         <td className="px-4 py-3">
-                          <div className="flex items-center justify-center gap-2">
-                            <Clock className={`w-4 h-4 ${guia.diasTranscurridos > 5 ? 'text-red-500' : guia.diasTranscurridos > 3 ? 'text-amber-500' : 'text-slate-400'}`} />
-                            <span className={`font-bold ${guia.diasTranscurridos > 5 ? 'text-red-600' : guia.diasTranscurridos > 3 ? 'text-amber-600' : 'text-slate-600 dark:text-slate-300'}`}>
-                              {guia.diasTranscurridos}
+                          <div className="flex items-center gap-1.5">
+                            <MapPin className="w-4 h-4 text-purple-500" />
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{guia.ciudadDestino}</span>
+                          </div>
+                        </td>
+
+                        {/* TRANSPORTADORA */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Truck className="w-4 h-4 text-slate-400" />
+                            <span className="text-sm text-slate-600 dark:text-slate-300">{guia.transportadora}</span>
+                          </div>
+                        </td>
+
+                        {/* ÚLTIMO MOVIMIENTO */}
+                        <td className="px-4 py-3">
+                          {ultimoMovimiento ? (
+                            <div className="max-w-[200px]">
+                              <p className="text-sm text-slate-700 dark:text-slate-300 truncate" title={ultimoMovimiento.descripcion}>
+                                {ultimoMovimiento.descripcion}
+                              </p>
+                              <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                                <MapPin className="w-3 h-3" />
+                                {ultimoMovimiento.ubicacion}
+                              </p>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400">Sin información</span>
+                          )}
+                        </td>
+
+                        {/* HORA DE ÚLTIMO MOVIMIENTO */}
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex flex-col items-center">
+                            <span className="font-mono text-sm font-medium text-slate-700 dark:text-slate-300">{horaUltimo}</span>
+                            <span className={`text-xs mt-0.5 ${guia.diasTranscurridos > 5 ? 'text-red-500 font-bold' : guia.diasTranscurridos > 3 ? 'text-amber-500' : 'text-slate-400'}`}>
+                              {guia.diasTranscurridos} días
                             </span>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="space-y-1">
-                            {guia.ultimos2Estados.slice(0, 2).map((estado, idx) => (
-                              <div key={idx} className="flex items-start gap-2 text-xs">
-                                <span className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${idx === 0 ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
-                                <div>
-                                  <span className="text-slate-400 font-mono">{formatDate(estado.fecha)}</span>
-                                  <p className="text-slate-600 dark:text-slate-400 truncate max-w-[200px]" title={estado.descripcion}>
-                                    {estado.descripcion}
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                            {guia.ultimos2Estados.length === 0 && (
-                              <span className="text-xs text-slate-400">Sin información</span>
-                            )}
-                          </div>
-                        </td>
+
+                        {/* VER */}
                         <td className="px-4 py-3 text-center">
                           <button
                             onClick={() => setExpandedGuia(isExpanded ? null : guia.numeroGuia)}
@@ -2101,7 +2138,7 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
 
                       {isExpanded && (
                         <tr className="bg-cyan-50/50 dark:bg-cyan-900/10">
-                          <td colSpan={7} className="px-4 py-4">
+                          <td colSpan={9} className="px-4 py-4">
                             <div className="bg-white dark:bg-navy-800 rounded-lg p-4 border border-cyan-200 dark:border-cyan-800">
                               <h4 className="font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
                                 <Calendar className="w-4 h-4 text-cyan-500" />
