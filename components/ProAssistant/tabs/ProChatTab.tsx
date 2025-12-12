@@ -16,6 +16,8 @@ import {
   Truck,
   Clock,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Download,
   MessageSquare,
   BarChart3,
@@ -27,6 +29,8 @@ import {
   Users,
   Search,
   Filter,
+  PanelTopClose,
+  PanelTop,
 } from 'lucide-react';
 import { useProAssistantStore, ProMessage } from '../../../stores/proAssistantStore';
 import { Shipment, ShipmentStatus, CarrierName } from '../../../types';
@@ -503,6 +507,7 @@ const ProChatTab: React.FC = () => {
   const [showGuideModal, setShowGuideModal] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalGuides, setModalGuides] = useState<Shipment[]>([]);
+  const [showQuickTexts, setShowQuickTexts] = useState(true); // Para colapsar botones rápidos
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -873,14 +878,50 @@ const ProChatTab: React.FC = () => {
   return (
     <div className="flex flex-col h-full">
       {/* ============================================ */}
-      {/* TEXTOS RÁPIDOS CON SUBFLUJOS */}
+      {/* TEXTOS RÁPIDOS CON SUBFLUJOS - COLAPSABLE */}
       {/* ============================================ */}
-      <div className="px-4 py-3 border-b border-slate-700/50 bg-slate-900/70">
-        <QuickTextsPanel
-          shipments={shipmentsContext}
-          onAction={handleAction}
-          onFilterGuides={handleFilterGuides}
-        />
+      <div className="border-b border-slate-700/50 bg-slate-900/70">
+        {/* Header con botón de colapso */}
+        <div
+          className="flex items-center justify-between px-4 py-2 cursor-pointer hover:bg-slate-800/50 transition-colors"
+          onClick={() => setShowQuickTexts(!showQuickTexts)}
+        >
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span className="text-xs font-medium text-slate-300">
+              {showQuickTexts ? 'Acciones Rápidas' : 'Mostrar Acciones Rápidas'}
+            </span>
+            {!showQuickTexts && shipmentsContext.length > 0 && (
+              <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-[10px] font-bold rounded-full">
+                {shipmentsContext.filter(s => s.status === ShipmentStatus.ISSUE || s.status === ShipmentStatus.IN_OFFICE).length} críticas
+              </span>
+            )}
+          </div>
+          <button
+            className="p-1 hover:bg-slate-700 rounded transition-colors"
+            title={showQuickTexts ? 'Ocultar acciones' : 'Mostrar acciones'}
+          >
+            {showQuickTexts ? (
+              <ChevronUp className="w-4 h-4 text-slate-400" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-slate-400" />
+            )}
+          </button>
+        </div>
+
+        {/* Panel colapsable con animación */}
+        <div className={`
+          overflow-hidden transition-all duration-300 ease-in-out
+          ${showQuickTexts ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'}
+        `}>
+          <div className="px-4 pb-3">
+            <QuickTextsPanel
+              shipments={shipmentsContext}
+              onAction={handleAction}
+              onFilterGuides={handleFilterGuides}
+            />
+          </div>
+        </div>
       </div>
 
       {/* ============================================ */}

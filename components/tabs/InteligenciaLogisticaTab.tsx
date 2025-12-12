@@ -55,9 +55,9 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-import { SessionComparisonUI } from '../intelligence';
+import { SessionComparisonUI, DashboardManana } from '../intelligence';
 import { RescueQueueUI } from '../RescueSystem';
-import { GitCompare } from 'lucide-react';
+import { GitCompare, Sunrise } from 'lucide-react';
 
 // =====================================
 // INTERFACES
@@ -446,6 +446,7 @@ export const InteligenciaLogisticaTab: React.FC = () => {
   const [showSesionesModal, setShowSesionesModal] = useState(false);
   const [showComparisonPanel, setShowComparisonPanel] = useState(false);
   const [showRescuePanel, setShowRescuePanel] = useState(false);
+  const [showDashboardManana, setShowDashboardManana] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -1243,8 +1244,59 @@ export const InteligenciaLogisticaTab: React.FC = () => {
               <FileUp className="w-5 h-5" />
               Cargar Datos
             </button>
+            {sesionesGuardadas.length > 0 && (
+              <button
+                onClick={() => setShowSesionesModal(true)}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl font-bold hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg"
+              >
+                <FolderOpen className="w-5 h-5" />
+                Sesiones Guardadas ({sesionesGuardadas.length})
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Panel de sesiones guardadas preview */}
+        {sesionesGuardadas.length > 0 && (
+          <div className="bg-white dark:bg-navy-900 rounded-2xl border border-slate-200 dark:border-navy-700 p-6">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+              <FolderOpen className="w-5 h-5 text-amber-500" />
+              Sesiones Recientes
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sesionesGuardadas.slice(0, 6).map((sesion) => (
+                <button
+                  key={sesion.id}
+                  onClick={() => cargarSesion(sesion)}
+                  className="flex flex-col p-4 bg-slate-50 dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 hover:border-amber-400 dark:hover:border-amber-500 transition-all text-left group"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-bold text-slate-800 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                      {sesion.fecha}
+                    </span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      {sesion.hora}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Package className="w-4 h-4 text-cyan-500" />
+                    <span className="text-sm text-slate-600 dark:text-slate-300">
+                      {sesion.totalGuias} guías
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+            {sesionesGuardadas.length > 6 && (
+              <button
+                onClick={() => setShowSesionesModal(true)}
+                className="mt-4 text-sm text-amber-600 dark:text-amber-400 hover:underline"
+              >
+                Ver todas las sesiones ({sesionesGuardadas.length})
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Modal de carga */}
         {showUploadModal && (
@@ -1375,6 +1427,14 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
           >
             <Upload className="w-4 h-4" />
             Cargar Datos
+          </button>
+          <button
+            onClick={() => setShowDashboardManana(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg font-medium transition-all shadow-lg"
+            title="Dashboard de predicciones del día"
+          >
+            <Sunrise className="w-4 h-4" />
+            Mi Día
           </button>
           <button
             onClick={guardarSesion}
@@ -2249,46 +2309,190 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
                       </tr>
 
                       {isExpanded && (
-                        <tr className="bg-cyan-50/50 dark:bg-cyan-900/10">
+                        <tr className="bg-gradient-to-r from-cyan-50/50 to-blue-50/50 dark:from-cyan-900/10 dark:to-blue-900/10">
                           <td colSpan={9} className="px-4 py-4">
-                            <div className="bg-white dark:bg-navy-800 rounded-lg p-4 border border-cyan-200 dark:border-cyan-800">
-                              <h4 className="font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-cyan-500" />
-                                Historial Completo de Movimientos
-                                <span className="text-xs bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 px-2 py-0.5 rounded-full">
-                                  {guia.historialCompleto.length} eventos
-                                </span>
-                              </h4>
-                              {guia.historialCompleto.length === 0 ? (
-                                <p className="text-sm text-slate-400">No hay historial de movimientos disponible</p>
-                              ) : (
-                                <div className="space-y-2 max-h-64 overflow-y-auto">
-                                  {guia.historialCompleto.map((evento, idx) => (
-                                    <div key={idx} className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-navy-700/50">
-                                      <div className={`w-2 h-2 rounded-full mt-2 ${idx === 0 ? 'bg-cyan-500' : 'bg-slate-300 dark:bg-slate-600'}`}></div>
-                                      <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
-                                            {formatDate(evento.fecha)}
-                                          </span>
-                                          {idx === 0 && (
-                                            <span className="px-1.5 py-0.5 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 text-xs rounded">
-                                              Actual
-                                            </span>
-                                          )}
-                                        </div>
-                                        <p className="text-sm text-slate-700 dark:text-slate-300 mt-1">
-                                          {evento.descripcion}
-                                        </p>
-                                        <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                                          <MapPin className="w-3 h-3" />
-                                          {evento.ubicacion}
-                                        </p>
+                            <div className="space-y-4">
+                              {/* RESUMEN DE LA GUÍA */}
+                              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                                {/* Card Info Principal */}
+                                <div className="lg:col-span-1 bg-white dark:bg-navy-800 rounded-xl p-4 border border-cyan-200 dark:border-cyan-800 shadow-sm">
+                                  <h4 className="font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2 text-sm">
+                                    <Package className="w-4 h-4 text-cyan-500" />
+                                    Información General
+                                  </h4>
+                                  <div className="space-y-3">
+                                    {/* Días en tránsito */}
+                                    <div className={`p-3 rounded-lg ${
+                                      guia.diasTranscurridos > 5
+                                        ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                                        : guia.diasTranscurridos > 3
+                                        ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800'
+                                        : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                                    }`}>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-xs text-slate-500 dark:text-slate-400">Días en tránsito</span>
+                                        <span className={`text-2xl font-bold ${
+                                          guia.diasTranscurridos > 5 ? 'text-red-600 dark:text-red-400' :
+                                          guia.diasTranscurridos > 3 ? 'text-amber-600 dark:text-amber-400' :
+                                          'text-green-600 dark:text-green-400'
+                                        }`}>
+                                          {guia.diasTranscurridos}
+                                        </span>
+                                      </div>
+                                      <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                        {guia.diasTranscurridos > 5 ? '⚠️ Requiere atención urgente' :
+                                         guia.diasTranscurridos > 3 ? '⏰ Monitorear de cerca' :
+                                         '✅ Tiempo normal'}
                                       </div>
                                     </div>
-                                  ))}
+
+                                    {/* Ruta */}
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <MapPin className="w-4 h-4 text-purple-500" />
+                                      <span className="text-slate-600 dark:text-slate-300">
+                                        {guia.ciudadOrigen} → <span className="font-bold">{guia.ciudadDestino}</span>
+                                      </span>
+                                    </div>
+
+                                    {/* Transportadora */}
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <Truck className="w-4 h-4 text-blue-500" />
+                                      <span className="text-slate-600 dark:text-slate-300 font-medium">{guia.transportadora}</span>
+                                    </div>
+
+                                    {/* Estado con novedad */}
+                                    <div className="flex items-center gap-2">
+                                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${statusColors.bg} ${statusColors.text}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${statusColors.dot}`}></span>
+                                        {guia.estadoActual}
+                                      </span>
+                                      {guia.tieneNovedad && (
+                                        <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs rounded-lg font-medium flex items-center gap-1">
+                                          <AlertTriangle className="w-3 h-3" />
+                                          Novedad
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Acciones rápidas */}
+                                  <div className="mt-4 pt-3 border-t border-slate-200 dark:border-navy-700">
+                                    <p className="text-xs text-slate-400 mb-2">Acciones rápidas</p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {guia.telefono && (
+                                        <>
+                                          <button
+                                            onClick={() => makeCall(guia.telefono!)}
+                                            className="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-xs hover:bg-blue-200 transition-colors"
+                                          >
+                                            <PhoneCall className="w-3 h-3" />
+                                            Llamar
+                                          </button>
+                                          <button
+                                            onClick={() => openWhatsApp(guia.telefono!, guia.numeroGuia)}
+                                            className="flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg text-xs hover:bg-green-200 transition-colors"
+                                          >
+                                            <MessageSquare className="w-3 h-3" />
+                                            WhatsApp
+                                          </button>
+                                        </>
+                                      )}
+                                      <a
+                                        href={`https://t.17track.net/es#nums=${guia.numeroGuia}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg text-xs hover:bg-purple-200 transition-colors"
+                                      >
+                                        <Eye className="w-3 h-3" />
+                                        17Track
+                                      </a>
+                                    </div>
+                                  </div>
                                 </div>
-                              )}
+
+                                {/* Timeline de Movimientos */}
+                                <div className="lg:col-span-3 bg-white dark:bg-navy-800 rounded-xl p-4 border border-cyan-200 dark:border-cyan-800 shadow-sm">
+                                  <h4 className="font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2 text-sm">
+                                    <Activity className="w-4 h-4 text-cyan-500" />
+                                    Timeline de Movimientos
+                                    <span className="text-xs bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 px-2 py-0.5 rounded-full">
+                                      {guia.historialCompleto.length} eventos
+                                    </span>
+                                  </h4>
+                                  {guia.historialCompleto.length === 0 ? (
+                                    <div className="text-center py-8">
+                                      <Activity className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
+                                      <p className="text-sm text-slate-400">No hay historial de movimientos disponible</p>
+                                    </div>
+                                  ) : (
+                                    <div className="relative">
+                                      {/* Línea vertical del timeline */}
+                                      <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-cyan-500 via-blue-400 to-slate-200 dark:to-slate-700"></div>
+
+                                      <div className="space-y-1 max-h-80 overflow-y-auto pr-2">
+                                        {guia.historialCompleto.map((evento, idx) => {
+                                          const esEntregado = evento.descripcion.toLowerCase().includes('entregado');
+                                          const esNovedad = evento.descripcion.toLowerCase().includes('devuelto') ||
+                                                           evento.descripcion.toLowerCase().includes('no logramos') ||
+                                                           evento.descripcion.toLowerCase().includes('rechaz');
+                                          const esEnReparto = evento.descripcion.toLowerCase().includes('reparto') ||
+                                                              evento.descripcion.toLowerCase().includes('viajando');
+
+                                          return (
+                                            <div key={idx} className={`flex items-start gap-4 p-3 rounded-lg transition-colors ${
+                                              idx === 0 ? 'bg-cyan-50 dark:bg-cyan-900/20' : 'hover:bg-slate-50 dark:hover:bg-navy-700/50'
+                                            }`}>
+                                              {/* Punto del timeline */}
+                                              <div className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                                idx === 0
+                                                  ? esEntregado ? 'bg-emerald-500' :
+                                                    esNovedad ? 'bg-red-500' :
+                                                    esEnReparto ? 'bg-blue-500' :
+                                                    'bg-cyan-500'
+                                                  : 'bg-slate-200 dark:bg-slate-700'
+                                              }`}>
+                                                {idx === 0 ? (
+                                                  esEntregado ? <CheckCircle className="w-4 h-4 text-white" /> :
+                                                  esNovedad ? <AlertTriangle className="w-4 h-4 text-white" /> :
+                                                  esEnReparto ? <Truck className="w-4 h-4 text-white" /> :
+                                                  <Activity className="w-4 h-4 text-white" />
+                                                ) : (
+                                                  <span className="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-500"></span>
+                                                )}
+                                              </div>
+
+                                              {/* Contenido */}
+                                              <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                  <span className="font-mono text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-navy-700 px-2 py-0.5 rounded">
+                                                    {formatDate(evento.fecha)}
+                                                  </span>
+                                                  {idx === 0 && (
+                                                    <span className={`px-2 py-0.5 text-xs font-bold rounded ${
+                                                      esEntregado ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
+                                                      esNovedad ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' :
+                                                      'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400'
+                                                    }`}>
+                                                      {esEntregado ? '✓ ENTREGADO' : esNovedad ? '⚠ NOVEDAD' : '● ACTUAL'}
+                                                    </span>
+                                                  )}
+                                                </div>
+                                                <p className={`text-sm mt-1 ${idx === 0 ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-600 dark:text-slate-300'}`}>
+                                                  {evento.descripcion}
+                                                </p>
+                                                <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                                                  <MapPin className="w-3 h-3" />
+                                                  {evento.ubicacion}
+                                                </p>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -2955,6 +3159,75 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
                   transportadora: g.transportadora,
                   estadoActual: g.estadoActual,
                 }))}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====================================== */}
+      {/* MODAL DE DASHBOARD DE MAÑANA */}
+      {/* ====================================== */}
+      {showDashboardManana && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDashboardManana(false)}>
+          <div className="bg-slate-100 dark:bg-navy-950 rounded-2xl max-w-6xl w-full max-h-[95vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-500 to-orange-600 text-white p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <Sunrise className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold">Dashboard de Mañana</h3>
+                    <p className="text-sm opacity-90">Planifica tu día con predicciones inteligentes</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowDashboardManana(false)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 max-h-[calc(95vh-80px)] overflow-y-auto">
+              <DashboardManana
+                guias={guiasLogisticas}
+                sesionesGuardadas={sesionesGuardadas}
+                onOpenRescue={() => {
+                  setShowDashboardManana(false);
+                  setShowRescuePanel(true);
+                }}
+                onOpenComparison={() => {
+                  setShowDashboardManana(false);
+                  setShowComparisonPanel(true);
+                }}
+                onFilterGuias={(filter) => {
+                  setShowDashboardManana(false);
+                  // Apply filter logic here if needed
+                  if (filter.diasMin) {
+                    setFiltroDias(filter.diasMin.toString());
+                  }
+                  if (filter.tieneNovedad) {
+                    setFiltroNovedad('SI');
+                  }
+                }}
+                onWhatsAppMasivo={(guias) => {
+                  // Generate CSV or show WhatsApp links
+                  const contactables = guias.filter(g => g.telefono);
+                  if (contactables.length > 0) {
+                    alert(`Se generarán ${contactables.length} mensajes de WhatsApp`);
+                    // Could open first one as demo
+                    const first = contactables[0];
+                    if (first.telefono) {
+                      const phone = first.telefono.replace(/\D/g, '');
+                      window.open(`https://wa.me/57${phone}?text=Hola! Sobre su pedido ${first.numeroGuia}...`, '_blank');
+                    }
+                  }
+                }}
               />
             </div>
           </div>
