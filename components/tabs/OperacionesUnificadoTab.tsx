@@ -20,6 +20,8 @@ import {
   RefreshCw,
   FileSpreadsheet,
   Zap,
+  Brain,
+  ListOrdered,
 } from 'lucide-react';
 import { Shipment } from '../../types';
 
@@ -27,11 +29,12 @@ import { Shipment } from '../../types';
 import { SeguimientoTab } from './SeguimientoTab';
 import { InteligenciaLogisticaTab } from './InteligenciaLogisticaTab';
 import SemaforoTabNew from './SemaforoTabNew';
+import { SmartPrioritizationPanel } from '../intelligence';
 
 // =====================================
 // TIPOS
 // =====================================
-type SubView = 'carga' | 'tabla' | 'inteligencia' | 'semaforo';
+type SubView = 'carga' | 'tabla' | 'prioridad' | 'inteligencia' | 'semaforo';
 
 interface OperacionesUnificadoTabProps {
   shipments: Shipment[];
@@ -56,6 +59,13 @@ const subNavItems: { id: SubView; label: string; icon: React.ElementType; descri
     icon: Table,
     description: 'Ver y gestionar',
     color: 'blue'
+  },
+  {
+    id: 'prioridad',
+    label: 'Prioridad IA',
+    icon: ListOrdered,
+    description: 'Guías prioritarias',
+    color: 'rose'
   },
   {
     id: 'inteligencia',
@@ -169,8 +179,8 @@ export const OperacionesUnificadoTab: React.FC<OperacionesUnificadoTabProps> = (
                 >
                   <Icon className={`w-4 h-4 ${isActive ? '' : `text-${item.color}-500`}`} />
                   <span>{item.label}</span>
-                  {item.id === 'inteligencia' && metrics.criticos > 0 && !isActive && (
-                    <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full">
+                  {(item.id === 'inteligencia' || item.id === 'prioridad') && metrics.criticos > 0 && !isActive && (
+                    <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full animate-pulse">
                       {metrics.criticos}
                     </span>
                   )}
@@ -205,6 +215,36 @@ export const OperacionesUnificadoTab: React.FC<OperacionesUnificadoTabProps> = (
               />
             ) : (
               <TablaGuiasRapida shipments={shipments} />
+            )}
+          </div>
+        )}
+
+        {activeView === 'prioridad' && (
+          <div className="animate-fade-in">
+            {shipments.length === 0 ? (
+              <EmptyState
+                title="No hay guías para priorizar"
+                description="Carga guías primero para ver las prioridades IA"
+                action={() => setActiveView('carga')}
+                actionLabel="Ir a Carga de Datos"
+              />
+            ) : (
+              <SmartPrioritizationPanel
+                shipments={shipments}
+                onCallGuide={(shipment) => {
+                  const phone = shipment.recipientPhone || shipment.senderPhone;
+                  if (phone) {
+                    window.open(`tel:${phone}`, '_blank');
+                  }
+                }}
+                onWhatsAppGuide={(shipment) => {
+                  const phone = shipment.recipientPhone || shipment.senderPhone;
+                  if (phone) {
+                    const message = encodeURIComponent(`Hola, le contactamos por su envío ${shipment.trackingNumber}`);
+                    window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${message}`, '_blank');
+                  }
+                }}
+              />
             )}
           </div>
         )}

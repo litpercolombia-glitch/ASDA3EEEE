@@ -1,6 +1,6 @@
 // components/tabs/InteligenciaIAUnificadoTab.tsx
-// Tab unificado que combina: Asistente IA + Sistema ML + Ciudad IA + Predicciones
-import React, { useState, useMemo } from 'react';
+// Tab unificado que combina: Asistente IA + Sistema ML + Ciudad IA + Predicciones + Priorización IA
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Brain,
   Bot,
@@ -23,6 +23,7 @@ import {
   Settings,
   BookOpen,
   Activity,
+  ListOrdered,
 } from 'lucide-react';
 import { Shipment } from '../../types';
 
@@ -31,11 +32,12 @@ import AsistenteIAUnificado from './AsistenteIAUnificado';
 import MLSystemTab from './MLSystemTab';
 import CiudadAgentesTab from './CiudadAgentesTab';
 import PrediccionesTab from './PrediccionesTab';
+import { SmartPrioritizationPanel, AILearningPanel } from '../intelligence';
 
 // =====================================
 // TIPOS
 // =====================================
-type SubView = 'asistente' | 'predicciones' | 'ml' | 'agentes';
+type SubView = 'asistente' | 'prioridad' | 'predicciones' | 'ml' | 'aprendizaje' | 'agentes';
 
 interface InteligenciaIAUnificadoTabProps {
   shipments: Shipment[];
@@ -54,6 +56,13 @@ const subNavItems: { id: SubView; label: string; icon: React.ElementType; descri
     gradient: 'from-amber-500 to-orange-500'
   },
   {
+    id: 'prioridad',
+    label: 'Priorización',
+    icon: ListOrdered,
+    description: 'Guías prioritarias IA',
+    gradient: 'from-red-500 to-rose-500'
+  },
+  {
     id: 'predicciones',
     label: 'Predicciones',
     icon: Target,
@@ -66,6 +75,13 @@ const subNavItems: { id: SubView; label: string; icon: React.ElementType; descri
     icon: Brain,
     description: 'Machine Learning',
     gradient: 'from-cyan-500 to-blue-500'
+  },
+  {
+    id: 'aprendizaje',
+    label: 'Aprendizaje',
+    icon: Sparkles,
+    description: 'Entrenar modelo',
+    gradient: 'from-pink-500 to-purple-500'
   },
   {
     id: 'agentes',
@@ -253,6 +269,27 @@ export const InteligenciaIAUnificadoTab: React.FC<InteligenciaIAUnificadoTabProp
           </div>
         )}
 
+        {activeView === 'prioridad' && (
+          <div className="animate-fade-in">
+            <SmartPrioritizationPanel
+              shipments={shipments}
+              onCallGuide={(shipment) => {
+                const phone = shipment.recipientPhone || shipment.senderPhone;
+                if (phone) {
+                  window.open(`tel:${phone}`, '_blank');
+                }
+              }}
+              onWhatsAppGuide={(shipment) => {
+                const phone = shipment.recipientPhone || shipment.senderPhone;
+                if (phone) {
+                  const message = encodeURIComponent(`Hola, le contactamos por su envío ${shipment.trackingNumber}`);
+                  window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${message}`, '_blank');
+                }
+              }}
+            />
+          </div>
+        )}
+
         {activeView === 'predicciones' && (
           <div className="animate-fade-in">
             <PrediccionesTab shipments={shipments} />
@@ -262,6 +299,12 @@ export const InteligenciaIAUnificadoTab: React.FC<InteligenciaIAUnificadoTabProp
         {activeView === 'ml' && (
           <div className="animate-fade-in">
             <MLSystemTab />
+          </div>
+        )}
+
+        {activeView === 'aprendizaje' && (
+          <div className="animate-fade-in">
+            <AILearningPanel shipments={shipments} />
           </div>
         )}
 
