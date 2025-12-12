@@ -30,7 +30,7 @@ import {
 import { CiudadAgentesTab } from './components/tabs/CiudadAgentesTab';
 import { InteligenciaLogisticaTab } from './components/tabs/InteligenciaLogisticaTab';
 import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
-import ProBubble from './components/ProAssistant/ProBubble';
+import { ProBubbleV2 } from './components/ProAssistant';
 import { AdminPanelPro } from './components/Admin/AdminPanelPro';
 import CountrySelector from './components/CountrySelector';
 import { detectarGuiasRetrasadas } from './utils/patternDetection';
@@ -1004,7 +1004,30 @@ const App: React.FC = () => {
       </footer>
 
       {/* Floating AI Assistant PRO Button */}
-      <ProBubble shipmentsContext={shipments} />
+      <ProBubbleV2
+        guiasLogisticas={shipments.map(s => ({
+          numeroGuia: s.id,
+          transportadora: s.carrier,
+          estadoActual: s.status,
+          ciudadDestino: s.detailedInfo?.city || 'N/A',
+          ciudadOrigen: 'N/A',
+          diasTranscurridos: s.detailedInfo?.daysInTransit || 0,
+          tieneNovedad: s.status === 'EXCEPTION' || s.status === 'RETURNED',
+          telefono: s.phone,
+          ultimos2Estados: s.detailedInfo?.history?.slice(0, 2).map(h => ({
+            fecha: h.date,
+            ubicacion: h.location || '',
+            descripcion: h.description,
+          })) || [],
+          historialCompleto: s.detailedInfo?.history?.map(h => ({
+            fecha: h.date,
+            ubicacion: h.location || '',
+            descripcion: h.description,
+          })) || [],
+        }))}
+        onNavigateToTab={(tab) => setCurrentTab(tab as MainTabNew)}
+        onExportData={handleDownloadExcel}
+      />
     </div>
   );
 };
