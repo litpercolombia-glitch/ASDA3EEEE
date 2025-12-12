@@ -55,9 +55,9 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-import { SessionComparisonUI } from '../intelligence';
+import { SessionComparisonUI, DashboardManana } from '../intelligence';
 import { RescueQueueUI } from '../RescueSystem';
-import { GitCompare } from 'lucide-react';
+import { GitCompare, Sunrise } from 'lucide-react';
 
 // =====================================
 // INTERFACES
@@ -446,6 +446,7 @@ export const InteligenciaLogisticaTab: React.FC = () => {
   const [showSesionesModal, setShowSesionesModal] = useState(false);
   const [showComparisonPanel, setShowComparisonPanel] = useState(false);
   const [showRescuePanel, setShowRescuePanel] = useState(false);
+  const [showDashboardManana, setShowDashboardManana] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -1375,6 +1376,14 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
           >
             <Upload className="w-4 h-4" />
             Cargar Datos
+          </button>
+          <button
+            onClick={() => setShowDashboardManana(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg font-medium transition-all shadow-lg"
+            title="Dashboard de predicciones del día"
+          >
+            <Sunrise className="w-4 h-4" />
+            Mi Día
           </button>
           <button
             onClick={guardarSesion}
@@ -2955,6 +2964,75 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
                   transportadora: g.transportadora,
                   estadoActual: g.estadoActual,
                 }))}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====================================== */}
+      {/* MODAL DE DASHBOARD DE MAÑANA */}
+      {/* ====================================== */}
+      {showDashboardManana && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDashboardManana(false)}>
+          <div className="bg-slate-100 dark:bg-navy-950 rounded-2xl max-w-6xl w-full max-h-[95vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-500 to-orange-600 text-white p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <Sunrise className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold">Dashboard de Mañana</h3>
+                    <p className="text-sm opacity-90">Planifica tu día con predicciones inteligentes</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowDashboardManana(false)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 max-h-[calc(95vh-80px)] overflow-y-auto">
+              <DashboardManana
+                guias={guiasLogisticas}
+                sesionesGuardadas={sesionesGuardadas}
+                onOpenRescue={() => {
+                  setShowDashboardManana(false);
+                  setShowRescuePanel(true);
+                }}
+                onOpenComparison={() => {
+                  setShowDashboardManana(false);
+                  setShowComparisonPanel(true);
+                }}
+                onFilterGuias={(filter) => {
+                  setShowDashboardManana(false);
+                  // Apply filter logic here if needed
+                  if (filter.diasMin) {
+                    setFiltroDias(filter.diasMin.toString());
+                  }
+                  if (filter.tieneNovedad) {
+                    setFiltroNovedad('SI');
+                  }
+                }}
+                onWhatsAppMasivo={(guias) => {
+                  // Generate CSV or show WhatsApp links
+                  const contactables = guias.filter(g => g.telefono);
+                  if (contactables.length > 0) {
+                    alert(`Se generarán ${contactables.length} mensajes de WhatsApp`);
+                    // Could open first one as demo
+                    const first = contactables[0];
+                    if (first.telefono) {
+                      const phone = first.telefono.replace(/\D/g, '');
+                      window.open(`https://wa.me/57${phone}?text=Hola! Sobre su pedido ${first.numeroGuia}...`, '_blank');
+                    }
+                  }
+                }}
               />
             </div>
           </div>
