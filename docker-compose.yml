@@ -1,0 +1,178 @@
+# =====================================
+# LITPER - Docker Compose
+# Stack completo: Frontend + Backend + DB + Redis
+# =====================================
+
+version: '3.8'
+
+services:
+  # =====================================
+  # PostgreSQL Database
+  # =====================================
+  db:
+    image: postgres:15-alpine
+    container_name: litper-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-litper}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-litper_secure_pass_2024}
+      POSTGRES_DB: ${DB_NAME:-litper_ml}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-litper} -d ${DB_NAME:-litper_ml}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - litper-network
+
+  # =====================================
+  # Redis (Cache + Queue)
+  # =====================================
+  redis:
+    image: redis:7-alpine
+    container_name: litper-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - litper-network
+
+  # =====================================
+  # Backend API (FastAPI)
+  # =====================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: litper-backend
+    restart: unless-stopped
+    environment:
+      # Database
+      DATABASE_URL: postgresql://${DB_USER:-litper}:${DB_PASSWORD:-litper_secure_pass_2024}@db:5432/${DB_NAME:-litper_ml}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-litper}
+      DB_PASSWORD: ${DB_PASSWORD:-litper_secure_pass_2024}
+      DB_NAME: ${DB_NAME:-litper_ml}
+
+      # Redis
+      REDIS_URL: redis://redis:6379/0
+
+      # API Settings
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      DEBUG: ${DEBUG:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+      # AI/ML
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+
+      # WhatsApp (Meta Official)
+      META_WHATSAPP_TOKEN: ${META_WHATSAPP_TOKEN:-}
+      META_PHONE_NUMBER_ID: ${META_PHONE_NUMBER_ID:-}
+
+      # WhatsApp (Twilio Alternative)
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_WHATSAPP_NUMBER: ${TWILIO_WHATSAPP_NUMBER:-}
+
+      # Tracking APIs
+      COORDINADORA_API_KEY: ${COORDINADORA_API_KEY:-}
+      COORDINADORA_NIT: ${COORDINADORA_NIT:-}
+      SERVIENTREGA_USER: ${SERVIENTREGA_USER:-}
+      SERVIENTREGA_PASSWORD: ${SERVIENTREGA_PASSWORD:-}
+      TCC_API_KEY: ${TCC_API_KEY:-}
+      ENVIA_API_KEY: ${ENVIA_API_KEY:-}
+
+      # Voice (Eleven Labs)
+      ELEVEN_LABS_API_KEY: ${ELEVEN_LABS_API_KEY:-}
+
+    volumes:
+      - ./backend/logs:/app/logs
+      - ./backend/uploads:/app/uploads
+      - ./backend/ml_models/saved:/app/ml_models/saved
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - litper-network
+
+  # =====================================
+  # Frontend (React/Vite)
+  # =====================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: litper-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://backend:8000
+      VITE_WS_URL: ws://backend:8000/ws
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - litper-network
+
+  # =====================================
+  # Nginx (Reverse Proxy) - Producción
+  # =====================================
+  nginx:
+    image: nginx:alpine
+    container_name: litper-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - litper-network
+    profiles:
+      - production
+
+# =====================================
+# Volumes
+# =====================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# =====================================
+# Networks
+# =====================================
+networks:
+  litper-network:
+    driver: bridge
