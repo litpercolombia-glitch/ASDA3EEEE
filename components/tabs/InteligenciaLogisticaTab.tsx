@@ -55,6 +55,9 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
+import { SessionComparisonUI } from '../intelligence';
+import { RescueQueueUI } from '../RescueSystem';
+import { GitCompare } from 'lucide-react';
 
 // =====================================
 // INTERFACES
@@ -441,6 +444,8 @@ export const InteligenciaLogisticaTab: React.FC = () => {
   const [showRecomendacionModal, setShowRecomendacionModal] = useState(false);
   const [sesionesGuardadas, setSesionesGuardadas] = useState<SesionGuardada[]>([]);
   const [showSesionesModal, setShowSesionesModal] = useState(false);
+  const [showComparisonPanel, setShowComparisonPanel] = useState(false);
+  const [showRescuePanel, setShowRescuePanel] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -1384,6 +1389,24 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
           >
             <FolderOpen className="w-4 h-4" />
             Sesiones ({sesionesGuardadas.length})
+          </button>
+          <button
+            onClick={() => setShowComparisonPanel(true)}
+            disabled={sesionesGuardadas.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-400 text-white rounded-lg font-medium transition-all"
+            title="Comparar sesiones para detectar guías estancadas"
+          >
+            <GitCompare className="w-4 h-4" />
+            Comparar
+          </button>
+          <button
+            onClick={() => setShowRescuePanel(true)}
+            disabled={guiasLogisticas.filter(g => g.tieneNovedad).length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-slate-400 text-white rounded-lg font-medium transition-all"
+            title="Cola de rescate para guías con novedad"
+          >
+            <Shield className="w-4 h-4" />
+            Rescate ({guiasLogisticas.filter(g => g.tieneNovedad).length})
           </button>
           <button
             onClick={exportarExcel}
@@ -2846,6 +2869,94 @@ Inter Rapidisimo (INTER RAPIDÍSIMO):
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ====================================== */}
+      {/* MODAL DE COMPARACIÓN DE SESIONES */}
+      {/* ====================================== */}
+      {showComparisonPanel && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowComparisonPanel(false)}>
+          <div className="bg-white dark:bg-navy-900 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <GitCompare className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold">Comparación de Sesiones</h3>
+                    <p className="text-sm opacity-90">Detecta guías estancadas, resueltas y nuevas</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowComparisonPanel(false)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-4 max-h-[75vh] overflow-y-auto">
+              <SessionComparisonUI
+                sesiones={sesionesGuardadas}
+                guiasActuales={guiasLogisticas}
+                onSendToRescue={(guias) => {
+                  setShowComparisonPanel(false);
+                  setShowRescuePanel(true);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====================================== */}
+      {/* MODAL DE COLA DE RESCATE */}
+      {/* ====================================== */}
+      {showRescuePanel && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowRescuePanel(false)}>
+          <div className="bg-white dark:bg-navy-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-red-500 to-orange-600 text-white p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <Shield className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold">Cola de Rescate</h3>
+                    <p className="text-sm opacity-90">{guiasLogisticas.filter(g => g.tieneNovedad).length} guías con novedad para rescatar</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowRescuePanel(false)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-4 max-h-[75vh] overflow-y-auto">
+              <RescueQueueUI
+                guias={guiasLogisticas.filter(g => g.tieneNovedad).map(g => ({
+                  numeroGuia: g.numeroGuia,
+                  telefono: g.telefono,
+                  ciudadDestino: g.ciudadDestino,
+                  tipoNovedad: g.estadoActual,
+                  descripcionNovedad: g.ultimos2Estados[0]?.descripcion || g.estadoActual,
+                  diasSinMovimiento: g.diasTranscurridos,
+                  transportadora: g.transportadora,
+                  estadoActual: g.estadoActual,
+                }))}
+              />
+            </div>
           </div>
         </div>
       )}

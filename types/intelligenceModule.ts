@@ -953,3 +953,70 @@ export const INTELLIGENCE_STORAGE_KEYS = {
   ALERT_THRESHOLDS: 'litper_intelligence_alert_thresholds',
   LAST_SYNC: 'litper_intelligence_last_sync',
 } as const;
+
+// ============================================
+// CARRIER STATUS INFO HELPER
+// ============================================
+
+export interface CarrierStatusResult {
+  status: string;
+  description: string;
+  isDelivered: boolean;
+  hasNovelty: boolean;
+  category: string;
+}
+
+export const getCarrierStatusInfo = (
+  carrier: string,
+  carrierStatus: string
+): CarrierStatusResult | null => {
+  const statusKey = carrierStatus?.toUpperCase?.()?.trim?.() || '';
+
+  if (carrier === 'COORDINADORA' || carrier === 'Coordinadora') {
+    const info = COORDINADORA_STATUS_MAP[statusKey];
+    if (info) {
+      return {
+        status: info.status,
+        description: info.description,
+        isDelivered: info.status === 'DELIVERED',
+        hasNovelty: info.status === 'ISSUE' || info.status === 'RETURNED',
+        category: info.category,
+      };
+    }
+  }
+
+  if (carrier === 'INTERRAPIDISIMO' || carrier === 'Interrapidisimo') {
+    const info = INTERRAPIDISIMO_STATUS_MAP[statusKey];
+    if (info) {
+      return {
+        status: info.status,
+        description: info.description,
+        isDelivered: info.status === 'DELIVERED',
+        hasNovelty: info.status === 'ISSUE' || info.status === 'RETURNED',
+        category: info.category,
+      };
+    }
+  }
+
+  if (carrier === 'ENVIA' || carrier === 'Envía' || carrier === 'Envia') {
+    const info = ENVIA_STATUS_MAP[statusKey];
+    if (info) {
+      return {
+        status: info.status,
+        description: info.description,
+        isDelivered: info.status === 'DELIVERED',
+        hasNovelty: info.status === 'ISSUE' || info.status === 'RETURNED',
+        category: info.category,
+      };
+    }
+  }
+
+  // Default fallback
+  return {
+    status: 'UNKNOWN',
+    description: carrierStatus || 'Estado desconocido',
+    isDelivered: false,
+    hasNovelty: false,
+    category: 'unknown',
+  };
+};
