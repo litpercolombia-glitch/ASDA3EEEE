@@ -30,6 +30,10 @@ import {
 import { CiudadAgentesTab } from './components/tabs/CiudadAgentesTab';
 import { InteligenciaLogisticaTab } from './components/tabs/InteligenciaLogisticaTab';
 import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
+// Nuevos tabs unificados
+import { OperacionesUnificadoTab } from './components/tabs/OperacionesUnificadoTab';
+import { InteligenciaIAUnificadoTab } from './components/tabs/InteligenciaIAUnificadoTab';
+import { AnalisisUnificadoTab } from './components/tabs/AnalisisUnificadoTab';
 import { ProBubbleV2 } from './components/ProAssistant';
 import { AdminPanelPro } from './components/Admin/AdminPanelPro';
 import CountrySelector from './components/CountrySelector';
@@ -663,17 +667,12 @@ const App: React.FC = () => {
               </button>
 
               {[
-                { id: 'seguimiento', icon: Package, label: '📦 Seguimiento' },
-                { id: 'demanda', icon: TrendingUp, label: '📈 Predicción', isNew: true },
-                { id: 'gamificacion', icon: Trophy, label: '🏆 Logros' },
-                { id: 'inteligencia-logistica', icon: BarChart3, label: '📊 Intel. Logística', isNew: true },
-                { id: 'semaforo', icon: Activity, label: '🚦 Semáforo' },
-                { id: 'predicciones', icon: Target, label: '🎯 Análisis' },
-                { id: 'asistente', icon: Bot, label: '🤖 Asistente IA', isNew: true },
-                { id: 'ml', icon: Brain, label: '🧠 Sistema ML' },
+                // Navegación simplificada: 5 tabs principales
+                { id: 'operaciones', icon: Package, label: '📦 Operaciones', isNew: true },
+                { id: 'inteligencia-ia', icon: Brain, label: '🧠 Inteligencia IA', isNew: true },
+                { id: 'analisis', icon: BarChart3, label: '📊 Análisis', isNew: true },
                 { id: 'procesos-litper', icon: Layers, label: '🏢 Procesos' },
-                { id: 'ciudad-agentes', icon: Globe, label: '🌆 Ciudad IA', isNew: true },
-                { id: 'admin', icon: Shield, label: '🔐 Admin', isNew: true },
+                { id: 'admin', icon: Shield, label: '⚙️ Config' },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -895,6 +894,34 @@ const App: React.FC = () => {
             />
           )}
 
+          {/* ====================================== */}
+          {/* NUEVOS TABS UNIFICADOS */}
+          {/* ====================================== */}
+          {currentTab === 'operaciones' && (
+            <OperacionesUnificadoTab
+              shipments={shipments}
+              onShipmentsLoaded={(newShipments) => setShipments(newShipments)}
+              onSemaforoDataLoaded={handleSemaforoDataLoaded}
+            />
+          )}
+          {currentTab === 'inteligencia-ia' && (
+            <InteligenciaIAUnificadoTab
+              shipments={shipments}
+              selectedCountry={selectedCountry}
+            />
+          )}
+          {currentTab === 'analisis' && (
+            <AnalisisUnificadoTab
+              shipments={shipments}
+              selectedCountry={selectedCountry}
+            />
+          )}
+          {currentTab === 'procesos-litper' && <ProcesosLitperTab selectedCountry={selectedCountry} />}
+          {currentTab === 'admin' && <AdminPanelPro />}
+
+          {/* ====================================== */}
+          {/* LEGACY TABS (Para compatibilidad) */}
+          {/* ====================================== */}
           {currentTab === 'seguimiento' && (
             <SeguimientoTab
               shipments={shipments}
@@ -907,9 +934,7 @@ const App: React.FC = () => {
           {currentTab === 'predicciones' && <PrediccionesTab shipments={shipments} />}
           {currentTab === 'asistente' && <AsistenteIAUnificado shipments={shipments} />}
           {currentTab === 'ml' && <MLSystemTab />}
-          {currentTab === 'procesos-litper' && <ProcesosLitperTab selectedCountry={selectedCountry} />}
           {currentTab === 'ciudad-agentes' && <CiudadAgentesTab selectedCountry={selectedCountry} />}
-          {currentTab === 'admin' && <AdminPanelPro />}
           {currentTab === 'inteligencia-logistica' && <InteligenciaLogisticaTab />}
         </div>
       </main>
