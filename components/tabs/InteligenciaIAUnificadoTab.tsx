@@ -24,6 +24,7 @@ import {
   BookOpen,
   Activity,
   ListOrdered,
+  Zap,
 } from 'lucide-react';
 import { Shipment } from '../../types';
 
@@ -32,12 +33,12 @@ import AsistenteIAUnificado from './AsistenteIAUnificado';
 import MLSystemTab from './MLSystemTab';
 import CiudadAgentesTab from './CiudadAgentesTab';
 import PrediccionesTab from './PrediccionesTab';
-import { SmartPrioritizationPanel, AILearningPanel } from '../intelligence';
+import { SmartPrioritizationPanel, AILearningPanel, AutomationPanel } from '../intelligence';
 
 // =====================================
 // TIPOS
 // =====================================
-type SubView = 'asistente' | 'prioridad' | 'predicciones' | 'ml' | 'aprendizaje' | 'agentes';
+type SubView = 'asistente' | 'prioridad' | 'automatizacion' | 'predicciones' | 'ml' | 'aprendizaje' | 'agentes';
 
 interface InteligenciaIAUnificadoTabProps {
   shipments: Shipment[];
@@ -61,6 +62,13 @@ const subNavItems: { id: SubView; label: string; icon: React.ElementType; descri
     icon: ListOrdered,
     description: 'Guías prioritarias IA',
     gradient: 'from-red-500 to-rose-500'
+  },
+  {
+    id: 'automatizacion',
+    label: 'Automatización',
+    icon: Zap,
+    description: 'Workflows y alertas',
+    gradient: 'from-amber-500 to-orange-500'
   },
   {
     id: 'predicciones',
@@ -287,6 +295,12 @@ export const InteligenciaIAUnificadoTab: React.FC<InteligenciaIAUnificadoTabProp
                 }
               }}
             />
+          </div>
+        )}
+
+        {activeView === 'automatizacion' && (
+          <div className="animate-fade-in">
+            <AutomationPanel shipments={shipments} />
           </div>
         )}
 
