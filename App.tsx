@@ -34,7 +34,9 @@ import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
 import { OperacionesUnificadoTab } from './components/tabs/OperacionesUnificadoTab';
 import { InteligenciaIAUnificadoTab } from './components/tabs/InteligenciaIAUnificadoTab';
 import { AnalisisUnificadoTab } from './components/tabs/AnalisisUnificadoTab';
-import { ProBubbleV2 } from './components/ProAssistant';
+import { ProBubbleV2, ProBubbleV3 } from './components/ProAssistant';
+import { AuthWrapper, UserProfilePanel } from './components/auth';
+import { EnhancedGuideTable } from './components/tables';
 import { AdminPanelPro } from './components/Admin/AdminPanelPro';
 import CountrySelector from './components/CountrySelector';
 import { detectarGuiasRetrasadas } from './utils/patternDetection';
@@ -1028,28 +1030,9 @@ const App: React.FC = () => {
         </div>
       </footer>
 
-      {/* Floating AI Assistant PRO Button */}
-      <ProBubbleV2
-        guiasLogisticas={shipments.map(s => ({
-          numeroGuia: s.id,
-          transportadora: s.carrier,
-          estadoActual: s.status,
-          ciudadDestino: s.detailedInfo?.city || 'N/A',
-          ciudadOrigen: 'N/A',
-          diasTranscurridos: s.detailedInfo?.daysInTransit || 0,
-          tieneNovedad: s.status === 'EXCEPTION' || s.status === 'RETURNED',
-          telefono: s.phone,
-          ultimos2Estados: s.detailedInfo?.history?.slice(0, 2).map(h => ({
-            fecha: h.date,
-            ubicacion: h.location || '',
-            descripcion: h.description,
-          })) || [],
-          historialCompleto: s.detailedInfo?.history?.map(h => ({
-            fecha: h.date,
-            ubicacion: h.location || '',
-            descripcion: h.description,
-          })) || [],
-        }))}
+      {/* Floating AI Assistant PRO Button - V3 Mejorado */}
+      <ProBubbleV3
+        shipments={shipments}
         onNavigateToTab={(tab) => setCurrentTab(tab as MainTabNew)}
         onExportData={handleDownloadExcel}
       />
@@ -1057,4 +1040,11 @@ const App: React.FC = () => {
   );
 };
 
-export default App;
+// Exportar App envuelto en AuthWrapper para requerir autenticación
+const AppWithAuth: React.FC = () => (
+  <AuthWrapper>
+    <App />
+  </AuthWrapper>
+);
+
+export default AppWithAuth;
