@@ -1,0 +1,26 @@
+// components/lazy/index.ts
+export {
+  LazyWrapper,
+  lazyWithRetry,
+  preload,
+  LazyTabWrapper,
+  LazyErrorBoundary,
+  preloadModules,
+  preloadOnIdle,
+  // Lazy loaded components
+  LazyPremiumDashboard,
+  LazyOperacionesTab,
+  LazyInteligenciaIATab,
+  LazyAnalisisTab,
+  LazyProcesosTab,
+  LazyAdminPanel,
+  LazySeguimientoTab,
+  LazySemaforoTab,
+  LazyDemandTab,
+  LazyPrediccionesTab,
+  LazyMLSystemTab,
+  LazyAsistenteTab,
+  LazyGamificationTab,
+  LazyCiudadAgentesTab,
+  LazyInteligenciaLogisticaTab,
+} from './LazyComponents';
