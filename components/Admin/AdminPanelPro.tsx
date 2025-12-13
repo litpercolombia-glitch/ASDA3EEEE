@@ -69,6 +69,10 @@ import { Shipment, ShipmentStatus, CarrierName } from '../../types';
 import { SemaforoExcelData, CiudadSemaforo, STORAGE_KEYS } from '../../types/logistics';
 import { saveTabData, loadTabData } from '../../utils/tabStorage';
 import { FinanceDashboard } from './FinanceCenter';
+import { ApiDashboard } from './ApiCenter';
+import { MCPDashboard } from './MCPCenter';
+import { LearningDashboard } from './LearningCenter';
+import { ReportsDashboard } from './ReportsCenter';
 
 // ============================================
 // TIPOS E INTERFACES
@@ -155,7 +159,7 @@ export const AdminPanelPro: React.FC = () => {
 
   // Estados de UI
   const [filtroFecha, setFiltroFecha] = useState<FiltroFecha>('todo');
-  const [activeTab, setActiveTab] = useState<'procesamiento' | 'documentos' | 'financial' | 'centro-financiero' | 'conocimiento' | 'integraciones' | 'predicciones' | 'info-logistica'>('procesamiento');
+  const [activeTab, setActiveTab] = useState<'procesamiento' | 'documentos' | 'financial' | 'centro-financiero' | 'conocimiento' | 'integraciones' | 'predicciones' | 'info-logistica' | 'api-publica' | 'mcp-conexiones' | 'aprendizaje' | 'reportes'>('procesamiento');
 
   // Estados de documentos
   const [documentos, setDocumentos] = useState<DocumentoCargado[]>([]);
@@ -611,6 +615,10 @@ export const AdminPanelPro: React.FC = () => {
             { id: 'predicciones', label: 'Predicciones ML', icon: Activity, color: 'pink' },
             { id: 'integraciones', label: 'Integraciones', icon: Plug, color: 'orange' },
             { id: 'info-logistica', label: 'Info Logística', icon: Truck, color: 'cyan', badge: logisticsData.length },
+            { id: 'api-publica', label: 'API Pública', icon: Globe, color: 'indigo' },
+            { id: 'mcp-conexiones', label: 'Conexiones MCP', icon: Link, color: 'violet' },
+            { id: 'aprendizaje', label: 'IA Learning', icon: Brain, color: 'fuchsia' },
+            { id: 'reportes', label: 'Reportes', icon: BarChart3, color: 'sky' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1089,6 +1097,45 @@ export const AdminPanelPro: React.FC = () => {
           {activeTab === 'integraciones' && (
             <div className="p-0">
               <ConexionesTab />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: INFO LOGÍSTICA */}
+          {/* ============================================ */}
+          {/* ============================================ */}
+          {/* TAB: API PÚBLICA */}
+          {/* ============================================ */}
+          {activeTab === 'api-publica' && (
+            <div className="p-6">
+              <ApiDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: CONEXIONES MCP */}
+          {/* ============================================ */}
+          {activeTab === 'mcp-conexiones' && (
+            <div className="p-6">
+              <MCPDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: APRENDIZAJE IA */}
+          {/* ============================================ */}
+          {activeTab === 'aprendizaje' && (
+            <div className="p-6">
+              <LearningDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: REPORTES */}
+          {/* ============================================ */}
+          {activeTab === 'reportes' && (
+            <div className="p-6">
+              <ReportsDashboard />
             </div>
           )}
 
