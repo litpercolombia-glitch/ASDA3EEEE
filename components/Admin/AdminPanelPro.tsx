@@ -68,6 +68,7 @@ import { documentProcessor, ProcessedDocument, SessionData } from '../../service
 import { Shipment, ShipmentStatus, CarrierName } from '../../types';
 import { SemaforoExcelData, CiudadSemaforo, STORAGE_KEYS } from '../../types/logistics';
 import { saveTabData, loadTabData } from '../../utils/tabStorage';
+import { FinanceDashboard } from './FinanceCenter';
 
 // ============================================
 // TIPOS E INTERFACES
@@ -154,7 +155,7 @@ export const AdminPanelPro: React.FC = () => {
 
   // Estados de UI
   const [filtroFecha, setFiltroFecha] = useState<FiltroFecha>('todo');
-  const [activeTab, setActiveTab] = useState<'procesamiento' | 'documentos' | 'financial' | 'conocimiento' | 'integraciones' | 'predicciones' | 'info-logistica'>('procesamiento');
+  const [activeTab, setActiveTab] = useState<'procesamiento' | 'documentos' | 'financial' | 'centro-financiero' | 'conocimiento' | 'integraciones' | 'predicciones' | 'info-logistica'>('procesamiento');
 
   // Estados de documentos
   const [documentos, setDocumentos] = useState<DocumentoCargado[]>([]);
@@ -604,6 +605,7 @@ export const AdminPanelPro: React.FC = () => {
           {[
             { id: 'procesamiento', label: 'Procesamiento IA', icon: Brain, color: 'purple' },
             { id: 'documentos', label: 'Documentos', icon: FileText, color: 'blue', badge: documentos.length },
+            { id: 'centro-financiero', label: 'Centro Financiero', icon: PieChart, color: 'success' },
             { id: 'financial', label: 'Análisis Financiero', icon: DollarSign, color: 'emerald' },
             { id: 'conocimiento', label: 'Base de Conocimiento', icon: BookOpen, color: 'amber', badge: knowledgeEntries.length },
             { id: 'predicciones', label: 'Predicciones ML', icon: Activity, color: 'pink' },
@@ -895,6 +897,13 @@ export const AdminPanelPro: React.FC = () => {
                 </div>
               )}
             </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: CENTRO FINANCIERO */}
+          {/* ============================================ */}
+          {activeTab === 'centro-financiero' && (
+            <FinanceDashboard />
           )}
 
           {/* ============================================ */}
