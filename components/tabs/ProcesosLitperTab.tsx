@@ -1,798 +1,1225 @@
 /**
- * 🌆 PROCESOS LITPER - Ciudad de Agentes IA
- * Dashboard principal de control total con MCP
- * Sistema de automatización para Colombia, Chile y Ecuador
+ * 🏢 LITPER PROCESOS - Sistema de Control de Procesos Logísticos
+ *
+ * Módulo completo para registro de guías y novedades con:
+ * - Cronómetro inteligente con alertas
+ * - Formularios de generación de guías por rondas
+ * - Registro de novedades
+ * - Dashboard administrativo
+ * - Gamificación y mensajes motivacionales
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Building2,
   Users,
-  Activity,
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  Zap,
-  Brain,
-  MessageSquare,
-  Phone,
+  Crown,
   Package,
-  Target,
-  Shield,
-  Sparkles,
-  ChevronRight,
+  AlertTriangle,
+  Clock,
   Play,
   Pause,
-  RefreshCw,
-  Send,
+  RotateCcw,
+  Plus,
+  Minus,
+  Save,
+  CheckCircle2,
+  XCircle,
+  Calendar,
+  MessageSquare,
+  Eye,
   TrendingUp,
-  Globe,
-  Bot,
-  Cpu,
-  Database,
-  Network,
-  Settings,
+  TrendingDown,
   BarChart3,
   PieChart,
-  Layers,
-  Boxes,
+  Award,
+  Target,
+  Zap,
+  Star,
+  Trophy,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Settings,
+  Bell,
+  Volume2,
+  VolumeX,
+  User,
+  Truck,
+  Building2,
+  RefreshCw,
+  FileSpreadsheet,
+  ArrowUpRight,
+  ArrowDownRight,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
-import {
-  getEstadoCiudad,
-  getDistritos,
-  getAgentes,
-  getMetricas,
-  getAlertas,
-  getEstadisticasGenerales,
-  ejecutarComandoMCP,
-  getAprendizajes,
-} from '../../services/agentCityService';
-
-import { getGuiasConNovedad, getGuiasCriticas } from '../../services/trackingAgentService';
-import {
-  getNovedadesActivas,
-  getEstadisticasNovedades,
-} from '../../services/novedadesAgentService';
-import {
-  getPedidosPendientes,
-  getEstadisticasPedidos,
-  getLlamadasPendientes,
-} from '../../services/ordersAgentService';
-
-import {
-  Pais,
-  DistritoId,
-  Distrito,
-  EstadoCiudadAgentes,
-  AlertaCiudad,
-  DISTRITOS_CONFIG,
-} from '../../types/agents';
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TIPOS LOCALES
-// ═══════════════════════════════════════════════════════════════════════════════
-
+// =====================================
+// TIPOS E INTERFACES
+// =====================================
 interface ProcesosLitperTabProps {
   selectedCountry?: string;
 }
 
-type VistaActiva =
-  | 'dashboard'
-  | 'distrito'
-  | 'agentes'
-  | 'alertas'
-  | 'aprendizajes'
-  | 'configuracion';
+interface Usuario {
+  id: string;
+  nombre: string;
+  avatar?: string;
+}
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// COMPONENTE PRINCIPAL
-// ═══════════════════════════════════════════════════════════════════════════════
+interface RondaGuias {
+  id: string;
+  numero: number;
+  usuarioId: string;
+  fecha: string;
+  horaInicio: string;
+  horaFin?: string;
+  tiempoTotal: number; // en segundos
+  pedidosIniciales: number;
+  realizado: number;
+  cancelado: number;
+  agendado: number;
+  dificiles: number;
+  pendientes: number;
+  revisado: number;
+  tiempoPromedio: number; // minutos por pedido
+}
 
-export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCountry }) => {
-  const [vistaActiva, setVistaActiva] = useState<VistaActiva>('dashboard');
-  const [distritoSeleccionado, setDistritoSeleccionado] = useState<DistritoId | null>(null);
-  const [paisSeleccionado, setPaisSeleccionado] = useState<Pais>(
-    (selectedCountry?.toLowerCase() as Pais) || Pais.COLOMBIA
-  );
+interface RegistroNovedades {
+  id: string;
+  usuarioId: string;
+  fecha: string;
+  hora: string;
+  solucionadas: number;
+  revisadas: number;
+  devolucion: number;
+  cliente: number;
+  transportadora: number;
+  litper: number;
+}
 
-  const [estado, setEstado] = useState<EstadoCiudadAgentes | null>(null);
-  const [estadisticas, setEstadisticas] = useState<any>(null);
-  const [alertas, setAlertas] = useState<AlertaCiudad[]>([]);
-  const [cargando, setCargando] = useState(true);
+interface ConfiguracionCronometro {
+  tiempoPorRonda: number; // minutos
+  tiempoPromedioGuia: number; // minutos
+  alertaTemprana: number; // segundos
+  alertaCritica: number; // segundos
+  sonidoActivo: boolean;
+  notificacionesActivas: boolean;
+  mensajesMotivacionales: boolean;
+}
 
-  // MCP Chat
-  const [comandoMCP, setComandoMCP] = useState('');
-  const [historialComandos, setHistorialComandos] = useState<
-    Array<{
-      comando: string;
-      respuesta: string;
-      timestamp: Date;
-    }>
-  >([]);
-  const [ejecutandoComando, setEjecutandoComando] = useState(false);
+// =====================================
+// CONSTANTES
+// =====================================
+const STORAGE_KEY_RONDAS = 'litper_procesos_rondas';
+const STORAGE_KEY_NOVEDADES = 'litper_procesos_novedades';
+const STORAGE_KEY_CONFIG = 'litper_procesos_config';
+const STORAGE_KEY_USUARIOS = 'litper_procesos_usuarios';
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CARGAR DATOS
-  // ═══════════════════════════════════════════════════════════════════════════
+const USUARIOS_DEFAULT: Usuario[] = [
+  { id: '1', nombre: 'EVAN' },
+  { id: '2', nombre: 'MARIA' },
+  { id: '3', nombre: 'CARLOS' },
+  { id: '4', nombre: 'ANA' },
+  { id: '5', nombre: 'PEDRO' },
+];
 
-  const cargarDatos = useCallback(() => {
-    setCargando(true);
-    try {
-      const estadoCiudad = getEstadoCiudad();
-      setEstado(estadoCiudad);
+const CONFIG_DEFAULT: ConfiguracionCronometro = {
+  tiempoPorRonda: 25,
+  tiempoPromedioGuia: 3,
+  alertaTemprana: 150, // 2:30 min
+  alertaCritica: 240, // 4:00 min
+  sonidoActivo: true,
+  notificacionesActivas: true,
+  mensajesMotivacionales: true,
+};
 
-      const stats = getEstadisticasGenerales();
-      setEstadisticas(stats);
+const MENSAJES_MOTIVACIONALES = [
+  "💪 ¡Tú puedes! Solo un poco más rápido y rompes tu récord.",
+  "🚀 ¡Vamos equipo Litper! Cada guía nos acerca al objetivo.",
+  "⭐ ¡Eres crack! Recuerda: eficiencia + calidad = éxito.",
+  "🎯 ¡Enfócate! Estás a punto de terminar esta guía.",
+  "🏆 ¡Campeón/a! El equipo Litper cuenta contigo.",
+  "💡 Tip: Si es muy compleja, márcala como 'Difícil' y continúa.",
+  "🌟 ¡Excelente trabajo! Mantén ese ritmo ganador.",
+  "⚡ ¡Velocidad Litper activada! Tú lo logras.",
+];
 
-      const alertasActivas = getAlertas(paisSeleccionado);
-      setAlertas(alertasActivas);
-    } catch (error) {
-      console.error('Error cargando datos:', error);
-    } finally {
-      setCargando(false);
-    }
-  }, [paisSeleccionado]);
+// =====================================
+// HELPERS
+// =====================================
+const formatTime = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
 
-  useEffect(() => {
-    cargarDatos();
-    const intervalo = setInterval(cargarDatos, 30000); // Actualizar cada 30s
-    return () => clearInterval(intervalo);
-  }, [cargarDatos]);
+const loadFromStorage = <T,>(key: string, defaultValue: T): T => {
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : defaultValue;
+  } catch {
+    return defaultValue;
+  }
+};
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // EJECUTAR COMANDO MCP
-  // ═══════════════════════════════════════════════════════════════════════════
+const saveToStorage = <T,>(key: string, data: T): void => {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    console.error('Error saving to storage:', e);
+  }
+};
 
-  const handleEjecutarComando = async () => {
-    if (!comandoMCP.trim() || ejecutandoComando) return;
-
-    setEjecutandoComando(true);
-    const comandoEnviado = comandoMCP;
-    setComandoMCP('');
-
-    try {
-      const resultado = await ejecutarComandoMCP(comandoEnviado, paisSeleccionado);
-
-      setHistorialComandos((prev) => [
-        ...prev,
-        {
-          comando: comandoEnviado,
-          respuesta: resultado.resultado || resultado.error || 'Comando ejecutado',
-          timestamp: new Date(),
-        },
-      ]);
-
-      // Recargar datos después del comando
-      cargarDatos();
-    } catch (error) {
-      setHistorialComandos((prev) => [
-        ...prev,
-        {
-          comando: comandoEnviado,
-          respuesta: `Error: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-          timestamp: new Date(),
-        },
-      ]);
-    } finally {
-      setEjecutandoComando(false);
-    }
-  };
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // RENDER HEADER
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  const renderHeader = () => (
-    <div className="bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-900 rounded-2xl p-6 mb-6 shadow-2xl border border-indigo-500/20">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
-            <Building2 className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              Ciudad de Agentes Litper
-              <span className="text-sm px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full">
-                {estado?.estado || 'Operativo'}
-              </span>
-            </h1>
-            <p className="text-indigo-200/80">
-              Sistema de automatización total con IA para logística multi-país
-            </p>
-          </div>
-        </div>
-
-        {/* Selector de País */}
-        <div className="flex items-center gap-3">
-          <span className="text-indigo-200/60 text-sm">País:</span>
-          <div className="flex gap-2">
-            {Object.values(Pais).map((pais) => (
-              <button
-                key={pais}
-                onClick={() => setPaisSeleccionado(pais)}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  paisSeleccionado === pais
-                    ? 'bg-white text-indigo-900 shadow-lg'
-                    : 'bg-white/10 text-white hover:bg-white/20'
-                }`}
-              >
-                {pais === Pais.COLOMBIA ? 'Colombia' : pais === Pais.CHILE ? 'Chile' : 'Ecuador'}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Métricas principales */}
-      {estadisticas && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-6">
-          <MetricaCard
-            icono={<Bot className="w-5 h-5" />}
-            valor={estadisticas.agentesActivos}
-            label="Agentes Activos"
-            color="text-blue-400"
-          />
-          <MetricaCard
-            icono={<Cpu className="w-5 h-5" />}
-            valor={estadisticas.agentesTrabajando}
-            label="Trabajando"
-            color="text-green-400"
-          />
-          <MetricaCard
-            icono={<Activity className="w-5 h-5" />}
-            valor={estadisticas.tareasCompletadas}
-            label="Tareas Hoy"
-            color="text-purple-400"
-          />
-          <MetricaCard
-            icono={<CheckCircle2 className="w-5 h-5" />}
-            valor={`${estadisticas.tasaExito}%`}
-            label="Tasa Éxito"
-            color="text-emerald-400"
-          />
-          <MetricaCard
-            icono={<AlertTriangle className="w-5 h-5" />}
-            valor={estadisticas.alertasActivas}
-            label="Alertas"
-            color="text-amber-400"
-          />
-          <MetricaCard
-            icono={<Brain className="w-5 h-5" />}
-            valor={estadisticas.aprendizajes}
-            label="Aprendizajes"
-            color="text-pink-400"
-          />
-        </div>
-      )}
+// =====================================
+// COMPONENTE: CONTADOR
+// =====================================
+const Counter: React.FC<{
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+  icon: React.ReactNode;
+  color: string;
+  min?: number;
+}> = ({ label, value, onChange, icon, color, min = 0 }) => (
+  <div className={`flex items-center justify-between p-3 rounded-xl ${color} transition-all`}>
+    <div className="flex items-center gap-2">
+      {icon}
+      <span className="font-medium text-sm">{label}</span>
     </div>
-  );
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => onChange(Math.max(min, value - 1))}
+        className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+      >
+        <Minus className="w-4 h-4" />
+      </button>
+      <span className="w-10 text-center font-bold text-lg">{value}</span>
+      <button
+        onClick={() => onChange(value + 1)}
+        className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+      >
+        <Plus className="w-4 h-4" />
+      </button>
+    </div>
+  </div>
+);
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // RENDER DISTRITOS
-  // ═══════════════════════════════════════════════════════════════════════════
+// =====================================
+// COMPONENTE: CRONÓMETRO CIRCULAR
+// =====================================
+const CircularTimer: React.FC<{
+  seconds: number;
+  maxSeconds: number;
+  alertaTemprana: number;
+  alertaCritica: number;
+  isRunning: boolean;
+}> = ({ seconds, maxSeconds, alertaTemprana, alertaCritica, isRunning }) => {
+  const progress = Math.min((seconds / maxSeconds) * 100, 100);
+  const circumference = 2 * Math.PI * 45;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
 
-  const renderDistritos = () => {
-    const distritos = getDistritos();
+  let color = 'text-emerald-500';
+  let bgColor = 'stroke-emerald-500';
+  if (seconds >= alertaCritica) {
+    color = 'text-red-500';
+    bgColor = 'stroke-red-500';
+  } else if (seconds >= alertaTemprana) {
+    color = 'text-amber-500';
+    bgColor = 'stroke-amber-500';
+  }
 
-    return (
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-          <Layers className="w-5 h-5 text-indigo-500" />
-          Los 7 Distritos
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {distritos.map((distrito) => {
-            const config = DISTRITOS_CONFIG.find((d) => d.id === distrito.id);
-            if (!config) return null;
-
-            return (
-              <DistritoCard
-                key={distrito.id}
-                distrito={distrito}
-                config={config}
-                onClick={() => {
-                  setDistritoSeleccionado(distrito.id);
-                  setVistaActiva('distrito');
-                }}
-              />
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // RENDER MCP CHAT
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  const renderMCPChat = () => (
-    <div className="bg-gray-900 rounded-xl border border-gray-700 overflow-hidden">
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3 flex items-center gap-3">
-        <MessageSquare className="w-5 h-5 text-white" />
-        <span className="font-semibold text-white">Chat con el Alcalde IA</span>
-        <span className="text-xs px-2 py-0.5 bg-white/20 rounded-full text-white">Claude Opus</span>
-      </div>
-
-      {/* Historial de comandos */}
-      <div className="h-64 overflow-y-auto p-4 space-y-3">
-        {historialComandos.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
-            <Bot className="w-12 h-12 mx-auto mb-2 opacity-30" />
-            <p>Escribe un comando para interactuar con la ciudad</p>
-            <p className="text-sm mt-1">Ej: "¿Cuántas novedades hay en Colombia?"</p>
-          </div>
-        ) : (
-          historialComandos.map((item, idx) => (
-            <div key={idx} className="space-y-2">
-              <div className="flex gap-2">
-                <span className="text-indigo-400 font-medium">Tú:</span>
-                <span className="text-gray-300">{item.comando}</span>
-              </div>
-              <div className="flex gap-2 bg-gray-800/50 rounded-lg p-3">
-                <Bot className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
-                <span className="text-gray-200 text-sm whitespace-pre-wrap">{item.respuesta}</span>
-              </div>
-            </div>
-          ))
+  return (
+    <div className="relative w-32 h-32">
+      <svg className="w-full h-full transform -rotate-90">
+        <circle
+          cx="64"
+          cy="64"
+          r="45"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="8"
+          className="text-slate-200 dark:text-navy-700"
+        />
+        <circle
+          cx="64"
+          cy="64"
+          r="45"
+          fill="none"
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          className={`${bgColor} transition-all duration-300`}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className={`text-2xl font-bold ${color}`}>{formatTime(seconds)}</span>
+        {isRunning && (
+          <span className="text-xs text-slate-500 animate-pulse">En curso</span>
         )}
       </div>
-
-      {/* Input de comando */}
-      <div className="border-t border-gray-700 p-3 flex gap-2">
-        <input
-          type="text"
-          value={comandoMCP}
-          onChange={(e) => setComandoMCP(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleEjecutarComando()}
-          placeholder="Escribe tu comando o pregunta..."
-          className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-          disabled={ejecutandoComando}
-        />
-        <button
-          onClick={handleEjecutarComando}
-          disabled={ejecutandoComando || !comandoMCP.trim()}
-          className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg text-white font-medium hover:from-indigo-500 hover:to-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          {ejecutandoComando ? (
-            <RefreshCw className="w-4 h-4 animate-spin" />
-          ) : (
-            <Send className="w-4 h-4" />
-          )}
-        </button>
-      </div>
     </div>
   );
+};
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // RENDER MÉTRICAS EN TIEMPO REAL
-  // ═══════════════════════════════════════════════════════════════════════════
+// =====================================
+// COMPONENTE PRINCIPAL: PROCESOS LITPER TAB
+// =====================================
+export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCountry }) => {
+  // Estados principales
+  const [modo, setModo] = useState<'selector' | 'usuario' | 'admin'>('selector');
+  const [usuarioActual, setUsuarioActual] = useState<Usuario | null>(null);
+  const [tipoRegistro, setTipoRegistro] = useState<'guias' | 'novedades' | null>(null);
 
-  const renderMetricasEnVivo = () => {
-    const statsNovedades = getEstadisticasNovedades(paisSeleccionado);
-    const statsPedidos = getEstadisticasPedidos(paisSeleccionado);
-    const llamadasPendientes = getLlamadasPendientes();
-    const guiasCriticas = getGuiasCriticas();
+  // Estados de datos
+  const [rondas, setRondas] = useState<RondaGuias[]>([]);
+  const [novedades, setNovedades] = useState<RegistroNovedades[]>([]);
+  const [config, setConfig] = useState<ConfiguracionCronometro>(CONFIG_DEFAULT);
+  const [usuarios] = useState<Usuario[]>(USUARIOS_DEFAULT);
 
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Panel de Novedades */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="bg-gradient-to-r from-red-500 to-orange-500 px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-white">
-              <AlertTriangle className="w-5 h-5" />
-              <span className="font-semibold">Novedades Activas</span>
-            </div>
-            <span className="text-2xl font-bold text-white">{statsNovedades.activas}</span>
-          </div>
+  // Estados del cronómetro
+  const [tiempoActual, setTiempoActual] = useState(0);
+  const [cronometroActivo, setCronometroActivo] = useState(false);
+  const [rondaActual, setRondaActual] = useState(1);
 
-          <div className="p-4 space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Resueltas hoy</span>
-              <span className="font-medium text-green-600">{statsNovedades.resueltasHoy}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">En oficina</span>
-              <span className="font-medium text-amber-600">{statsNovedades.enOficina}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Escaladas</span>
-              <span className="font-medium text-red-600">{statsNovedades.escaladas}</span>
-            </div>
-            <div className="flex justify-between text-sm border-t border-gray-200 dark:border-gray-700 pt-2">
-              <span className="text-gray-500">Tasa resolución</span>
-              <span className="font-bold text-indigo-600">{statsNovedades.tasaResolucion}%</span>
-            </div>
-          </div>
-        </div>
+  // Estados del formulario de guías
+  const [pedidosIniciales, setPedidosIniciales] = useState(0);
+  const [realizado, setRealizado] = useState(0);
+  const [cancelado, setCancelado] = useState(0);
+  const [agendado, setAgendado] = useState(0);
+  const [dificiles, setDificiles] = useState(0);
+  const [pendientes, setPendientes] = useState(0);
+  const [revisado, setRevisado] = useState(0);
 
-        {/* Panel de Pedidos */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-white">
-              <Package className="w-5 h-5" />
-              <span className="font-semibold">Pedidos Hoy</span>
-            </div>
-            <span className="text-2xl font-bold text-white">{statsPedidos.procesadosHoy}</span>
-          </div>
+  // Estados del formulario de novedades
+  const [solucionadas, setSolucionadas] = useState(0);
+  const [revisadas, setRevisadas] = useState(0);
+  const [devolucion, setDevolucion] = useState(0);
+  const [clienteNov, setClienteNov] = useState(0);
+  const [transportadoraNov, setTransportadoraNov] = useState(0);
+  const [litperNov, setLitperNov] = useState(0);
 
-          <div className="p-4 space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Pendientes</span>
-              <span className="font-medium text-amber-600">{statsPedidos.pendientes}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Desde Chatea Pro</span>
-              <span className="font-medium text-blue-600">{statsPedidos.porOrigen.chatea_pro}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Desde Shopify</span>
-              <span className="font-medium text-purple-600">{statsPedidos.porOrigen.shopify}</span>
-            </div>
-            <div className="flex justify-between text-sm border-t border-gray-200 dark:border-gray-700 pt-2">
-              <span className="text-gray-500">Llamadas pendientes</span>
-              <span className="font-bold text-orange-600">{llamadasPendientes.length}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  // Estados de UI
+  const [showMensaje, setShowMensaje] = useState(false);
+  const [mensajeActual, setMensajeActual] = useState('');
+  const [vistaAdmin, setVistaAdmin] = useState<'hoy' | 'semana' | 'mes' | 'equipo' | 'config'>('hoy');
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // RENDER ALERTAS
-  // ═══════════════════════════════════════════════════════════════════════════
+  // Cargar datos al montar
+  useEffect(() => {
+    setRondas(loadFromStorage(STORAGE_KEY_RONDAS, []));
+    setNovedades(loadFromStorage(STORAGE_KEY_NOVEDADES, []));
+    setConfig(loadFromStorage(STORAGE_KEY_CONFIG, CONFIG_DEFAULT));
+  }, []);
 
-  const renderAlertas = () => {
-    const alertasActivas = alertas.filter((a) => a.activa);
+  // Guardar datos cuando cambian
+  useEffect(() => {
+    saveToStorage(STORAGE_KEY_RONDAS, rondas);
+  }, [rondas]);
 
-    if (alertasActivas.length === 0) {
-      return (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-6 text-center">
-          <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-2" />
-          <p className="text-green-700 dark:text-green-300 font-medium">Sin alertas activas</p>
-          <p className="text-green-600/70 dark:text-green-400/70 text-sm">
-            Todo funciona correctamente
-          </p>
-        </div>
-      );
+  useEffect(() => {
+    saveToStorage(STORAGE_KEY_NOVEDADES, novedades);
+  }, [novedades]);
+
+  useEffect(() => {
+    saveToStorage(STORAGE_KEY_CONFIG, config);
+  }, [config]);
+
+  // Cronómetro
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (cronometroActivo) {
+      interval = setInterval(() => {
+        setTiempoActual((prev) => {
+          const newTime = prev + 1;
+          // Mostrar mensaje motivacional si excede tiempo
+          if (config.mensajesMotivacionales && newTime === config.alertaCritica) {
+            const mensaje = MENSAJES_MOTIVACIONALES[Math.floor(Math.random() * MENSAJES_MOTIVACIONALES.length)];
+            setMensajeActual(mensaje);
+            setShowMensaje(true);
+            setTimeout(() => setShowMensaje(false), 5000);
+          }
+          return newTime;
+        });
+      }, 1000);
     }
+    return () => clearInterval(interval);
+  }, [cronometroActivo, config.mensajesMotivacionales, config.alertaCritica]);
 
-    return (
-      <div className="space-y-3">
-        {alertasActivas.slice(0, 5).map((alerta) => (
-          <div
-            key={alerta.id}
-            className={`rounded-lg p-4 border ${
-              alerta.tipo === 'critical'
-                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                : alerta.tipo === 'error'
-                  ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'
-                  : alerta.tipo === 'warning'
-                    ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
-                    : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-            }`}
-          >
-            <div className="flex items-start gap-3">
-              <AlertTriangle
-                className={`w-5 h-5 flex-shrink-0 ${
-                  alerta.tipo === 'critical'
-                    ? 'text-red-500'
-                    : alerta.tipo === 'error'
-                      ? 'text-orange-500'
-                      : alerta.tipo === 'warning'
-                        ? 'text-amber-500'
-                        : 'text-blue-500'
-                }`}
-              />
-              <div className="flex-1">
-                <h4 className="font-medium text-gray-800 dark:text-white">{alerta.titulo}</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-300">{alerta.mensaje}</p>
-                {alerta.accionRequerida && (
-                  <p className="text-xs text-gray-500 mt-1 italic">{alerta.accionRequerida}</p>
-                )}
-              </div>
-              <span className="text-xs text-gray-400">
-                {new Date(alerta.creadaEn).toLocaleTimeString()}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+  // Calcular tiempo promedio
+  const tiempoPromedio = useMemo(() => {
+    const totalProcesados = realizado + cancelado + agendado;
+    if (totalProcesados === 0 || tiempoActual === 0) return 0;
+    return (tiempoActual / 60 / totalProcesados).toFixed(2);
+  }, [realizado, cancelado, agendado, tiempoActual]);
+
+  // Finalizar ronda
+  const finalizarRonda = () => {
+    if (!usuarioActual) return;
+
+    const nuevaRonda: RondaGuias = {
+      id: `ronda-${Date.now()}`,
+      numero: rondaActual,
+      usuarioId: usuarioActual.id,
+      fecha: new Date().toLocaleDateString('es-CO'),
+      horaInicio: new Date(Date.now() - tiempoActual * 1000).toLocaleTimeString('es-CO'),
+      horaFin: new Date().toLocaleTimeString('es-CO'),
+      tiempoTotal: tiempoActual,
+      pedidosIniciales,
+      realizado,
+      cancelado,
+      agendado,
+      dificiles,
+      pendientes,
+      revisado,
+      tiempoPromedio: parseFloat(tiempoPromedio as string) || 0,
+    };
+
+    setRondas((prev) => [...prev, nuevaRonda]);
+
+    // Resetear para nueva ronda
+    setRondaActual((prev) => prev + 1);
+    setTiempoActual(0);
+    setCronometroActivo(false);
+    setPedidosIniciales(0);
+    setRealizado(0);
+    setCancelado(0);
+    setAgendado(0);
+    setDificiles(0);
+    setPendientes(0);
+    setRevisado(0);
   };
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // RENDER VISTA DE DISTRITO INDIVIDUAL
-  // ═══════════════════════════════════════════════════════════════════════════
+  // Guardar novedades
+  const guardarNovedades = () => {
+    if (!usuarioActual) return;
 
-  const renderVistaDistrito = () => {
-    if (!distritoSeleccionado) return null;
+    const nuevoRegistro: RegistroNovedades = {
+      id: `nov-${Date.now()}`,
+      usuarioId: usuarioActual.id,
+      fecha: new Date().toLocaleDateString('es-CO'),
+      hora: new Date().toLocaleTimeString('es-CO'),
+      solucionadas,
+      revisadas,
+      devolucion,
+      cliente: clienteNov,
+      transportadora: transportadoraNov,
+      litper: litperNov,
+    };
 
-    const distrito = getDistritos().find((d) => d.id === distritoSeleccionado);
-    const config = DISTRITOS_CONFIG.find((d) => d.id === distritoSeleccionado);
-    const agentes = getAgentes(distritoSeleccionado, paisSeleccionado);
+    setNovedades((prev) => [...prev, nuevoRegistro]);
 
-    if (!distrito || !config) return null;
-
-    return (
-      <div className="space-y-6">
-        {/* Header del distrito */}
-        <div
-          className={`${config.colorBg} rounded-xl p-6 border border-gray-200 dark:border-gray-700`}
-        >
-          <button
-            onClick={() => {
-              setDistritoSeleccionado(null);
-              setVistaActiva('dashboard');
-            }}
-            className="text-sm text-gray-500 hover:text-gray-700 mb-4 flex items-center gap-1"
-          >
-            ← Volver al dashboard
-          </button>
-
-          <div className="flex items-center gap-4">
-            <div className="text-4xl">{config.icono}</div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-white">{config.nombre}</h2>
-              <p className="text-gray-600 dark:text-gray-300">{config.descripcion}</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-4 gap-4 mt-6">
-            <div className="bg-white/80 dark:bg-gray-800/80 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-gray-800 dark:text-white">
-                {agentes.length}
-              </div>
-              <div className="text-xs text-gray-500">Agentes</div>
-            </div>
-            <div className="bg-white/80 dark:bg-gray-800/80 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {distrito.tareasCompletadasHoy}
-              </div>
-              <div className="text-xs text-gray-500">Completadas</div>
-            </div>
-            <div className="bg-white/80 dark:bg-gray-800/80 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-blue-600">{distrito.tareasHoy}</div>
-              <div className="text-xs text-gray-500">Total Hoy</div>
-            </div>
-            <div className="bg-white/80 dark:bg-gray-800/80 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-purple-600">
-                {distrito.tasaExitoHoy.toFixed(0)}%
-              </div>
-              <div className="text-xs text-gray-500">Éxito</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Lista de agentes */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <h3 className="font-semibold text-gray-800 dark:text-white flex items-center gap-2">
-              <Users className="w-5 h-5 text-indigo-500" />
-              Agentes del Distrito
-            </h3>
-            <span className="text-sm text-gray-500">{agentes.length} agentes</span>
-          </div>
-
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {agentes.map((agente) => (
-              <div
-                key={agente.id}
-                className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        agente.estado === 'trabajando'
-                          ? 'bg-green-100 text-green-600'
-                          : agente.estado === 'activo'
-                            ? 'bg-blue-100 text-blue-600'
-                            : agente.estado === 'pausado'
-                              ? 'bg-amber-100 text-amber-600'
-                              : 'bg-gray-100 text-gray-600'
-                      }`}
-                    >
-                      <Bot className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-800 dark:text-white">{agente.nombre}</h4>
-                      <p className="text-sm text-gray-500">
-                        {agente.especialidad.replace(/_/g, ' ')}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="text-sm font-medium text-gray-800 dark:text-white">
-                        {agente.tareasCompletadas} tareas
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {agente.calificacionPromedio.toFixed(1)}/10
-                      </div>
-                    </div>
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-medium ${
-                        agente.estado === 'trabajando'
-                          ? 'bg-green-100 text-green-700'
-                          : agente.estado === 'activo'
-                            ? 'bg-blue-100 text-blue-700'
-                            : agente.estado === 'pausado'
-                              ? 'bg-amber-100 text-amber-700'
-                              : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {agente.estado}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    // Resetear
+    setSolucionadas(0);
+    setRevisadas(0);
+    setDevolucion(0);
+    setClienteNov(0);
+    setTransportadoraNov(0);
+    setLitperNov(0);
   };
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // RENDER PRINCIPAL
-  // ═══════════════════════════════════════════════════════════════════════════
+  // Estadísticas del día
+  const estadisticasHoy = useMemo(() => {
+    const hoy = new Date().toLocaleDateString('es-CO');
+    const rondasHoy = rondas.filter((r) => r.fecha === hoy);
+    const novedadesHoy = novedades.filter((n) => n.fecha === hoy);
 
-  if (cargando && !estado) {
+    return {
+      totalRondas: rondasHoy.length,
+      totalPedidos: rondasHoy.reduce((acc, r) => acc + r.pedidosIniciales, 0),
+      totalRealizado: rondasHoy.reduce((acc, r) => acc + r.realizado, 0),
+      totalCancelado: rondasHoy.reduce((acc, r) => acc + r.cancelado, 0),
+      totalAgendado: rondasHoy.reduce((acc, r) => acc + r.agendado, 0),
+      totalDificiles: rondasHoy.reduce((acc, r) => acc + r.dificiles, 0),
+      promedioGeneral: rondasHoy.length > 0
+        ? (rondasHoy.reduce((acc, r) => acc + r.tiempoPromedio, 0) / rondasHoy.length).toFixed(2)
+        : '0',
+      novedadesSolucionadas: novedadesHoy.reduce((acc, n) => acc + n.solucionadas, 0),
+      novedadesTotal: novedadesHoy.reduce((acc, n) => acc + n.solucionadas + n.revisadas + n.devolucion, 0),
+    };
+  }, [rondas, novedades]);
+
+  // Exportar a Excel
+  const exportarExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    // Hoja de rondas
+    const rondasData = [
+      ['REGISTRO DE RONDAS - LITPER PROCESOS'],
+      [''],
+      ['Fecha', 'Usuario', 'Ronda', 'Hora Inicio', 'Hora Fin', 'Tiempo Total', 'Pedidos', 'Realizado', 'Cancelado', 'Agendado', 'Difíciles', 'T. Promedio'],
+      ...rondas.map((r) => [
+        r.fecha,
+        usuarios.find((u) => u.id === r.usuarioId)?.nombre || 'N/A',
+        r.numero,
+        r.horaInicio,
+        r.horaFin || 'En curso',
+        formatTime(r.tiempoTotal),
+        r.pedidosIniciales,
+        r.realizado,
+        r.cancelado,
+        r.agendado,
+        r.dificiles,
+        r.tiempoPromedio.toFixed(2) + ' min',
+      ]),
+    ];
+    const wsRondas = XLSX.utils.aoa_to_sheet(rondasData);
+    XLSX.utils.book_append_sheet(wb, wsRondas, 'Rondas');
+
+    // Hoja de novedades
+    const novedadesData = [
+      ['REGISTRO DE NOVEDADES - LITPER PROCESOS'],
+      [''],
+      ['Fecha', 'Hora', 'Usuario', 'Solucionadas', 'Revisadas', 'Devolución', 'Cliente', 'Transportadora', 'Litper'],
+      ...novedades.map((n) => [
+        n.fecha,
+        n.hora,
+        usuarios.find((u) => u.id === n.usuarioId)?.nombre || 'N/A',
+        n.solucionadas,
+        n.revisadas,
+        n.devolucion,
+        n.cliente,
+        n.transportadora,
+        n.litper,
+      ]),
+    ];
+    const wsNovedades = XLSX.utils.aoa_to_sheet(novedadesData);
+    XLSX.utils.book_append_sheet(wb, wsNovedades, 'Novedades');
+
+    XLSX.writeFile(wb, `Procesos_Litper_${new Date().toLocaleDateString('es-CO')}.xlsx`);
+  };
+
+  // =====================================
+  // RENDER: SELECTOR DE MODO
+  // =====================================
+  if (modo === 'selector') {
     return (
-      <div className="flex items-center justify-center h-96">
+      <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-navy-950 dark:to-navy-900">
         <div className="text-center">
-          <RefreshCw className="w-12 h-12 text-indigo-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-500">Cargando Ciudad de Agentes...</p>
+          <div className="w-20 h-20 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl">
+            <Zap className="w-10 h-10 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-2">
+            LITPER PROCESOS
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 mb-8">
+            Sistema de control de procesos logísticos
+          </p>
+
+          <h2 className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-6">
+            SELECCIONA TU MODO
+          </h2>
+
+          <div className="flex gap-6 justify-center">
+            {/* Modo Usuario */}
+            <button
+              onClick={() => setModo('usuario')}
+              className="group bg-white dark:bg-navy-900 rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all border-2 border-transparent hover:border-cyan-500 w-48"
+            >
+              <div className="w-16 h-16 bg-cyan-100 dark:bg-cyan-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <User className="w-8 h-8 text-cyan-600 dark:text-cyan-400" />
+              </div>
+              <h3 className="font-bold text-slate-800 dark:text-white mb-1">USUARIO</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">LOGÍSTICO</p>
+            </button>
+
+            {/* Modo Admin */}
+            <button
+              onClick={() => setModo('admin')}
+              className="group bg-white dark:bg-navy-900 rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all border-2 border-transparent hover:border-amber-500 w-48"
+            >
+              <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Crown className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h3 className="font-bold text-slate-800 dark:text-white mb-1">ADMIN</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">GERENCIA</p>
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-6 p-6">
-      {renderHeader()}
+  // =====================================
+  // RENDER: MODO USUARIO - SELECCIÓN DE USUARIO
+  // =====================================
+  if (modo === 'usuario' && !usuarioActual) {
+    return (
+      <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-navy-950 dark:to-navy-900">
+        <div className="bg-white dark:bg-navy-900 rounded-2xl p-8 shadow-xl max-w-md w-full mx-4">
+          <button
+            onClick={() => setModo('selector')}
+            className="flex items-center gap-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 mb-6"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            Volver
+          </button>
 
-      {vistaActiva === 'distrito' && distritoSeleccionado ? (
-        renderVistaDistrito()
-      ) : (
-        <>
-          {renderMetricasEnVivo()}
-          {renderDistritos()}
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Panel MCP */}
-            <div>
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-indigo-500" />
-                Control Total con MCP
-              </h2>
-              {renderMCPChat()}
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-cyan-100 dark:bg-cyan-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">👋</span>
             </div>
-
-            {/* Panel de Alertas */}
-            <div>
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-amber-500" />
-                Alertas del Sistema
-              </h2>
-              {renderAlertas()}
-            </div>
+            <h2 className="text-xl font-bold text-slate-800 dark:text-white">
+              ¡Hola! ¿Quién eres?
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Selecciona tu nombre para continuar
+            </p>
           </div>
 
-          {/* Footer con estadísticas de aprendizaje */}
-          <div className="bg-gradient-to-r from-purple-900/20 to-indigo-900/20 rounded-xl p-6 border border-purple-500/20">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                  <Brain className="w-6 h-6 text-white" />
+          <div className="space-y-2">
+            {usuarios.map((usuario) => (
+              <button
+                key={usuario.id}
+                onClick={() => setUsuarioActual(usuario)}
+                className="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-navy-700 hover:border-cyan-500 dark:hover:border-cyan-500 transition-all flex items-center gap-3 group"
+              >
+                <div className="w-10 h-10 bg-slate-100 dark:bg-navy-800 rounded-full flex items-center justify-center group-hover:bg-cyan-100 dark:group-hover:bg-cyan-900/30 transition-colors">
+                  <User className="w-5 h-5 text-slate-500 group-hover:text-cyan-600" />
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-800 dark:text-white">Memoria Colectiva</h3>
-                  <p className="text-sm text-gray-500">Sistema de aprendizaje continuo activo</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-8">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {getAprendizajes().length}
-                  </div>
-                  <div className="text-xs text-gray-500">Aprendizajes</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-pink-600">
-                    {estadisticas?.distritosOperativos || 7}
-                  </div>
-                  <div className="text-xs text-gray-500">Distritos</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-indigo-600">
-                    {estadisticas?.agentesTotales || 0}
-                  </div>
-                  <div className="text-xs text-gray-500">Agentes Total</div>
-                </div>
-              </div>
-            </div>
+                <span className="font-bold text-slate-700 dark:text-slate-300 group-hover:text-cyan-600 dark:group-hover:text-cyan-400">
+                  {usuario.nombre}
+                </span>
+              </button>
+            ))}
           </div>
-        </>
-      )}
-    </div>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// COMPONENTES AUXILIARES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const MetricaCard: React.FC<{
-  icono: React.ReactNode;
-  valor: number | string;
-  label: string;
-  color: string;
-}> = ({ icono, valor, label, color }) => (
-  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 text-center">
-    <div className={`${color} mb-1 flex justify-center`}>{icono}</div>
-    <div className="text-xl font-bold text-white">{valor}</div>
-    <div className="text-xs text-indigo-200/70">{label}</div>
-  </div>
-);
-
-const DistritoCard: React.FC<{
-  distrito: Distrito;
-  config: (typeof DISTRITOS_CONFIG)[0];
-  onClick: () => void;
-}> = ({ distrito, config, onClick }) => (
-  <button
-    onClick={onClick}
-    className={`${config.colorBg} rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all text-left w-full group`}
-  >
-    <div className="flex items-start justify-between mb-3">
-      <span className="text-3xl">{config.icono}</span>
-      <span
-        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-          distrito.estado === 'operativo'
-            ? 'bg-green-100 text-green-700'
-            : distrito.estado === 'degradado'
-              ? 'bg-amber-100 text-amber-700'
-              : 'bg-red-100 text-red-700'
-        }`}
-      >
-        {distrito.estado}
-      </span>
-    </div>
-
-    <h3 className="font-bold text-gray-800 dark:text-white mb-1">{config.nombre}</h3>
-    <p className="text-xs text-gray-500 mb-3 line-clamp-2">{config.descripcion}</p>
-
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2 text-sm">
-        <Users className="w-4 h-4 text-gray-400" />
-        <span className="text-gray-600 dark:text-gray-300">{distrito.agentesActivos} agentes</span>
+        </div>
       </div>
-      {distrito.alertasActivas > 0 && (
-        <span className="flex items-center gap-1 text-amber-600 text-sm">
-          <AlertTriangle className="w-3 h-3" />
-          {distrito.alertasActivas}
-        </span>
-      )}
-    </div>
+    );
+  }
 
-    <div className="mt-3 pt-3 border-t border-gray-200/50 dark:border-gray-600/50 flex justify-between text-xs">
-      <span className="text-gray-500">
-        Hoy: {distrito.tareasCompletadasHoy}/{distrito.tareasHoy}
-      </span>
-      <span className={config.color}>{distrito.tasaExitoHoy.toFixed(0)}% éxito</span>
-    </div>
+  // =====================================
+  // RENDER: MODO USUARIO - SELECCIÓN DE TIPO DE REGISTRO
+  // =====================================
+  if (modo === 'usuario' && usuarioActual && !tipoRegistro) {
+    return (
+      <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-navy-950 dark:to-navy-900">
+        <div className="bg-white dark:bg-navy-900 rounded-2xl p-8 shadow-xl max-w-md w-full mx-4">
+          <button
+            onClick={() => setUsuarioActual(null)}
+            className="flex items-center gap-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 mb-6"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            Cambiar usuario
+          </button>
 
-    <div className="flex items-center justify-end mt-2 text-gray-400 group-hover:text-indigo-500 transition-colors">
-      <span className="text-xs">Gestionar</span>
-      <ChevronRight className="w-4 h-4" />
-    </div>
-  </button>
-);
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-800 dark:text-white">
+              ¡Hola, {usuarioActual.nombre}!
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              ¿Qué vas a registrar?
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => setTipoRegistro('guias')}
+              className="group bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-all"
+            >
+              <Package className="w-10 h-10 mx-auto mb-3 group-hover:scale-110 transition-transform" />
+              <h3 className="font-bold">Generación</h3>
+              <p className="text-sm opacity-80">Guías</p>
+            </button>
+
+            <button
+              onClick={() => setTipoRegistro('novedades')}
+              className="group bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-all"
+            >
+              <AlertTriangle className="w-10 h-10 mx-auto mb-3 group-hover:scale-110 transition-transform" />
+              <h3 className="font-bold">Novedades</h3>
+              <p className="text-sm opacity-80">Gestión</p>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // =====================================
+  // RENDER: FORMULARIO GENERACIÓN DE GUÍAS
+  // =====================================
+  if (modo === 'usuario' && tipoRegistro === 'guias') {
+    return (
+      <div className="h-full overflow-auto bg-gradient-to-br from-slate-50 to-slate-100 dark:from-navy-950 dark:to-navy-900 p-4">
+        {/* Mensaje motivacional */}
+        {showMensaje && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl shadow-lg animate-bounce">
+            {mensajeActual}
+          </div>
+        )}
+
+        <div className="max-w-lg mx-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <button
+              onClick={() => setTipoRegistro(null)}
+              className="flex items-center gap-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            >
+              <ChevronLeft className="w-5 h-5" />
+              Volver
+            </button>
+            <div className="text-right">
+              <p className="text-sm text-slate-500">{usuarioActual?.nombre}</p>
+              <p className="text-xs text-slate-400">{new Date().toLocaleDateString('es-CO')}</p>
+            </div>
+          </div>
+
+          {/* Card principal */}
+          <div className="bg-white dark:bg-navy-900 rounded-2xl shadow-xl overflow-hidden">
+            {/* Header con ronda y cronómetro */}
+            <div className="bg-gradient-to-r from-blue-500 to-cyan-500 p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">🎯 RONDA {rondaActual}</h2>
+                  <p className="text-sm opacity-80">Generación de Guías</p>
+                </div>
+                <CircularTimer
+                  seconds={tiempoActual}
+                  maxSeconds={config.tiempoPorRonda * 60}
+                  alertaTemprana={config.alertaTemprana}
+                  alertaCritica={config.alertaCritica}
+                  isRunning={cronometroActivo}
+                />
+              </div>
+
+              {/* Controles del cronómetro */}
+              <div className="flex items-center justify-center gap-3 mt-4">
+                <button
+                  onClick={() => setCronometroActivo(!cronometroActivo)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all ${
+                    cronometroActivo
+                      ? 'bg-white/20 hover:bg-white/30'
+                      : 'bg-white text-blue-600 hover:bg-blue-50'
+                  }`}
+                >
+                  {cronometroActivo ? (
+                    <>
+                      <Pause className="w-5 h-5" />
+                      Pausar
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-5 h-5" />
+                      Iniciar
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setTiempoActual(0);
+                    setCronometroActivo(false);
+                  }}
+                  className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
+                >
+                  <RotateCcw className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Formulario */}
+            <div className="p-6 space-y-4">
+              {/* Pedidos iniciales */}
+              <div className="bg-slate-50 dark:bg-navy-800 rounded-xl p-4">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Pedidos Iniciales
+                </label>
+                <input
+                  type="number"
+                  value={pedidosIniciales || ''}
+                  onChange={(e) => setPedidosIniciales(parseInt(e.target.value) || 0)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-slate-800 dark:text-white text-center text-xl font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  placeholder="0"
+                />
+              </div>
+
+              {/* Contadores */}
+              <div className="space-y-3">
+                <Counter
+                  label="Realizado"
+                  value={realizado}
+                  onChange={setRealizado}
+                  icon={<CheckCircle2 className="w-5 h-5" />}
+                  color="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                />
+                <Counter
+                  label="Cancelado"
+                  value={cancelado}
+                  onChange={setCancelado}
+                  icon={<XCircle className="w-5 h-5" />}
+                  color="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+                />
+                <Counter
+                  label="Agendado"
+                  value={agendado}
+                  onChange={setAgendado}
+                  icon={<Calendar className="w-5 h-5" />}
+                  color="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+                />
+                <Counter
+                  label="Difíciles"
+                  value={dificiles}
+                  onChange={setDificiles}
+                  icon={<MessageSquare className="w-5 h-5" />}
+                  color="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                />
+                <Counter
+                  label="Pendientes"
+                  value={pendientes}
+                  onChange={setPendientes}
+                  icon={<Clock className="w-5 h-5" />}
+                  color="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400"
+                />
+                <Counter
+                  label="Revisado"
+                  value={revisado}
+                  onChange={setRevisado}
+                  icon={<Eye className="w-5 h-5" />}
+                  color="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400"
+                />
+              </div>
+
+              {/* Tiempo promedio */}
+              <div className="bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 rounded-xl p-4 text-center">
+                <p className="text-sm text-slate-500 dark:text-slate-400">Tiempo Promedio por Pedido</p>
+                <p className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">
+                  {tiempoPromedio} min
+                </p>
+              </div>
+
+              {/* Botón finalizar */}
+              <button
+                onClick={finalizarRonda}
+                className="w-full py-4 bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
+              >
+                <Save className="w-5 h-5" />
+                FINALIZAR RONDA
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // =====================================
+  // RENDER: FORMULARIO NOVEDADES
+  // =====================================
+  if (modo === 'usuario' && tipoRegistro === 'novedades') {
+    return (
+      <div className="h-full overflow-auto bg-gradient-to-br from-slate-50 to-slate-100 dark:from-navy-950 dark:to-navy-900 p-4">
+        <div className="max-w-lg mx-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <button
+              onClick={() => setTipoRegistro(null)}
+              className="flex items-center gap-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            >
+              <ChevronLeft className="w-5 h-5" />
+              Volver
+            </button>
+            <div className="text-right">
+              <p className="text-sm text-slate-500">{usuarioActual?.nombre}</p>
+              <p className="text-xs text-slate-400">{new Date().toLocaleDateString('es-CO')}</p>
+            </div>
+          </div>
+
+          {/* Card principal */}
+          <div className="bg-white dark:bg-navy-900 rounded-2xl shadow-xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-white">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-8 h-8" />
+                <div>
+                  <h2 className="text-xl font-bold">REGISTRO DE NOVEDADES</h2>
+                  <p className="text-sm opacity-80">
+                    Usuario: {usuarioActual?.nombre} | Fecha: {new Date().toLocaleDateString('es-CO')}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Formulario */}
+            <div className="p-6 space-y-4">
+              {/* Gestión */}
+              <div className="space-y-3">
+                <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm uppercase tracking-wide">
+                  Estado de Gestión
+                </h3>
+                <Counter
+                  label="Solucionadas"
+                  value={solucionadas}
+                  onChange={setSolucionadas}
+                  icon={<CheckCircle2 className="w-5 h-5" />}
+                  color="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                />
+                <Counter
+                  label="Revisadas"
+                  value={revisadas}
+                  onChange={setRevisadas}
+                  icon={<Eye className="w-5 h-5" />}
+                  color="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+                />
+                <Counter
+                  label="Devolución"
+                  value={devolucion}
+                  onChange={setDevolucion}
+                  icon={<RefreshCw className="w-5 h-5" />}
+                  color="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400"
+                />
+              </div>
+
+              <hr className="border-slate-200 dark:border-navy-700" />
+
+              {/* Origen del problema */}
+              <div className="space-y-3">
+                <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm uppercase tracking-wide flex items-center gap-2">
+                  📍 Origen del Problema
+                </h3>
+                <Counter
+                  label="Cliente"
+                  value={clienteNov}
+                  onChange={setClienteNov}
+                  icon={<User className="w-5 h-5" />}
+                  color="bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400"
+                />
+                <Counter
+                  label="Transportadora"
+                  value={transportadoraNov}
+                  onChange={setTransportadoraNov}
+                  icon={<Truck className="w-5 h-5" />}
+                  color="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                />
+                <Counter
+                  label="Litper"
+                  value={litperNov}
+                  onChange={setLitperNov}
+                  icon={<Building2 className="w-5 h-5" />}
+                  color="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+                />
+              </div>
+
+              {/* Botón guardar */}
+              <button
+                onClick={guardarNovedades}
+                className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
+              >
+                <Save className="w-5 h-5" />
+                GUARDAR REGISTRO
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // =====================================
+  // RENDER: MODO ADMIN
+  // =====================================
+  if (modo === 'admin') {
+    return (
+      <div className="h-full overflow-auto bg-gradient-to-br from-slate-50 to-slate-100 dark:from-navy-950 dark:to-navy-900">
+        {/* Header Admin */}
+        <div className="bg-white dark:bg-navy-900 border-b border-slate-200 dark:border-navy-700 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setModo('selector')}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-navy-800 rounded-lg"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div>
+                <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <BarChart3 className="w-6 h-6 text-amber-500" />
+                  PANEL DE CONTROL
+                </h1>
+                <p className="text-sm text-slate-500">LITPER Procesos</p>
+              </div>
+            </div>
+
+            <button
+              onClick={exportarExcel}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Exportar
+            </button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-2 mt-4">
+            {[
+              { id: 'hoy', label: '📅 HOY', icon: Calendar },
+              { id: 'semana', label: '📆 SEMANA', icon: Calendar },
+              { id: 'equipo', label: '👥 EQUIPO', icon: Users },
+              { id: 'config', label: '⚙️ CONFIG', icon: Settings },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setVistaAdmin(tab.id as any)}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  vistaAdmin === tab.id
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-navy-700'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Contenido según vista */}
+        <div className="p-4">
+          {vistaAdmin === 'hoy' && (
+            <div className="space-y-6">
+              {/* Métricas principales */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-white dark:bg-navy-900 rounded-xl p-4 shadow">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-slate-500">Total Rondas</span>
+                    <Target className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <p className="text-3xl font-bold text-slate-800 dark:text-white">
+                    {estadisticasHoy.totalRondas}
+                  </p>
+                </div>
+
+                <div className="bg-white dark:bg-navy-900 rounded-xl p-4 shadow">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-slate-500">Pedidos</span>
+                    <Package className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <p className="text-3xl font-bold text-slate-800 dark:text-white">
+                    {estadisticasHoy.totalRealizado}
+                    <span className="text-sm text-slate-400 ml-1">/ {estadisticasHoy.totalPedidos}</span>
+                  </p>
+                </div>
+
+                <div className="bg-white dark:bg-navy-900 rounded-xl p-4 shadow">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-slate-500">Cancelados</span>
+                    <XCircle className="w-5 h-5 text-red-500" />
+                  </div>
+                  <p className="text-3xl font-bold text-slate-800 dark:text-white">
+                    {estadisticasHoy.totalCancelado}
+                  </p>
+                </div>
+
+                <div className="bg-white dark:bg-navy-900 rounded-xl p-4 shadow">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-slate-500">T. Promedio</span>
+                    <Clock className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <p className="text-3xl font-bold text-slate-800 dark:text-white">
+                    {estadisticasHoy.promedioGeneral}
+                    <span className="text-sm text-slate-400 ml-1">min</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Tabla de rondas del día */}
+              <div className="bg-white dark:bg-navy-900 rounded-xl shadow overflow-hidden">
+                <div className="p-4 border-b border-slate-200 dark:border-navy-700">
+                  <h3 className="font-bold text-slate-800 dark:text-white">Rondas de Hoy</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-slate-50 dark:bg-navy-800">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400">Usuario</th>
+                        <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400">Ronda</th>
+                        <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400">Tiempo</th>
+                        <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400">Pedidos</th>
+                        <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400">Realizado</th>
+                        <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400">Cancel.</th>
+                        <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400">T.Prom</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-navy-800">
+                      {rondas
+                        .filter((r) => r.fecha === new Date().toLocaleDateString('es-CO'))
+                        .map((ronda) => (
+                          <tr key={ronda.id} className="hover:bg-slate-50 dark:hover:bg-navy-800/50">
+                            <td className="px-4 py-3 font-medium text-slate-800 dark:text-white">
+                              {usuarios.find((u) => u.id === ronda.usuarioId)?.nombre}
+                            </td>
+                            <td className="px-4 py-3 text-center">{ronda.numero}</td>
+                            <td className="px-4 py-3 text-center">{formatTime(ronda.tiempoTotal)}</td>
+                            <td className="px-4 py-3 text-center">{ronda.pedidosIniciales}</td>
+                            <td className="px-4 py-3 text-center text-emerald-600 font-bold">{ronda.realizado}</td>
+                            <td className="px-4 py-3 text-center text-red-600">{ronda.cancelado}</td>
+                            <td className="px-4 py-3 text-center">{ronda.tiempoPromedio.toFixed(2)} min</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {vistaAdmin === 'config' && (
+            <div className="max-w-lg mx-auto">
+              <div className="bg-white dark:bg-navy-900 rounded-xl shadow p-6 space-y-6">
+                <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-slate-500" />
+                  Configuración del Cronómetro
+                </h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                      Tiempo por ronda (minutos)
+                    </label>
+                    <input
+                      type="number"
+                      value={config.tiempoPorRonda}
+                      onChange={(e) => setConfig({ ...config, tiempoPorRonda: parseInt(e.target.value) || 25 })}
+                      className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                      Tiempo promedio por guía (minutos)
+                    </label>
+                    <input
+                      type="number"
+                      value={config.tiempoPromedioGuia}
+                      onChange={(e) => setConfig({ ...config, tiempoPromedioGuia: parseInt(e.target.value) || 3 })}
+                      className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                      Alerta temprana (segundos)
+                    </label>
+                    <input
+                      type="number"
+                      value={config.alertaTemprana}
+                      onChange={(e) => setConfig({ ...config, alertaTemprana: parseInt(e.target.value) || 150 })}
+                      className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                      Alerta crítica (segundos)
+                    </label>
+                    <input
+                      type="number"
+                      value={config.alertaCritica}
+                      onChange={(e) => setConfig({ ...config, alertaCritica: parseInt(e.target.value) || 240 })}
+                      className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-800"
+                    />
+                  </div>
+
+                  <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-navy-700">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={config.sonidoActivo}
+                        onChange={(e) => setConfig({ ...config, sonidoActivo: e.target.checked })}
+                        className="w-5 h-5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                      />
+                      <span className="text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                        {config.sonidoActivo ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                        Activar sonido de alerta
+                      </span>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={config.notificacionesActivas}
+                        onChange={(e) => setConfig({ ...config, notificacionesActivas: e.target.checked })}
+                        className="w-5 h-5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                      />
+                      <span className="text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                        <Bell className="w-4 h-4" />
+                        Enviar notificación push
+                      </span>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={config.mensajesMotivacionales}
+                        onChange={(e) => setConfig({ ...config, mensajesMotivacionales: e.target.checked })}
+                        className="w-5 h-5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                      />
+                      <span className="text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                        <Star className="w-4 h-4" />
+                        Mostrar mensaje motivacional
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => saveToStorage(STORAGE_KEY_CONFIG, config)}
+                  className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-colors"
+                >
+                  APLICAR CONFIGURACIÓN
+                </button>
+              </div>
+            </div>
+          )}
+
+          {vistaAdmin === 'equipo' && (
+            <div className="grid gap-4">
+              {usuarios.map((usuario) => {
+                const rondasUsuario = rondas.filter((r) => r.usuarioId === usuario.id);
+                const totalRealizado = rondasUsuario.reduce((acc, r) => acc + r.realizado, 0);
+                const promedioUsuario = rondasUsuario.length > 0
+                  ? (rondasUsuario.reduce((acc, r) => acc + r.tiempoPromedio, 0) / rondasUsuario.length).toFixed(2)
+                  : '0';
+
+                return (
+                  <div key={usuario.id} className="bg-white dark:bg-navy-900 rounded-xl shadow p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                          {usuario.nombre.charAt(0)}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-800 dark:text-white">{usuario.nombre}</h4>
+                          <p className="text-sm text-slate-500">{rondasUsuario.length} rondas totales</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-emerald-600">{totalRealizado}</p>
+                        <p className="text-xs text-slate-500">guías procesadas</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-navy-800 flex justify-between text-sm">
+                      <span className="text-slate-500">Promedio: <span className="font-bold text-slate-800 dark:text-white">{promedioUsuario} min</span></span>
+                      <span className="text-slate-500">Cancelados: <span className="font-bold text-red-500">{rondasUsuario.reduce((acc, r) => acc + r.cancelado, 0)}</span></span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {vistaAdmin === 'semana' && (
+            <div className="bg-white dark:bg-navy-900 rounded-xl shadow p-6">
+              <h3 className="font-bold text-slate-800 dark:text-white mb-4">Resumen Semanal</h3>
+              <p className="text-slate-500">Próximamente: Gráficos y estadísticas semanales</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+};
 
 export default ProcesosLitperTab;
