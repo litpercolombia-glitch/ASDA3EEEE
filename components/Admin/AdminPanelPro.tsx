@@ -73,6 +73,12 @@ import { ApiDashboard } from './ApiCenter';
 import { MCPDashboard } from './MCPCenter';
 import { LearningDashboard } from './LearningCenter';
 import { ReportsDashboard } from './ReportsCenter';
+import { CRMDashboard } from './CRMCenter';
+import { OrdersDashboard } from './OrdersCenter';
+import { MarketingDashboard } from './MarketingCenter';
+import { SupportDashboard } from './SupportCenter';
+import { NotificationsDashboard } from './NotificationsCenter';
+import { SecurityDashboard } from './SecurityCenter';
 
 // ============================================
 // TIPOS E INTERFACES
@@ -159,7 +165,7 @@ export const AdminPanelPro: React.FC = () => {
 
   // Estados de UI
   const [filtroFecha, setFiltroFecha] = useState<FiltroFecha>('todo');
-  const [activeTab, setActiveTab] = useState<'procesamiento' | 'documentos' | 'financial' | 'centro-financiero' | 'conocimiento' | 'integraciones' | 'predicciones' | 'info-logistica' | 'api-publica' | 'mcp-conexiones' | 'aprendizaje' | 'reportes'>('procesamiento');
+  const [activeTab, setActiveTab] = useState<'procesamiento' | 'documentos' | 'financial' | 'centro-financiero' | 'conocimiento' | 'integraciones' | 'predicciones' | 'info-logistica' | 'api-publica' | 'mcp-conexiones' | 'aprendizaje' | 'reportes' | 'crm' | 'pedidos' | 'marketing' | 'soporte' | 'notificaciones' | 'seguridad'>('procesamiento');
 
   // Estados de documentos
   const [documentos, setDocumentos] = useState<DocumentoCargado[]>([]);
@@ -619,6 +625,12 @@ export const AdminPanelPro: React.FC = () => {
             { id: 'mcp-conexiones', label: 'Conexiones MCP', icon: Link, color: 'violet' },
             { id: 'aprendizaje', label: 'IA Learning', icon: Brain, color: 'fuchsia' },
             { id: 'reportes', label: 'Reportes', icon: BarChart3, color: 'sky' },
+            { id: 'crm', label: 'CRM Clientes', icon: Target, color: 'rose' },
+            { id: 'pedidos', label: 'Pedidos', icon: Package, color: 'teal' },
+            { id: 'marketing', label: 'Marketing', icon: Zap, color: 'lime' },
+            { id: 'soporte', label: 'Soporte', icon: Activity, color: 'cyan' },
+            { id: 'notificaciones', label: 'Alertas', icon: Bell, color: 'amber' },
+            { id: 'seguridad', label: 'Seguridad', icon: Shield, color: 'red' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1136,6 +1148,60 @@ export const AdminPanelPro: React.FC = () => {
           {activeTab === 'reportes' && (
             <div className="p-6">
               <ReportsDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: CRM CLIENTES */}
+          {/* ============================================ */}
+          {activeTab === 'crm' && (
+            <div className="p-6">
+              <CRMDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: PEDIDOS */}
+          {/* ============================================ */}
+          {activeTab === 'pedidos' && (
+            <div className="p-6">
+              <OrdersDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: MARKETING */}
+          {/* ============================================ */}
+          {activeTab === 'marketing' && (
+            <div className="p-6">
+              <MarketingDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: SOPORTE */}
+          {/* ============================================ */}
+          {activeTab === 'soporte' && (
+            <div className="p-6">
+              <SupportDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: NOTIFICACIONES */}
+          {/* ============================================ */}
+          {activeTab === 'notificaciones' && (
+            <div className="p-6">
+              <NotificationsDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: SEGURIDAD */}
+          {/* ============================================ */}
+          {activeTab === 'seguridad' && (
+            <div className="p-6">
+              <SecurityDashboard />
             </div>
           )}
 
