@@ -82,9 +82,7 @@ const ConfigItem: React.FC<{
     <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl hover:bg-slate-800 transition-colors">
       <div className="flex-1 mr-4">
         <p className="text-sm font-medium text-white">{label}</p>
-        {description && (
-          <p className="text-xs text-slate-500 mt-0.5">{description}</p>
-        )}
+        {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
       </div>
       {children}
     </div>
@@ -155,50 +153,35 @@ const ProConfigTab: React.FC = () => {
       {/* NOTIFICACIONES */}
       {/* ============================================ */}
       <Section title="Notificaciones" icon={<Bell className="w-4 h-4" />}>
-        <ConfigItem
-          label="Alertas criticas"
-          description="Guias con problemas urgentes"
-        >
+        <ConfigItem label="Alertas criticas" description="Guias con problemas urgentes">
           <Toggle
             enabled={config.notifications.criticalAlerts}
             onChange={(v) => updateNotificationSettings({ criticalAlerts: v })}
           />
         </ConfigItem>
 
-        <ConfigItem
-          label="Novedades sin resolver"
-          description="Guias con +24h sin gestion"
-        >
+        <ConfigItem label="Novedades sin resolver" description="Guias con +24h sin gestion">
           <Toggle
             enabled={config.notifications.unresolvedNovelties}
             onChange={(v) => updateNotificationSettings({ unresolvedNovelties: v })}
           />
         </ConfigItem>
 
-        <ConfigItem
-          label="Reclamo en oficina"
-          description="Guias con +3 dias en reclamo"
-        >
+        <ConfigItem label="Reclamo en oficina" description="Guias con +3 dias en reclamo">
           <Toggle
             enabled={config.notifications.officeReclaims}
             onChange={(v) => updateNotificationSettings({ officeReclaims: v })}
           />
         </ConfigItem>
 
-        <ConfigItem
-          label="Cada nueva guia"
-          description="Notificar al crear guias"
-        >
+        <ConfigItem label="Cada nueva guia" description="Notificar al crear guias">
           <Toggle
             enabled={config.notifications.newGuides}
             onChange={(v) => updateNotificationSettings({ newGuides: v })}
           />
         </ConfigItem>
 
-        <ConfigItem
-          label="Reportes automaticos"
-          description="Resumen diario y semanal"
-        >
+        <ConfigItem label="Reportes automaticos" description="Resumen diario y semanal">
           <Toggle
             enabled={config.notifications.autoReports}
             onChange={(v) => updateNotificationSettings({ autoReports: v })}
@@ -210,40 +193,28 @@ const ProConfigTab: React.FC = () => {
       {/* PERMISOS DE EJECUCION */}
       {/* ============================================ */}
       <Section title="Permisos de Ejecucion" icon={<Shield className="w-4 h-4" />}>
-        <ConfigItem
-          label="Ejecutar reportes"
-          description="Generar informes automaticos"
-        >
+        <ConfigItem label="Ejecutar reportes" description="Generar informes automaticos">
           <Toggle
             enabled={config.permissions.canExecuteReports}
             onChange={(v) => updatePermissions({ canExecuteReports: v })}
           />
         </ConfigItem>
 
-        <ConfigItem
-          label="Filtrar y buscar guias"
-          description="Consultar datos de envios"
-        >
+        <ConfigItem label="Filtrar y buscar guias" description="Consultar datos de envios">
           <Toggle
             enabled={config.permissions.canFilterGuides}
             onChange={(v) => updatePermissions({ canFilterGuides: v })}
           />
         </ConfigItem>
 
-        <ConfigItem
-          label="Programar llamadas"
-          description="Llamadas automaticas a clientes"
-        >
+        <ConfigItem label="Programar llamadas" description="Llamadas automaticas a clientes">
           <Toggle
             enabled={config.permissions.canScheduleCalls}
             onChange={(v) => updatePermissions({ canScheduleCalls: v })}
           />
         </ConfigItem>
 
-        <ConfigItem
-          label="Enviar WhatsApp masivo"
-          description="Requiere confirmacion"
-        >
+        <ConfigItem label="Enviar WhatsApp masivo" description="Requiere confirmacion">
           <div className="flex items-center gap-2">
             {!config.permissions.canSendWhatsApp && (
               <AlertTriangle className="w-4 h-4 text-amber-500" />
@@ -255,10 +226,7 @@ const ProConfigTab: React.FC = () => {
           </div>
         </ConfigItem>
 
-        <ConfigItem
-          label="Modificar ordenes Dropi"
-          description="Cambios en plataforma externa"
-        >
+        <ConfigItem label="Modificar ordenes Dropi" description="Cambios en plataforma externa">
           <div className="flex items-center gap-2">
             {!config.permissions.canModifyOrders && (
               <AlertTriangle className="w-4 h-4 text-amber-500" />
@@ -283,7 +251,9 @@ const ProConfigTab: React.FC = () => {
               <p className="text-xs text-slate-500">Documentos</p>
             </div>
             <div className="text-center p-3 bg-slate-900/50 rounded-lg">
-              <p className="text-2xl font-bold text-purple-400">{Math.round(knowledgeSize / 1024)}</p>
+              <p className="text-2xl font-bold text-purple-400">
+                {Math.round(knowledgeSize / 1024)}
+              </p>
               <p className="text-xs text-slate-500">KB Total</p>
             </div>
             <div className="text-center p-3 bg-slate-900/50 rounded-lg">

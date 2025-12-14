@@ -52,7 +52,7 @@ export const obtenerTodasLasHojas = async (): Promise<HojaCarga[]> => {
       const storage: GlobalStorage = data.record;
 
       // Convertir fechas string a Date
-      const hojas = storage.hojas.map(h => ({
+      const hojas = storage.hojas.map((h) => ({
         ...h,
         fechaCreacion: new Date(h.fechaCreacion),
         fechaActualizacion: new Date(h.fechaActualizacion),
@@ -102,13 +102,15 @@ export const guardarNuevaHoja = async (
 
   const nuevaHoja: HojaCarga = {
     id: `hoja_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    nombre: nombreHoja || `Carga ${new Date().toLocaleDateString('es-CO', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })}`,
+    nombre:
+      nombreHoja ||
+      `Carga ${new Date().toLocaleDateString('es-CO', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })}`,
     fechaCreacion: new Date(),
     fechaActualizacion: new Date(),
     cantidadGuias: guias.length,
@@ -129,7 +131,7 @@ export const guardarNuevaHoja = async (
  */
 export const eliminarHoja = async (hojaId: string): Promise<boolean> => {
   const hojas = await obtenerTodasLasHojas();
-  const nuevasHojas = hojas.filter(h => h.id !== hojaId);
+  const nuevasHojas = hojas.filter((h) => h.id !== hojaId);
 
   await guardarHojasGlobal(nuevasHojas);
 
@@ -144,12 +146,12 @@ export const eliminarGuiaDeHoja = async (
   guiaId: string
 ): Promise<HojaCarga | null> => {
   const hojas = await obtenerTodasLasHojas();
-  const hojaIndex = hojas.findIndex(h => h.id === hojaId);
+  const hojaIndex = hojas.findIndex((h) => h.id === hojaId);
 
   if (hojaIndex === -1) return null;
 
   const hoja = hojas[hojaIndex];
-  const nuevasGuias = hoja.guias.filter(g => g.id !== guiaId);
+  const nuevasGuias = hoja.guias.filter((g) => g.id !== guiaId);
 
   // Actualizar la hoja
   const hojaActualizada: HojaCarga = {
@@ -161,7 +163,7 @@ export const eliminarGuiaDeHoja = async (
 
   // Si no quedan guías, eliminar la hoja completa
   if (nuevasGuias.length === 0) {
-    const nuevasHojas = hojas.filter(h => h.id !== hojaId);
+    const nuevasHojas = hojas.filter((h) => h.id !== hojaId);
     await guardarHojasGlobal(nuevasHojas);
     return null;
   }
@@ -179,11 +181,11 @@ export const eliminarGuiaDeHoja = async (
  */
 export const restaurarHoja = async (hojaId: string): Promise<HojaCarga | null> => {
   const hojas = await obtenerTodasLasHojas();
-  const hoja = hojas.find(h => h.id === hojaId);
+  const hoja = hojas.find((h) => h.id === hojaId);
 
   if (hoja) {
     // Marcar todas como inactivas y esta como activa
-    const nuevasHojas = hojas.map(h => ({
+    const nuevasHojas = hojas.map((h) => ({
       ...h,
       activo: h.id === hojaId,
     }));
@@ -252,16 +254,16 @@ export const sincronizarHojas = async (): Promise<{
     // Combinar hojas (las del servidor tienen prioridad por fecha)
     const todasLasHojas = [...hojasServidor];
 
-    hojasLocales.forEach(local => {
-      const existeEnServidor = hojasServidor.find(s => s.id === local.id);
+    hojasLocales.forEach((local) => {
+      const existeEnServidor = hojasServidor.find((s) => s.id === local.id);
       if (!existeEnServidor) {
         todasLasHojas.push(local);
       }
     });
 
     // Ordenar por fecha y guardar
-    todasLasHojas.sort((a, b) =>
-      new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime()
+    todasLasHojas.sort(
+      (a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime()
     );
 
     await guardarHojasGlobal(todasLasHojas.slice(0, 50));

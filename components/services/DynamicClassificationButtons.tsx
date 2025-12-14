@@ -105,41 +105,39 @@ const RISK_CONFIG: Record<
 };
 
 // Configuration for carriers
-const CARRIER_CONFIG: Record<
-  CarrierName,
-  { color: string; bgColor: string; borderColor: string }
-> = {
-  [CarrierName.INTER_RAPIDISIMO]: {
-    color: 'text-red-600',
-    bgColor: 'bg-red-50 hover:bg-red-100',
-    borderColor: 'border-red-200',
-  },
-  [CarrierName.ENVIA]: {
-    color: 'text-green-600',
-    bgColor: 'bg-green-50 hover:bg-green-100',
-    borderColor: 'border-green-200',
-  },
-  [CarrierName.COORDINADORA]: {
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50 hover:bg-blue-100',
-    borderColor: 'border-blue-200',
-  },
-  [CarrierName.TCC]: {
-    color: 'text-orange-600',
-    bgColor: 'bg-orange-50 hover:bg-orange-100',
-    borderColor: 'border-orange-200',
-  },
-  [CarrierName.VELOCES]: {
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-50 hover:bg-purple-100',
-    borderColor: 'border-purple-200',
-  },
-  [CarrierName.UNKNOWN]: {
-    color: 'text-gray-600',
-    bgColor: 'bg-gray-50 hover:bg-gray-100',
-    borderColor: 'border-gray-200',
-  },
-};
+const CARRIER_CONFIG: Record<CarrierName, { color: string; bgColor: string; borderColor: string }> =
+  {
+    [CarrierName.INTER_RAPIDISIMO]: {
+      color: 'text-red-600',
+      bgColor: 'bg-red-50 hover:bg-red-100',
+      borderColor: 'border-red-200',
+    },
+    [CarrierName.ENVIA]: {
+      color: 'text-green-600',
+      bgColor: 'bg-green-50 hover:bg-green-100',
+      borderColor: 'border-green-200',
+    },
+    [CarrierName.COORDINADORA]: {
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50 hover:bg-blue-100',
+      borderColor: 'border-blue-200',
+    },
+    [CarrierName.TCC]: {
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50 hover:bg-orange-100',
+      borderColor: 'border-orange-200',
+    },
+    [CarrierName.VELOCES]: {
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50 hover:bg-purple-100',
+      borderColor: 'border-purple-200',
+    },
+    [CarrierName.UNKNOWN]: {
+      color: 'text-gray-600',
+      bgColor: 'bg-gray-50 hover:bg-gray-100',
+      borderColor: 'border-gray-200',
+    },
+  };
 
 const DynamicClassificationButtons: React.FC<DynamicClassificationButtonsProps> = ({
   shipments,
@@ -154,46 +152,52 @@ const DynamicClassificationButtons: React.FC<DynamicClassificationButtonsProps> 
   // Build classification summary
   const classification = useMemo<ClassificationSummary>(() => {
     // By Status
-    const byStatus: ClassificationCategory[] = Object.values(ShipmentStatus).map((status) => {
-      const guides = shipments.filter((s) => s.status === status);
-      const config = STATUS_CONFIG[status];
-      return {
-        id: `status-${status}`,
-        label: status,
-        color: config.color,
-        bgColor: config.bgColor,
-        count: guides.length,
-        guides,
-      };
-    }).filter(cat => cat.count > 0);
+    const byStatus: ClassificationCategory[] = Object.values(ShipmentStatus)
+      .map((status) => {
+        const guides = shipments.filter((s) => s.status === status);
+        const config = STATUS_CONFIG[status];
+        return {
+          id: `status-${status}`,
+          label: status,
+          color: config.color,
+          bgColor: config.bgColor,
+          count: guides.length,
+          guides,
+        };
+      })
+      .filter((cat) => cat.count > 0);
 
     // By Risk
-    const byRisk: ClassificationCategory[] = Object.values(ShipmentRiskLevel).map((risk) => {
-      const guides = shipments.filter((s) => s.riskAnalysis?.level === risk);
-      const config = RISK_CONFIG[risk];
-      return {
-        id: `risk-${risk}`,
-        label: config.label,
-        color: config.color,
-        bgColor: config.bgColor,
-        count: guides.length,
-        guides,
-      };
-    }).filter(cat => cat.count > 0);
+    const byRisk: ClassificationCategory[] = Object.values(ShipmentRiskLevel)
+      .map((risk) => {
+        const guides = shipments.filter((s) => s.riskAnalysis?.level === risk);
+        const config = RISK_CONFIG[risk];
+        return {
+          id: `risk-${risk}`,
+          label: config.label,
+          color: config.color,
+          bgColor: config.bgColor,
+          count: guides.length,
+          guides,
+        };
+      })
+      .filter((cat) => cat.count > 0);
 
     // By Carrier
-    const byCarrier: ClassificationCategory[] = Object.values(CarrierName).map((carrier) => {
-      const guides = shipments.filter((s) => s.carrier === carrier);
-      const config = CARRIER_CONFIG[carrier];
-      return {
-        id: `carrier-${carrier}`,
-        label: carrier,
-        color: config.color,
-        bgColor: config.bgColor,
-        count: guides.length,
-        guides,
-      };
-    }).filter(cat => cat.count > 0);
+    const byCarrier: ClassificationCategory[] = Object.values(CarrierName)
+      .map((carrier) => {
+        const guides = shipments.filter((s) => s.carrier === carrier);
+        const config = CARRIER_CONFIG[carrier];
+        return {
+          id: `carrier-${carrier}`,
+          label: carrier,
+          color: config.color,
+          bgColor: config.bgColor,
+          count: guides.length,
+          guides,
+        };
+      })
+      .filter((cat) => cat.count > 0);
 
     return {
       byStatus,
@@ -365,8 +369,7 @@ const DynamicClassificationButtons: React.FC<DynamicClassificationButtonsProps> 
               </span>
               {category.guides.some((g) => g.phone) && (
                 <span className="text-gray-500">
-                  Con teléfono:{' '}
-                  <strong>{category.guides.filter((g) => g.phone).length}</strong>
+                  Con teléfono: <strong>{category.guides.filter((g) => g.phone).length}</strong>
                 </span>
               )}
             </div>
@@ -604,9 +607,7 @@ const DynamicClassificationButtons: React.FC<DynamicClassificationButtonsProps> 
               minute: '2-digit',
             })}
           </span>
-          <span>
-            {currentCategories.length} categorías con datos
-          </span>
+          <span>{currentCategories.length} categorías con datos</span>
         </div>
       </div>
     </div>

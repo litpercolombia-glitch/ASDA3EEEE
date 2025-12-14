@@ -272,7 +272,8 @@ export const updateStreak = (
   const profile = getUserProfile();
   const today = new Date().toISOString().split('T')[0];
 
-  const streakKey = streakType === 'shipment' ? 'shipment' : streakType === 'noIssues' ? 'noIssues' : 'mlUsage';
+  const streakKey =
+    streakType === 'shipment' ? 'shipment' : streakType === 'noIssues' ? 'noIssues' : 'mlUsage';
   const streak = profile.streaks[streakKey];
 
   let xpEarned = 0;
@@ -410,12 +411,19 @@ export const updateChallengeProgress = (
   });
 
   if (totalXP > 0) {
-    addXP(totalXP, `Desafíos completados: ${completedChallenges.map((c) => c.name).join(', ')}`, 'challenge');
+    addXP(
+      totalXP,
+      `Desafíos completados: ${completedChallenges.map((c) => c.name).join(', ')}`,
+      'challenge'
+    );
   }
 
   // Mover completados
   profile.activeChallenges = profile.activeChallenges.filter((c) => !c.completed);
-  profile.completedChallenges = [...completedChallenges, ...profile.completedChallenges].slice(0, 50);
+  profile.completedChallenges = [...completedChallenges, ...profile.completedChallenges].slice(
+    0,
+    50
+  );
 
   saveUserProfile(profile);
 
@@ -459,9 +467,21 @@ export const getLeaderboard = (type: 'national' | 'weekly' = 'national'): Leader
 
 const generateDemoLeaderboard = (): LeaderboardEntry[] => {
   const names = [
-    'LogiMaster_CO', 'EnviosPro', 'FlashKing', 'CargoExpert', 'RapidoYa',
-    'PackPro', 'EnviaMax', 'LogiStar', 'CargoLider', 'Express360',
-    'ShipMaster', 'EnvioTop', 'LogiChamp', 'PackExpress', 'CargoVIP'
+    'LogiMaster_CO',
+    'EnviosPro',
+    'FlashKing',
+    'CargoExpert',
+    'RapidoYa',
+    'PackPro',
+    'EnviaMax',
+    'LogiStar',
+    'CargoLider',
+    'Express360',
+    'ShipMaster',
+    'EnvioTop',
+    'LogiChamp',
+    'PackExpress',
+    'CargoVIP',
   ];
 
   const profile = getUserProfile();
@@ -480,7 +500,7 @@ const generateDemoLeaderboard = (): LeaderboardEntry[] => {
 
   // Insertar usuario actual en posición aleatoria si tiene XP
   if (profile.totalXP > 0) {
-    const userRank = Math.min(15, Math.max(1, Math.floor(15 - (profile.totalXP / 2000))));
+    const userRank = Math.min(15, Math.max(1, Math.floor(15 - profile.totalXP / 2000)));
     entries.splice(userRank - 1, 0, {
       rank: userRank,
       userId: profile.id,
@@ -557,7 +577,9 @@ export const recordFlashShipment = (): { xpEarned: number; newBadges: Badge[] } 
   return { xpEarned: XP_REWARDS.flash_shipment, newBadges: result.newBadges };
 };
 
-export const recordMLUsage = (wasAccurate: boolean = true): { xpEarned: number; newBadges: Badge[] } => {
+export const recordMLUsage = (
+  wasAccurate: boolean = true
+): { xpEarned: number; newBadges: Badge[] } => {
   const profile = getUserProfile();
   profile.stats.mlPredictions += 1;
   saveUserProfile(profile);

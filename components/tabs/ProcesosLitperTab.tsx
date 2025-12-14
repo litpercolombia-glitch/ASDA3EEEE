@@ -35,7 +35,7 @@ import {
   BarChart3,
   PieChart,
   Layers,
-  Boxes
+  Boxes,
 } from 'lucide-react';
 
 import {
@@ -46,12 +46,19 @@ import {
   getAlertas,
   getEstadisticasGenerales,
   ejecutarComandoMCP,
-  getAprendizajes
+  getAprendizajes,
 } from '../../services/agentCityService';
 
 import { getGuiasConNovedad, getGuiasCriticas } from '../../services/trackingAgentService';
-import { getNovedadesActivas, getEstadisticasNovedades } from '../../services/novedadesAgentService';
-import { getPedidosPendientes, getEstadisticasPedidos, getLlamadasPendientes } from '../../services/ordersAgentService';
+import {
+  getNovedadesActivas,
+  getEstadisticasNovedades,
+} from '../../services/novedadesAgentService';
+import {
+  getPedidosPendientes,
+  getEstadisticasPedidos,
+  getLlamadasPendientes,
+} from '../../services/ordersAgentService';
 
 import {
   Pais,
@@ -59,7 +66,7 @@ import {
   Distrito,
   EstadoCiudadAgentes,
   AlertaCiudad,
-  DISTRITOS_CONFIG
+  DISTRITOS_CONFIG,
 } from '../../types/agents';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -70,7 +77,13 @@ interface ProcesosLitperTabProps {
   selectedCountry?: string;
 }
 
-type VistaActiva = 'dashboard' | 'distrito' | 'agentes' | 'alertas' | 'aprendizajes' | 'configuracion';
+type VistaActiva =
+  | 'dashboard'
+  | 'distrito'
+  | 'agentes'
+  | 'alertas'
+  | 'aprendizajes'
+  | 'configuracion';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // COMPONENTE PRINCIPAL
@@ -90,11 +103,13 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
 
   // MCP Chat
   const [comandoMCP, setComandoMCP] = useState('');
-  const [historialComandos, setHistorialComandos] = useState<Array<{
-    comando: string;
-    respuesta: string;
-    timestamp: Date;
-  }>>([]);
+  const [historialComandos, setHistorialComandos] = useState<
+    Array<{
+      comando: string;
+      respuesta: string;
+      timestamp: Date;
+    }>
+  >([]);
   const [ejecutandoComando, setEjecutandoComando] = useState(false);
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -139,20 +154,26 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
     try {
       const resultado = await ejecutarComandoMCP(comandoEnviado, paisSeleccionado);
 
-      setHistorialComandos(prev => [...prev, {
-        comando: comandoEnviado,
-        respuesta: resultado.resultado || resultado.error || 'Comando ejecutado',
-        timestamp: new Date()
-      }]);
+      setHistorialComandos((prev) => [
+        ...prev,
+        {
+          comando: comandoEnviado,
+          respuesta: resultado.resultado || resultado.error || 'Comando ejecutado',
+          timestamp: new Date(),
+        },
+      ]);
 
       // Recargar datos después del comando
       cargarDatos();
     } catch (error) {
-      setHistorialComandos(prev => [...prev, {
-        comando: comandoEnviado,
-        respuesta: `Error: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-        timestamp: new Date()
-      }]);
+      setHistorialComandos((prev) => [
+        ...prev,
+        {
+          comando: comandoEnviado,
+          respuesta: `Error: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setEjecutandoComando(false);
     }
@@ -186,7 +207,7 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
         <div className="flex items-center gap-3">
           <span className="text-indigo-200/60 text-sm">País:</span>
           <div className="flex gap-2">
-            {Object.values(Pais).map(pais => (
+            {Object.values(Pais).map((pais) => (
               <button
                 key={pais}
                 onClick={() => setPaisSeleccionado(pais)}
@@ -196,8 +217,7 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
                     : 'bg-white/10 text-white hover:bg-white/20'
                 }`}
               >
-                {pais === Pais.COLOMBIA ? 'Colombia' :
-                 pais === Pais.CHILE ? 'Chile' : 'Ecuador'}
+                {pais === Pais.COLOMBIA ? 'Colombia' : pais === Pais.CHILE ? 'Chile' : 'Ecuador'}
               </button>
             ))}
           </div>
@@ -263,8 +283,8 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {distritos.map(distrito => {
-            const config = DISTRITOS_CONFIG.find(d => d.id === distrito.id);
+          {distritos.map((distrito) => {
+            const config = DISTRITOS_CONFIG.find((d) => d.id === distrito.id);
             if (!config) return null;
 
             return (
@@ -293,9 +313,7 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3 flex items-center gap-3">
         <MessageSquare className="w-5 h-5 text-white" />
         <span className="font-semibold text-white">Chat con el Alcalde IA</span>
-        <span className="text-xs px-2 py-0.5 bg-white/20 rounded-full text-white">
-          Claude Opus
-        </span>
+        <span className="text-xs px-2 py-0.5 bg-white/20 rounded-full text-white">Claude Opus</span>
       </div>
 
       {/* Historial de comandos */}
@@ -428,37 +446,47 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
   // ═══════════════════════════════════════════════════════════════════════════
 
   const renderAlertas = () => {
-    const alertasActivas = alertas.filter(a => a.activa);
+    const alertasActivas = alertas.filter((a) => a.activa);
 
     if (alertasActivas.length === 0) {
       return (
         <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-6 text-center">
           <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-2" />
           <p className="text-green-700 dark:text-green-300 font-medium">Sin alertas activas</p>
-          <p className="text-green-600/70 dark:text-green-400/70 text-sm">Todo funciona correctamente</p>
+          <p className="text-green-600/70 dark:text-green-400/70 text-sm">
+            Todo funciona correctamente
+          </p>
         </div>
       );
     }
 
     return (
       <div className="space-y-3">
-        {alertasActivas.slice(0, 5).map(alerta => (
+        {alertasActivas.slice(0, 5).map((alerta) => (
           <div
             key={alerta.id}
             className={`rounded-lg p-4 border ${
-              alerta.tipo === 'critical' ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' :
-              alerta.tipo === 'error' ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800' :
-              alerta.tipo === 'warning' ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' :
-              'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+              alerta.tipo === 'critical'
+                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                : alerta.tipo === 'error'
+                  ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'
+                  : alerta.tipo === 'warning'
+                    ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+                    : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
             }`}
           >
             <div className="flex items-start gap-3">
-              <AlertTriangle className={`w-5 h-5 flex-shrink-0 ${
-                alerta.tipo === 'critical' ? 'text-red-500' :
-                alerta.tipo === 'error' ? 'text-orange-500' :
-                alerta.tipo === 'warning' ? 'text-amber-500' :
-                'text-blue-500'
-              }`} />
+              <AlertTriangle
+                className={`w-5 h-5 flex-shrink-0 ${
+                  alerta.tipo === 'critical'
+                    ? 'text-red-500'
+                    : alerta.tipo === 'error'
+                      ? 'text-orange-500'
+                      : alerta.tipo === 'warning'
+                        ? 'text-amber-500'
+                        : 'text-blue-500'
+                }`}
+              />
               <div className="flex-1">
                 <h4 className="font-medium text-gray-800 dark:text-white">{alerta.titulo}</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-300">{alerta.mensaje}</p>
@@ -483,8 +511,8 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
   const renderVistaDistrito = () => {
     if (!distritoSeleccionado) return null;
 
-    const distrito = getDistritos().find(d => d.id === distritoSeleccionado);
-    const config = DISTRITOS_CONFIG.find(d => d.id === distritoSeleccionado);
+    const distrito = getDistritos().find((d) => d.id === distritoSeleccionado);
+    const config = DISTRITOS_CONFIG.find((d) => d.id === distritoSeleccionado);
     const agentes = getAgentes(distritoSeleccionado, paisSeleccionado);
 
     if (!distrito || !config) return null;
@@ -492,7 +520,9 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
     return (
       <div className="space-y-6">
         {/* Header del distrito */}
-        <div className={`${config.colorBg} rounded-xl p-6 border border-gray-200 dark:border-gray-700`}>
+        <div
+          className={`${config.colorBg} rounded-xl p-6 border border-gray-200 dark:border-gray-700`}
+        >
           <button
             onClick={() => {
               setDistritoSeleccionado(null);
@@ -506,20 +536,22 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
           <div className="flex items-center gap-4">
             <div className="text-4xl">{config.icono}</div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
-                {config.nombre}
-              </h2>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white">{config.nombre}</h2>
               <p className="text-gray-600 dark:text-gray-300">{config.descripcion}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-4 gap-4 mt-6">
             <div className="bg-white/80 dark:bg-gray-800/80 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-gray-800 dark:text-white">{agentes.length}</div>
+              <div className="text-2xl font-bold text-gray-800 dark:text-white">
+                {agentes.length}
+              </div>
               <div className="text-xs text-gray-500">Agentes</div>
             </div>
             <div className="bg-white/80 dark:bg-gray-800/80 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-green-600">{distrito.tareasCompletadasHoy}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {distrito.tareasCompletadasHoy}
+              </div>
               <div className="text-xs text-gray-500">Completadas</div>
             </div>
             <div className="bg-white/80 dark:bg-gray-800/80 rounded-lg p-3 text-center">
@@ -527,7 +559,9 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
               <div className="text-xs text-gray-500">Total Hoy</div>
             </div>
             <div className="bg-white/80 dark:bg-gray-800/80 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-purple-600">{distrito.tasaExitoHoy.toFixed(0)}%</div>
+              <div className="text-2xl font-bold text-purple-600">
+                {distrito.tasaExitoHoy.toFixed(0)}%
+              </div>
               <div className="text-xs text-gray-500">Éxito</div>
             </div>
           </div>
@@ -544,21 +578,31 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
           </div>
 
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {agentes.map(agente => (
-              <div key={agente.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+            {agentes.map((agente) => (
+              <div
+                key={agente.id}
+                className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      agente.estado === 'trabajando' ? 'bg-green-100 text-green-600' :
-                      agente.estado === 'activo' ? 'bg-blue-100 text-blue-600' :
-                      agente.estado === 'pausado' ? 'bg-amber-100 text-amber-600' :
-                      'bg-gray-100 text-gray-600'
-                    }`}>
+                    <div
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        agente.estado === 'trabajando'
+                          ? 'bg-green-100 text-green-600'
+                          : agente.estado === 'activo'
+                            ? 'bg-blue-100 text-blue-600'
+                            : agente.estado === 'pausado'
+                              ? 'bg-amber-100 text-amber-600'
+                              : 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
                       <Bot className="w-5 h-5" />
                     </div>
                     <div>
                       <h4 className="font-medium text-gray-800 dark:text-white">{agente.nombre}</h4>
-                      <p className="text-sm text-gray-500">{agente.especialidad.replace(/_/g, ' ')}</p>
+                      <p className="text-sm text-gray-500">
+                        {agente.especialidad.replace(/_/g, ' ')}
+                      </p>
                     </div>
                   </div>
 
@@ -571,12 +615,17 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
                         {agente.calificacionPromedio.toFixed(1)}/10
                       </div>
                     </div>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      agente.estado === 'trabajando' ? 'bg-green-100 text-green-700' :
-                      agente.estado === 'activo' ? 'bg-blue-100 text-blue-700' :
-                      agente.estado === 'pausado' ? 'bg-amber-100 text-amber-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium ${
+                        agente.estado === 'trabajando'
+                          ? 'bg-green-100 text-green-700'
+                          : agente.estado === 'activo'
+                            ? 'bg-blue-100 text-blue-700'
+                            : agente.estado === 'pausado'
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
                       {agente.estado}
                     </span>
                   </div>
@@ -649,15 +698,21 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
               </div>
               <div className="flex items-center gap-8">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">{getAprendizajes().length}</div>
+                  <div className="text-2xl font-bold text-purple-600">
+                    {getAprendizajes().length}
+                  </div>
                   <div className="text-xs text-gray-500">Aprendizajes</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-pink-600">{estadisticas?.distritosOperativos || 7}</div>
+                  <div className="text-2xl font-bold text-pink-600">
+                    {estadisticas?.distritosOperativos || 7}
+                  </div>
                   <div className="text-xs text-gray-500">Distritos</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-indigo-600">{estadisticas?.agentesTotales || 0}</div>
+                  <div className="text-2xl font-bold text-indigo-600">
+                    {estadisticas?.agentesTotales || 0}
+                  </div>
                   <div className="text-xs text-gray-500">Agentes Total</div>
                 </div>
               </div>
@@ -688,7 +743,7 @@ const MetricaCard: React.FC<{
 
 const DistritoCard: React.FC<{
   distrito: Distrito;
-  config: typeof DISTRITOS_CONFIG[0];
+  config: (typeof DISTRITOS_CONFIG)[0];
   onClick: () => void;
 }> = ({ distrito, config, onClick }) => (
   <button
@@ -697,11 +752,15 @@ const DistritoCard: React.FC<{
   >
     <div className="flex items-start justify-between mb-3">
       <span className="text-3xl">{config.icono}</span>
-      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-        distrito.estado === 'operativo' ? 'bg-green-100 text-green-700' :
-        distrito.estado === 'degradado' ? 'bg-amber-100 text-amber-700' :
-        'bg-red-100 text-red-700'
-      }`}>
+      <span
+        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+          distrito.estado === 'operativo'
+            ? 'bg-green-100 text-green-700'
+            : distrito.estado === 'degradado'
+              ? 'bg-amber-100 text-amber-700'
+              : 'bg-red-100 text-red-700'
+        }`}
+      >
         {distrito.estado}
       </span>
     </div>
@@ -723,10 +782,10 @@ const DistritoCard: React.FC<{
     </div>
 
     <div className="mt-3 pt-3 border-t border-gray-200/50 dark:border-gray-600/50 flex justify-between text-xs">
-      <span className="text-gray-500">Hoy: {distrito.tareasCompletadasHoy}/{distrito.tareasHoy}</span>
-      <span className={config.color}>
-        {distrito.tasaExitoHoy.toFixed(0)}% éxito
+      <span className="text-gray-500">
+        Hoy: {distrito.tareasCompletadasHoy}/{distrito.tareasHoy}
       </span>
+      <span className={config.color}>{distrito.tasaExitoHoy.toFixed(0)}% éxito</span>
     </div>
 
     <div className="flex items-center justify-end mt-2 text-gray-400 group-hover:text-indigo-500 transition-colors">

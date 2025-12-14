@@ -48,31 +48,81 @@ interface GuiaConEstados {
 const getStatusColor = (status: string): { bg: string; text: string; border: string } => {
   const statusLower = status.toLowerCase();
 
-  if (statusLower.includes('entregado') || statusLower === 'delivered' || status === ShipmentStatus.DELIVERED) {
-    return { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-400', border: 'border-green-300 dark:border-green-700' };
+  if (
+    statusLower.includes('entregado') ||
+    statusLower === 'delivered' ||
+    status === ShipmentStatus.DELIVERED
+  ) {
+    return {
+      bg: 'bg-green-100 dark:bg-green-900/30',
+      text: 'text-green-700 dark:text-green-400',
+      border: 'border-green-300 dark:border-green-700',
+    };
   }
-  if (statusLower.includes('tránsito') || statusLower.includes('transito') || statusLower.includes('reparto') || status === ShipmentStatus.IN_TRANSIT) {
-    return { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-400', border: 'border-blue-300 dark:border-blue-700' };
+  if (
+    statusLower.includes('tránsito') ||
+    statusLower.includes('transito') ||
+    statusLower.includes('reparto') ||
+    status === ShipmentStatus.IN_TRANSIT
+  ) {
+    return {
+      bg: 'bg-blue-100 dark:bg-blue-900/30',
+      text: 'text-blue-700 dark:text-blue-400',
+      border: 'border-blue-300 dark:border-blue-700',
+    };
   }
   if (statusLower.includes('oficina') || status === ShipmentStatus.IN_OFFICE) {
-    return { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-400', border: 'border-purple-300 dark:border-purple-700' };
+    return {
+      bg: 'bg-purple-100 dark:bg-purple-900/30',
+      text: 'text-purple-700 dark:text-purple-400',
+      border: 'border-purple-300 dark:border-purple-700',
+    };
   }
-  if (statusLower.includes('novedad') || statusLower.includes('rechazado') || statusLower.includes('devuelto') || statusLower.includes('problema') || status === ShipmentStatus.ISSUE) {
-    return { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400', border: 'border-red-300 dark:border-red-700' };
+  if (
+    statusLower.includes('novedad') ||
+    statusLower.includes('rechazado') ||
+    statusLower.includes('devuelto') ||
+    statusLower.includes('problema') ||
+    status === ShipmentStatus.ISSUE
+  ) {
+    return {
+      bg: 'bg-red-100 dark:bg-red-900/30',
+      text: 'text-red-700 dark:text-red-400',
+      border: 'border-red-300 dark:border-red-700',
+    };
   }
   if (statusLower.includes('pendiente') || status === ShipmentStatus.PENDING) {
-    return { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-400', border: 'border-yellow-300 dark:border-yellow-700' };
+    return {
+      bg: 'bg-yellow-100 dark:bg-yellow-900/30',
+      text: 'text-yellow-700 dark:text-yellow-400',
+      border: 'border-yellow-300 dark:border-yellow-700',
+    };
   }
-  return { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-400', border: 'border-gray-300 dark:border-gray-700' };
+  return {
+    bg: 'bg-gray-100 dark:bg-gray-800',
+    text: 'text-gray-700 dark:text-gray-400',
+    border: 'border-gray-300 dark:border-gray-700',
+  };
 };
 
 const getStatusIcon = (status: string): string => {
   const statusLower = status.toLowerCase();
 
   if (statusLower.includes('entregado') || statusLower === 'delivered') return '✅';
-  if (statusLower.includes('tránsito') || statusLower.includes('transito') || statusLower.includes('reparto')) return '🚚';
+  if (
+    statusLower.includes('tránsito') ||
+    statusLower.includes('transito') ||
+    statusLower.includes('reparto')
+  )
+    return '🚚';
   if (statusLower.includes('oficina')) return '🏢';
-  if (statusLower.includes('novedad') || statusLower.includes('rechazado') || statusLower.includes('devuelto') || statusLower.includes('problema')) return '⚠️';
+  if (
+    statusLower.includes('novedad') ||
+    statusLower.includes('rechazado') ||
+    statusLower.includes('devuelto') ||
+    statusLower.includes('problema')
+  )
+    return '⚠️';
   if (statusLower.includes('pendiente')) return '⏳';
   return '📦';
 };
@@ -118,10 +168,7 @@ const DeleteConfirmModal: React.FC<{
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Overlay */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onCancel}
-      />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
 
       {/* Modal */}
       <div className="relative bg-white dark:bg-navy-900 rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 animate-in fade-in zoom-in duration-200">
@@ -177,7 +224,9 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const icon = getStatusIcon(status);
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${colors.bg} ${colors.text} border ${colors.border}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${colors.bg} ${colors.text} border ${colors.border}`}
+    >
       <span>{icon}</span>
       <span className="truncate max-w-[100px]">{status}</span>
     </span>
@@ -192,11 +241,7 @@ const UltimosEstadosView: React.FC<{
   estados: ShipmentEvent[];
 }> = ({ estados }) => {
   if (estados.length === 0) {
-    return (
-      <div className="text-xs text-slate-400 italic py-1">
-        Sin eventos registrados
-      </div>
-    );
+    return <div className="text-xs text-slate-400 italic py-1">Sin eventos registrados</div>;
   }
 
   return (
@@ -210,9 +255,11 @@ const UltimosEstadosView: React.FC<{
               : 'text-slate-500 dark:text-slate-500'
           }`}
         >
-          <span className={`flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 ${
-            idx === 0 ? 'bg-emerald-500' : 'bg-slate-400'
-          }`} />
+          <span
+            className={`flex-shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 ${
+              idx === 0 ? 'bg-emerald-500' : 'bg-slate-400'
+            }`}
+          />
           <div className="flex-1 min-w-0">
             <span className="font-mono text-[10px] mr-2 opacity-70">
               {formatDateShort(evento.date)}
@@ -251,24 +298,30 @@ const TimelineCompleto: React.FC<{
         {eventos.map((evento, idx) => (
           <div key={`${guiaId}-${idx}`} className="relative flex items-start gap-3">
             {/* Punto del timeline */}
-            <div className={`relative z-10 flex-shrink-0 w-4 h-4 rounded-full border-2 ${
-              idx === 0
-                ? 'bg-emerald-500 border-emerald-300 dark:border-emerald-700 shadow-lg shadow-emerald-500/30'
-                : 'bg-white dark:bg-navy-900 border-slate-300 dark:border-slate-600'
-            }`} />
+            <div
+              className={`relative z-10 flex-shrink-0 w-4 h-4 rounded-full border-2 ${
+                idx === 0
+                  ? 'bg-emerald-500 border-emerald-300 dark:border-emerald-700 shadow-lg shadow-emerald-500/30'
+                  : 'bg-white dark:bg-navy-900 border-slate-300 dark:border-slate-600'
+              }`}
+            />
 
             {/* Contenido del evento */}
-            <div className={`flex-1 pb-3 ${
-              idx === 0
-                ? 'bg-gradient-to-r from-emerald-50 to-transparent dark:from-emerald-900/20 dark:to-transparent -ml-1 pl-2 rounded-lg'
-                : ''
-            }`}>
+            <div
+              className={`flex-1 pb-3 ${
+                idx === 0
+                  ? 'bg-gradient-to-r from-emerald-50 to-transparent dark:from-emerald-900/20 dark:to-transparent -ml-1 pl-2 rounded-lg'
+                  : ''
+              }`}
+            >
               <div className="flex items-center gap-2 mb-1">
-                <span className={`text-xs font-mono ${
-                  idx === 0
-                    ? 'text-emerald-700 dark:text-emerald-400 font-bold'
-                    : 'text-slate-500 dark:text-slate-500'
-                }`}>
+                <span
+                  className={`text-xs font-mono ${
+                    idx === 0
+                      ? 'text-emerald-700 dark:text-emerald-400 font-bold'
+                      : 'text-slate-500 dark:text-slate-500'
+                  }`}
+                >
                   {formatDateShort(evento.date)}
                 </span>
                 {idx === 0 && (
@@ -278,11 +331,13 @@ const TimelineCompleto: React.FC<{
                 )}
               </div>
 
-              <p className={`text-sm ${
-                idx === 0
-                  ? 'text-emerald-800 dark:text-emerald-300 font-medium'
-                  : 'text-slate-700 dark:text-slate-300'
-              }`}>
+              <p
+                className={`text-sm ${
+                  idx === 0
+                    ? 'text-emerald-800 dark:text-emerald-300 font-medium'
+                    : 'text-slate-700 dark:text-slate-300'
+                }`}
+              >
                 {evento.description}
               </p>
 
@@ -350,14 +405,15 @@ const GuiaRow: React.FC<{
   };
 
   return (
-    <div className={`border-b border-slate-100 dark:border-navy-800 ${
-      isExpanded ? 'bg-blue-50 dark:bg-blue-900/10' : 'hover:bg-slate-50 dark:hover:bg-navy-800/50'
-    }`}>
+    <div
+      className={`border-b border-slate-100 dark:border-navy-800 ${
+        isExpanded
+          ? 'bg-blue-50 dark:bg-blue-900/10'
+          : 'hover:bg-slate-50 dark:hover:bg-navy-800/50'
+      }`}
+    >
       {/* Fila Principal */}
-      <div
-        className="px-4 py-3 cursor-pointer"
-        onClick={onToggleExpand}
-      >
+      <div className="px-4 py-3 cursor-pointer" onClick={onToggleExpand}>
         <div className="flex items-start gap-4">
           {/* Número de Guía */}
           <div className="flex-shrink-0">
@@ -435,12 +491,17 @@ const GuiaRow: React.FC<{
 
           {/* Días */}
           <div className="flex-shrink-0">
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${
-              dias > 5 ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400' :
-              dias > 3 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400' :
-              dias > 1 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400' :
-              'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400'
-            }`}>
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${
+                dias > 5
+                  ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400'
+                  : dias > 3
+                    ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400'
+                    : dias > 1
+                      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400'
+                      : 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400'
+              }`}
+            >
               <Clock className="w-3 h-3" />
               {dias}d
             </span>
@@ -459,7 +520,10 @@ const GuiaRow: React.FC<{
 
             {/* Botón expandir */}
             <button
-              onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleExpand();
+              }}
               className="p-1.5 bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300 rounded hover:bg-slate-200 dark:hover:bg-navy-700"
             >
               {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -511,7 +575,7 @@ const CargaSection: React.FC<{
 
   // Procesar guías con sus estados
   const guiasConEstados: GuiaConEstados[] = useMemo(() => {
-    return hoja.guias.map(guia => {
+    return hoja.guias.map((guia) => {
       const eventos = guia.detailedInfo?.events || [];
       const eventosOrdenados = [...eventos].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -530,20 +594,21 @@ const CargaSection: React.FC<{
     if (!searchQuery) return guiasConEstados;
 
     const query = searchQuery.toLowerCase();
-    return guiasConEstados.filter(g =>
-      g.guia.id.toLowerCase().includes(query) ||
-      g.guia.phone?.includes(query) ||
-      g.guia.carrier.toLowerCase().includes(query) ||
-      g.guia.detailedInfo?.destination?.toLowerCase().includes(query)
+    return guiasConEstados.filter(
+      (g) =>
+        g.guia.id.toLowerCase().includes(query) ||
+        g.guia.phone?.includes(query) ||
+        g.guia.carrier.toLowerCase().includes(query) ||
+        g.guia.detailedInfo?.destination?.toLowerCase().includes(query)
     );
   }, [guiasConEstados, searchQuery]);
 
   // Estadísticas rápidas
   const stats = useMemo(() => {
     const total = hoja.guias.length;
-    const entregados = hoja.guias.filter(g => g.status === ShipmentStatus.DELIVERED).length;
-    const novedades = hoja.guias.filter(g => g.status === ShipmentStatus.ISSUE).length;
-    const enTransito = hoja.guias.filter(g => g.status === ShipmentStatus.IN_TRANSIT).length;
+    const entregados = hoja.guias.filter((g) => g.status === ShipmentStatus.DELIVERED).length;
+    const novedades = hoja.guias.filter((g) => g.status === ShipmentStatus.ISSUE).length;
+    const enTransito = hoja.guias.filter((g) => g.status === ShipmentStatus.IN_TRANSIT).length;
 
     return { total, entregados, novedades, enTransito };
   }, [hoja.guias]);
@@ -566,9 +631,7 @@ const CargaSection: React.FC<{
               <FileSpreadsheet className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-lg">
-                {hoja.nombre}
-              </h3>
+              <h3 className="font-bold text-white text-lg">{hoja.nombre}</h3>
               <div className="flex items-center gap-3 text-indigo-100 text-xs mt-0.5">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
@@ -596,7 +659,10 @@ const CargaSection: React.FC<{
 
             {/* Botón eliminar carga */}
             <button
-              onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDeleteModal(true);
+              }}
               className="p-2 bg-white/10 hover:bg-red-500 text-white rounded-lg transition-colors"
               title="Eliminar carga completa"
             >
@@ -605,7 +671,10 @@ const CargaSection: React.FC<{
 
             {/* Botón expandir/colapsar */}
             <button
-              onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleExpand();
+              }}
               className="p-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors"
             >
               {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -650,9 +719,9 @@ const CargaSection: React.FC<{
                   guia={guia}
                   onDelete={() => onDeleteGuia(guia.guia.id)}
                   isExpanded={expandedGuiaId === guia.guia.id}
-                  onToggleExpand={() => setExpandedGuiaId(
-                    expandedGuiaId === guia.guia.id ? null : guia.guia.id
-                  )}
+                  onToggleExpand={() =>
+                    setExpandedGuiaId(expandedGuiaId === guia.guia.id ? null : guia.guia.id)
+                  }
                 />
               ))
             )}
@@ -688,8 +757,8 @@ export const CargasTrackingView: React.FC<CargasTrackingViewProps> = ({
 
   // Ordenar hojas por fecha (más reciente primero)
   const hojasOrdenadas = useMemo(() => {
-    return [...hojas].sort((a, b) =>
-      new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime()
+    return [...hojas].sort(
+      (a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime()
     );
   }, [hojas]);
 
@@ -733,9 +802,7 @@ export const CargasTrackingView: React.FC<CargasTrackingViewProps> = ({
             onDeleteHoja={() => onDeleteHoja(hoja.id)}
             onDeleteGuia={(guiaId) => onDeleteGuia(hoja.id, guiaId)}
             isExpanded={expandedHojaId === hoja.id}
-            onToggleExpand={() => setExpandedHojaId(
-              expandedHojaId === hoja.id ? null : hoja.id
-            )}
+            onToggleExpand={() => setExpandedHojaId(expandedHojaId === hoja.id ? null : hoja.id)}
           />
         ))}
       </div>

@@ -94,7 +94,10 @@ export const createFlashProfile = (
   return profile;
 };
 
-export const updateFlashProfile = (profileId: string, updates: Partial<FlashProfile>): FlashProfile | null => {
+export const updateFlashProfile = (
+  profileId: string,
+  updates: Partial<FlashProfile>
+): FlashProfile | null => {
   const profiles = getAllFlashProfiles();
   const index = profiles.findIndex((p) => p.id === profileId);
 
@@ -190,10 +193,11 @@ export const createFlashShipment = (
     serviceName: service?.name || 'Estándar',
     recipient: profile.recipient,
     address: profile.address,
-    product: product || profile.defaultProduct || {
-      name: 'Paquete',
-      description: 'Paquete estándar',
-    },
+    product: product ||
+      profile.defaultProduct || {
+        name: 'Paquete',
+        description: 'Paquete estándar',
+      },
     status: 'label_generated',
     createdAt: new Date().toISOString(),
     estimatedDelivery: calculateEstimatedDelivery(service?.avgDays || 3),

@@ -7,7 +7,7 @@ import os
 import pickle
 import time
 from datetime import datetime
-from typing import Optional, Dict, List, Any, Tuple
+from typing import Optional, Dict, List, Any
 from pathlib import Path
 
 import numpy as np
@@ -16,7 +16,7 @@ from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score,
-    f1_score, roc_auc_score, confusion_matrix
+    f1_score, roc_auc_score
 )
 from loguru import logger
 
@@ -628,10 +628,10 @@ class ModeloNovedades:
         Solo usa guías con novedades.
         """
         inicio = time.time()
-        logger.info(f"Iniciando entrenamiento de ModeloNovedades")
+        logger.info("Iniciando entrenamiento de ModeloNovedades")
 
         # Filtrar solo guías con novedad
-        df_train = df[df['tiene_novedad'] == True].dropna(subset=['tipo_novedad'])
+        df_train = df[df['tiene_novedad']].dropna(subset=['tipo_novedad'])
 
         if len(df_train) < 30:
             logger.warning(f"Insuficientes datos con novedades: {len(df_train)}")

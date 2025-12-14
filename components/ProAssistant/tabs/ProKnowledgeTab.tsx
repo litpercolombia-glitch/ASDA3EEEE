@@ -29,7 +29,13 @@ import { useProAssistantStore, ProKnowledge } from '../../../stores/proAssistant
 // TIPOS DE FUENTES
 // ============================================
 const sourceTypes = [
-  { id: 'document', label: 'Documento', icon: FileText, accept: '.pdf,.docx,.txt,.xlsx,.csv', color: 'blue' },
+  {
+    id: 'document',
+    label: 'Documento',
+    icon: FileText,
+    accept: '.pdf,.docx,.txt,.xlsx,.csv',
+    color: 'blue',
+  },
   { id: 'url', label: 'URL', icon: Globe, accept: '', color: 'green' },
   { id: 'video', label: 'Video', icon: Video, accept: '', color: 'red' },
   { id: 'text', label: 'Texto', icon: FileEdit, accept: '', color: 'purple' },
@@ -45,21 +51,31 @@ const KnowledgeItem: React.FC<{
 }> = ({ item, onView, onDelete }) => {
   const getTypeIcon = () => {
     switch (item.type) {
-      case 'document': return <FileText className="w-4 h-4" />;
-      case 'url': return <Globe className="w-4 h-4" />;
-      case 'video': return <Video className="w-4 h-4" />;
-      case 'text': return <FileEdit className="w-4 h-4" />;
-      default: return <File className="w-4 h-4" />;
+      case 'document':
+        return <FileText className="w-4 h-4" />;
+      case 'url':
+        return <Globe className="w-4 h-4" />;
+      case 'video':
+        return <Video className="w-4 h-4" />;
+      case 'text':
+        return <FileEdit className="w-4 h-4" />;
+      default:
+        return <File className="w-4 h-4" />;
     }
   };
 
   const getTypeColor = () => {
     switch (item.type) {
-      case 'document': return 'bg-blue-500/20 text-blue-400';
-      case 'url': return 'bg-green-500/20 text-green-400';
-      case 'video': return 'bg-red-500/20 text-red-400';
-      case 'text': return 'bg-purple-500/20 text-purple-400';
-      default: return 'bg-slate-500/20 text-slate-400';
+      case 'document':
+        return 'bg-blue-500/20 text-blue-400';
+      case 'url':
+        return 'bg-green-500/20 text-green-400';
+      case 'video':
+        return 'bg-red-500/20 text-red-400';
+      case 'text':
+        return 'bg-purple-500/20 text-purple-400';
+      default:
+        return 'bg-slate-500/20 text-slate-400';
     }
   };
 
@@ -80,9 +96,7 @@ const KnowledgeItem: React.FC<{
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 flex-1 min-w-0">
           {/* Icono de tipo */}
-          <div className={`p-2 rounded-lg ${getTypeColor()}`}>
-            {getTypeIcon()}
-          </div>
+          <div className={`p-2 rounded-lg ${getTypeColor()}`}>{getTypeIcon()}</div>
 
           {/* Info */}
           <div className="flex-1 min-w-0">
@@ -97,19 +111,18 @@ const KnowledgeItem: React.FC<{
                 <Clock className="w-3 h-3" />
                 {formatDate(item.createdAt)}
               </span>
-              {item.metadata?.pages && (
-                <span>{item.metadata.pages} paginas</span>
-              )}
-              {item.metadata?.words && (
-                <span>{item.metadata.words} palabras</span>
-              )}
+              {item.metadata?.pages && <span>{item.metadata.pages} paginas</span>}
+              {item.metadata?.words && <span>{item.metadata.words} palabras</span>}
             </div>
 
             {/* Tags */}
             {item.tags && item.tags.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {item.tags.slice(0, 3).map((tag, i) => (
-                  <span key={i} className="px-2 py-0.5 bg-slate-700/50 text-slate-400 text-[10px] rounded-full">
+                  <span
+                    key={i}
+                    className="px-2 py-0.5 bg-slate-700/50 text-slate-400 text-[10px] rounded-full"
+                  >
                     {tag}
                   </span>
                 ))}
@@ -302,7 +315,9 @@ const UploadModal: React.FC<{
           {activeType === 'url' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Titulo (opcional)</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Titulo (opcional)
+                </label>
                 <input
                   type="text"
                   value={titleInput}
@@ -341,8 +356,8 @@ const UploadModal: React.FC<{
                   <span className="font-medium text-sm">Funcion Premium</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  La transcripcion de videos requiere integracion con Whisper API.
-                  Soporta YouTube, Vimeo y videos locales.
+                  La transcripcion de videos requiere integracion con Whisper API. Soporta YouTube,
+                  Vimeo y videos locales.
                 </p>
               </div>
               <input
@@ -401,20 +416,13 @@ const UploadModal: React.FC<{
 // COMPONENTE PRINCIPAL
 // ============================================
 const ProKnowledgeTab: React.FC = () => {
-  const {
-    knowledge,
-    addKnowledge,
-    removeKnowledge,
-    searchKnowledge,
-  } = useProAssistantStore();
+  const { knowledge, addKnowledge, removeKnowledge, searchKnowledge } = useProAssistantStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ProKnowledge | null>(null);
 
-  const filteredKnowledge = searchQuery
-    ? searchKnowledge(searchQuery)
-    : knowledge;
+  const filteredKnowledge = searchQuery ? searchKnowledge(searchQuery) : knowledge;
 
   const handleUpload = (data: Partial<ProKnowledge>) => {
     addKnowledge({
@@ -491,7 +499,12 @@ const ProKnowledgeTab: React.FC = () => {
             {/* Header de lista */}
             <div className="flex items-center justify-between px-1 text-xs text-slate-500">
               <span>{filteredKnowledge.length} items</span>
-              <span>{Math.round(filteredKnowledge.reduce((acc, k) => acc + (k.content?.length || 0), 0) / 1024)} KB</span>
+              <span>
+                {Math.round(
+                  filteredKnowledge.reduce((acc, k) => acc + (k.content?.length || 0), 0) / 1024
+                )}{' '}
+                KB
+              </span>
             </div>
 
             {/* Items */}
@@ -536,7 +549,10 @@ const ProKnowledgeTab: React.FC = () => {
               {selectedItem.tags && selectedItem.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-700">
                   {selectedItem.tags.map((tag, i) => (
-                    <span key={i} className="px-2 py-1 bg-slate-800 text-slate-400 text-xs rounded-full">
+                    <span
+                      key={i}
+                      className="px-2 py-1 bg-slate-800 text-slate-400 text-xs rounded-full"
+                    >
                       #{tag}
                     </span>
                   ))}

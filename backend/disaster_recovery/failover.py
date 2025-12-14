@@ -21,7 +21,7 @@ Uso:
 
 import asyncio
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Any
 from enum import Enum
 
 
@@ -107,7 +107,7 @@ class FailoverOrchestrator:
             import httpx
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(
-                    f"https://api.litper.co/health"
+                    "https://api.litper.co/health"
                 )
                 return {
                     "healthy": response.status_code == 200,
@@ -416,7 +416,7 @@ Nueva región activa: {self.dr_region}
 
     async def _notify_failover_complete(self, results: Dict[str, Any]):
         """Notificar a todos los canales sobre failover."""
-        message = f"""
+        f"""
 🚨 FAILOVER COMPLETADO - LITPER
 
 ID: {results['failover_id']}
@@ -429,7 +429,7 @@ Pasos ejecutados:
 {chr(10).join(f"  • {s['step']}: {s['status']}" for s in results['steps'])}
         """
 
-        self.logger.info(f"Enviando notificaciones de failover...")
+        self.logger.info("Enviando notificaciones de failover...")
 
         # TODO: Implementar notificaciones
         # await asyncio.gather(

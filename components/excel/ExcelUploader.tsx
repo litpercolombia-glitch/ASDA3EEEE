@@ -10,7 +10,13 @@ import {
   Table,
   Info,
 } from 'lucide-react';
-import { ExcelPreviewData, ExcelValidationResult, SemaforoExcelData, TasaEntregaRow, TiempoPromedioRow } from '../../types/logistics';
+import {
+  ExcelPreviewData,
+  ExcelValidationResult,
+  SemaforoExcelData,
+  TasaEntregaRow,
+  TiempoPromedioRow,
+} from '../../types/logistics';
 
 interface ExcelUploaderProps {
   pestaña: 'semaforo' | 'predicciones';
@@ -38,10 +44,7 @@ const KNOWN_CARRIERS = [
   '472',
 ];
 
-export const ExcelUploader: React.FC<ExcelUploaderProps> = ({
-  pestaña,
-  onDataLoaded,
-}) => {
+export const ExcelUploader: React.FC<ExcelUploaderProps> = ({ pestaña, onDataLoaded }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -53,7 +56,7 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({
   const isCarrier = (str: string): boolean => {
     if (!str) return false;
     const upper = str.trim().toUpperCase();
-    return KNOWN_CARRIERS.some(c => upper.includes(c) || c.includes(upper));
+    return KNOWN_CARRIERS.some((c) => upper.includes(c) || c.includes(upper));
   };
 
   // Check if a string is indented (indicates it's a child row in pivot table)
@@ -121,7 +124,9 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({
 
       // Look for column headers
       for (let j = 0; j < row.length; j++) {
-        const cell = String(row[j] || '').toUpperCase().trim();
+        const cell = String(row[j] || '')
+          .toUpperCase()
+          .trim();
 
         if (cell.includes('ETIQUETA') || cell.includes('FILA')) {
           headerRowIdx = i;
@@ -174,7 +179,7 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({
         const devolucionesPct = parseFloat(row[devolucionPctColIdx]) || 0;
         const entregasCant = parseFloat(row[entregadoColIdx]) || 0;
         const entregasPct = parseFloat(row[entregadoPctColIdx]) || 0;
-        const total = parseFloat(row[totalColIdx]) || (devolucionesCant + entregasCant);
+        const total = parseFloat(row[totalColIdx]) || devolucionesCant + entregasCant;
 
         // Only add if we have meaningful data
         if (total > 0) {
@@ -233,14 +238,18 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({
     }
 
     for (const row of jsonData) {
-      const ciudad = String(row[ciudadCol] || '').toUpperCase().trim();
-      const transportadora = String(row[transCol] || '').toUpperCase().trim();
+      const ciudad = String(row[ciudadCol] || '')
+        .toUpperCase()
+        .trim();
+      const transportadora = String(row[transCol] || '')
+        .toUpperCase()
+        .trim();
 
       if (!ciudad || !transportadora) continue;
 
       const devoluciones = parseFloat(row[devCol || '']) || 0;
       const entregas = parseFloat(row[entregaCol || '']) || 0;
-      const total = parseFloat(row[totalCol || '']) || (devoluciones + entregas);
+      const total = parseFloat(row[totalCol || '']) || devoluciones + entregas;
 
       if (total > 0) {
         results.push({
@@ -299,8 +308,13 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({
     const groupedData: Record<string, { total: number; count: number; dias: number[] }> = {};
 
     for (const row of jsonData) {
-      const ciudad = String(row[ciudadCol] || '').toUpperCase().trim();
-      const transportadora = String(row[transportadoraCol || ''] || '').toUpperCase().trim() || 'DESCONOCIDO';
+      const ciudad = String(row[ciudadCol] || '')
+        .toUpperCase()
+        .trim();
+      const transportadora =
+        String(row[transportadoraCol || ''] || '')
+          .toUpperCase()
+          .trim() || 'DESCONOCIDO';
 
       if (!ciudad) continue;
 
@@ -352,9 +366,15 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({
       // Find required sheets (flexible matching)
       const findSheet = (keywords: string[]): string | null => {
         for (const name of workbook.SheetNames) {
-          const upper = name.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          const upper = name
+            .toUpperCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
           for (const keyword of keywords) {
-            const normalizedKeyword = keyword.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const normalizedKeyword = keyword
+              .toUpperCase()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '');
             if (upper.includes(normalizedKeyword)) return name;
           }
         }
@@ -376,7 +396,9 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({
       }
 
       if (!tasaSheetName) {
-        throw new Error('No se encontró la hoja de tasas de entrega. El Excel debe tener al menos una hoja con datos de tasas.');
+        throw new Error(
+          'No se encontró la hoja de tasas de entrega. El Excel debe tener al menos una hoja con datos de tasas.'
+        );
       }
 
       // Process sheets
@@ -390,7 +412,9 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({
       }
 
       if (tasaEntregas.length === 0) {
-        throw new Error('No se pudieron extraer datos de tasas de entrega del Excel. Verifica el formato.');
+        throw new Error(
+          'No se pudieron extraer datos de tasas de entrega del Excel. Verifica el formato.'
+        );
       }
 
       // Store processed data
@@ -400,7 +424,7 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({
       // Calculate totals for preview
       const totalEnvios = tasaEntregas.reduce((sum, r) => sum + r.total, 0);
       const totalRutas = tasaEntregas.length;
-      const ciudadesUnicas = new Set(tasaEntregas.map(r => r.ciudad)).size;
+      const ciudadesUnicas = new Set(tasaEntregas.map((r) => r.ciudad)).size;
 
       setWarnings(localWarnings);
       setPreview({
@@ -468,12 +492,20 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({
       ['MEDELLIN', 304, 0.278, 789, 0.722, 1093],
       ['  COORDINADORA', 146, 0.222, 513, 0.778, 659],
       ['  INTERRAPIDISIMO', 158, 0.364, 276, 0.636, 434],
-      ['TUMACO', 70, 0.70, 30, 0.30, 100],
-      ['  INTERRAPIDISIMO', 70, 0.70, 30, 0.30, 100],
+      ['TUMACO', 70, 0.7, 30, 0.3, 100],
+      ['  INTERRAPIDISIMO', 70, 0.7, 30, 0.3, 100],
     ];
 
     const tiempoData = [
-      ['CIUDAD DESTINO', 'FECHA', 'FECHA ULTIMO MOV', 'ESTATUS', 'TIEMPO ENTREGA', 'USUARIO', 'TRANSPORTADORA'],
+      [
+        'CIUDAD DESTINO',
+        'FECHA',
+        'FECHA ULTIMO MOV',
+        'ESTATUS',
+        'TIEMPO ENTREGA',
+        'USUARIO',
+        'TRANSPORTADORA',
+      ],
       ['BOGOTA', '15-10-2025', '2025-10-17', 'ENTREGADO', 2, 'JOHN DOE', 'COORDINADORA'],
       ['BOGOTA', '15-10-2025', '2025-10-18', 'ENTREGADO', 3, 'JANE DOE', 'ENVIA'],
       ['MEDELLIN', '15-10-2025', '2025-10-19', 'ENTREGADO', 4, 'BOB SMITH', 'COORDINADORA'],
@@ -526,7 +558,8 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({
             </h3>
 
             <p className="text-slate-500 dark:text-slate-400 mb-4 text-sm">
-              Para ver el semáforo de ciudades necesitas cargar un archivo Excel con los datos históricos.
+              Para ver el semáforo de ciudades necesitas cargar un archivo Excel con los datos
+              históricos.
             </p>
 
             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-6 text-left">
@@ -537,8 +570,12 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({
                 </p>
               </div>
               <ul className="text-xs text-blue-600 dark:text-blue-400 space-y-1 ml-6">
-                <li>✅ <strong>"tasa de entregas"</strong> - Tabla pivote ciudad/transportadora</li>
-                <li>✅ <strong>"Tiempo promedio"</strong> - Registros detallados de guías</li>
+                <li>
+                  ✅ <strong>"tasa de entregas"</strong> - Tabla pivote ciudad/transportadora
+                </li>
+                <li>
+                  ✅ <strong>"Tiempo promedio"</strong> - Registros detallados de guías
+                </li>
               </ul>
             </div>
 
@@ -585,10 +622,7 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({
           <div className="flex-1">
             <p className="text-red-700 dark:text-red-400 font-medium">{error}</p>
           </div>
-          <button
-            onClick={() => setError(null)}
-            className="text-red-400 hover:text-red-600"
-          >
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -600,9 +634,7 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-yellow-700 dark:text-yellow-400 font-medium mb-2">
-                Advertencias:
-              </p>
+              <p className="text-yellow-700 dark:text-yellow-400 font-medium mb-2">Advertencias:</p>
               <ul className="text-sm text-yellow-600 dark:text-yellow-300 space-y-1">
                 {warnings.map((w, i) => (
                   <li key={i}>• {w}</li>
@@ -676,12 +708,24 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-100 dark:bg-navy-800">
-                      <th className="px-3 py-2 text-left text-xs font-bold uppercase text-slate-500">Ciudad</th>
-                      <th className="px-3 py-2 text-left text-xs font-bold uppercase text-slate-500">Transportadora</th>
-                      <th className="px-3 py-2 text-right text-xs font-bold uppercase text-emerald-600">Entregas</th>
-                      <th className="px-3 py-2 text-right text-xs font-bold uppercase text-red-600">Devoluciones</th>
-                      <th className="px-3 py-2 text-right text-xs font-bold uppercase text-slate-500">Total</th>
-                      <th className="px-3 py-2 text-right text-xs font-bold uppercase text-blue-600">Éxito %</th>
+                      <th className="px-3 py-2 text-left text-xs font-bold uppercase text-slate-500">
+                        Ciudad
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-bold uppercase text-slate-500">
+                        Transportadora
+                      </th>
+                      <th className="px-3 py-2 text-right text-xs font-bold uppercase text-emerald-600">
+                        Entregas
+                      </th>
+                      <th className="px-3 py-2 text-right text-xs font-bold uppercase text-red-600">
+                        Devoluciones
+                      </th>
+                      <th className="px-3 py-2 text-right text-xs font-bold uppercase text-slate-500">
+                        Total
+                      </th>
+                      <th className="px-3 py-2 text-right text-xs font-bold uppercase text-blue-600">
+                        Éxito %
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -689,13 +733,21 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({
                       const tasaExito = row.total > 0 ? (row.entregas / row.total) * 100 : 0;
                       return (
                         <tr key={i} className="border-b border-slate-100 dark:border-navy-700">
-                          <td className="px-3 py-2 text-slate-700 dark:text-slate-300 font-medium">{row.ciudad}</td>
-                          <td className="px-3 py-2 text-slate-600 dark:text-slate-400">{row.transportadora}</td>
-                          <td className="px-3 py-2 text-right text-emerald-600 font-bold">{row.entregas}</td>
+                          <td className="px-3 py-2 text-slate-700 dark:text-slate-300 font-medium">
+                            {row.ciudad}
+                          </td>
+                          <td className="px-3 py-2 text-slate-600 dark:text-slate-400">
+                            {row.transportadora}
+                          </td>
+                          <td className="px-3 py-2 text-right text-emerald-600 font-bold">
+                            {row.entregas}
+                          </td>
                           <td className="px-3 py-2 text-right text-red-600">{row.devoluciones}</td>
                           <td className="px-3 py-2 text-right text-slate-500">{row.total}</td>
                           <td className="px-3 py-2 text-right">
-                            <span className={`font-bold ${tasaExito >= 70 ? 'text-emerald-600' : tasaExito >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                            <span
+                              className={`font-bold ${tasaExito >= 70 ? 'text-emerald-600' : tasaExito >= 50 ? 'text-yellow-600' : 'text-red-600'}`}
+                            >
                               {tasaExito.toFixed(1)}%
                             </span>
                           </td>
@@ -744,23 +796,19 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div className="bg-white dark:bg-navy-900 rounded-lg p-4 border border-slate-200 dark:border-navy-700">
-              <p className="font-bold text-amber-600 text-sm mb-2">
-                Hoja 1: "tasa de entregas"
-              </p>
+              <p className="font-bold text-amber-600 text-sm mb-2">Hoja 1: "tasa de entregas"</p>
               <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
                 Tabla pivote con estructura:
               </p>
               <div className="text-xs text-slate-500 space-y-1 bg-slate-50 dark:bg-navy-950 p-2 rounded font-mono">
                 <p>| Etiqueta | DEVOLUCION | % | ENTREGADO | % | Total |</p>
-                <p>| BOGOTA   |            |   |           |   |       |</p>
-                <p>|  COORD.. | 331        | 25| 959       | 75| 1290  |</p>
+                <p>| BOGOTA | | | | | |</p>
+                <p>| COORD.. | 331 | 25| 959 | 75| 1290 |</p>
               </div>
             </div>
 
             <div className="bg-white dark:bg-navy-900 rounded-lg p-4 border border-slate-200 dark:border-navy-700">
-              <p className="font-bold text-amber-600 text-sm mb-2">
-                Hoja 2: "Tiempo promedio"
-              </p>
+              <p className="font-bold text-amber-600 text-sm mb-2">Hoja 2: "Tiempo promedio"</p>
               <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
                 Registros detallados:
               </p>

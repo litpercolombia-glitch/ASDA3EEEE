@@ -18,7 +18,7 @@ export enum TipoAgente {
   COORDINADOR = 'coordinador',
   SOLUCIONADOR = 'solucionador',
   COMUNICADOR = 'comunicador',
-  RASTREADOR = 'rastreador'
+  RASTREADOR = 'rastreador',
 }
 
 export enum EstadoAgente {
@@ -27,7 +27,7 @@ export enum EstadoAgente {
   ESPERANDO = 'esperando',
   PAUSADO = 'pausado',
   ERROR = 'error',
-  MANTENIMIENTO = 'mantenimiento'
+  MANTENIMIENTO = 'mantenimiento',
 }
 
 export enum EstadoTarea {
@@ -36,13 +36,13 @@ export enum EstadoTarea {
   COMPLETADA = 'completada',
   FALLIDA = 'fallida',
   CANCELADA = 'cancelada',
-  ESCALADA = 'escalada'
+  ESCALADA = 'escalada',
 }
 
 export enum Pais {
   COLOMBIA = 'colombia',
   CHILE = 'chile',
-  ECUADOR = 'ecuador'
+  ECUADOR = 'ecuador',
 }
 
 export enum DistritoId {
@@ -52,7 +52,7 @@ export enum DistritoId {
   COMMUNICATIONS = 'communications',
   QUALITY = 'quality',
   INTELLIGENCE = 'intelligence',
-  AUTOMATION = 'automation'
+  AUTOMATION = 'automation',
 }
 
 export enum TipoNovedad {
@@ -62,7 +62,7 @@ export enum TipoNovedad {
   REHUSADO = 'rehusado',
   PAQUETE_DANADO = 'paquete_danado',
   RECLAMO_OFICINA = 'reclamo_oficina',
-  OTRO = 'otro'
+  OTRO = 'otro',
 }
 
 export enum NivelPrioridad {
@@ -70,7 +70,7 @@ export enum NivelPrioridad {
   NORMAL = 2,
   ALTA = 3,
   URGENTE = 4,
-  CRITICA = 5
+  CRITICA = 5,
 }
 
 export enum CanalComunicacion {
@@ -78,7 +78,7 @@ export enum CanalComunicacion {
   EMAIL = 'email',
   LLAMADA = 'llamada',
   SMS = 'sms',
-  CHAT_WEB = 'chat_web'
+  CHAT_WEB = 'chat_web',
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -720,14 +720,14 @@ export const DISTRITOS_CONFIG: DistritoConfig[] = [
       '✓ Rastreo automático cada 30 minutos',
       '✓ Validación triple: API + GPS + Confirmación cliente',
       '✓ Alertas instantáneas de retrasos',
-      '✓ Historial completo de movimientos'
+      '✓ Historial completo de movimientos',
     ],
     tareas: [
       'Actualizar estados de guías',
       'Detectar guías estancadas',
       'Generar alertas de retraso',
-      'Validar entregas exitosas'
-    ]
+      'Validar entregas exitosas',
+    ],
   },
   {
     id: DistritoId.ORDERS,
@@ -743,14 +743,14 @@ export const DISTRITOS_CONFIG: DistritoConfig[] = [
       '✓ Integración con Chatea Pro y Shopify',
       '✓ Validación automática de direcciones',
       '✓ Asignación inteligente de transportadora',
-      '✓ Generación automática de guías'
+      '✓ Generación automática de guías',
     ],
     tareas: [
       'Capturar pedidos nuevos',
       'Validar información del cliente',
       'Asignar transportadora óptima',
-      'Generar guía y notificar'
-    ]
+      'Generar guía y notificar',
+    ],
   },
   {
     id: DistritoId.CRISIS,
@@ -766,14 +766,14 @@ export const DISTRITOS_CONFIG: DistritoConfig[] = [
       '✓ Hasta 3 reintentos automáticos',
       '✓ Contacto multicanal: WhatsApp, llamada, SMS',
       '✓ Escalamiento inteligente por prioridad',
-      '✓ Tasa de resolución del 91%'
+      '✓ Tasa de resolución del 91%',
     ],
     tareas: [
       'Detectar guías con novedad',
       'Contactar al cliente automáticamente',
       'Coordinar reintentos de entrega',
-      'Escalar casos críticos'
-    ]
+      'Escalar casos críticos',
+    ],
   },
   {
     id: DistritoId.COMMUNICATIONS,
@@ -789,14 +789,14 @@ export const DISTRITOS_CONFIG: DistritoConfig[] = [
       '✓ Respuestas automáticas en WhatsApp',
       '✓ Llamadas salientes programadas',
       '✓ Notificaciones proactivas al cliente',
-      '✓ Chat web con IA conversacional'
+      '✓ Chat web con IA conversacional',
     ],
     tareas: [
       'Responder consultas de clientes',
       'Enviar actualizaciones de estado',
       'Coordinar entregas por teléfono',
-      'Gestionar chat en tiempo real'
-    ]
+      'Gestionar chat en tiempo real',
+    ],
   },
   {
     id: DistritoId.QUALITY,
@@ -812,14 +812,14 @@ export const DISTRITOS_CONFIG: DistritoConfig[] = [
       '✓ Auditoría automática de procesos',
       '✓ Detección de anomalías en tiempo real',
       '✓ Métricas de satisfacción del cliente',
-      '✓ Reportes de calidad diarios'
+      '✓ Reportes de calidad diarios',
     ],
     tareas: [
       'Auditar entregas completadas',
       'Evaluar calidad de atención',
       'Detectar errores en procesos',
-      'Generar reportes de mejora'
-    ]
+      'Generar reportes de mejora',
+    ],
   },
   {
     id: DistritoId.INTELLIGENCE,
@@ -835,14 +835,14 @@ export const DISTRITOS_CONFIG: DistritoConfig[] = [
       '✓ Detección de patrones de retraso',
       '✓ Predicción de riesgo con ML',
       '✓ Memoria colectiva compartida',
-      '✓ Mejora continua de algoritmos'
+      '✓ Mejora continua de algoritmos',
     ],
     tareas: [
       'Analizar patrones históricos',
       'Entrenar modelos predictivos',
       'Compartir aprendizajes entre agentes',
-      'Optimizar estrategias de entrega'
-    ]
+      'Optimizar estrategias de entrega',
+    ],
   },
   {
     id: DistritoId.AUTOMATION,
@@ -858,15 +858,15 @@ export const DISTRITOS_CONFIG: DistritoConfig[] = [
       '✓ Creación dinámica de agentes',
       '✓ Optimización de flujos de trabajo',
       '✓ A/B testing de estrategias',
-      '✓ Integración con nuevas APIs'
+      '✓ Integración con nuevas APIs',
     ],
     tareas: [
       'Crear agentes especializados',
       'Optimizar tiempos de proceso',
       'Probar nuevas estrategias',
-      'Automatizar tareas manuales'
-    ]
-  }
+      'Automatizar tareas manuales',
+    ],
+  },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -879,19 +879,39 @@ export const ESTRATEGIAS_NOVEDAD: Record<TipoNovedad, EstrategiaSolucion> = {
     prioridad: NivelPrioridad.ALTA,
     tasaExitoHistorica: 91,
     acciones: [
-      { orden: 1, canal: CanalComunicacion.WHATSAPP, mensaje: 'Opciones de reprogramación', esperaMaxima: 30 },
-      { orden: 2, canal: CanalComunicacion.LLAMADA, mensaje: 'Llamada para coordinar', esperaMaxima: 60 },
-      { orden: 3, canal: CanalComunicacion.SMS, mensaje: 'SMS urgente', esperaMaxima: 120 }
-    ]
+      {
+        orden: 1,
+        canal: CanalComunicacion.WHATSAPP,
+        mensaje: 'Opciones de reprogramación',
+        esperaMaxima: 30,
+      },
+      {
+        orden: 2,
+        canal: CanalComunicacion.LLAMADA,
+        mensaje: 'Llamada para coordinar',
+        esperaMaxima: 60,
+      },
+      { orden: 3, canal: CanalComunicacion.SMS, mensaje: 'SMS urgente', esperaMaxima: 120 },
+    ],
   },
   [TipoNovedad.DIRECCION_INCORRECTA]: {
     tipo: TipoNovedad.DIRECCION_INCORRECTA,
     prioridad: NivelPrioridad.ALTA,
     tasaExitoHistorica: 85,
     acciones: [
-      { orden: 1, canal: CanalComunicacion.WHATSAPP, mensaje: 'Solicitar dirección correcta', esperaMaxima: 60 },
-      { orden: 2, canal: CanalComunicacion.LLAMADA, mensaje: 'Llamada para validar', esperaMaxima: 30 }
-    ]
+      {
+        orden: 1,
+        canal: CanalComunicacion.WHATSAPP,
+        mensaje: 'Solicitar dirección correcta',
+        esperaMaxima: 60,
+      },
+      {
+        orden: 2,
+        canal: CanalComunicacion.LLAMADA,
+        mensaje: 'Llamada para validar',
+        esperaMaxima: 30,
+      },
+    ],
   },
   [TipoNovedad.TELEFONO_NO_CONTESTA]: {
     tipo: TipoNovedad.TELEFONO_NO_CONTESTA,
@@ -901,46 +921,96 @@ export const ESTRATEGIAS_NOVEDAD: Record<TipoNovedad, EstrategiaSolucion> = {
       { orden: 1, canal: CanalComunicacion.WHATSAPP, mensaje: 'Mensaje inicial', esperaMaxima: 60 },
       { orden: 2, canal: CanalComunicacion.EMAIL, mensaje: 'Email de respaldo', esperaMaxima: 120 },
       { orden: 3, canal: CanalComunicacion.SMS, mensaje: 'SMS urgente', esperaMaxima: 180 },
-      { orden: 4, canal: CanalComunicacion.LLAMADA, mensaje: 'Llamada en horario diferente', esperaMaxima: 60 }
-    ]
+      {
+        orden: 4,
+        canal: CanalComunicacion.LLAMADA,
+        mensaje: 'Llamada en horario diferente',
+        esperaMaxima: 60,
+      },
+    ],
   },
   [TipoNovedad.REHUSADO]: {
     tipo: TipoNovedad.REHUSADO,
     prioridad: NivelPrioridad.URGENTE,
     tasaExitoHistorica: 67,
     acciones: [
-      { orden: 1, canal: CanalComunicacion.LLAMADA, mensaje: 'Llamada empática inmediata', esperaMaxima: 15 },
-      { orden: 2, canal: CanalComunicacion.WHATSAPP, mensaje: 'Ofrecer opciones', esperaMaxima: 30 }
-    ]
+      {
+        orden: 1,
+        canal: CanalComunicacion.LLAMADA,
+        mensaje: 'Llamada empática inmediata',
+        esperaMaxima: 15,
+      },
+      {
+        orden: 2,
+        canal: CanalComunicacion.WHATSAPP,
+        mensaje: 'Ofrecer opciones',
+        esperaMaxima: 30,
+      },
+    ],
   },
   [TipoNovedad.PAQUETE_DANADO]: {
     tipo: TipoNovedad.PAQUETE_DANADO,
     prioridad: NivelPrioridad.CRITICA,
     tasaExitoHistorica: 95,
     acciones: [
-      { orden: 1, canal: CanalComunicacion.LLAMADA, mensaje: 'Disculpa y solución inmediata', esperaMaxima: 10 },
-      { orden: 2, canal: CanalComunicacion.WHATSAPP, mensaje: 'Confirmar reemplazo', esperaMaxima: 30 }
-    ]
+      {
+        orden: 1,
+        canal: CanalComunicacion.LLAMADA,
+        mensaje: 'Disculpa y solución inmediata',
+        esperaMaxima: 10,
+      },
+      {
+        orden: 2,
+        canal: CanalComunicacion.WHATSAPP,
+        mensaje: 'Confirmar reemplazo',
+        esperaMaxima: 30,
+      },
+    ],
   },
   [TipoNovedad.RECLAMO_OFICINA]: {
     tipo: TipoNovedad.RECLAMO_OFICINA,
     prioridad: NivelPrioridad.ALTA,
     tasaExitoHistorica: 76,
     acciones: [
-      { orden: 1, canal: CanalComunicacion.LLAMADA, mensaje: 'Llamada para recuperar', esperaMaxima: 60 },
-      { orden: 2, canal: CanalComunicacion.WHATSAPP, mensaje: 'Info de oficina + alternativas', esperaMaxima: 120 },
-      { orden: 3, canal: CanalComunicacion.SMS, mensaje: 'Recordatorio urgente', esperaMaxima: 1440 }
-    ]
+      {
+        orden: 1,
+        canal: CanalComunicacion.LLAMADA,
+        mensaje: 'Llamada para recuperar',
+        esperaMaxima: 60,
+      },
+      {
+        orden: 2,
+        canal: CanalComunicacion.WHATSAPP,
+        mensaje: 'Info de oficina + alternativas',
+        esperaMaxima: 120,
+      },
+      {
+        orden: 3,
+        canal: CanalComunicacion.SMS,
+        mensaje: 'Recordatorio urgente',
+        esperaMaxima: 1440,
+      },
+    ],
   },
   [TipoNovedad.OTRO]: {
     tipo: TipoNovedad.OTRO,
     prioridad: NivelPrioridad.NORMAL,
     tasaExitoHistorica: 70,
     acciones: [
-      { orden: 1, canal: CanalComunicacion.WHATSAPP, mensaje: 'Contacto inicial', esperaMaxima: 60 },
-      { orden: 2, canal: CanalComunicacion.LLAMADA, mensaje: 'Llamada para entender', esperaMaxima: 60 }
-    ]
-  }
+      {
+        orden: 1,
+        canal: CanalComunicacion.WHATSAPP,
+        mensaje: 'Contacto inicial',
+        esperaMaxima: 60,
+      },
+      {
+        orden: 2,
+        canal: CanalComunicacion.LLAMADA,
+        mensaje: 'Llamada para entender',
+        esperaMaxima: 60,
+      },
+    ],
+  },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

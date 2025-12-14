@@ -5,7 +5,12 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { MapPin, Search, X, Check, ChevronDown, Building2, Users, Star } from 'lucide-react';
-import { CiudadColombia, buscarCiudades, CIUDADES_COLOMBIA, getCiudadesCapitales } from '../data/ciudadesColombia';
+import {
+  CiudadColombia,
+  buscarCiudades,
+  CIUDADES_COLOMBIA,
+  getCiudadesCapitales,
+} from '../data/ciudadesColombia';
 
 interface CiudadAutocompleteProps {
   value: string;
@@ -61,57 +66,64 @@ export const CiudadAutocomplete: React.FC<CiudadAutocompleteProps> = ({
     }
   }, [highlightedIndex]);
 
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setInputValue(newValue);
-    setIsOpen(true);
-    setHighlightedIndex(-1);
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value;
+      setInputValue(newValue);
+      setIsOpen(true);
+      setHighlightedIndex(-1);
 
-    if (!newValue.trim()) {
-      onChange(null);
-    }
-  }, [onChange]);
-
-  const handleSelect = useCallback((ciudad: CiudadColombia) => {
-    setInputValue(ciudad.nombre);
-    setIsOpen(false);
-    setHighlightedIndex(-1);
-    onChange(ciudad);
-    onSelect?.(ciudad);
-    inputRef.current?.blur();
-  }, [onChange, onSelect]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (!isOpen) {
-      if (e.key === 'ArrowDown' || e.key === 'Enter') {
-        setIsOpen(true);
+      if (!newValue.trim()) {
+        onChange(null);
       }
-      return;
-    }
+    },
+    [onChange]
+  );
 
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setHighlightedIndex(prev =>
-          prev < sugerencias.length - 1 ? prev + 1 : prev
-        );
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setHighlightedIndex(prev => prev > 0 ? prev - 1 : -1);
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (highlightedIndex >= 0 && sugerencias[highlightedIndex]) {
-          handleSelect(sugerencias[highlightedIndex]);
+  const handleSelect = useCallback(
+    (ciudad: CiudadColombia) => {
+      setInputValue(ciudad.nombre);
+      setIsOpen(false);
+      setHighlightedIndex(-1);
+      onChange(ciudad);
+      onSelect?.(ciudad);
+      inputRef.current?.blur();
+    },
+    [onChange, onSelect]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!isOpen) {
+        if (e.key === 'ArrowDown' || e.key === 'Enter') {
+          setIsOpen(true);
         }
-        break;
-      case 'Escape':
-        setIsOpen(false);
-        setHighlightedIndex(-1);
-        break;
-    }
-  }, [isOpen, sugerencias, highlightedIndex, handleSelect]);
+        return;
+      }
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setHighlightedIndex((prev) => (prev < sugerencias.length - 1 ? prev + 1 : prev));
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+          break;
+        case 'Enter':
+          e.preventDefault();
+          if (highlightedIndex >= 0 && sugerencias[highlightedIndex]) {
+            handleSelect(sugerencias[highlightedIndex]);
+          }
+          break;
+        case 'Escape':
+          setIsOpen(false);
+          setHighlightedIndex(-1);
+          break;
+      }
+    },
+    [isOpen, sugerencias, highlightedIndex, handleSelect]
+  );
 
   const handleFocus = useCallback(() => {
     setIsFocused(true);
@@ -143,11 +155,13 @@ export const CiudadAutocomplete: React.FC<CiudadAutocompleteProps> = ({
   return (
     <div className={`relative ${className}`}>
       {/* Input */}
-      <div className={`relative flex items-center ${
-        isFocused
-          ? 'ring-2 ring-indigo-500 border-indigo-500'
-          : 'border-slate-300 dark:border-slate-600'
-      } border rounded-xl bg-white dark:bg-slate-800 transition-all`}>
+      <div
+        className={`relative flex items-center ${
+          isFocused
+            ? 'ring-2 ring-indigo-500 border-indigo-500'
+            : 'border-slate-300 dark:border-slate-600'
+        } border rounded-xl bg-white dark:bg-slate-800 transition-all`}
+      >
         <div className="absolute left-3 pointer-events-none">
           <MapPin className={`w-5 h-5 ${isFocused ? 'text-indigo-500' : 'text-slate-400'}`} />
         </div>
@@ -182,7 +196,9 @@ export const CiudadAutocomplete: React.FC<CiudadAutocompleteProps> = ({
             className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
             type="button"
           >
-            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown
+              className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            />
           </button>
         </div>
       </div>
@@ -216,11 +232,13 @@ export const CiudadAutocomplete: React.FC<CiudadAutocompleteProps> = ({
                   } ${index !== sugerencias.length - 1 ? 'border-b border-slate-100 dark:border-slate-700' : ''}`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      ciudad.esCapital
-                        ? 'bg-amber-100 dark:bg-amber-900/30'
-                        : 'bg-slate-100 dark:bg-slate-700'
-                    }`}>
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                        ciudad.esCapital
+                          ? 'bg-amber-100 dark:bg-amber-900/30'
+                          : 'bg-slate-100 dark:bg-slate-700'
+                      }`}
+                    >
                       {ciudad.esCapital ? (
                         <Star className="w-4 h-4 text-amber-500" />
                       ) : (
@@ -252,9 +270,7 @@ export const CiudadAutocomplete: React.FC<CiudadAutocompleteProps> = ({
                         {formatPoblacion(ciudad.poblacion)}
                       </span>
                     )}
-                    {highlightedIndex === index && (
-                      <Check className="w-4 h-4 text-indigo-500" />
-                    )}
+                    {highlightedIndex === index && <Check className="w-4 h-4 text-indigo-500" />}
                   </div>
                 </li>
               ))}
@@ -284,16 +300,23 @@ export const CiudadMultiSelect: React.FC<CiudadMultiSelectProps> = ({
 
   const handleSelect = (ciudad: CiudadColombia) => {
     if (selectedCities.length >= maxSelections) return;
-    if (selectedCities.some(c => c.nombre === ciudad.nombre && c.departamento === ciudad.departamento)) return;
+    if (
+      selectedCities.some(
+        (c) => c.nombre === ciudad.nombre && c.departamento === ciudad.departamento
+      )
+    )
+      return;
 
     onChange([...selectedCities, ciudad]);
     setSearchValue('');
   };
 
   const handleRemove = (ciudad: CiudadColombia) => {
-    onChange(selectedCities.filter(c =>
-      !(c.nombre === ciudad.nombre && c.departamento === ciudad.departamento)
-    ));
+    onChange(
+      selectedCities.filter(
+        (c) => !(c.nombre === ciudad.nombre && c.departamento === ciudad.departamento)
+      )
+    );
   };
 
   return (

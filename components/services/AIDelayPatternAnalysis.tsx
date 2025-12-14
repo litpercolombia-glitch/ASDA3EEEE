@@ -184,9 +184,7 @@ const AIDelayPatternAnalysis: React.FC<AIDelayPatternAnalysisProps> = ({
               <Brain className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">
-                Análisis de Patrones con IA
-              </h2>
+              <h2 className="text-xl font-bold text-white">Análisis de Patrones con IA</h2>
               <p className="text-purple-100">
                 Experto en Logística Colombiana • {quickStats.total} guías
               </p>
@@ -270,7 +268,8 @@ const AIDelayPatternAnalysis: React.FC<AIDelayPatternAnalysisProps> = ({
               Análisis de Patrones con IA
             </h3>
             <p className="text-gray-500 dark:text-gray-400 mb-4">
-              Haz clic en "Analizar con IA" para obtener insights de un experto en logística colombiana
+              Haz clic en "Analizar con IA" para obtener insights de un experto en logística
+              colombiana
             </p>
             <div className="flex flex-wrap justify-center gap-2 text-sm text-gray-500">
               <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full">
@@ -450,8 +449,7 @@ const AIDelayPatternAnalysis: React.FC<AIDelayPatternAnalysisProps> = ({
                             <div className="flex items-center gap-2 text-sm">
                               <Clock className="w-4 h-4 text-gray-500" />
                               <span className="text-gray-600 dark:text-gray-400">
-                                Días sin movimiento:{' '}
-                                <strong>{pattern.daysWithoutMovement}</strong>
+                                Días sin movimiento: <strong>{pattern.daysWithoutMovement}</strong>
                               </span>
                             </div>
 
@@ -561,9 +559,7 @@ const AIDelayPatternAnalysis: React.FC<AIDelayPatternAnalysisProps> = ({
                             className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg"
                           >
                             <span className="text-red-500 mt-1">•</span>
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
-                              {rec}
-                            </span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{rec}</span>
                           </li>
                         ))}
                       </ul>
@@ -584,9 +580,7 @@ const AIDelayPatternAnalysis: React.FC<AIDelayPatternAnalysisProps> = ({
                             className="flex items-start gap-2 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg"
                           >
                             <span className="text-orange-500 mt-1">•</span>
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
-                              {rec}
-                            </span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{rec}</span>
                           </li>
                         ))}
                       </ul>
@@ -607,9 +601,7 @@ const AIDelayPatternAnalysis: React.FC<AIDelayPatternAnalysisProps> = ({
                             className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg"
                           >
                             <span className="text-blue-500 mt-1">•</span>
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
-                              {rec}
-                            </span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{rec}</span>
                           </li>
                         ))}
                       </ul>
@@ -649,7 +641,10 @@ const AIDelayPatternAnalysis: React.FC<AIDelayPatternAnalysisProps> = ({
                       </h4>
                       <ul className="space-y-2">
                         {analysis.colombianContext.regionalIssues.map((issue, i) => (
-                          <li key={i} className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                          <li
+                            key={i}
+                            className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2"
+                          >
                             <span className="text-red-400">•</span>
                             {issue}
                           </li>
@@ -667,7 +662,10 @@ const AIDelayPatternAnalysis: React.FC<AIDelayPatternAnalysisProps> = ({
                       </h4>
                       <ul className="space-y-2">
                         {analysis.colombianContext.carrierAlerts.map((alert, i) => (
-                          <li key={i} className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                          <li
+                            key={i}
+                            className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2"
+                          >
                             <span className="text-orange-400">•</span>
                             {alert}
                           </li>
@@ -685,7 +683,10 @@ const AIDelayPatternAnalysis: React.FC<AIDelayPatternAnalysisProps> = ({
                       </h4>
                       <ul className="space-y-2">
                         {analysis.colombianContext.seasonalFactors.map((factor, i) => (
-                          <li key={i} className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                          <li
+                            key={i}
+                            className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2"
+                          >
                             <span className="text-blue-400">•</span>
                             {factor}
                           </li>
@@ -703,7 +704,10 @@ const AIDelayPatternAnalysis: React.FC<AIDelayPatternAnalysisProps> = ({
                       </h4>
                       <ul className="space-y-2">
                         {analysis.colombianContext.marketInsights.map((insight, i) => (
-                          <li key={i} className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                          <li
+                            key={i}
+                            className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2"
+                          >
                             <span className="text-green-400">•</span>
                             {insight}
                           </li>

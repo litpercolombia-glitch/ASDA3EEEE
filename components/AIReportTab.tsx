@@ -14,10 +14,16 @@ import {
   Lightbulb,
   AlertOctagon,
   ExternalLink,
-  RefreshCw
+  RefreshCw,
 } from 'lucide-react';
 import { Shipment, ShipmentStatus, CarrierName, ReportStats } from '../types';
-import { getActualStatus, STATUS_CONFIG, NormalizedStatus, groupBySemaforo, getHoursSinceUpdate } from '../utils/statusHelpers';
+import {
+  getActualStatus,
+  STATUS_CONFIG,
+  NormalizedStatus,
+  groupBySemaforo,
+  getHoursSinceUpdate,
+} from '../utils/statusHelpers';
 import { GuiasDetailModal } from './GuiasDetailModal';
 import { calculateStats } from '../services/logisticsService';
 
@@ -43,7 +49,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   colorClass,
   bgClass,
   onClick,
-  trend
+  trend,
 }) => (
   <button
     onClick={onClick}
@@ -51,13 +57,17 @@ const MetricCard: React.FC<MetricCardProps> = ({
   >
     <div className="flex items-start justify-between">
       <div>
-        <p className="text-3xl font-bold text-slate-800 dark:text-white">
-          {value}
-        </p>
+        <p className="text-3xl font-bold text-slate-800 dark:text-white">{value}</p>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{label}</p>
         {trend && (
-          <div className={`flex items-center gap-1 mt-2 text-xs font-bold ${trend.isPositive ? 'text-green-600' : 'text-red-500'}`}>
-            {trend.isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+          <div
+            className={`flex items-center gap-1 mt-2 text-xs font-bold ${trend.isPositive ? 'text-green-600' : 'text-red-500'}`}
+          >
+            {trend.isPositive ? (
+              <TrendingUp className="w-3 h-3" />
+            ) : (
+              <TrendingDown className="w-3 h-3" />
+            )}
             {trend.value}%
           </div>
         )}
@@ -85,13 +95,29 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
   title,
   description,
   onAction,
-  actionLabel
+  actionLabel,
 }) => {
   const styles = {
-    URGENT: { bg: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800', icon: AlertOctagon, iconColor: 'text-red-500' },
-    WARNING: { bg: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800', icon: AlertTriangle, iconColor: 'text-orange-500' },
-    TIP: { bg: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800', icon: Lightbulb, iconColor: 'text-blue-500' },
-    SUCCESS: { bg: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800', icon: CheckCircle, iconColor: 'text-green-500' }
+    URGENT: {
+      bg: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800',
+      icon: AlertOctagon,
+      iconColor: 'text-red-500',
+    },
+    WARNING: {
+      bg: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800',
+      icon: AlertTriangle,
+      iconColor: 'text-orange-500',
+    },
+    TIP: {
+      bg: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
+      icon: Lightbulb,
+      iconColor: 'text-blue-500',
+    },
+    SUCCESS: {
+      bg: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800',
+      icon: CheckCircle,
+      iconColor: 'text-green-500',
+    },
   };
 
   const style = styles[type];
@@ -123,9 +149,7 @@ const ReportOnboarding: React.FC<{ onGenerate: () => void }> = ({ onGenerate }) 
       <BarChart3 className="w-10 h-10 text-white" />
     </div>
 
-    <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-4">
-      Reporte Inteligente
-    </h2>
+    <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-4">Reporte Inteligente</h2>
 
     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6 mb-8 text-left">
       <div className="flex items-start gap-3 mb-4">
@@ -158,7 +182,8 @@ const ReportOnboarding: React.FC<{ onGenerate: () => void }> = ({ onGenerate }) 
         <div className="flex items-start gap-2">
           <Lightbulb className="w-4 h-4 text-blue-500 mt-0.5" />
           <p className="text-sm text-blue-700 dark:text-blue-300">
-            <strong>TIP:</strong> Haz click en cualquier métrica para ver el detalle de las guías involucradas
+            <strong>TIP:</strong> Haz click en cualquier métrica para ver el detalle de las guías
+            involucradas
           </p>
         </div>
       </div>
@@ -194,10 +219,10 @@ export const AIReportTab: React.FC<AIReportTabProps> = ({ shipments, onNavigateT
       EN_OFICINA: [],
       NOVEDAD: [],
       PENDIENTE: [],
-      DESCONOCIDO: []
+      DESCONOCIDO: [],
     };
 
-    shipments.forEach(s => {
+    shipments.forEach((s) => {
       const status = getActualStatus(s);
       groups[status].push(s);
     });
@@ -209,7 +234,7 @@ export const AIReportTab: React.FC<AIReportTabProps> = ({ shipments, onNavigateT
   const carrierPerformance = useMemo(() => {
     const perf: Record<string, { total: number; delivered: number; issues: number }> = {};
 
-    shipments.forEach(s => {
+    shipments.forEach((s) => {
       const carrier = s.carrier;
       if (!perf[carrier]) perf[carrier] = { total: 0, delivered: 0, issues: 0 };
       perf[carrier].total++;
@@ -217,11 +242,13 @@ export const AIReportTab: React.FC<AIReportTabProps> = ({ shipments, onNavigateT
       if (s.status === ShipmentStatus.ISSUE) perf[carrier].issues++;
     });
 
-    return Object.entries(perf).map(([carrier, data]) => ({
-      carrier,
-      ...data,
-      successRate: data.total > 0 ? Math.round((data.delivered / data.total) * 100) : 0
-    })).sort((a, b) => a.successRate - b.successRate);
+    return Object.entries(perf)
+      .map(([carrier, data]) => ({
+        carrier,
+        ...data,
+        successRate: data.total > 0 ? Math.round((data.delivered / data.total) * 100) : 0,
+      }))
+      .sort((a, b) => a.successRate - b.successRate);
   }, [shipments]);
 
   // Generate recommendations
@@ -236,12 +263,12 @@ export const AIReportTab: React.FC<AIReportTabProps> = ({ shipments, onNavigateT
         title: `${withIssues.length} guías requieren acción inmediata`,
         description: 'Hay envíos con novedad que necesitan resolverse hoy.',
         actionLabel: 'Ver guías',
-        onAction: () => handleMetricClick('NOVEDAD', withIssues, '⚠️ Guías con Novedad')
+        onAction: () => handleMetricClick('NOVEDAD', withIssues, '⚠️ Guías con Novedad'),
       });
     }
 
     // 2. Guides in office > 48h (WARNING)
-    const inOffice = statusGroups.EN_OFICINA.filter(s => {
+    const inOffice = statusGroups.EN_OFICINA.filter((s) => {
       const hours = getHoursSinceUpdate(s);
       return hours > 48;
     });
@@ -251,7 +278,8 @@ export const AIReportTab: React.FC<AIReportTabProps> = ({ shipments, onNavigateT
         title: `${inOffice.length} guías en oficina por más de 48h`,
         description: 'Contacta a los clientes para coordinar retiro o re-entrega.',
         actionLabel: 'Contactar',
-        onAction: () => handleMetricClick('EN_OFICINA_LARGO', inOffice, '📍 Guías en Oficina (+48h)')
+        onAction: () =>
+          handleMetricClick('EN_OFICINA_LARGO', inOffice, '📍 Guías en Oficina (+48h)'),
       });
     }
 
@@ -262,7 +290,7 @@ export const AIReportTab: React.FC<AIReportTabProps> = ({ shipments, onNavigateT
         type: 'TIP',
         title: `${worstCarrier.carrier} tiene ${worstCarrier.successRate}% de éxito`,
         description: 'Considera usar otra transportadora para esas rutas.',
-        actionLabel: 'Ver análisis'
+        actionLabel: 'Ver análisis',
       });
     }
 
@@ -272,7 +300,7 @@ export const AIReportTab: React.FC<AIReportTabProps> = ({ shipments, onNavigateT
       recs.push({
         type: 'SUCCESS',
         title: `¡Excelente! ${overallSuccess}% de éxito general`,
-        description: 'Tu operación logística está funcionando muy bien.'
+        description: 'Tu operación logística está funcionando muy bien.',
       });
     }
 
@@ -291,7 +319,7 @@ export const AIReportTab: React.FC<AIReportTabProps> = ({ shipments, onNavigateT
     month: 'short',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 
   if (!reportGenerated) {
@@ -307,9 +335,7 @@ export const AIReportTab: React.FC<AIReportTabProps> = ({ shipments, onNavigateT
             <BarChart3 className="w-7 h-7 text-blue-600" />
             Reporte IA
           </h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            Generado: {reportDate}
-          </p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Generado: {reportDate}</p>
         </div>
         <button
           onClick={() => setReportGenerated(false)}
@@ -336,7 +362,9 @@ export const AIReportTab: React.FC<AIReportTabProps> = ({ shipments, onNavigateT
           icon={CheckCircle}
           colorClass="text-white"
           bgClass="bg-green-500"
-          onClick={() => handleMetricClick('ENTREGADO', statusGroups.ENTREGADO, '✅ Guías Entregadas')}
+          onClick={() =>
+            handleMetricClick('ENTREGADO', statusGroups.ENTREGADO, '✅ Guías Entregadas')
+          }
         />
         <MetricCard
           value={statusGroups.EN_TRANSITO.length + statusGroups.EN_REPARTO.length}
@@ -344,7 +372,13 @@ export const AIReportTab: React.FC<AIReportTabProps> = ({ shipments, onNavigateT
           icon={Truck}
           colorClass="text-white"
           bgClass="bg-blue-500"
-          onClick={() => handleMetricClick('EN_CAMINO', [...statusGroups.EN_TRANSITO, ...statusGroups.EN_REPARTO], '🚚 Guías en Camino')}
+          onClick={() =>
+            handleMetricClick(
+              'EN_CAMINO',
+              [...statusGroups.EN_TRANSITO, ...statusGroups.EN_REPARTO],
+              '🚚 Guías en Camino'
+            )
+          }
         />
         <MetricCard
           value={statusGroups.EN_OFICINA.length}
@@ -352,7 +386,9 @@ export const AIReportTab: React.FC<AIReportTabProps> = ({ shipments, onNavigateT
           icon={MapPin}
           colorClass="text-white"
           bgClass="bg-orange-500"
-          onClick={() => handleMetricClick('EN_OFICINA', statusGroups.EN_OFICINA, '📍 Guías en Oficina')}
+          onClick={() =>
+            handleMetricClick('EN_OFICINA', statusGroups.EN_OFICINA, '📍 Guías en Oficina')
+          }
         />
         <MetricCard
           value={statusGroups.NOVEDAD.length}
@@ -374,16 +410,24 @@ export const AIReportTab: React.FC<AIReportTabProps> = ({ shipments, onNavigateT
             <h3 className="font-bold text-lg mb-2">Análisis IA</h3>
             <p className="text-blue-100 leading-relaxed">
               {statusGroups.EN_OFICINA.length > 0 && (
-                <>Tienes <strong>{statusGroups.EN_OFICINA.length} guías en oficina</strong>. </>
+                <>
+                  Tienes <strong>{statusGroups.EN_OFICINA.length} guías en oficina</strong>.{' '}
+                </>
               )}
               {statusGroups.NOVEDAD.length > 0 && (
-                <>Las <strong>{statusGroups.NOVEDAD.length} guías con novedad</strong> requieren acción inmediata. </>
+                <>
+                  Las <strong>{statusGroups.NOVEDAD.length} guías con novedad</strong> requieren
+                  acción inmediata.{' '}
+                </>
               )}
               {stats.avgDays > 5 && (
                 <>El tiempo promedio de {stats.avgDays} días está por encima del objetivo. </>
               )}
               {stats.delivered > 0 && (
-                <>Se han entregado exitosamente <strong>{stats.delivered} guías</strong> ({Math.round((stats.delivered / stats.total) * 100)}% de efectividad).</>
+                <>
+                  Se han entregado exitosamente <strong>{stats.delivered} guías</strong> (
+                  {Math.round((stats.delivered / stats.total) * 100)}% de efectividad).
+                </>
               )}
             </p>
           </div>
@@ -413,7 +457,7 @@ export const AIReportTab: React.FC<AIReportTabProps> = ({ shipments, onNavigateT
             Rendimiento por Transportadora
           </h3>
           <div className="space-y-4">
-            {carrierPerformance.map(carrier => (
+            {carrierPerformance.map((carrier) => (
               <div key={carrier.carrier} className="flex items-center gap-4">
                 <div className="w-32 font-medium text-slate-700 dark:text-slate-300 truncate">
                   {carrier.carrier}
@@ -433,9 +477,7 @@ export const AIReportTab: React.FC<AIReportTabProps> = ({ shipments, onNavigateT
                 <div className="w-16 text-right font-bold text-slate-800 dark:text-white">
                   {carrier.successRate}%
                 </div>
-                <div className="w-16 text-right text-xs text-slate-500">
-                  {carrier.total} guías
-                </div>
+                <div className="w-16 text-right text-xs text-slate-500">{carrier.total} guías</div>
               </div>
             ))}
           </div>

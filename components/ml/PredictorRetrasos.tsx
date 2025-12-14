@@ -125,7 +125,7 @@ export function PredictorRetrasos() {
       setPrediccion(resultado);
 
       // Agregar al historial
-      setHistorial(prev => [
+      setHistorial((prev) => [
         { numeroGuia, prediccion: resultado, timestamp: new Date() },
         ...prev.slice(0, 9), // Mantener últimos 10
       ]);
@@ -262,13 +262,18 @@ export function PredictorRetrasos() {
                       <Clock className="w-4 h-4" />
                       Predicciones Recientes ({historial.length})
                     </span>
-                    {showHistorial ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    {showHistorial ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
                   </button>
 
                   {showHistorial && (
                     <div className="mt-3 space-y-2">
                       {historial.map((item, idx) => {
-                        const config = RISK_CONFIG[item.prediccion.nivel_riesgo] || RISK_CONFIG.MEDIO;
+                        const config =
+                          RISK_CONFIG[item.prediccion.nivel_riesgo] || RISK_CONFIG.MEDIO;
                         return (
                           <button
                             key={idx}
@@ -276,13 +281,20 @@ export function PredictorRetrasos() {
                             className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
                           >
                             <div className="flex items-center gap-3">
-                              <span className="font-mono text-sm text-gray-700">{item.numeroGuia}</span>
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${config.bgGradient} ${config.textColor}`}>
+                              <span className="font-mono text-sm text-gray-700">
+                                {item.numeroGuia}
+                              </span>
+                              <span
+                                className={`text-xs px-2 py-0.5 rounded-full ${config.bgGradient} ${config.textColor}`}
+                              >
                                 {item.prediccion.nivel_riesgo}
                               </span>
                             </div>
                             <span className="text-xs text-gray-400">
-                              {item.timestamp.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                              {item.timestamp.toLocaleTimeString('es-CO', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
                             </span>
                           </button>
                         );
@@ -305,8 +317,8 @@ export function PredictorRetrasos() {
                     <p className="text-sm text-indigo-700 mt-1 leading-relaxed">
                       Nuestro modelo de Machine Learning (XGBoost) analiza más de 15,000 envíos
                       históricos, considerando transportadora, ciudad destino, día de la semana,
-                      temporada y patrones de tráfico para predecir la probabilidad de retraso
-                      con una precisión del 92.3%.
+                      temporada y patrones de tráfico para predecir la probabilidad de retraso con
+                      una precisión del 92.3%.
                     </p>
                   </div>
                 </div>
@@ -339,7 +351,12 @@ interface ResultadoPrediccionProps {
   setShowAnalisis: (show: boolean) => void;
 }
 
-function ResultadoPrediccion({ prediccion, onNuevaPrediccion, showAnalisis, setShowAnalisis }: ResultadoPrediccionProps) {
+function ResultadoPrediccion({
+  prediccion,
+  onNuevaPrediccion,
+  showAnalisis,
+  setShowAnalisis,
+}: ResultadoPrediccionProps) {
   const config = RISK_CONFIG[prediccion.nivel_riesgo] || RISK_CONFIG.MEDIO;
   const IconComponent = config.icon;
   const probabilidadPorcentaje = Math.round(prediccion.probabilidad_retraso * 100);
@@ -354,9 +371,7 @@ function ResultadoPrediccion({ prediccion, onNuevaPrediccion, showAnalisis, setS
             <span className="font-mono text-xl font-bold text-gray-800">
               {prediccion.numero_guia}
             </span>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Modelo: {prediccion.modelo_usado}
-            </p>
+            <p className="text-xs text-gray-500 mt-0.5">Modelo: {prediccion.modelo_usado}</p>
           </div>
         </div>
         <div className="text-right">
@@ -381,16 +396,12 @@ function ResultadoPrediccion({ prediccion, onNuevaPrediccion, showAnalisis, setS
           {/* Información del riesgo */}
           <div className="flex-1">
             <div className="flex items-baseline gap-3 flex-wrap">
-              <span className={`text-4xl font-bold ${config.textColor}`}>
-                {config.label}
-              </span>
+              <span className={`text-4xl font-bold ${config.textColor}`}>{config.label}</span>
               <span className={`text-2xl font-semibold ${config.textColor} opacity-80`}>
                 {probabilidadPorcentaje}%
               </span>
             </div>
-            <p className={`text-base mt-1 ${config.textColor} opacity-90`}>
-              {config.description}
-            </p>
+            <p className={`text-base mt-1 ${config.textColor} opacity-90`}>{config.description}</p>
           </div>
         </div>
 
@@ -400,10 +411,13 @@ function ResultadoPrediccion({ prediccion, onNuevaPrediccion, showAnalisis, setS
             <div
               className={`h-full rounded-full transition-all duration-1000 ease-out
                 ${
-                  prediccion.nivel_riesgo === 'BAJO' ? 'bg-gradient-to-r from-green-400 to-emerald-500' :
-                  prediccion.nivel_riesgo === 'MEDIO' ? 'bg-gradient-to-r from-yellow-400 to-amber-500' :
-                  prediccion.nivel_riesgo === 'ALTO' ? 'bg-gradient-to-r from-orange-400 to-amber-500' :
-                  'bg-gradient-to-r from-red-400 to-rose-500'
+                  prediccion.nivel_riesgo === 'BAJO'
+                    ? 'bg-gradient-to-r from-green-400 to-emerald-500'
+                    : prediccion.nivel_riesgo === 'MEDIO'
+                      ? 'bg-gradient-to-r from-yellow-400 to-amber-500'
+                      : prediccion.nivel_riesgo === 'ALTO'
+                        ? 'bg-gradient-to-r from-orange-400 to-amber-500'
+                        : 'bg-gradient-to-r from-red-400 to-rose-500'
                 }`}
               style={{ width: `${probabilidadPorcentaje}%` }}
             />
@@ -428,7 +442,10 @@ function ResultadoPrediccion({ prediccion, onNuevaPrediccion, showAnalisis, setS
         <InfoCard
           icon={MapPin}
           label="Entrega"
-          value={new Date(prediccion.fecha_estimada_entrega).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
+          value={new Date(prediccion.fecha_estimada_entrega).toLocaleDateString('es-CO', {
+            day: '2-digit',
+            month: 'short',
+          })}
           sublabel="fecha"
           color="purple"
         />
@@ -476,8 +493,10 @@ function ResultadoPrediccion({ prediccion, onNuevaPrediccion, showAnalisis, setS
           <ul className="space-y-3">
             {prediccion.acciones_recomendadas.map((accion, idx) => (
               <li key={idx} className="text-sm text-blue-700 flex items-start gap-3">
-                <span className="w-6 h-6 rounded-full bg-blue-200 text-blue-800
-                  flex items-center justify-center text-xs font-bold flex-shrink-0">
+                <span
+                  className="w-6 h-6 rounded-full bg-blue-200 text-blue-800
+                  flex items-center justify-center text-xs font-bold flex-shrink-0"
+                >
                   {idx + 1}
                 </span>
                 {accion}
@@ -508,7 +527,9 @@ function ResultadoPrediccion({ prediccion, onNuevaPrediccion, showAnalisis, setS
                 <BarChart3 className="w-5 h-5 text-gray-500 mt-0.5" />
                 <div>
                   <div className="text-sm font-medium text-gray-700">Patrón Histórico</div>
-                  <p className="text-sm text-gray-600">{prediccion.analisis_detallado.patron_historico}</p>
+                  <p className="text-sm text-gray-600">
+                    {prediccion.analisis_detallado.patron_historico}
+                  </p>
                 </div>
               </div>
 
@@ -524,9 +545,11 @@ function ResultadoPrediccion({ prediccion, onNuevaPrediccion, showAnalisis, setS
                 <div>
                   <div className="text-sm font-medium text-gray-700">Tendencia</div>
                   <p className="text-sm text-gray-600 capitalize">
-                    {prediccion.analisis_detallado.tendencia === 'mejorando' ? 'Mejorando - La ruta muestra mejoría' :
-                     prediccion.analisis_detallado.tendencia === 'empeorando' ? 'Empeorando - Requiere atención' :
-                     'Estable - Sin cambios significativos'}
+                    {prediccion.analisis_detallado.tendencia === 'mejorando'
+                      ? 'Mejorando - La ruta muestra mejoría'
+                      : prediccion.analisis_detallado.tendencia === 'empeorando'
+                        ? 'Empeorando - Requiere atención'
+                        : 'Estable - Sin cambios significativos'}
                   </p>
                 </div>
               </div>
@@ -535,12 +558,16 @@ function ResultadoPrediccion({ prediccion, onNuevaPrediccion, showAnalisis, setS
               <div className="flex items-start gap-3">
                 <Truck className="w-5 h-5 text-blue-500 mt-0.5" />
                 <div>
-                  <div className="text-sm font-medium text-gray-700">Comparación Transportadora</div>
+                  <div className="text-sm font-medium text-gray-700">
+                    Comparación Transportadora
+                  </div>
                   <div className="flex items-center gap-2 mt-1">
                     <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-blue-500 rounded-full"
-                        style={{ width: `${prediccion.analisis_detallado.comparacion_transportadora}%` }}
+                        style={{
+                          width: `${prediccion.analisis_detallado.comparacion_transportadora}%`,
+                        }}
                       />
                     </div>
                     <span className="text-sm font-semibold text-blue-600">
@@ -562,18 +589,24 @@ function ResultadoPrediccion({ prediccion, onNuevaPrediccion, showAnalisis, setS
                     <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full ${
-                          prediccion.analisis_detallado.score_ruta >= 80 ? 'bg-green-500' :
-                          prediccion.analisis_detallado.score_ruta >= 60 ? 'bg-yellow-500' :
-                          'bg-red-500'
+                          prediccion.analisis_detallado.score_ruta >= 80
+                            ? 'bg-green-500'
+                            : prediccion.analisis_detallado.score_ruta >= 60
+                              ? 'bg-yellow-500'
+                              : 'bg-red-500'
                         }`}
                         style={{ width: `${prediccion.analisis_detallado.score_ruta}%` }}
                       />
                     </div>
-                    <span className={`text-sm font-semibold ${
-                      prediccion.analisis_detallado.score_ruta >= 80 ? 'text-green-600' :
-                      prediccion.analisis_detallado.score_ruta >= 60 ? 'text-yellow-600' :
-                      'text-red-600'
-                    }`}>
+                    <span
+                      className={`text-sm font-semibold ${
+                        prediccion.analisis_detallado.score_ruta >= 80
+                          ? 'text-green-600'
+                          : prediccion.analisis_detallado.score_ruta >= 60
+                            ? 'text-yellow-600'
+                            : 'text-red-600'
+                      }`}
+                    >
                       {prediccion.analisis_detallado.score_ruta}/100
                     </span>
                   </div>

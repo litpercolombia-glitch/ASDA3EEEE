@@ -17,12 +17,11 @@ Autor: Litper IA System
 Versión: 1.0.0
 """
 
-import os
 import json
 import csv
 import io
 import asyncio
-from typing import Optional, Dict, Union
+from typing import Dict
 from pathlib import Path
 from loguru import logger
 
@@ -349,7 +348,7 @@ class DocumentParser:
                 ensure_ascii=False
             )
 
-            logger.success(f"✅ JSON parseado")
+            logger.success("✅ JSON parseado")
             return texto_formateado
 
         except json.JSONDecodeError as e:
@@ -373,7 +372,7 @@ class DocumentParser:
             # Limpiar espacios
             texto_limpio = re.sub(r'\s+', ' ', texto_limpio).strip()
 
-            logger.success(f"✅ XML parseado")
+            logger.success("✅ XML parseado")
             return texto_limpio
 
         except Exception as e:
@@ -399,7 +398,7 @@ class DocumentParser:
                 script.decompose()
 
             texto = soup.get_text(separator='\n', strip=True)
-            logger.success(f"✅ HTML parseado")
+            logger.success("✅ HTML parseado")
             return texto
 
         except ImportError:

@@ -43,7 +43,9 @@ import {
 const GamificationTab: React.FC = () => {
   const [profile, setProfile] = useState<UserGamificationProfile | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [activeSection, setActiveSection] = useState<'overview' | 'badges' | 'challenges' | 'leaderboard'>('overview');
+  const [activeSection, setActiveSection] = useState<
+    'overview' | 'badges' | 'challenges' | 'leaderboard'
+  >('overview');
   const [editingUsername, setEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
 
@@ -182,7 +184,8 @@ const GamificationTab: React.FC = () => {
             <div className="flex items-center justify-between text-sm mb-2">
               <span>Progreso a {nextLevelConfig?.name || 'Max'}</span>
               <span>
-                {formatXP(profile.totalXP)} / {nextLevelConfig ? formatXP(nextLevelConfig.minXP) : '∞'} XP
+                {formatXP(profile.totalXP)} /{' '}
+                {nextLevelConfig ? formatXP(nextLevelConfig.minXP) : '∞'} XP
               </span>
             </div>
             <div className="h-3 bg-white/20 rounded-full overflow-hidden">
@@ -258,7 +261,9 @@ const GamificationTab: React.FC = () => {
             {/* Next Level Preview */}
             {nextLevelConfig && (
               <div className="mt-4 p-4 bg-slate-50 dark:bg-navy-800 rounded-xl border-2 border-dashed border-slate-200 dark:border-navy-700">
-                <div className="text-sm text-slate-500 mb-2">Próximo nivel: {nextLevelConfig.name}</div>
+                <div className="text-sm text-slate-500 mb-2">
+                  Próximo nivel: {nextLevelConfig.name}
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {nextLevelConfig.benefits.slice(0, 2).map((benefit, i) => (
                     <span
@@ -314,7 +319,9 @@ const GamificationTab: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">+{tx.amount} XP</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                    +{tx.amount} XP
+                  </span>
                 </div>
               ))}
             </div>
@@ -353,7 +360,9 @@ const GamificationTab: React.FC = () => {
                 className={`bg-${stat.color}-50 dark:bg-${stat.color}-900/20 rounded-xl p-4 border border-${stat.color}-100 dark:border-${stat.color}-800`}
               >
                 <div className={`text-${stat.color}-500 mb-2`}>{stat.icon}</div>
-                <div className="text-2xl font-bold text-slate-800 dark:text-white">{stat.value}</div>
+                <div className="text-2xl font-bold text-slate-800 dark:text-white">
+                  {stat.value}
+                </div>
                 <div className="text-xs text-slate-500 dark:text-slate-400">{stat.label}</div>
               </div>
             ))}
@@ -392,7 +401,12 @@ const GamificationTab: React.FC = () => {
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {profile.lockedBadges.slice(0, 12).map((badge) => (
-                <BadgeCard key={badge.id} badge={badge} unlocked={false} progress={getBadgeProgress(badge)} />
+                <BadgeCard
+                  key={badge.id}
+                  badge={badge}
+                  unlocked={false}
+                  progress={getBadgeProgress(badge)}
+                />
               ))}
             </div>
           </div>
@@ -500,7 +514,9 @@ const GamificationTab: React.FC = () => {
                 {/* Level Badge */}
                 <div className="text-right">
                   <span className="text-lg">{getLevelConfig(entry.level).icon}</span>
-                  <div className="text-xs text-slate-500">{entry.shipmentsThisMonth} envíos/mes</div>
+                  <div className="text-xs text-slate-500">
+                    {entry.shipmentsThisMonth} envíos/mes
+                  </div>
                 </div>
               </div>
             ))}
@@ -610,7 +626,11 @@ const ChallengeCard: React.FC<{ challenge: Challenge; completed?: boolean }> = (
                     : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
               }`}
             >
-              {challenge.type === 'daily' ? 'Diario' : challenge.type === 'weekly' ? 'Semanal' : 'Mensual'}
+              {challenge.type === 'daily'
+                ? 'Diario'
+                : challenge.type === 'weekly'
+                  ? 'Semanal'
+                  : 'Mensual'}
             </span>
           </div>
         </div>

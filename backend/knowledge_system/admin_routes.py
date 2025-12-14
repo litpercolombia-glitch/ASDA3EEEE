@@ -366,7 +366,7 @@ async def analizar_financiero(
 
         # Leer Excel
         df = pd.read_excel(io.BytesIO(contenido))
-        columnas = [str(c).upper() for c in df.columns]
+        [str(c).upper() for c in df.columns]
 
         # Mapear columnas comunes
         mapeo_columnas = {

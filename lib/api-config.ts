@@ -214,8 +214,16 @@ export interface Alerta {
 // ==================== DATOS DE EJEMPLO PROFESIONALES ====================
 
 const TRANSPORTADORAS_COLOMBIA = [
-  'Coordinadora', 'Servientrega', 'Interrapidisimo', 'Envia', 'TCC',
-  'Deprisa', 'Saferbo', '472', 'Domina', 'Fedex Colombia'
+  'Coordinadora',
+  'Servientrega',
+  'Interrapidisimo',
+  'Envia',
+  'TCC',
+  'Deprisa',
+  'Saferbo',
+  '472',
+  'Domina',
+  'Fedex Colombia',
 ];
 
 const CIUDADES_PRINCIPALES = [
@@ -355,11 +363,46 @@ const DATOS_EJEMPLO: DashboardData = {
     },
   ],
   top_ciudades: [
-    { ciudad: 'Bogota', departamento: 'Cundinamarca', total_guias: 5234, porcentaje_del_total: 33.0, tasa_exito: 94.2, tiempo_promedio: 1.8 },
-    { ciudad: 'Medellin', departamento: 'Antioquia', total_guias: 2876, porcentaje_del_total: 18.1, tasa_exito: 92.8, tiempo_promedio: 2.1 },
-    { ciudad: 'Cali', departamento: 'Valle del Cauca', total_guias: 1923, porcentaje_del_total: 12.1, tasa_exito: 91.5, tiempo_promedio: 2.4 },
-    { ciudad: 'Barranquilla', departamento: 'Atlantico', total_guias: 1456, porcentaje_del_total: 9.2, tasa_exito: 89.3, tiempo_promedio: 3.2 },
-    { ciudad: 'Cartagena', departamento: 'Bolivar', total_guias: 987, porcentaje_del_total: 6.2, tasa_exito: 88.7, tiempo_promedio: 3.5 },
+    {
+      ciudad: 'Bogota',
+      departamento: 'Cundinamarca',
+      total_guias: 5234,
+      porcentaje_del_total: 33.0,
+      tasa_exito: 94.2,
+      tiempo_promedio: 1.8,
+    },
+    {
+      ciudad: 'Medellin',
+      departamento: 'Antioquia',
+      total_guias: 2876,
+      porcentaje_del_total: 18.1,
+      tasa_exito: 92.8,
+      tiempo_promedio: 2.1,
+    },
+    {
+      ciudad: 'Cali',
+      departamento: 'Valle del Cauca',
+      total_guias: 1923,
+      porcentaje_del_total: 12.1,
+      tasa_exito: 91.5,
+      tiempo_promedio: 2.4,
+    },
+    {
+      ciudad: 'Barranquilla',
+      departamento: 'Atlantico',
+      total_guias: 1456,
+      porcentaje_del_total: 9.2,
+      tasa_exito: 89.3,
+      tiempo_promedio: 3.2,
+    },
+    {
+      ciudad: 'Cartagena',
+      departamento: 'Bolivar',
+      total_guias: 987,
+      porcentaje_del_total: 6.2,
+      tasa_exito: 88.7,
+      tiempo_promedio: 3.5,
+    },
   ],
   modelos_activos: [
     {
@@ -478,7 +521,7 @@ function generarPrediccionInteligente(numeroGuia: string): Prediccion {
     acciones = ['Monitoreo estandar'];
   } else if (prefijo.startsWith('700')) {
     // Servientrega
-    probabilidad = 0.10 + (seed % 20) / 100;
+    probabilidad = 0.1 + (seed % 20) / 100;
     nivelRiesgo = probabilidad < 0.2 ? 'BAJO' : probabilidad < 0.35 ? 'MEDIO' : 'ALTO';
     diasEstimados = 3 + Math.floor(seed % 2);
     confianza = 0.88;
@@ -491,7 +534,10 @@ function generarPrediccionInteligente(numeroGuia: string): Prediccion {
     diasEstimados = 3 + Math.floor(seed % 3);
     confianza = 0.85;
     factoresRiesgo = probabilidad > 0.25 ? ['Ruta con congestiones frecuentes'] : [];
-    acciones = nivelRiesgo === 'ALTO' ? ['Contactar transportadora', 'Preparar alternativas'] : ['Seguimiento normal'];
+    acciones =
+      nivelRiesgo === 'ALTO'
+        ? ['Contactar transportadora', 'Preparar alternativas']
+        : ['Seguimiento normal'];
   } else {
     // Otros
     probabilidad = 0.15 + (seed % 30) / 100;
@@ -524,9 +570,18 @@ function generarPrediccionInteligente(numeroGuia: string): Prediccion {
 
   // Acciones segun nivel
   if (nivelRiesgo === 'CRITICO') {
-    acciones = ['ACCION INMEDIATA REQUERIDA', 'Contactar cliente', 'Escalar a supervision', 'Preparar compensacion'];
+    acciones = [
+      'ACCION INMEDIATA REQUERIDA',
+      'Contactar cliente',
+      'Escalar a supervision',
+      'Preparar compensacion',
+    ];
   } else if (nivelRiesgo === 'ALTO') {
-    acciones = ['Contactar transportadora urgente', 'Alertar al cliente proactivamente', 'Monitoreo cada 2 horas'];
+    acciones = [
+      'Contactar transportadora urgente',
+      'Alertar al cliente proactivamente',
+      'Monitoreo cada 2 horas',
+    ];
   } else if (nivelRiesgo === 'MEDIO') {
     acciones = ['Seguimiento activo', 'Verificar proximo estado en 12 horas'];
   }
@@ -547,13 +602,14 @@ function generarPrediccionInteligente(numeroGuia: string): Prediccion {
     analisis_detallado: {
       patron_historico: `Basado en ${1000 + seed * 10} envios similares`,
       tendencia: seed % 3 === 0 ? 'mejorando' : seed % 3 === 1 ? 'estable' : 'empeorando',
-      comparacion_transportadora: 100 - seed % 20,
-      score_ruta: 70 + seed % 25,
-      recomendacion_ia: nivelRiesgo === 'BAJO'
-        ? 'El envio tiene alta probabilidad de llegar a tiempo. Mantenga monitoreo estandar.'
-        : nivelRiesgo === 'MEDIO'
-        ? 'Se recomienda seguimiento activo. Considere contactar al cliente si hay cambios.'
-        : 'Atencion prioritaria requerida. Implemente medidas preventivas inmediatamente.',
+      comparacion_transportadora: 100 - (seed % 20),
+      score_ruta: 70 + (seed % 25),
+      recomendacion_ia:
+        nivelRiesgo === 'BAJO'
+          ? 'El envio tiene alta probabilidad de llegar a tiempo. Mantenga monitoreo estandar.'
+          : nivelRiesgo === 'MEDIO'
+            ? 'Se recomienda seguimiento activo. Considere contactar al cliente si hay cambios.'
+            : 'Atencion prioritaria requerida. Implemente medidas preventivas inmediatamente.',
     },
   };
 }
@@ -572,7 +628,11 @@ const PATRONES_CHAT: PatronChat[] = [
       respuesta: `Actualmente tienes **${datos.estadisticas_generales.total_guias.toLocaleString('es-CO')}** guias registradas en el sistema.\n\n📊 **Desglose:**\n- Entregadas: ${datos.estadisticas_generales.guias_entregadas.toLocaleString('es-CO')} (${datos.estadisticas_generales.tasa_entrega.toFixed(1)}%)\n- En retraso: ${datos.estadisticas_generales.guias_en_retraso.toLocaleString('es-CO')} (${datos.estadisticas_generales.tasa_retraso.toFixed(1)}%)\n- Con novedad: ${datos.estadisticas_generales.guias_con_novedad.toLocaleString('es-CO')}\n\n💡 **Insight:** Tu tasa de entrega del ${datos.estadisticas_generales.tasa_entrega.toFixed(1)}% esta ${datos.estadisticas_generales.tasa_entrega > 90 ? 'por encima' : 'cerca'} del promedio de la industria (88-92%).`,
       tipo_consulta: 'estadisticas_generales',
       datos_consultados: { total: datos.estadisticas_generales.total_guias },
-      sugerencias: ['¿Cuales estan en retraso?', '¿Que transportadora tiene mas envios?', 'Dame el resumen del mes'],
+      sugerencias: [
+        '¿Cuales estan en retraso?',
+        '¿Que transportadora tiene mas envios?',
+        'Dame el resumen del mes',
+      ],
       tokens_usados: 245,
       tiempo_respuesta_ms: 180,
       confianza_respuesta: 0.98,
@@ -586,10 +646,19 @@ const PATRONES_CHAT: PatronChat[] = [
         a.tasa_retraso < b.tasa_retraso ? a : b
       );
       return {
-        respuesta: `🏆 **La mejor transportadora es ${mejor.nombre}**\n\n📈 **Metricas:**\n- Tasa de retraso: ${mejor.tasa_retraso.toFixed(1)}% (la mas baja)\n- Tiempo promedio: ${mejor.tiempo_promedio_dias} dias\n- Total guias: ${mejor.total_guias.toLocaleString('es-CO')}\n- Calificacion: ${mejor.calificacion}\n- Score de confiabilidad: ${mejor.score_confiabilidad}%\n\n**Ranking completo:**\n${datos.rendimiento_transportadoras.slice(0, 5).map((t, i) => `${i + 1}. ${t.nombre} - ${t.tasa_retraso.toFixed(1)}% retrasos`).join('\n')}\n\n💡 **Recomendacion:** Considera aumentar el volumen con ${mejor.nombre} para rutas criticas.`,
+        respuesta: `🏆 **La mejor transportadora es ${mejor.nombre}**\n\n📈 **Metricas:**\n- Tasa de retraso: ${mejor.tasa_retraso.toFixed(1)}% (la mas baja)\n- Tiempo promedio: ${mejor.tiempo_promedio_dias} dias\n- Total guias: ${mejor.total_guias.toLocaleString('es-CO')}\n- Calificacion: ${mejor.calificacion}\n- Score de confiabilidad: ${mejor.score_confiabilidad}%\n\n**Ranking completo:**\n${datos.rendimiento_transportadoras
+          .slice(0, 5)
+          .map((t, i) => `${i + 1}. ${t.nombre} - ${t.tasa_retraso.toFixed(1)}% retrasos`)
+          .join(
+            '\n'
+          )}\n\n💡 **Recomendacion:** Considera aumentar el volumen con ${mejor.nombre} para rutas criticas.`,
         tipo_consulta: 'comparacion_transportadoras',
         datos_consultados: { mejor_transportadora: mejor.nombre },
-        sugerencias: ['Compara todas las transportadoras', '¿Cual es mas economica?', 'Recomendaciones de optimizacion'],
+        sugerencias: [
+          'Compara todas las transportadoras',
+          '¿Cual es mas economica?',
+          'Recomendaciones de optimizacion',
+        ],
         tokens_usados: 312,
         tiempo_respuesta_ms: 220,
         confianza_respuesta: 0.95,
@@ -600,7 +669,12 @@ const PATRONES_CHAT: PatronChat[] = [
   {
     keywords: /(retraso|tarde|demorado)/i,
     respuesta: (datos) => ({
-      respuesta: `⚠️ **Estado de Retrasos**\n\nActualmente hay **${datos.estadisticas_generales.guias_en_retraso.toLocaleString('es-CO')}** guias con retraso (${datos.estadisticas_generales.tasa_retraso.toFixed(1)}% del total).\n\n📊 **Analisis por Transportadora:**\n${datos.rendimiento_transportadoras.slice(0, 4).map(t => `- ${t.nombre}: ${t.retrasos} retrasos (${t.tasa_retraso.toFixed(1)}%)`).join('\n')}\n\n🎯 **Acciones Sugeridas:**\n1. Priorizar contacto con transportadoras de mayor retraso\n2. Notificar proactivamente a clientes afectados\n3. Evaluar rutas alternativas para zonas problematicas\n\n💡 **Insight ML:** El modelo predice una mejora del 12% si se optimizan las rutas a Barranquilla y Cartagena.`,
+      respuesta: `⚠️ **Estado de Retrasos**\n\nActualmente hay **${datos.estadisticas_generales.guias_en_retraso.toLocaleString('es-CO')}** guias con retraso (${datos.estadisticas_generales.tasa_retraso.toFixed(1)}% del total).\n\n📊 **Analisis por Transportadora:**\n${datos.rendimiento_transportadoras
+        .slice(0, 4)
+        .map((t) => `- ${t.nombre}: ${t.retrasos} retrasos (${t.tasa_retraso.toFixed(1)}%)`)
+        .join(
+          '\n'
+        )}\n\n🎯 **Acciones Sugeridas:**\n1. Priorizar contacto con transportadoras de mayor retraso\n2. Notificar proactivamente a clientes afectados\n3. Evaluar rutas alternativas para zonas problematicas\n\n💡 **Insight ML:** El modelo predice una mejora del 12% si se optimizan las rutas a Barranquilla y Cartagena.`,
       tipo_consulta: 'analisis_retrasos',
       datos_consultados: { total_retrasos: datos.estadisticas_generales.guias_en_retraso },
       sugerencias: ['¿Que acciones tomar?', 'Prediccion para manana', 'Alertas activas'],
@@ -618,7 +692,11 @@ const PATRONES_CHAT: PatronChat[] = [
         respuesta: `📍 **Estadisticas de ${ciudad.ciudad}**\n\n📦 Total de guias: ${ciudad.total_guias.toLocaleString('es-CO')}\n📊 Porcentaje del total: ${ciudad.porcentaje_del_total.toFixed(1)}%\n✅ Tasa de exito: ${ciudad.tasa_exito.toFixed(1)}%\n⏱️ Tiempo promedio: ${ciudad.tiempo_promedio} dias\n\n**Top 5 Ciudades:**\n${datos.top_ciudades.map((c, i) => `${i + 1}. ${c.ciudad} - ${c.total_guias.toLocaleString('es-CO')} guias (${c.tasa_exito.toFixed(1)}% exito)`).join('\n')}\n\n💡 **Insight:** Las ciudades principales mantienen tasas de exito superiores al 88%.`,
         tipo_consulta: 'estadisticas_ciudad',
         datos_consultados: { ciudad: ciudad.ciudad },
-        sugerencias: ['Comparar con otras ciudades', 'Transportadoras en esta zona', 'Tendencia mensual'],
+        sugerencias: [
+          'Comparar con otras ciudades',
+          'Transportadoras en esta zona',
+          'Tendencia mensual',
+        ],
         tokens_usados: 267,
         tiempo_respuesta_ms: 175,
         confianza_respuesta: 0.94,
@@ -635,7 +713,11 @@ const PATRONES_CHAT: PatronChat[] = [
         respuesta: `📊 **Comparacion: ${t1.nombre} vs ${t2.nombre}**\n\n| Metrica | ${t1.nombre} | ${t2.nombre} |\n|---------|-------------|-------------|\n| Total Guias | ${t1.total_guias.toLocaleString('es-CO')} | ${t2.total_guias.toLocaleString('es-CO')} |\n| Tasa Retraso | ${t1.tasa_retraso.toFixed(1)}% | ${t2.tasa_retraso.toFixed(1)}% |\n| Tiempo Prom. | ${t1.tiempo_promedio_dias} dias | ${t2.tiempo_promedio_dias} dias |\n| Costo Prom. | $${t1.costo_promedio.toLocaleString('es-CO')} | $${t2.costo_promedio.toLocaleString('es-CO')} |\n| Calificacion | ${t1.calificacion} | ${t2.calificacion} |\n\n🏆 **Ganador:** ${t1.tasa_retraso < t2.tasa_retraso ? t1.nombre : t2.nombre} tiene mejor rendimiento general.\n\n💡 **Recomendacion:** ${t1.costo_promedio > t2.costo_promedio ? t2.nombre : t1.nombre} ofrece mejor relacion costo-beneficio.`,
         tipo_consulta: 'comparacion_detallada',
         datos_consultados: { transportadoras: [t1.nombre, t2.nombre] },
-        sugerencias: ['Ver todas las transportadoras', 'Optimizar costos', 'Prediccion de rendimiento'],
+        sugerencias: [
+          'Ver todas las transportadoras',
+          'Optimizar costos',
+          'Prediccion de rendimiento',
+        ],
         tokens_usados: 356,
         tiempo_respuesta_ms: 245,
         confianza_respuesta: 0.96,
@@ -646,10 +728,14 @@ const PATRONES_CHAT: PatronChat[] = [
   {
     keywords: /(modelo|ml|machine|prediccion|inteligencia)/i,
     respuesta: (datos) => ({
-      respuesta: `🤖 **Estado del Sistema ML**\n\n**Modelos Activos:**\n${datos.modelos_activos.map(m => `✅ **${m.nombre}** v${m.version}\n   - Accuracy: ${(m.accuracy * 100).toFixed(1)}%\n   - Predicciones hoy: ${m.predicciones_hoy.toLocaleString('es-CO')}\n   - Precision: ${(m.precision * 100).toFixed(1)}%`).join('\n\n')}\n\n📈 **KPIs del Sistema:**\n- OTIF Score: ${datos.kpis_avanzados.otif_score}%\n- Eficiencia de Ruta: ${datos.kpis_avanzados.eficiencia_ruta}%\n- NPS Logistico: ${datos.kpis_avanzados.nps_logistico}\n\n💡 **Insight:** Los modelos han procesado mas de 3,000 predicciones hoy con una precision promedio del 90.3%.`,
+      respuesta: `🤖 **Estado del Sistema ML**\n\n**Modelos Activos:**\n${datos.modelos_activos.map((m) => `✅ **${m.nombre}** v${m.version}\n   - Accuracy: ${(m.accuracy * 100).toFixed(1)}%\n   - Predicciones hoy: ${m.predicciones_hoy.toLocaleString('es-CO')}\n   - Precision: ${(m.precision * 100).toFixed(1)}%`).join('\n\n')}\n\n📈 **KPIs del Sistema:**\n- OTIF Score: ${datos.kpis_avanzados.otif_score}%\n- Eficiencia de Ruta: ${datos.kpis_avanzados.eficiencia_ruta}%\n- NPS Logistico: ${datos.kpis_avanzados.nps_logistico}\n\n💡 **Insight:** Los modelos han procesado mas de 3,000 predicciones hoy con una precision promedio del 90.3%.`,
       tipo_consulta: 'estado_sistema_ml',
       datos_consultados: { modelos: datos.modelos_activos.length },
-      sugerencias: ['¿Como mejoro los modelos?', 'Reentrenar modelos', 'Ver predicciones recientes'],
+      sugerencias: [
+        '¿Como mejoro los modelos?',
+        'Reentrenar modelos',
+        'Ver predicciones recientes',
+      ],
       tokens_usados: 298,
       tiempo_respuesta_ms: 165,
       confianza_respuesta: 0.99,
@@ -659,7 +745,7 @@ const PATRONES_CHAT: PatronChat[] = [
 ];
 
 function generarRespuestaChat(pregunta: string): ChatResponse {
-  const patron = PATRONES_CHAT.find(p => p.keywords.test(pregunta));
+  const patron = PATRONES_CHAT.find((p) => p.keywords.test(pregunta));
 
   if (patron) {
     return patron.respuesta(DATOS_EJEMPLO);
@@ -670,7 +756,12 @@ function generarRespuestaChat(pregunta: string): ChatResponse {
     respuesta: `Gracias por tu consulta. Basandome en los datos actuales del sistema:\n\n📊 **Resumen Rapido:**\n- Total de guias: ${DATOS_EJEMPLO.estadisticas_generales.total_guias.toLocaleString('es-CO')}\n- Tasa de entrega: ${DATOS_EJEMPLO.estadisticas_generales.tasa_entrega.toFixed(1)}%\n- Alertas pendientes: ${DATOS_EJEMPLO.alertas_pendientes}\n\nPuedo ayudarte con:\n- Estadisticas de transportadoras\n- Analisis por ciudad o region\n- Predicciones de retraso\n- Estado de los modelos ML\n- Comparaciones y reportes\n\n¿Que informacion especifica necesitas?`,
     tipo_consulta: 'consulta_general',
     datos_consultados: {},
-    sugerencias: ['¿Cuantas guias tengo?', '¿Cual es la mejor transportadora?', 'Estado de retrasos', 'Estadisticas de Bogota'],
+    sugerencias: [
+      '¿Cuantas guias tengo?',
+      '¿Cual es la mejor transportadora?',
+      'Estado de retrasos',
+      'Estadisticas de Bogota',
+    ],
     tokens_usados: 198,
     tiempo_respuesta_ms: 120,
     confianza_respuesta: 0.85,
@@ -813,11 +904,7 @@ export const mlApi = {
   /**
    * Peticion generica con fallback automatico
    */
-  async request<T>(
-    endpoint: string,
-    options: RequestInit = {},
-    fallbackData?: T
-  ): Promise<T> {
+  async request<T>(endpoint: string, options: RequestInit = {}, fallbackData?: T): Promise<T> {
     const url = `${API_CONFIG.baseURL}${endpoint}`;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
@@ -879,7 +966,8 @@ export const mlApi = {
       registros_errores: Math.floor(Math.random() * 10),
       tiempo_procesamiento_segundos: 2.5 + Math.random() * 3,
       errores_detalle: [],
-      mensaje: 'Archivo procesado en modo offline. Los datos se sincronizaran cuando el servidor este disponible.',
+      mensaje:
+        'Archivo procesado en modo offline. Los datos se sincronizaran cuando el servidor este disponible.',
       metricas_calculadas: {
         transportadoras_detectadas: 5,
         ciudades_detectadas: 15,
@@ -901,9 +989,33 @@ export const mlApi = {
 
   async listarArchivos(): Promise<ArchivoCargado[]> {
     const fallback: ArchivoCargado[] = [
-      { id: 1, nombre_archivo: 'guias_enero_2024.xlsx', fecha_carga: generarFechaReciente(30), total_registros: 1250, registros_procesados: 1245, estado: 'COMPLETADO', usuario_carga: 'admin' },
-      { id: 2, nombre_archivo: 'envios_febrero.xlsx', fecha_carga: generarFechaReciente(20), total_registros: 980, registros_procesados: 978, estado: 'COMPLETADO', usuario_carga: 'admin' },
-      { id: 3, nombre_archivo: 'datos_marzo_2024.xlsx', fecha_carga: generarFechaReciente(10), total_registros: 1456, registros_procesados: 1450, estado: 'COMPLETADO', usuario_carga: 'admin' },
+      {
+        id: 1,
+        nombre_archivo: 'guias_enero_2024.xlsx',
+        fecha_carga: generarFechaReciente(30),
+        total_registros: 1250,
+        registros_procesados: 1245,
+        estado: 'COMPLETADO',
+        usuario_carga: 'admin',
+      },
+      {
+        id: 2,
+        nombre_archivo: 'envios_febrero.xlsx',
+        fecha_carga: generarFechaReciente(20),
+        total_registros: 980,
+        registros_procesados: 978,
+        estado: 'COMPLETADO',
+        usuario_carga: 'admin',
+      },
+      {
+        id: 3,
+        nombre_archivo: 'datos_marzo_2024.xlsx',
+        fecha_carga: generarFechaReciente(10),
+        total_registros: 1456,
+        registros_procesados: 1450,
+        estado: 'COMPLETADO',
+        usuario_carga: 'admin',
+      },
     ];
     return this.request<ArchivoCargado[]>(API_CONFIG.endpoints.memoria.archivos, {}, fallback);
   },
@@ -925,7 +1037,7 @@ export const mlApi = {
     const fallback: ResultadoEntrenamiento = {
       exito: true,
       modelos_entrenados: ['ModeloRetrasos', 'ModeloNovedades', 'ModeloRutas'],
-      metricas: DATOS_EJEMPLO.modelos_activos.map(m => ({
+      metricas: DATOS_EJEMPLO.modelos_activos.map((m) => ({
         nombre_modelo: m.nombre,
         version: m.version,
         accuracy: m.accuracy,
@@ -940,7 +1052,7 @@ export const mlApi = {
           { nombre: 'ciudad_destino', importancia: 0.22 },
           { nombre: 'dia_semana', importancia: 0.15 },
           { nombre: 'precio_flete', importancia: 0.12 },
-          { nombre: 'tiene_novedad', importancia: 0.10 },
+          { nombre: 'tiene_novedad', importancia: 0.1 },
         ],
       })),
       tiempo_total_segundos: 45.8,
@@ -972,7 +1084,7 @@ export const mlApi = {
   },
 
   async getMetricasModelos(): Promise<MetricasModelo[]> {
-    const fallback: MetricasModelo[] = DATOS_EJEMPLO.modelos_activos.map(m => ({
+    const fallback: MetricasModelo[] = DATOS_EJEMPLO.modelos_activos.map((m) => ({
       nombre_modelo: m.nombre,
       version: m.version,
       accuracy: m.accuracy,
@@ -1017,8 +1129,20 @@ export const mlApi = {
 
   async getChatHistorial(limite: number = 50): Promise<ConversacionHistorial[]> {
     const fallback: ConversacionHistorial[] = [
-      { id: 1, pregunta: '¿Cuantas guias tengo?', respuesta: `Tienes ${DATOS_EJEMPLO.estadisticas_generales.total_guias} guias.`, fecha: generarFechaReciente(1), tipo_consulta: 'estadisticas' },
-      { id: 2, pregunta: '¿Cual es la mejor transportadora?', respuesta: 'Coordinadora tiene el mejor rendimiento con 3.5% de retrasos.', fecha: generarFechaReciente(2), tipo_consulta: 'comparacion' },
+      {
+        id: 1,
+        pregunta: '¿Cuantas guias tengo?',
+        respuesta: `Tienes ${DATOS_EJEMPLO.estadisticas_generales.total_guias} guias.`,
+        fecha: generarFechaReciente(1),
+        tipo_consulta: 'estadisticas',
+      },
+      {
+        id: 2,
+        pregunta: '¿Cual es la mejor transportadora?',
+        respuesta: 'Coordinadora tiene el mejor rendimiento con 3.5% de retrasos.',
+        fecha: generarFechaReciente(2),
+        tipo_consulta: 'comparacion',
+      },
     ];
     return this.request<ConversacionHistorial[]>(
       `${API_CONFIG.endpoints.chat.historial}?limite=${limite}`,
@@ -1038,11 +1162,7 @@ export const mlApi = {
   // ==================== DASHBOARD ====================
 
   async getDashboard(): Promise<DashboardData> {
-    return this.request<DashboardData>(
-      API_CONFIG.endpoints.dashboard.resumen,
-      {},
-      DATOS_EJEMPLO
-    );
+    return this.request<DashboardData>(API_CONFIG.endpoints.dashboard.resumen, {}, DATOS_EJEMPLO);
   },
 
   async getTransportadoras(): Promise<TransportadoraRendimiento[]> {
@@ -1063,11 +1183,7 @@ export const mlApi = {
 
   async getTendencias(dias: number = 30) {
     const fallback = generarTendencias(dias);
-    return this.request(
-      `${API_CONFIG.endpoints.dashboard.tendencias}?dias=${dias}`,
-      {},
-      fallback
-    );
+    return this.request(`${API_CONFIG.endpoints.dashboard.tendencias}?dias=${dias}`, {}, fallback);
   },
 
   // ==================== SISTEMA ====================
@@ -1120,22 +1236,28 @@ export const mlApi = {
   },
 
   async listarReportes() {
-    return this.request(
-      API_CONFIG.endpoints.reportes.listar,
-      {},
-      [
-        { id: 'RPT-001', tipo: 'PDF', fecha: generarFechaReciente(5), estado: 'COMPLETADO', url: '#' },
-        { id: 'RPT-002', tipo: 'EXCEL', fecha: generarFechaReciente(10), estado: 'COMPLETADO', url: '#' },
-      ]
-    );
+    return this.request(API_CONFIG.endpoints.reportes.listar, {}, [
+      {
+        id: 'RPT-001',
+        tipo: 'PDF',
+        fecha: generarFechaReciente(5),
+        estado: 'COMPLETADO',
+        url: '#',
+      },
+      {
+        id: 'RPT-002',
+        tipo: 'EXCEL',
+        fecha: generarFechaReciente(10),
+        estado: 'COMPLETADO',
+        url: '#',
+      },
+    ]);
   },
 
   // ==================== ALERTAS ====================
 
   async listarAlertas(activas: boolean = true): Promise<Alerta[]> {
-    const fallback = activas
-      ? ALERTAS_EJEMPLO.filter(a => a.activa)
-      : ALERTAS_EJEMPLO;
+    const fallback = activas ? ALERTAS_EJEMPLO.filter((a) => a.activa) : ALERTAS_EJEMPLO;
     return this.request<Alerta[]>(
       `${API_CONFIG.endpoints.alertas.listar}?activas=${activas}`,
       {},
@@ -1182,7 +1304,9 @@ export function getRiskLevelColor(nivel: Prediccion['nivel_riesgo']): string {
   return colors[nivel] || colors.MEDIO;
 }
 
-export function getCalificacionColor(calificacion: TransportadoraRendimiento['calificacion']): string {
+export function getCalificacionColor(
+  calificacion: TransportadoraRendimiento['calificacion']
+): string {
   const colors = {
     EXCELENTE: 'text-green-600 bg-green-100',
     BUENO: 'text-blue-600 bg-blue-100',
