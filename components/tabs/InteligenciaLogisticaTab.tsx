@@ -132,6 +132,7 @@ const STORAGE_KEY = 'litper_inteligencia_logistica_sesiones';
 const MAX_SESIONES = 30;
 const CONFIG_PASSWORD = 'LITPERTUPAPA';
 const COLUMN_CONFIG_KEY = 'litper_column_config';
+const ITEMS_PER_PAGE = 100; // Guías por página
 
 // Configuración de columnas disponibles
 interface ColumnConfig {
@@ -582,6 +583,7 @@ export const InteligenciaLogisticaTab: React.FC = () => {
   const [sesionParaComparar, setSesionParaComparar] = useState<string | null>(null);
   const [modoMiDia, setModoMiDia] = useState(false);
   const [modoRescate, setModoRescate] = useState(false);
+  const [paginaActual, setPaginaActual] = useState(1);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -1043,6 +1045,43 @@ export const InteligenciaLogisticaTab: React.FC = () => {
       return true;
     });
   }, [guiasActivas, guiasMiDia, guiasRescate, modoMiDia, modoRescate, searchQuery, filtroTransportadora, filtroEstado]);
+
+  // Resetear página cuando cambian filtros
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchQuery, filtroTransportadora, filtroEstado, modoMiDia, modoRescate, sesionActiva]);
+
+  // Paginación
+  const totalPaginas = Math.ceil(guiasFiltradas.length / ITEMS_PER_PAGE);
+  const guiasPaginadas = useMemo(() => {
+    const inicio = (paginaActual - 1) * ITEMS_PER_PAGE;
+    const fin = inicio + ITEMS_PER_PAGE;
+    return guiasFiltradas.slice(inicio, fin);
+  }, [guiasFiltradas, paginaActual]);
+
+  // Columnas habilitadas para mostrar en la tabla
+  const columnasVisibles = useMemo(() => {
+    return columnConfig.filter(col => col.enabled);
+  }, [columnConfig]);
+
+  // Función para obtener el valor de una guía según la columna
+  const getGuiaValue = (guia: GuiaLogistica, columnId: string): string => {
+    switch (columnId) {
+      case 'guia': return guia.numeroGuia;
+      case 'estado': return guia.estadoActual;
+      case 'transportadora': return guia.transportadora;
+      case 'ciudad': return guia.ciudadDestino;
+      case 'dias': return String(guia.diasTranscurridos);
+      case 'telefono': return guia.telefono || 'N/A';
+      case 'novedad': return guia.tieneNovedad ? 'SÍ' : 'NO';
+      case 'cliente': return (guia as any).cliente || 'N/A';
+      case 'producto': return (guia as any).producto || 'N/A';
+      case 'valor': return (guia as any).valor || 'N/A';
+      case 'fecha': return (guia as any).fechaEnvio || 'N/A';
+      case 'direccion': return (guia as any).direccion || 'N/A';
+      default: return 'N/A';
+    }
+  };
 
   // Estadísticas
   const estadisticas = useMemo(() => {
@@ -1581,166 +1620,306 @@ export const InteligenciaLogisticaTab: React.FC = () => {
               <p>No se encontraron guías con los filtros actuales</p>
             </div>
           ) : (
-            <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-slate-50 dark:bg-navy-800">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
-                      Guía
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
-                      Transportadora
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
-                      Destino
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
-                      Estado
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
-                      Días
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
-                      Acciones
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-navy-800">
-                  {guiasFiltradas.map((guia) => {
-                    const statusColors = getStatusColor(guia.estadoActual);
-                    const cambio = comparacion?.cambiosEstado.find(
-                      (c) => c.guia.numeroGuia === guia.numeroGuia
-                    );
+            <div className="space-y-4">
+              {/* Info de paginación */}
+              <div className="flex items-center justify-between bg-white dark:bg-navy-900 rounded-xl p-3 border border-slate-200 dark:border-navy-700">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">
+                    Mostrando <span className="font-bold text-cyan-600">{((paginaActual - 1) * ITEMS_PER_PAGE) + 1}</span> - <span className="font-bold text-cyan-600">{Math.min(paginaActual * ITEMS_PER_PAGE, guiasFiltradas.length)}</span> de <span className="font-bold">{guiasFiltradas.length}</span> guías
+                  </span>
+                  <span className="text-xs text-slate-400">|</span>
+                  <span className="text-sm text-slate-500">
+                    Página <span className="font-bold">{paginaActual}</span> de <span className="font-bold">{totalPaginas}</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400 mr-2">{ITEMS_PER_PAGE} guías por página</span>
+                  <button
+                    onClick={() => setPaginaActual(1)}
+                    disabled={paginaActual === 1}
+                    className="px-2 py-1 text-xs bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+                  >
+                    ««
+                  </button>
+                  <button
+                    onClick={() => setPaginaActual(p => Math.max(1, p - 1))}
+                    disabled={paginaActual === 1}
+                    className="px-3 py-1 text-sm bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+                  >
+                    ← Anterior
+                  </button>
+                  <button
+                    onClick={() => setPaginaActual(p => Math.min(totalPaginas, p + 1))}
+                    disabled={paginaActual === totalPaginas}
+                    className="px-3 py-1 text-sm bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+                  >
+                    Siguiente →
+                  </button>
+                  <button
+                    onClick={() => setPaginaActual(totalPaginas)}
+                    disabled={paginaActual === totalPaginas}
+                    className="px-2 py-1 text-xs bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+                  >
+                    »»
+                  </button>
+                </div>
+              </div>
 
-                    return (
-                      <React.Fragment key={guia.numeroGuia}>
-                        <tr className="hover:bg-slate-50 dark:hover:bg-navy-800/50 transition-colors">
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono font-bold text-slate-800 dark:text-white">
-                                {guia.numeroGuia}
-                              </span>
-                              {guia.tieneNovedad && (
-                                <span className="px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-bold rounded">
-                                  NOVEDAD
+              {/* Tabla con columnas dinámicas */}
+              <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-slate-50 dark:bg-navy-800">
+                      <tr>
+                        {/* Columna de número */}
+                        <th className="px-3 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400 uppercase w-16">
+                          #
+                        </th>
+                        {/* Columnas dinámicas según configuración */}
+                        {columnasVisibles.map((col) => (
+                          <th
+                            key={col.id}
+                            className={`px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-400 uppercase ${
+                              col.id === 'dias' ? 'text-center' : 'text-left'
+                            }`}
+                          >
+                            {col.name}
+                          </th>
+                        ))}
+                        {/* Columna de acciones */}
+                        <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
+                          Acciones
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-navy-800">
+                      {guiasPaginadas.map((guia, index) => {
+                        const numeroGlobal = ((paginaActual - 1) * ITEMS_PER_PAGE) + index + 1;
+                        const statusColors = getStatusColor(guia.estadoActual);
+                        const cambio = comparacion?.cambiosEstado.find(
+                          (c) => c.guia.numeroGuia === guia.numeroGuia
+                        );
+
+                        return (
+                          <React.Fragment key={guia.numeroGuia}>
+                            <tr className="hover:bg-slate-50 dark:hover:bg-navy-800/50 transition-colors">
+                              {/* Número de fila */}
+                              <td className="px-3 py-3 text-center">
+                                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400">
+                                  {numeroGlobal}
                                 </span>
-                              )}
-                              {cambio && (
-                                <span
-                                  className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${
-                                    cambio.mejora
-                                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-                                      : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                                  }`}
+                              </td>
+
+                              {/* Columnas dinámicas */}
+                              {columnasVisibles.map((col) => (
+                                <td key={col.id} className={`px-4 py-3 ${col.id === 'dias' ? 'text-center' : ''}`}>
+                                  {col.id === 'guia' ? (
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono font-bold text-slate-800 dark:text-white">
+                                        {guia.numeroGuia}
+                                      </span>
+                                      {guia.tieneNovedad && (
+                                        <span className="px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-bold rounded">
+                                          NOVEDAD
+                                        </span>
+                                      )}
+                                      {cambio && (
+                                        <span
+                                          className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${
+                                            cambio.mejora
+                                              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                                              : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                                          }`}
+                                        >
+                                          {cambio.mejora ? 'MEJORÓ' : 'EMPEORÓ'}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : col.id === 'estado' ? (
+                                    <span
+                                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusColors.bg} ${statusColors.text}`}
+                                    >
+                                      <span className={`w-1.5 h-1.5 rounded-full ${statusColors.dot}`}></span>
+                                      {guia.estadoActual}
+                                    </span>
+                                  ) : col.id === 'dias' ? (
+                                    <span
+                                      className={`font-bold ${guia.diasTranscurridos > 5 ? 'text-red-500' : guia.diasTranscurridos > 3 ? 'text-amber-500' : 'text-slate-600 dark:text-slate-400'}`}
+                                    >
+                                      {guia.diasTranscurridos}
+                                    </span>
+                                  ) : col.id === 'novedad' ? (
+                                    <span className={`px-2 py-1 rounded text-xs font-bold ${guia.tieneNovedad ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'}`}>
+                                      {guia.tieneNovedad ? 'SÍ' : 'NO'}
+                                    </span>
+                                  ) : (
+                                    <span className="text-sm text-slate-600 dark:text-slate-400">
+                                      {getGuiaValue(guia, col.id)}
+                                    </span>
+                                  )}
+                                </td>
+                              ))}
+
+                              {/* Acciones */}
+                              <td className="px-4 py-3 text-center">
+                                <button
+                                  onClick={() =>
+                                    setExpandedGuia(
+                                      expandedGuia === guia.numeroGuia ? null : guia.numeroGuia
+                                    )
+                                  }
+                                  className="p-2 hover:bg-slate-100 dark:hover:bg-navy-700 rounded-lg transition-colors"
                                 >
-                                  {cambio.mejora ? 'MEJORÓ' : 'EMPEORÓ'}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
-                            {guia.transportadora}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
-                            {guia.ciudadDestino}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusColors.bg} ${statusColors.text}`}
-                            >
-                              <span
-                                className={`w-1.5 h-1.5 rounded-full ${statusColors.dot}`}
-                              ></span>
-                              {guia.estadoActual}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span
-                              className={`font-bold ${guia.diasTranscurridos > 5 ? 'text-red-500' : guia.diasTranscurridos > 3 ? 'text-amber-500' : 'text-slate-600 dark:text-slate-400'}`}
-                            >
-                              {guia.diasTranscurridos}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <button
-                              onClick={() =>
-                                setExpandedGuia(
-                                  expandedGuia === guia.numeroGuia ? null : guia.numeroGuia
-                                )
-                              }
-                              className="p-2 hover:bg-slate-100 dark:hover:bg-navy-700 rounded-lg transition-colors"
-                            >
-                              <Eye className="w-4 h-4 text-slate-400" />
-                            </button>
-                          </td>
-                        </tr>
-                        {expandedGuia === guia.numeroGuia && (
-                          <tr>
-                            <td colSpan={6} className="bg-slate-50 dark:bg-navy-800/50 px-4 py-4">
-                              <div className="space-y-3">
-                                <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                  <History className="w-4 h-4 text-cyan-500" />
-                                  Historial de la Guía
-                                </h4>
-                                {guia.historialCompleto.length > 0 ? (
-                                  <div className="space-y-2">
-                                    {guia.historialCompleto.map((evento, idx) => (
-                                      <div key={idx} className="flex items-start gap-3 text-sm">
-                                        <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-cyan-500"></div>
-                                        <div>
-                                          <span className="text-slate-500 dark:text-slate-400">
-                                            {formatDateTime(evento.fecha)}
+                                  <Eye className="w-4 h-4 text-slate-400" />
+                                </button>
+                              </td>
+                            </tr>
+
+                            {/* Fila expandida con detalles */}
+                            {expandedGuia === guia.numeroGuia && (
+                              <tr>
+                                <td colSpan={columnasVisibles.length + 2} className="bg-slate-50 dark:bg-navy-800/50 px-4 py-4">
+                                  <div className="space-y-3">
+                                    <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                      <History className="w-4 h-4 text-cyan-500" />
+                                      Detalles de Guía #{numeroGlobal} - {guia.numeroGuia}
+                                    </h4>
+
+                                    {/* Info adicional */}
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                                      <div className="bg-white dark:bg-navy-900 p-2 rounded-lg">
+                                        <span className="text-xs text-slate-500">Teléfono</span>
+                                        <p className="font-bold text-slate-800 dark:text-white">{guia.telefono || 'N/A'}</p>
+                                      </div>
+                                      <div className="bg-white dark:bg-navy-900 p-2 rounded-lg">
+                                        <span className="text-xs text-slate-500">Transportadora</span>
+                                        <p className="font-bold text-slate-800 dark:text-white">{guia.transportadora}</p>
+                                      </div>
+                                      <div className="bg-white dark:bg-navy-900 p-2 rounded-lg">
+                                        <span className="text-xs text-slate-500">Destino</span>
+                                        <p className="font-bold text-slate-800 dark:text-white">{guia.ciudadDestino}</p>
+                                      </div>
+                                      <div className="bg-white dark:bg-navy-900 p-2 rounded-lg">
+                                        <span className="text-xs text-slate-500">Días</span>
+                                        <p className={`font-bold ${guia.diasTranscurridos > 5 ? 'text-red-500' : guia.diasTranscurridos > 3 ? 'text-amber-500' : 'text-slate-800 dark:text-white'}`}>
+                                          {guia.diasTranscurridos} días
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {guia.historialCompleto.length > 0 ? (
+                                      <div className="space-y-2">
+                                        <h5 className="text-sm font-bold text-slate-700 dark:text-slate-300">Historial</h5>
+                                        {guia.historialCompleto.map((evento, idx) => (
+                                          <div key={idx} className="flex items-start gap-3 text-sm">
+                                            <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-cyan-500"></div>
+                                            <div>
+                                              <span className="text-slate-500 dark:text-slate-400">
+                                                {formatDateTime(evento.fecha)}
+                                              </span>
+                                              <span className="mx-2 text-slate-300 dark:text-slate-600">•</span>
+                                              <span className="font-medium text-slate-700 dark:text-slate-300">
+                                                {evento.ubicacion}
+                                              </span>
+                                              <p className="text-slate-600 dark:text-slate-400">{evento.descripcion}</p>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className="text-slate-500 text-sm">No hay historial detallado disponible</p>
+                                    )}
+
+                                    {cambio && (
+                                      <div className="mt-4 p-3 bg-white dark:bg-navy-900 rounded-lg border border-slate-200 dark:border-navy-700">
+                                        <h5 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                                          <GitCompare className="w-4 h-4 text-purple-500" />
+                                          Cambio vs Sesión Anterior
+                                        </h5>
+                                        <div className="flex items-center gap-3 text-sm">
+                                          <span className="text-slate-500">{cambio.estadoAnterior}</span>
+                                          <ArrowRight className="w-4 h-4 text-slate-400" />
+                                          <span className={cambio.mejora ? 'text-emerald-600 font-bold' : 'text-red-600 font-bold'}>
+                                            {cambio.estadoActual}
                                           </span>
-                                          <span className="mx-2 text-slate-300 dark:text-slate-600">
-                                            •
-                                          </span>
-                                          <span className="font-medium text-slate-700 dark:text-slate-300">
-                                            {evento.ubicacion}
-                                          </span>
-                                          <p className="text-slate-600 dark:text-slate-400">
-                                            {evento.descripcion}
-                                          </p>
                                         </div>
                                       </div>
-                                    ))}
+                                    )}
                                   </div>
-                                ) : (
-                                  <p className="text-slate-500 text-sm">
-                                    No hay historial detallado disponible
-                                  </p>
-                                )}
-                                {cambio && (
-                                  <div className="mt-4 p-3 bg-white dark:bg-navy-900 rounded-lg border border-slate-200 dark:border-navy-700">
-                                    <h5 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                                      <GitCompare className="w-4 h-4 text-purple-500" />
-                                      Cambio vs Sesión Anterior
-                                    </h5>
-                                    <div className="flex items-center gap-3 text-sm">
-                                      <span className="text-slate-500">
-                                        {cambio.estadoAnterior}
-                                      </span>
-                                      <ArrowRight className="w-4 h-4 text-slate-400" />
-                                      <span
-                                        className={
-                                          cambio.mejora
-                                            ? 'text-emerald-600 font-bold'
-                                            : 'text-red-600 font-bold'
-                                        }
-                                      >
-                                        {cambio.estadoActual}
-                                      </span>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Paginación inferior */}
+              {totalPaginas > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-4">
+                  <button
+                    onClick={() => setPaginaActual(1)}
+                    disabled={paginaActual === 1}
+                    className="px-3 py-2 text-sm bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-700 hover:bg-slate-50 dark:hover:bg-navy-800 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                  >
+                    Primera
+                  </button>
+                  <button
+                    onClick={() => setPaginaActual(p => Math.max(1, p - 1))}
+                    disabled={paginaActual === 1}
+                    className="px-4 py-2 text-sm bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-700 hover:bg-slate-50 dark:hover:bg-navy-800 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                  >
+                    ← Anterior
+                  </button>
+
+                  {/* Números de página */}
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPaginas) }, (_, i) => {
+                      let pageNum;
+                      if (totalPaginas <= 5) {
+                        pageNum = i + 1;
+                      } else if (paginaActual <= 3) {
+                        pageNum = i + 1;
+                      } else if (paginaActual >= totalPaginas - 2) {
+                        pageNum = totalPaginas - 4 + i;
+                      } else {
+                        pageNum = paginaActual - 2 + i;
+                      }
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setPaginaActual(pageNum)}
+                          className={`w-10 h-10 text-sm rounded-lg transition-colors ${
+                            paginaActual === pageNum
+                              ? 'bg-cyan-500 text-white font-bold'
+                              : 'bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-700 hover:bg-slate-50 dark:hover:bg-navy-800'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    onClick={() => setPaginaActual(p => Math.min(totalPaginas, p + 1))}
+                    disabled={paginaActual === totalPaginas}
+                    className="px-4 py-2 text-sm bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-700 hover:bg-slate-50 dark:hover:bg-navy-800 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                  >
+                    Siguiente →
+                  </button>
+                  <button
+                    onClick={() => setPaginaActual(totalPaginas)}
+                    disabled={paginaActual === totalPaginas}
+                    className="px-3 py-2 text-sm bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-700 hover:bg-slate-50 dark:hover:bg-navy-800 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                  >
+                    Última
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
