@@ -19,3 +19,6 @@ export { InteligenciaLogisticaTab } from './InteligenciaLogisticaTab';
 export { OperacionesUnificadoTab } from './OperacionesUnificadoTab';
 export { InteligenciaIAUnificadoTab } from './InteligenciaIAUnificadoTab';
 export { AnalisisUnificadoTab } from './AnalisisUnificadoTab';
+
+// Centro de Negocio - Herramientas Operativas
+export { CentroNegocioTab } from './CentroNegocioTab';
