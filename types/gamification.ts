@@ -37,7 +37,15 @@ export interface Badge {
 }
 
 export interface BadgeRequirement {
-  type: 'shipments' | 'streak' | 'ml_usage' | 'flash_usage' | 'perfect_delivery' | 'savings' | 'rank' | 'special';
+  type:
+    | 'shipments'
+    | 'streak'
+    | 'ml_usage'
+    | 'flash_usage'
+    | 'perfect_delivery'
+    | 'savings'
+    | 'rank'
+    | 'special';
   count: number;
   timeframe?: 'day' | 'week' | 'month' | 'all_time';
   description: string;
@@ -171,7 +179,11 @@ export const LEVEL_CONFIGS: LevelConfig[] = [
     bgColor: 'bg-slate-100',
     icon: '🌱',
     benefits: [
-      { type: 'feature', name: 'Acceso Básico', description: 'Acceso a todas las funciones básicas' },
+      {
+        type: 'feature',
+        name: 'Acceso Básico',
+        description: 'Acceso a todas las funciones básicas',
+      },
     ],
   },
   {
@@ -183,8 +195,17 @@ export const LEVEL_CONFIGS: LevelConfig[] = [
     bgColor: 'bg-emerald-100',
     icon: '📦',
     benefits: [
-      { type: 'discount', name: '3% Descuento', description: '3% de descuento en envíos', value: 3 },
-      { type: 'feature', name: 'Predicciones Básicas', description: 'Acceso a predicciones ML básicas' },
+      {
+        type: 'discount',
+        name: '3% Descuento',
+        description: '3% de descuento en envíos',
+        value: 3,
+      },
+      {
+        type: 'feature',
+        name: 'Predicciones Básicas',
+        description: 'Acceso a predicciones ML básicas',
+      },
     ],
   },
   {
@@ -196,9 +217,18 @@ export const LEVEL_CONFIGS: LevelConfig[] = [
     bgColor: 'bg-blue-100',
     icon: '🚀',
     benefits: [
-      { type: 'discount', name: '5% Descuento', description: '5% de descuento permanente', value: 5 },
+      {
+        type: 'discount',
+        name: '5% Descuento',
+        description: '5% de descuento permanente',
+        value: 5,
+      },
       { type: 'feature', name: 'Litper Flash', description: 'Acceso completo a perfiles Flash' },
-      { type: 'support', name: 'Soporte Prioritario', description: 'Respuesta en menos de 4 horas' },
+      {
+        type: 'support',
+        name: 'Soporte Prioritario',
+        description: 'Respuesta en menos de 4 horas',
+      },
     ],
   },
   {
@@ -210,8 +240,17 @@ export const LEVEL_CONFIGS: LevelConfig[] = [
     bgColor: 'bg-purple-100',
     icon: '⭐',
     benefits: [
-      { type: 'discount', name: '8% Descuento', description: '8% de descuento permanente', value: 8 },
-      { type: 'feature', name: 'Predicción Avanzada', description: 'Predicciones de demanda a 90 días' },
+      {
+        type: 'discount',
+        name: '8% Descuento',
+        description: '8% de descuento permanente',
+        value: 8,
+      },
+      {
+        type: 'feature',
+        name: 'Predicción Avanzada',
+        description: 'Predicciones de demanda a 90 días',
+      },
       { type: 'feature', name: 'API Access', description: 'Acceso a API para integraciones' },
       { type: 'support', name: 'Soporte VIP', description: 'Respuesta en menos de 1 hora' },
     ],
@@ -225,8 +264,17 @@ export const LEVEL_CONFIGS: LevelConfig[] = [
     bgColor: 'bg-orange-100',
     icon: '👑',
     benefits: [
-      { type: 'discount', name: '12% Descuento', description: '12% de descuento permanente', value: 12 },
-      { type: 'feature', name: 'Beta Features', description: 'Acceso anticipado a nuevas funciones' },
+      {
+        type: 'discount',
+        name: '12% Descuento',
+        description: '12% de descuento permanente',
+        value: 12,
+      },
+      {
+        type: 'feature',
+        name: 'Beta Features',
+        description: 'Acceso anticipado a nuevas funciones',
+      },
       { type: 'feature', name: 'White Label', description: 'Personalización de marca' },
       { type: 'support', name: 'Account Manager', description: 'Gerente de cuenta dedicado' },
     ],
@@ -240,8 +288,17 @@ export const LEVEL_CONFIGS: LevelConfig[] = [
     bgColor: 'bg-gradient-to-r from-gold-100 to-orange-100',
     icon: '🏆',
     benefits: [
-      { type: 'discount', name: '15% Descuento', description: '15% de descuento permanente', value: 15 },
-      { type: 'feature', name: 'Todo Incluido', description: 'Acceso a todas las funciones premium' },
+      {
+        type: 'discount',
+        name: '15% Descuento',
+        description: '15% de descuento permanente',
+        value: 15,
+      },
+      {
+        type: 'feature',
+        name: 'Todo Incluido',
+        description: 'Acceso a todas las funciones premium',
+      },
       { type: 'badge', name: 'Badge Exclusivo', description: 'Badge de Leyenda en perfil público' },
       { type: 'support', name: 'Soporte 24/7', description: 'Línea directa de soporte' },
     ],
@@ -349,7 +406,12 @@ export const AVAILABLE_BADGES: Badge[] = [
     bgColor: 'bg-emerald-100',
     category: 'streak',
     rarity: 'rare',
-    requirement: { type: 'streak', count: 10, timeframe: 'day', description: '10 días sin novedades' },
+    requirement: {
+      type: 'streak',
+      count: 10,
+      timeframe: 'day',
+      description: '10 días sin novedades',
+    },
     xpReward: 300,
   },
 
@@ -439,7 +501,12 @@ export const AVAILABLE_BADGES: Badge[] = [
     bgColor: 'bg-emerald-100',
     category: 'special',
     rarity: 'rare',
-    requirement: { type: 'perfect_delivery', count: 100, timeframe: 'week', description: '100% éxito semanal' },
+    requirement: {
+      type: 'perfect_delivery',
+      count: 100,
+      timeframe: 'week',
+      description: '100% éxito semanal',
+    },
     xpReward: 500,
   },
   {

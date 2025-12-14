@@ -290,8 +290,7 @@ export function ChatInteligente() {
       {
         id: generarId(),
         tipo: 'ia',
-        texto:
-          '¡Chat reiniciado! ¿En qué puedo ayudarte con tu logística?',
+        texto: '¡Chat reiniciado! ¿En qué puedo ayudarte con tu logística?',
         timestamp: new Date(),
         sugerencias: PREGUNTAS_RAPIDAS.map((p) => p.texto),
       },
@@ -311,16 +310,13 @@ export function ChatInteligente() {
               Asistente de Logística IA
               <Sparkles className="w-5 h-5 text-yellow-300" />
             </h2>
-            <p className="text-indigo-200 text-sm">
-              Powered by Machine Learning
-            </p>
+            <p className="text-indigo-200 text-sm">Powered by Machine Learning</p>
           </div>
           <div className="flex items-center gap-3">
             {/* Indicador de estado */}
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
-              ${isOnline
-                ? 'bg-green-400/20 text-green-200'
-                : 'bg-yellow-400/20 text-yellow-200'}`}
+            <span
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
+              ${isOnline ? 'bg-green-400/20 text-green-200' : 'bg-yellow-400/20 text-yellow-200'}`}
             >
               {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
               {isOnline ? 'Conectado' : 'Offline'}
@@ -357,9 +353,18 @@ export function ChatInteligente() {
             <div className="bg-white rounded-2xl rounded-tl-none px-5 py-4 shadow-sm border border-gray-100">
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span
+                    className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce"
+                    style={{ animationDelay: '0ms' }}
+                  />
+                  <span
+                    className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce"
+                    style={{ animationDelay: '150ms' }}
+                  />
+                  <span
+                    className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce"
+                    style={{ animationDelay: '300ms' }}
+                  />
                 </div>
                 <span className="text-sm text-gray-500 ml-2">Analizando datos...</span>
               </div>
@@ -376,9 +381,7 @@ export function ChatInteligente() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Lightbulb className="w-4 h-4 text-yellow-500" />
-              <span className="text-sm font-semibold text-gray-700">
-                Preguntas Rápidas
-              </span>
+              <span className="text-sm font-semibold text-gray-700">Preguntas Rápidas</span>
             </div>
             <button
               onClick={() => setShowCategorias(!showCategorias)}
@@ -484,11 +487,7 @@ export function ChatInteligente() {
                   : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 active:scale-95 shadow-lg'
               }`}
           >
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Send className="w-5 h-5" />
-            )}
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </button>
           <button
             onClick={handleLimpiarChat}
@@ -533,9 +532,10 @@ function MensajeItem({ mensaje, onSugerenciaClick, onCopiar, isCopied }: Mensaje
       {/* Avatar */}
       <div
         className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm
-          ${esUsuario
-            ? 'bg-gradient-to-br from-blue-500 to-indigo-600'
-            : 'bg-gradient-to-br from-indigo-100 to-purple-100'
+          ${
+            esUsuario
+              ? 'bg-gradient-to-br from-blue-500 to-indigo-600'
+              : 'bg-gradient-to-br from-indigo-100 to-purple-100'
           }`}
       >
         {esUsuario ? (
@@ -555,14 +555,19 @@ function MensajeItem({ mensaje, onSugerenciaClick, onCopiar, isCopied }: Mensaje
           } px-5 py-4`}
         >
           {/* Texto del mensaje con formato markdown básico */}
-          <div className={`text-sm whitespace-pre-wrap leading-relaxed ${esUsuario ? '' : 'text-gray-800'}`}>
+          <div
+            className={`text-sm whitespace-pre-wrap leading-relaxed ${esUsuario ? '' : 'text-gray-800'}`}
+          >
             {mensaje.texto.split('\n').map((linea, i) => {
               // Detectar encabezados con **
               if (linea.includes('**')) {
                 return (
-                  <p key={i} dangerouslySetInnerHTML={{
-                    __html: linea.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-                  }} />
+                  <p
+                    key={i}
+                    dangerouslySetInnerHTML={{
+                      __html: linea.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>'),
+                    }}
+                  />
                 );
               }
               return <p key={i}>{linea}</p>;
@@ -570,7 +575,8 @@ function MensajeItem({ mensaje, onSugerenciaClick, onCopiar, isCopied }: Mensaje
           </div>
 
           {/* Timestamp y acciones */}
-          <div className={`flex items-center justify-between mt-3 pt-2 border-t
+          <div
+            className={`flex items-center justify-between mt-3 pt-2 border-t
             ${esUsuario ? 'border-white/20' : 'border-gray-100'}`}
           >
             <span className={`text-xs ${esUsuario ? 'text-blue-200' : 'text-gray-400'}`}>

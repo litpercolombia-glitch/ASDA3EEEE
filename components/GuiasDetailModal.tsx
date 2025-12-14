@@ -12,7 +12,7 @@ import {
   ExternalLink,
   AlertTriangle,
   CheckCircle,
-  Truck
+  Truck,
 } from 'lucide-react';
 import { Shipment, ShipmentStatus } from '../types';
 import { getTrackingUrl, getWhatsAppTemplate } from '../services/logisticsService';
@@ -48,20 +48,22 @@ const GuiaRow: React.FC<{ guia: Shipment }> = ({ guia }) => {
   };
 
   return (
-    <div className={`bg-white dark:bg-slate-800 rounded-xl p-4 border-l-4 ${config.borderColor} shadow-sm hover:shadow-md transition-all`}>
+    <div
+      className={`bg-white dark:bg-slate-800 rounded-xl p-4 border-l-4 ${config.borderColor} shadow-sm hover:shadow-md transition-all`}
+    >
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Guide Info */}
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${config.bgColor}`}>
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${config.bgColor}`}
+            >
               {config.icon} {config.label}
             </span>
             <span className="text-xs text-slate-500 dark:text-slate-400">{guia.carrier}</span>
           </div>
 
-          <h4 className="font-bold text-slate-800 dark:text-white text-lg mb-1">
-            #{guia.id}
-          </h4>
+          <h4 className="font-bold text-slate-800 dark:text-white text-lg mb-1">#{guia.id}</h4>
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
             {guia.phone && (
@@ -118,18 +120,20 @@ export const GuiasDetailModal: React.FC<GuiasDetailModalProps> = ({
   onClose,
   guias,
   title,
-  filterStatus
+  filterStatus,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   if (!isOpen) return null;
 
-  const filteredGuias = guias.filter(g => {
+  const filteredGuias = guias.filter((g) => {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      return g.id.toLowerCase().includes(term) ||
-             g.phone?.includes(term) ||
-             g.detailedInfo?.destination?.toLowerCase().includes(term);
+      return (
+        g.id.toLowerCase().includes(term) ||
+        g.phone?.includes(term) ||
+        g.detailedInfo?.destination?.toLowerCase().includes(term)
+      );
     }
     return true;
   });
@@ -137,14 +141,16 @@ export const GuiasDetailModal: React.FC<GuiasDetailModalProps> = ({
   const handleExportList = () => {
     const csvContent = [
       ['Guía', 'Teléfono', 'Estado', 'Destino', 'Días', 'Último Evento'].join(','),
-      ...filteredGuias.map(g => [
-        g.id,
-        g.phone || '',
-        g.status,
-        g.detailedInfo?.destination || '',
-        g.detailedInfo?.daysInTransit || 0,
-        g.detailedInfo?.events?.[0]?.description || ''
-      ].join(','))
+      ...filteredGuias.map((g) =>
+        [
+          g.id,
+          g.phone || '',
+          g.status,
+          g.detailedInfo?.destination || '',
+          g.detailedInfo?.daysInTransit || 0,
+          g.detailedInfo?.events?.[0]?.description || '',
+        ].join(',')
+      ),
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -156,7 +162,7 @@ export const GuiasDetailModal: React.FC<GuiasDetailModalProps> = ({
   };
 
   const handleWhatsAppMasivo = () => {
-    const guiasWithPhone = filteredGuias.filter(g => g.phone);
+    const guiasWithPhone = filteredGuias.filter((g) => g.phone);
     if (guiasWithPhone.length === 0) {
       alert('No hay guías con número de teléfono para enviar mensajes.');
       return;
@@ -171,7 +177,6 @@ export const GuiasDetailModal: React.FC<GuiasDetailModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-900 to-slate-900 p-6 text-white">
           <div className="flex justify-between items-start">
@@ -180,9 +185,7 @@ export const GuiasDetailModal: React.FC<GuiasDetailModalProps> = ({
                 <Package className="w-6 h-6" />
                 {title}
               </h2>
-              <p className="text-blue-200 text-sm mt-1">
-                {filteredGuias.length} guías encontradas
-              </p>
+              <p className="text-blue-200 text-sm mt-1">{filteredGuias.length} guías encontradas</p>
             </div>
             <button
               onClick={onClose}
@@ -212,9 +215,7 @@ export const GuiasDetailModal: React.FC<GuiasDetailModalProps> = ({
               <p>No se encontraron guías</p>
             </div>
           ) : (
-            filteredGuias.map(guia => (
-              <GuiaRow key={guia.id} guia={guia} />
-            ))
+            filteredGuias.map((guia) => <GuiaRow key={guia.id} guia={guia} />)
           )}
         </div>
 
@@ -235,7 +236,6 @@ export const GuiasDetailModal: React.FC<GuiasDetailModalProps> = ({
             WhatsApp Masivo
           </button>
         </div>
-
       </div>
     </div>
   );

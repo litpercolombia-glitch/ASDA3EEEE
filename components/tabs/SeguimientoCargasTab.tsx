@@ -75,27 +75,36 @@ export const SeguimientoCargasTab: React.FC<SeguimientoCargasTabProps> = ({
   /**
    * Eliminar una carga completa
    */
-  const handleEliminarCarga = useCallback(async (hojaId: string) => {
-    await eliminarCarga(hojaId);
-  }, [eliminarCarga]);
+  const handleEliminarCarga = useCallback(
+    async (hojaId: string) => {
+      await eliminarCarga(hojaId);
+    },
+    [eliminarCarga]
+  );
 
   /**
    * Eliminar una guía individual
    */
-  const handleEliminarGuia = useCallback(async (hojaId: string, guiaId: string) => {
-    await eliminarGuia(hojaId, guiaId);
-  }, [eliminarGuia]);
+  const handleEliminarGuia = useCallback(
+    async (hojaId: string, guiaId: string) => {
+      await eliminarGuia(hojaId, guiaId);
+    },
+    [eliminarGuia]
+  );
 
   /**
    * Restaurar una carga
    */
-  const handleRestaurarCarga = useCallback(async (hojaId: string) => {
-    const hoja = hojas.find(h => h.id === hojaId);
-    if (hoja && onRestoreShipments) {
-      onRestoreShipments(hoja.guias);
-      await restaurarCarga(hojaId);
-    }
-  }, [hojas, onRestoreShipments, restaurarCarga]);
+  const handleRestaurarCarga = useCallback(
+    async (hojaId: string) => {
+      const hoja = hojas.find((h) => h.id === hojaId);
+      if (hoja && onRestoreShipments) {
+        onRestoreShipments(hoja.guias);
+        await restaurarCarga(hojaId);
+      }
+    },
+    [hojas, onRestoreShipments, restaurarCarga]
+  );
 
   /**
    * Sincronizar con servidor
@@ -208,8 +217,8 @@ export const SeguimientoCargasTab: React.FC<SeguimientoCargasTabProps> = ({
             <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-sm">
               <Upload className="w-4 h-4" />
               <span>
-                <strong>{shipments.length} guías</strong> cargadas en memoria.
-                Haz clic en "Guardar Carga Actual" para crear una nueva hoja de seguimiento.
+                <strong>{shipments.length} guías</strong> cargadas en memoria. Haz clic en "Guardar
+                Carga Actual" para crear una nueva hoja de seguimiento.
               </span>
             </div>
           </div>
@@ -227,9 +236,13 @@ export const SeguimientoCargasTab: React.FC<SeguimientoCargasTabProps> = ({
           hojas={hojas}
           onDeleteHoja={handleEliminarCarga}
           onDeleteGuia={handleEliminarGuia}
-          onRestoreHoja={onRestoreShipments ? (hoja) => {
-            onRestoreShipments(hoja.guias);
-          } : undefined}
+          onRestoreHoja={
+            onRestoreShipments
+              ? (hoja) => {
+                  onRestoreShipments(hoja.guias);
+                }
+              : undefined
+          }
         />
       )}
 
@@ -243,8 +256,8 @@ export const SeguimientoCargasTab: React.FC<SeguimientoCargasTabProps> = ({
             Sin cargas registradas
           </h3>
           <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
-            Carga un archivo Excel con tus guías de seguimiento.
-            Cada carga se guardará como una "hoja" independiente organizada por fecha y hora.
+            Carga un archivo Excel con tus guías de seguimiento. Cada carga se guardará como una
+            "hoja" independiente organizada por fecha y hora.
           </p>
           <div className="flex flex-wrap justify-center gap-4 text-sm text-slate-600 dark:text-slate-400">
             <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-navy-800 rounded-lg">

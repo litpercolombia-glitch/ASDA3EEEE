@@ -63,7 +63,7 @@ export function useCargasTracking(): UseCargasTrackingResult {
 
       // Si hay hojas y ninguna está activa, activar la primera
       if (hojasOrdenadas.length > 0 && !hojaActiva) {
-        const activa = hojasOrdenadas.find(h => h.activo);
+        const activa = hojasOrdenadas.find((h) => h.activo);
         if (activa) {
           setHojaActiva(activa.id);
         }
@@ -79,94 +79,95 @@ export function useCargasTracking(): UseCargasTrackingResult {
   /**
    * Guardar una nueva carga de guías como hoja
    */
-  const guardarNuevaCarga = useCallback(async (
-    guias: Shipment[],
-    nombre?: string
-  ): Promise<HojaCarga | null> => {
-    if (guias.length === 0) {
-      setError('No hay guías para guardar');
-      return null;
-    }
+  const guardarNuevaCarga = useCallback(
+    async (guias: Shipment[], nombre?: string): Promise<HojaCarga | null> => {
+      if (guias.length === 0) {
+        setError('No hay guías para guardar');
+        return null;
+      }
 
-    setIsSaving(true);
-    setError(null);
-    try {
-      const nuevaHoja = await guardarNuevaHoja(guias, nombre);
+      setIsSaving(true);
+      setError(null);
+      try {
+        const nuevaHoja = await guardarNuevaHoja(guias, nombre);
 
-      // Actualizar estado local
-      setHojas(prev => {
-        const nuevas = [nuevaHoja, ...prev];
-        // Mantener máximo 50 hojas
-        return nuevas.slice(0, 50);
-      });
+        // Actualizar estado local
+        setHojas((prev) => {
+          const nuevas = [nuevaHoja, ...prev];
+          // Mantener máximo 50 hojas
+          return nuevas.slice(0, 50);
+        });
 
-      setHojaActiva(nuevaHoja.id);
+        setHojaActiva(nuevaHoja.id);
 
-      return nuevaHoja;
-    } catch (err) {
-      console.error('Error guardando nueva carga:', err);
-      setError('Error al guardar la carga');
-      return null;
-    } finally {
-      setIsSaving(false);
-    }
-  }, []);
+        return nuevaHoja;
+      } catch (err) {
+        console.error('Error guardando nueva carga:', err);
+        setError('Error al guardar la carga');
+        return null;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    []
+  );
 
   /**
    * Eliminar una carga completa
    */
-  const eliminarCarga = useCallback(async (hojaId: string): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      await eliminarHoja(hojaId);
+  const eliminarCarga = useCallback(
+    async (hojaId: string): Promise<boolean> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        await eliminarHoja(hojaId);
 
-      // Actualizar estado local
-      setHojas(prev => prev.filter(h => h.id !== hojaId));
+        // Actualizar estado local
+        setHojas((prev) => prev.filter((h) => h.id !== hojaId));
 
-      // Si era la hoja activa, desactivar
-      if (hojaActiva === hojaId) {
-        setHojaActiva(null);
+        // Si era la hoja activa, desactivar
+        if (hojaActiva === hojaId) {
+          setHojaActiva(null);
+        }
+
+        return true;
+      } catch (err) {
+        console.error('Error eliminando carga:', err);
+        setError('Error al eliminar la carga');
+        return false;
+      } finally {
+        setIsLoading(false);
       }
-
-      return true;
-    } catch (err) {
-      console.error('Error eliminando carga:', err);
-      setError('Error al eliminar la carga');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [hojaActiva]);
+    },
+    [hojaActiva]
+  );
 
   /**
    * Eliminar una guía individual de una hoja
    */
-  const eliminarGuia = useCallback(async (
-    hojaId: string,
-    guiaId: string
-  ): Promise<void> => {
-    setError(null);
-    try {
-      const hojaActualizada = await eliminarGuiaDeHoja(hojaId, guiaId);
+  const eliminarGuia = useCallback(
+    async (hojaId: string, guiaId: string): Promise<void> => {
+      setError(null);
+      try {
+        const hojaActualizada = await eliminarGuiaDeHoja(hojaId, guiaId);
 
-      if (hojaActualizada === null) {
-        // La hoja fue eliminada porque no quedaban guías
-        setHojas(prev => prev.filter(h => h.id !== hojaId));
-        if (hojaActiva === hojaId) {
-          setHojaActiva(null);
+        if (hojaActualizada === null) {
+          // La hoja fue eliminada porque no quedaban guías
+          setHojas((prev) => prev.filter((h) => h.id !== hojaId));
+          if (hojaActiva === hojaId) {
+            setHojaActiva(null);
+          }
+        } else {
+          // Actualizar la hoja en el estado
+          setHojas((prev) => prev.map((h) => (h.id === hojaId ? hojaActualizada : h)));
         }
-      } else {
-        // Actualizar la hoja en el estado
-        setHojas(prev => prev.map(h =>
-          h.id === hojaId ? hojaActualizada : h
-        ));
+      } catch (err) {
+        console.error('Error eliminando guía:', err);
+        setError('Error al eliminar la guía');
       }
-    } catch (err) {
-      console.error('Error eliminando guía:', err);
-      setError('Error al eliminar la guía');
-    }
-  }, [hojaActiva]);
+    },
+    [hojaActiva]
+  );
 
   /**
    * Restaurar una hoja (hacerla activa)
@@ -179,10 +180,12 @@ export function useCargasTracking(): UseCargasTrackingResult {
 
       if (hoja) {
         // Actualizar estado local - marcar como activa
-        setHojas(prev => prev.map(h => ({
-          ...h,
-          activo: h.id === hojaId,
-        })));
+        setHojas((prev) =>
+          prev.map((h) => ({
+            ...h,
+            activo: h.id === hojaId,
+          }))
+        );
         setHojaActiva(hojaId);
       }
 

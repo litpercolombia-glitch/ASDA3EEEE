@@ -223,9 +223,7 @@ function parseInsightsFromText(text: string): PredictiveInsights {
 /**
  * Genera un resumen ejecutivo en texto natural usando Claude
  */
-export async function generateExecutiveSummary(
-  report: AnalyticsReport
-): Promise<string> {
+export async function generateExecutiveSummary(report: AnalyticsReport): Promise<string> {
   const client = new Anthropic({
     apiKey: API_CONFIG.CLAUDE_API_KEY,
     dangerouslyAllowBrowser: true,

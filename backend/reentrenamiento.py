@@ -3,8 +3,7 @@ Sistema de Reentrenamiento Automático de Modelos ML.
 Usa APScheduler para ejecutar reentrenamiento semanal.
 """
 
-import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional, Dict, Any
 
 import pandas as pd
@@ -15,7 +14,6 @@ from loguru import logger
 from database import (
     get_db_session,
     get_config,
-    set_config,
     GuiaHistorica,
     MetricaModelo,
     AlertaSistema,
@@ -94,7 +92,7 @@ class SistemaReentrenamiento:
                 # Obtener última métrica
                 ultima_metrica = session.query(MetricaModelo).filter(
                     MetricaModelo.nombre_modelo == 'ModeloRetrasos',
-                    MetricaModelo.esta_activo == True
+                    MetricaModelo.esta_activo
                 ).order_by(MetricaModelo.fecha_entrenamiento.desc()).first()
 
                 if not ultima_metrica:
@@ -158,7 +156,7 @@ class SistemaReentrenamiento:
             }
 
         self.esta_ejecutando = True
-        inicio = datetime.now()
+        datetime.now()
 
         logger.info(f"Iniciando reentrenamiento {'manual' if manual else 'automático'}")
 
@@ -289,7 +287,7 @@ class SistemaReentrenamiento:
             with get_db_session() as session:
                 # Última métrica activa
                 ultima_metrica = session.query(MetricaModelo).filter(
-                    MetricaModelo.esta_activo == True
+                    MetricaModelo.esta_activo
                 ).order_by(MetricaModelo.fecha_entrenamiento.desc()).first()
 
                 if not ultima_metrica:

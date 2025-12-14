@@ -141,9 +141,11 @@ const MetricCard: React.FC<{
 }> = ({ value, label, icon: Icon, color, onClick }) => {
   const colorClasses: Record<string, string> = {
     blue: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-600',
-    emerald: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-600',
+    emerald:
+      'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-600',
     amber: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-600',
-    orange: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-600',
+    orange:
+      'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-600',
     red: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600',
   };
 
@@ -337,7 +339,8 @@ export const ReporteIATab: React.FC<ReporteIATabProps> = ({ shipments }) => {
             Reporte IA
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            Generado: {new Date().toLocaleDateString('es-CO')} {new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+            Generado: {new Date().toLocaleDateString('es-CO')}{' '}
+            {new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
           </p>
         </div>
 
@@ -500,7 +503,9 @@ export const ReporteIATab: React.FC<ReporteIATabProps> = ({ shipments }) => {
                       <td className="px-4 py-3 text-center text-slate-600 dark:text-slate-400">
                         {carrier.total}
                       </td>
-                      <td className="px-4 py-3 text-center text-emerald-600">{carrier.delivered}</td>
+                      <td className="px-4 py-3 text-center text-emerald-600">
+                        {carrier.delivered}
+                      </td>
                       <td className="px-4 py-3 text-center">
                         <span
                           className={`font-bold ${
@@ -556,11 +561,7 @@ export const ReporteIATab: React.FC<ReporteIATabProps> = ({ shipments }) => {
               >
                 <div className="flex items-start gap-3">
                   <span className="text-lg">
-                    {patron.impacto === 'CRITICO'
-                      ? '🔴'
-                      : patron.impacto === 'ALTO'
-                        ? '🟠'
-                        : '🟡'}
+                    {patron.impacto === 'CRITICO' ? '🔴' : patron.impacto === 'ALTO' ? '🟠' : '🟡'}
                   </span>
                   <div className="flex-1">
                     <p className="font-bold text-slate-800 dark:text-white">{patron.titulo}</p>

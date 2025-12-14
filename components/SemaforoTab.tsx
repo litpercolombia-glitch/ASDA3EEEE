@@ -13,7 +13,7 @@ import {
   MessageCircle,
   ExternalLink,
   Package,
-  Lightbulb
+  Lightbulb,
 } from 'lucide-react';
 import { Shipment, ShipmentStatus } from '../types';
 import {
@@ -22,7 +22,7 @@ import {
   NormalizedStatus,
   groupBySemaforo,
   SemaforoColor,
-  getHoursSinceUpdate
+  getHoursSinceUpdate,
 } from '../utils/statusHelpers';
 import { getTrackingUrl, getWhatsAppTemplate } from '../services/logisticsService';
 import { GuiasDetailModal } from './GuiasDetailModal';
@@ -42,9 +42,12 @@ interface FilterButtonProps {
 const FilterButton: React.FC<FilterButtonProps> = ({ label, count, color, active, onClick }) => {
   const colorStyles = {
     all: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600',
-    green: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700',
-    yellow: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700',
-    orange: 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 border-orange-300 dark:border-orange-700',
+    green:
+      'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700',
+    yellow:
+      'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700',
+    orange:
+      'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 border-orange-300 dark:border-orange-700',
     red: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-300 dark:border-red-700',
   };
 
@@ -76,7 +79,7 @@ const FilterButton: React.FC<FilterButtonProps> = ({ label, count, color, active
 const GuiaCard: React.FC<{ guia: Shipment; expanded: boolean; onToggle: () => void }> = ({
   guia,
   expanded,
-  onToggle
+  onToggle,
 }) => {
   const normalizedStatus = getActualStatus(guia);
   const config = STATUS_CONFIG[normalizedStatus];
@@ -112,7 +115,9 @@ const GuiaCard: React.FC<{ guia: Shipment; expanded: boolean; onToggle: () => vo
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-lg">{config.icon}</span>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${config.bgColor}`}>
+              <span
+                className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${config.bgColor}`}
+              >
                 {config.label}
               </span>
               {hoursSinceUpdate > 48 && (
@@ -123,9 +128,7 @@ const GuiaCard: React.FC<{ guia: Shipment; expanded: boolean; onToggle: () => vo
               )}
             </div>
 
-            <h4 className="font-bold text-slate-800 dark:text-white truncate">
-              #{guia.id}
-            </h4>
+            <h4 className="font-bold text-slate-800 dark:text-white truncate">#{guia.id}</h4>
 
             <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-slate-500 dark:text-slate-400">
               <span>{guia.carrier}</span>
@@ -218,10 +221,26 @@ const Section: React.FC<SectionProps> = ({ title, color, guias, defaultOpen = fa
   const [expandedGuia, setExpandedGuia] = useState<string | null>(null);
 
   const colorStyles = {
-    green: { bg: 'bg-green-50 dark:bg-green-900/10', border: 'border-green-200 dark:border-green-800', text: 'text-green-700 dark:text-green-400' },
-    yellow: { bg: 'bg-yellow-50 dark:bg-yellow-900/10', border: 'border-yellow-200 dark:border-yellow-800', text: 'text-yellow-700 dark:text-yellow-400' },
-    orange: { bg: 'bg-orange-50 dark:bg-orange-900/10', border: 'border-orange-200 dark:border-orange-800', text: 'text-orange-700 dark:text-orange-400' },
-    red: { bg: 'bg-red-50 dark:bg-red-900/10', border: 'border-red-200 dark:border-red-800', text: 'text-red-700 dark:text-red-400' },
+    green: {
+      bg: 'bg-green-50 dark:bg-green-900/10',
+      border: 'border-green-200 dark:border-green-800',
+      text: 'text-green-700 dark:text-green-400',
+    },
+    yellow: {
+      bg: 'bg-yellow-50 dark:bg-yellow-900/10',
+      border: 'border-yellow-200 dark:border-yellow-800',
+      text: 'text-yellow-700 dark:text-yellow-400',
+    },
+    orange: {
+      bg: 'bg-orange-50 dark:bg-orange-900/10',
+      border: 'border-orange-200 dark:border-orange-800',
+      text: 'text-orange-700 dark:text-orange-400',
+    },
+    red: {
+      bg: 'bg-red-50 dark:bg-red-900/10',
+      border: 'border-red-200 dark:border-red-800',
+      text: 'text-red-700 dark:text-red-400',
+    },
   };
 
   const emoji = { green: '🟢', yellow: '🟡', orange: '🟠', red: '🔴' };
@@ -229,7 +248,9 @@ const Section: React.FC<SectionProps> = ({ title, color, guias, defaultOpen = fa
   if (guias.length === 0) return null;
 
   return (
-    <div className={`rounded-2xl ${colorStyles[color].bg} border ${colorStyles[color].border} overflow-hidden`}>
+    <div
+      className={`rounded-2xl ${colorStyles[color].bg} border ${colorStyles[color].border} overflow-hidden`}
+    >
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full px-6 py-4 flex items-center justify-between"
@@ -249,7 +270,7 @@ const Section: React.FC<SectionProps> = ({ title, color, guias, defaultOpen = fa
 
       {isOpen && (
         <div className="px-4 pb-4 space-y-2">
-          {guias.map(guia => (
+          {guias.map((guia) => (
             <GuiaCard
               key={guia.id}
               guia={guia}
@@ -270,9 +291,7 @@ const SemaforoOnboarding: React.FC = () => (
       <Activity className="w-10 h-10 text-white" />
     </div>
 
-    <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-4">
-      Semáforo de Guías
-    </h2>
+    <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-4">Semáforo de Guías</h2>
 
     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6 mb-8 text-left">
       <p className="text-slate-600 dark:text-slate-300 mb-4">
@@ -282,19 +301,27 @@ const SemaforoOnboarding: React.FC = () => (
       <ul className="space-y-3">
         <li className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
           <span className="text-xl">🟢</span>
-          <span><strong>VERDE</strong> → Entregado / Sin problemas</span>
+          <span>
+            <strong>VERDE</strong> → Entregado / Sin problemas
+          </span>
         </li>
         <li className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
           <span className="text-xl">🟡</span>
-          <span><strong>AMARILLO</strong> → En tránsito / Requiere seguimiento</span>
+          <span>
+            <strong>AMARILLO</strong> → En tránsito / Requiere seguimiento
+          </span>
         </li>
         <li className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
           <span className="text-xl">🟠</span>
-          <span><strong>NARANJA</strong> → En oficina / Atención requerida</span>
+          <span>
+            <strong>NARANJA</strong> → En oficina / Atención requerida
+          </span>
         </li>
         <li className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
           <span className="text-xl">🔴</span>
-          <span><strong>ROJO</strong> → Novedad / Acción urgente</span>
+          <span>
+            <strong>ROJO</strong> → Novedad / Acción urgente
+          </span>
         </li>
       </ul>
 
@@ -394,19 +421,19 @@ export const SemaforoTab: React.FC<SemaforoTabProps> = ({ shipments }) => {
       {activeFilter === 'all' ? (
         <div className="space-y-6">
           <Section title="🔴 URGENTE" color="red" guias={semaforoGroups.red} defaultOpen={true} />
-          <Section title="🟠 ATENCIÓN" color="orange" guias={semaforoGroups.orange} defaultOpen={true} />
+          <Section
+            title="🟠 ATENCIÓN"
+            color="orange"
+            guias={semaforoGroups.orange}
+            defaultOpen={true}
+          />
           <Section title="🟡 EN SEGUIMIENTO" color="yellow" guias={semaforoGroups.yellow} />
           <Section title="🟢 COMPLETADOS" color="green" guias={semaforoGroups.green} />
         </div>
       ) : (
         <div className="space-y-2">
-          {filteredGuias.map(guia => (
-            <GuiaCard
-              key={guia.id}
-              guia={guia}
-              expanded={false}
-              onToggle={() => {}}
-            />
+          {filteredGuias.map((guia) => (
+            <GuiaCard key={guia.id} guia={guia} expanded={false} onToggle={() => {}} />
           ))}
           {filteredGuias.length === 0 && (
             <div className="text-center py-12 text-slate-400">

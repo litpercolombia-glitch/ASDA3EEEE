@@ -1,10 +1,4 @@
-import {
-  HistoricalData,
-  RiskAnalysis,
-  RiskLevel,
-  CarrierPerformance,
-  ProductType,
-} from '../types';
+import { HistoricalData, RiskAnalysis, RiskLevel, CarrierPerformance, ProductType } from '../types';
 
 /**
  * Calcula el score de riesgo para una ciudad y transportadora específica
@@ -134,7 +128,9 @@ function generateRecommendations(
   const recommendations: string[] = [];
 
   if (riskLevel === 'CRÍTICO') {
-    recommendations.push('⚠️ RIESGO CRÍTICO: Considerar NO enviar a esta zona con esta transportadora');
+    recommendations.push(
+      '⚠️ RIESGO CRÍTICO: Considerar NO enviar a esta zona con esta transportadora'
+    );
     recommendations.push('Buscar transportadora alternativa con mejor historial');
     recommendations.push('Si debe enviar, exigir prepago en lugar de contraentrega');
   }
@@ -226,10 +222,7 @@ export function recommendBestCarrier(
     else if (carrier.total >= 20) score += 5;
 
     // Penalización por productos frágiles si el tiempo es muy largo
-    if (
-      (productType === 'Frágil' || productType === 'Electrónico') &&
-      carrier.avgTimeValue > 7
-    ) {
+    if ((productType === 'Frágil' || productType === 'Electrónico') && carrier.avgTimeValue > 7) {
       score -= 10;
     }
 

@@ -4,10 +4,9 @@ Define todas las tablas de la base de datos PostgreSQL
 """
 
 from datetime import datetime
-from typing import Optional, List
 from sqlalchemy import (
     Column, Integer, String, Float, Boolean, DateTime, Text,
-    ForeignKey, JSON, Index, Enum as SQLEnum, UniqueConstraint
+    ForeignKey, JSON, Index, Enum as SQLEnum
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship

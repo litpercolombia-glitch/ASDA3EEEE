@@ -50,7 +50,7 @@ import {
   Wifi,
   Server,
   HardDrive,
-  HelpCircle
+  HelpCircle,
 } from 'lucide-react';
 import { HelpTooltip } from '../HelpSystem/HelpTooltip';
 import { agentesHelp } from '../HelpSystem/helpContent';
@@ -67,12 +67,19 @@ import {
   crearAlerta,
   resolverAlerta,
   pausarAgente,
-  activarAgente
+  activarAgente,
 } from '../../services/agentCityService';
 
 import { getGuiasConNovedad, getGuiasCriticas } from '../../services/trackingAgentService';
-import { getNovedadesActivas, getEstadisticasNovedades } from '../../services/novedadesAgentService';
-import { getPedidosPendientes, getEstadisticasPedidos, getLlamadasPendientes } from '../../services/ordersAgentService';
+import {
+  getNovedadesActivas,
+  getEstadisticasNovedades,
+} from '../../services/novedadesAgentService';
+import {
+  getPedidosPendientes,
+  getEstadisticasPedidos,
+  getLlamadasPendientes,
+} from '../../services/ordersAgentService';
 
 import {
   Pais,
@@ -84,7 +91,7 @@ import {
   MetricasCiudad,
   TipoAgente,
   EstadoAgente,
-  DISTRITOS_CONFIG
+  DISTRITOS_CONFIG,
 } from '../../types/agents';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -95,7 +102,14 @@ interface CiudadAgentesTabProps {
   selectedCountry?: string;
 }
 
-type VistaActiva = 'mapa' | 'distritos' | 'agentes' | 'metricas' | 'alertas' | 'memoria' | 'configuracion';
+type VistaActiva =
+  | 'mapa'
+  | 'distritos'
+  | 'agentes'
+  | 'metricas'
+  | 'alertas'
+  | 'memoria'
+  | 'configuracion';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // COMPONENTE PRINCIPAL
@@ -118,11 +132,13 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
 
   // MCP Chat
   const [comandoMCP, setComandoMCP] = useState('');
-  const [historialComandos, setHistorialComandos] = useState<Array<{
-    comando: string;
-    respuesta: string;
-    timestamp: Date;
-  }>>([]);
+  const [historialComandos, setHistorialComandos] = useState<
+    Array<{
+      comando: string;
+      respuesta: string;
+      timestamp: Date;
+    }>
+  >([]);
   const [ejecutandoComando, setEjecutandoComando] = useState(false);
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -170,19 +186,25 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
     try {
       const resultado = await ejecutarComandoMCP(comandoEnviado, paisSeleccionado);
 
-      setHistorialComandos(prev => [...prev, {
-        comando: comandoEnviado,
-        respuesta: resultado.resultado || resultado.error || 'Comando ejecutado',
-        timestamp: new Date()
-      }]);
+      setHistorialComandos((prev) => [
+        ...prev,
+        {
+          comando: comandoEnviado,
+          respuesta: resultado.resultado || resultado.error || 'Comando ejecutado',
+          timestamp: new Date(),
+        },
+      ]);
 
       cargarDatos();
     } catch (error) {
-      setHistorialComandos(prev => [...prev, {
-        comando: comandoEnviado,
-        respuesta: `Error: ${error instanceof Error ? error.message : 'Error desconocido'}`,
-        timestamp: new Date()
-      }]);
+      setHistorialComandos((prev) => [
+        ...prev,
+        {
+          comando: comandoEnviado,
+          respuesta: `Error: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setEjecutandoComando(false);
     }
@@ -208,9 +230,7 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
             </div>
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-3xl font-black text-white">
-                  Ciudad de Agentes
-                </h1>
+                <h1 className="text-3xl font-black text-white">Ciudad de Agentes</h1>
                 <HelpTooltip
                   title={agentesHelp.general.title}
                   content={agentesHelp.general.content}
@@ -236,8 +256,7 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
                   {estadisticas?.agentesActivos || 0} agentes activos
                 </span>
                 <span className="flex items-center gap-1">
-                  <HardDrive className="w-4 h-4 text-purple-400" />
-                  v{estado?.version || '1.0.0'}
+                  <HardDrive className="w-4 h-4 text-purple-400" />v{estado?.version || '1.0.0'}
                 </span>
               </div>
             </div>
@@ -247,7 +266,7 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
           <div className="flex items-center gap-3">
             <span className="text-indigo-200/60 text-sm font-medium">Hub:</span>
             <div className="flex gap-2 bg-black/20 rounded-xl p-1">
-              {Object.values(Pais).map(pais => (
+              {Object.values(Pais).map((pais) => (
                 <button
                   key={pais}
                   onClick={() => setPaisSeleccionado(pais)}
@@ -257,8 +276,7 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
                       : 'text-white hover:bg-white/10'
                   }`}
                 >
-                  {pais === Pais.COLOMBIA ? 'Colombia' :
-                   pais === Pais.CHILE ? 'Chile' : 'Ecuador'}
+                  {pais === Pais.COLOMBIA ? 'Colombia' : pais === Pais.CHILE ? 'Chile' : 'Ecuador'}
                 </button>
               ))}
             </div>
@@ -328,18 +346,79 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
 
   const renderNavegacion = () => {
     const navItems = [
-      { id: 'mapa', label: 'Mapa de la Ciudad', icon: Map, helpTitle: 'Mapa de la Ciudad', helpContent: 'Vista general de todos los distritos y su estado operativo', helpTips: ['Los 7 distritos se organizan alrededor de la Alcaldía central', 'Haz clic en un distrito para ver sus agentes'] },
-      { id: 'distritos', label: 'Los 7 Distritos', icon: Layers, helpTitle: agentesHelp.distritos.title, helpContent: agentesHelp.distritos.content, helpTips: agentesHelp.distritos.tips },
-      { id: 'agentes', label: 'Agentes IA', icon: Users, helpTitle: 'Agentes de IA', helpContent: 'Lista de todos los agentes inteligentes del sistema', helpTips: ['Cada distrito tiene agentes especializados', 'Los agentes procesan tareas automáticamente'] },
-      { id: 'metricas', label: 'Métricas en Vivo', icon: BarChart3, helpTitle: 'Métricas en Tiempo Real', helpContent: 'Monitorea el rendimiento del sistema en tiempo real', helpTips: ['KPIs de rendimiento', 'Estadísticas por distrito', 'Tendencias de tareas'] },
-      { id: 'alertas', label: 'Centro de Alertas', icon: AlertTriangle, helpTitle: 'Centro de Alertas', helpContent: 'Visualiza y gestiona alertas del sistema', helpTips: ['Alertas críticas requieren acción inmediata', 'Las alertas se resuelven automáticamente o manualmente'] },
-      { id: 'memoria', label: 'Memoria Colectiva', icon: Brain, helpTitle: 'Memoria Colectiva', helpContent: 'Conocimiento aprendido por los agentes de todas sus interacciones', helpTips: ['Los agentes aprenden de cada tarea', 'El conocimiento se comparte entre distritos'] },
-      { id: 'configuracion', label: 'Configuración', icon: Settings, helpTitle: 'Configuración', helpContent: 'Configura el comportamiento del sistema de agentes', helpTips: ['Ajusta parámetros de los agentes', 'Configura umbrales de alertas'] }
+      {
+        id: 'mapa',
+        label: 'Mapa de la Ciudad',
+        icon: Map,
+        helpTitle: 'Mapa de la Ciudad',
+        helpContent: 'Vista general de todos los distritos y su estado operativo',
+        helpTips: [
+          'Los 7 distritos se organizan alrededor de la Alcaldía central',
+          'Haz clic en un distrito para ver sus agentes',
+        ],
+      },
+      {
+        id: 'distritos',
+        label: 'Los 7 Distritos',
+        icon: Layers,
+        helpTitle: agentesHelp.distritos.title,
+        helpContent: agentesHelp.distritos.content,
+        helpTips: agentesHelp.distritos.tips,
+      },
+      {
+        id: 'agentes',
+        label: 'Agentes IA',
+        icon: Users,
+        helpTitle: 'Agentes de IA',
+        helpContent: 'Lista de todos los agentes inteligentes del sistema',
+        helpTips: [
+          'Cada distrito tiene agentes especializados',
+          'Los agentes procesan tareas automáticamente',
+        ],
+      },
+      {
+        id: 'metricas',
+        label: 'Métricas en Vivo',
+        icon: BarChart3,
+        helpTitle: 'Métricas en Tiempo Real',
+        helpContent: 'Monitorea el rendimiento del sistema en tiempo real',
+        helpTips: ['KPIs de rendimiento', 'Estadísticas por distrito', 'Tendencias de tareas'],
+      },
+      {
+        id: 'alertas',
+        label: 'Centro de Alertas',
+        icon: AlertTriangle,
+        helpTitle: 'Centro de Alertas',
+        helpContent: 'Visualiza y gestiona alertas del sistema',
+        helpTips: [
+          'Alertas críticas requieren acción inmediata',
+          'Las alertas se resuelven automáticamente o manualmente',
+        ],
+      },
+      {
+        id: 'memoria',
+        label: 'Memoria Colectiva',
+        icon: Brain,
+        helpTitle: 'Memoria Colectiva',
+        helpContent: 'Conocimiento aprendido por los agentes de todas sus interacciones',
+        helpTips: [
+          'Los agentes aprenden de cada tarea',
+          'El conocimiento se comparte entre distritos',
+        ],
+      },
+      {
+        id: 'configuracion',
+        label: 'Configuración',
+        icon: Settings,
+        helpTitle: 'Configuración',
+        helpContent: 'Configura el comportamiento del sistema de agentes',
+        helpTips: ['Ajusta parámetros de los agentes', 'Configura umbrales de alertas'],
+      },
     ];
 
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2 mb-6 flex flex-wrap gap-2">
-        {navItems.map(item => {
+        {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = vistaActiva === item.id;
           return (
@@ -381,7 +460,9 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
           <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
             Mapa de la Ciudad de Agentes
           </h2>
-          <p className="text-gray-500">Vista general de todos los distritos y su estado operativo</p>
+          <p className="text-gray-500">
+            Vista general de todos los distritos y su estado operativo
+          </p>
         </div>
 
         {/* Visualización del mapa como grid */}
@@ -399,7 +480,7 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
           {/* Distritos alrededor */}
           <div className="grid grid-cols-3 gap-4 h-full">
             {distritos.map((distrito, index) => {
-              const config = DISTRITOS_CONFIG.find(d => d.id === distrito.id);
+              const config = DISTRITOS_CONFIG.find((d) => d.id === distrito.id);
               if (!config) return null;
 
               const posiciones = [
@@ -409,7 +490,7 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
                 'col-start-1 row-start-2',
                 'col-start-3 row-start-2',
                 'col-start-1 row-start-3',
-                'col-start-3 row-start-3'
+                'col-start-3 row-start-3',
               ];
 
               return (
@@ -421,9 +502,9 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
                     distrito={distrito}
                     config={config}
                     expandido={distritoExpandido === distrito.id}
-                    onClick={() => setDistritoExpandido(
-                      distritoExpandido === distrito.id ? null : distrito.id
-                    )}
+                    onClick={() =>
+                      setDistritoExpandido(distritoExpandido === distrito.id ? null : distrito.id)
+                    }
                   />
                 </div>
               );
@@ -432,13 +513,69 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
 
           {/* Líneas de conexión visuales */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-20">
-            <line x1="50%" y1="50%" x2="16%" y2="16%" stroke="currentColor" strokeWidth="2" className="text-indigo-500" />
-            <line x1="50%" y1="50%" x2="50%" y2="16%" stroke="currentColor" strokeWidth="2" className="text-indigo-500" />
-            <line x1="50%" y1="50%" x2="84%" y2="16%" stroke="currentColor" strokeWidth="2" className="text-indigo-500" />
-            <line x1="50%" y1="50%" x2="16%" y2="50%" stroke="currentColor" strokeWidth="2" className="text-indigo-500" />
-            <line x1="50%" y1="50%" x2="84%" y2="50%" stroke="currentColor" strokeWidth="2" className="text-indigo-500" />
-            <line x1="50%" y1="50%" x2="16%" y2="84%" stroke="currentColor" strokeWidth="2" className="text-indigo-500" />
-            <line x1="50%" y1="50%" x2="84%" y2="84%" stroke="currentColor" strokeWidth="2" className="text-indigo-500" />
+            <line
+              x1="50%"
+              y1="50%"
+              x2="16%"
+              y2="16%"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="text-indigo-500"
+            />
+            <line
+              x1="50%"
+              y1="50%"
+              x2="50%"
+              y2="16%"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="text-indigo-500"
+            />
+            <line
+              x1="50%"
+              y1="50%"
+              x2="84%"
+              y2="16%"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="text-indigo-500"
+            />
+            <line
+              x1="50%"
+              y1="50%"
+              x2="16%"
+              y2="50%"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="text-indigo-500"
+            />
+            <line
+              x1="50%"
+              y1="50%"
+              x2="84%"
+              y2="50%"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="text-indigo-500"
+            />
+            <line
+              x1="50%"
+              y1="50%"
+              x2="16%"
+              y2="84%"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="text-indigo-500"
+            />
+            <line
+              x1="50%"
+              y1="50%"
+              x2="84%"
+              y2="84%"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="text-indigo-500"
+            />
           </svg>
         </div>
 
@@ -451,7 +588,9 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
                 <MessageSquare className="w-5 h-5 text-white" />
                 <span className="font-semibold text-white">Chat con Alcalde IA</span>
               </div>
-              <span className="text-xs px-2 py-0.5 bg-white/20 rounded-full text-white">Claude Opus</span>
+              <span className="text-xs px-2 py-0.5 bg-white/20 rounded-full text-white">
+                Claude Opus
+              </span>
             </div>
 
             <div className="h-64 overflow-y-auto p-4 space-y-3">
@@ -475,7 +614,9 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
                     </div>
                     <div className="flex gap-2 bg-gray-800/50 rounded-lg p-3">
                       <Bot className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
-                      <span className="text-gray-200 text-sm whitespace-pre-wrap">{item.respuesta}</span>
+                      <span className="text-gray-200 text-sm whitespace-pre-wrap">
+                        {item.respuesta}
+                      </span>
                     </div>
                   </div>
                 ))
@@ -513,44 +654,61 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
                 <AlertTriangle className="w-5 h-5 text-white" />
                 <span className="font-semibold text-white">Alertas Activas</span>
               </div>
-              <span className="text-white font-bold">{alertas.filter(a => a.activa).length}</span>
+              <span className="text-white font-bold">{alertas.filter((a) => a.activa).length}</span>
             </div>
 
             <div className="h-64 overflow-y-auto p-4 space-y-3">
-              {alertas.filter(a => a.activa).length === 0 ? (
+              {alertas.filter((a) => a.activa).length === 0 ? (
                 <div className="text-center text-gray-500 py-8">
                   <CheckCircle2 className="w-12 h-12 mx-auto mb-2 text-green-500 opacity-50" />
-                  <p className="text-green-600 dark:text-green-400 font-medium">Sin alertas activas</p>
+                  <p className="text-green-600 dark:text-green-400 font-medium">
+                    Sin alertas activas
+                  </p>
                   <p className="text-sm text-gray-400">Todo funciona correctamente</p>
                 </div>
               ) : (
-                alertas.filter(a => a.activa).slice(0, 5).map(alerta => (
-                  <div
-                    key={alerta.id}
-                    className={`rounded-lg p-3 border ${
-                      alerta.tipo === 'critical' ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' :
-                      alerta.tipo === 'error' ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800' :
-                      alerta.tipo === 'warning' ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' :
-                      'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-                    }`}
-                  >
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
-                        alerta.tipo === 'critical' ? 'text-red-500' :
-                        alerta.tipo === 'error' ? 'text-orange-500' :
-                        alerta.tipo === 'warning' ? 'text-amber-500' :
-                        'text-blue-500'
-                      }`} />
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-800 dark:text-white text-sm">{alerta.titulo}</h4>
-                        <p className="text-xs text-gray-600 dark:text-gray-300">{alerta.mensaje}</p>
+                alertas
+                  .filter((a) => a.activa)
+                  .slice(0, 5)
+                  .map((alerta) => (
+                    <div
+                      key={alerta.id}
+                      className={`rounded-lg p-3 border ${
+                        alerta.tipo === 'critical'
+                          ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                          : alerta.tipo === 'error'
+                            ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'
+                            : alerta.tipo === 'warning'
+                              ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+                              : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle
+                          className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
+                            alerta.tipo === 'critical'
+                              ? 'text-red-500'
+                              : alerta.tipo === 'error'
+                                ? 'text-orange-500'
+                                : alerta.tipo === 'warning'
+                                  ? 'text-amber-500'
+                                  : 'text-blue-500'
+                          }`}
+                        />
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-800 dark:text-white text-sm">
+                            {alerta.titulo}
+                          </h4>
+                          <p className="text-xs text-gray-600 dark:text-gray-300">
+                            {alerta.mensaje}
+                          </p>
+                        </div>
+                        <span className="text-xs text-gray-400">
+                          {new Date(alerta.creadaEn).toLocaleTimeString()}
+                        </span>
                       </div>
-                      <span className="text-xs text-gray-400">
-                        {new Date(alerta.creadaEn).toLocaleTimeString()}
-                      </span>
                     </div>
-                  </div>
-                ))
+                  ))
               )}
             </div>
           </div>
@@ -574,13 +732,13 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
             Los 7 Distritos Operativos
           </h2>
           <div className="text-sm text-gray-500">
-            {distritos.filter(d => d.estado === 'operativo').length}/{distritos.length} operativos
+            {distritos.filter((d) => d.estado === 'operativo').length}/{distritos.length} operativos
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {distritos.map(distrito => {
-            const config = DISTRITOS_CONFIG.find(d => d.id === distrito.id);
+          {distritos.map((distrito) => {
+            const config = DISTRITOS_CONFIG.find((d) => d.id === distrito.id);
             if (!config) return null;
 
             return (
@@ -590,9 +748,9 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
                 config={config}
                 expandido={distritoExpandido === distrito.id}
                 paisSeleccionado={paisSeleccionado}
-                onToggle={() => setDistritoExpandido(
-                  distritoExpandido === distrito.id ? null : distrito.id
-                )}
+                onToggle={() =>
+                  setDistritoExpandido(distritoExpandido === distrito.id ? null : distrito.id)
+                }
               />
             );
           })}
@@ -608,17 +766,18 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
   const renderVistaAgentes = () => {
     const todosAgentes = getAgentes(undefined, paisSeleccionado);
     const agentesFiltrados = busquedaAgente
-      ? todosAgentes.filter(a =>
-          a.nombre.toLowerCase().includes(busquedaAgente.toLowerCase()) ||
-          a.especialidad.toLowerCase().includes(busquedaAgente.toLowerCase())
+      ? todosAgentes.filter(
+          (a) =>
+            a.nombre.toLowerCase().includes(busquedaAgente.toLowerCase()) ||
+            a.especialidad.toLowerCase().includes(busquedaAgente.toLowerCase())
         )
       : todosAgentes;
 
     const agentesPorEstado = {
-      trabajando: agentesFiltrados.filter(a => a.estado === EstadoAgente.TRABAJANDO).length,
-      activos: agentesFiltrados.filter(a => a.estado === EstadoAgente.ACTIVO).length,
-      pausados: agentesFiltrados.filter(a => a.estado === EstadoAgente.PAUSADO).length,
-      error: agentesFiltrados.filter(a => a.estado === EstadoAgente.ERROR).length
+      trabajando: agentesFiltrados.filter((a) => a.estado === EstadoAgente.TRABAJANDO).length,
+      activos: agentesFiltrados.filter((a) => a.estado === EstadoAgente.ACTIVO).length,
+      pausados: agentesFiltrados.filter((a) => a.estado === EstadoAgente.PAUSADO).length,
+      error: agentesFiltrados.filter((a) => a.estado === EstadoAgente.ERROR).length,
     };
 
     return (
@@ -658,14 +817,14 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {agentesFiltrados.map(agente => (
+          {agentesFiltrados.map((agente) => (
             <AgenteCard
               key={agente.id}
               agente={agente}
               seleccionado={agenteSeleccionado === agente.id}
-              onClick={() => setAgenteSeleccionado(
-                agenteSeleccionado === agente.id ? null : agente.id
-              )}
+              onClick={() =>
+                setAgenteSeleccionado(agenteSeleccionado === agente.id ? null : agente.id)
+              }
             />
           ))}
         </div>
@@ -706,11 +865,28 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
               <span className="text-2xl font-bold text-white">{statsNovedades.activas}</span>
             </div>
             <div className="p-4 space-y-2">
-              <MetricaLinea label="Resueltas hoy" valor={statsNovedades.resueltasHoy} color="text-green-600" />
-              <MetricaLinea label="En oficina" valor={statsNovedades.enOficina} color="text-amber-600" />
-              <MetricaLinea label="Escaladas" valor={statsNovedades.escaladas} color="text-red-600" />
+              <MetricaLinea
+                label="Resueltas hoy"
+                valor={statsNovedades.resueltasHoy}
+                color="text-green-600"
+              />
+              <MetricaLinea
+                label="En oficina"
+                valor={statsNovedades.enOficina}
+                color="text-amber-600"
+              />
+              <MetricaLinea
+                label="Escaladas"
+                valor={statsNovedades.escaladas}
+                color="text-red-600"
+              />
               <div className="border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
-                <MetricaLinea label="Tasa resolución" valor={`${statsNovedades.tasaResolucion}%`} color="text-indigo-600" bold />
+                <MetricaLinea
+                  label="Tasa resolución"
+                  valor={`${statsNovedades.tasaResolucion}%`}
+                  color="text-indigo-600"
+                  bold
+                />
               </div>
             </div>
           </div>
@@ -725,11 +901,28 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
               <span className="text-2xl font-bold text-white">{statsPedidos.procesadosHoy}</span>
             </div>
             <div className="p-4 space-y-2">
-              <MetricaLinea label="Pendientes" valor={statsPedidos.pendientes} color="text-amber-600" />
-              <MetricaLinea label="Chatea Pro" valor={statsPedidos.porOrigen.chatea_pro} color="text-blue-600" />
-              <MetricaLinea label="Shopify" valor={statsPedidos.porOrigen.shopify} color="text-purple-600" />
+              <MetricaLinea
+                label="Pendientes"
+                valor={statsPedidos.pendientes}
+                color="text-amber-600"
+              />
+              <MetricaLinea
+                label="Chatea Pro"
+                valor={statsPedidos.porOrigen.chatea_pro}
+                color="text-blue-600"
+              />
+              <MetricaLinea
+                label="Shopify"
+                valor={statsPedidos.porOrigen.shopify}
+                color="text-purple-600"
+              />
               <div className="border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
-                <MetricaLinea label="Tasa automática" valor={`${statsPedidos.tasaAutomatizacion || 92}%`} color="text-indigo-600" bold />
+                <MetricaLinea
+                  label="Tasa automática"
+                  valor={`${statsPedidos.tasaAutomatizacion || 92}%`}
+                  color="text-indigo-600"
+                  bold
+                />
               </div>
             </div>
           </div>
@@ -741,14 +934,33 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
                 <MessageSquare className="w-5 h-5" />
                 Comunicaciones
               </span>
-              <span className="text-2xl font-bold text-white">{metricas?.conversacionesActivas || 0}</span>
+              <span className="text-2xl font-bold text-white">
+                {metricas?.conversacionesActivas || 0}
+              </span>
             </div>
             <div className="p-4 space-y-2">
-              <MetricaLinea label="Chats activos" valor={metricas?.conversacionesActivas || 0} color="text-purple-600" />
-              <MetricaLinea label="Llamadas hoy" valor={getLlamadasPendientes().length} color="text-blue-600" />
-              <MetricaLinea label="Tiempo respuesta" valor={`${metricas?.tiempoRespuestaPromedio || 6}s`} color="text-green-600" />
+              <MetricaLinea
+                label="Chats activos"
+                valor={metricas?.conversacionesActivas || 0}
+                color="text-purple-600"
+              />
+              <MetricaLinea
+                label="Llamadas hoy"
+                valor={getLlamadasPendientes().length}
+                color="text-blue-600"
+              />
+              <MetricaLinea
+                label="Tiempo respuesta"
+                valor={`${metricas?.tiempoRespuestaPromedio || 6}s`}
+                color="text-green-600"
+              />
               <div className="border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
-                <MetricaLinea label="Satisfacción" valor={`${metricas?.satisfaccionCliente || 91}%`} color="text-indigo-600" bold />
+                <MetricaLinea
+                  label="Satisfacción"
+                  valor={`${metricas?.satisfaccionCliente || 91}%`}
+                  color="text-indigo-600"
+                  bold
+                />
               </div>
             </div>
           </div>
@@ -760,14 +972,33 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
                 <Target className="w-5 h-5" />
                 Tracking
               </span>
-              <span className="text-2xl font-bold text-white">{metricas?.guiasRastreadas || 0}</span>
+              <span className="text-2xl font-bold text-white">
+                {metricas?.guiasRastreadas || 0}
+              </span>
             </div>
             <div className="p-4 space-y-2">
-              <MetricaLinea label="Con novedad" valor={metricas?.guiasConNovedad || 0} color="text-amber-600" />
-              <MetricaLinea label="Críticas" valor={metricas?.guiasCriticas || 0} color="text-red-600" />
-              <MetricaLinea label="En tránsito" valor={Math.floor((metricas?.guiasRastreadas || 100) * 0.7)} color="text-blue-600" />
+              <MetricaLinea
+                label="Con novedad"
+                valor={metricas?.guiasConNovedad || 0}
+                color="text-amber-600"
+              />
+              <MetricaLinea
+                label="Críticas"
+                valor={metricas?.guiasCriticas || 0}
+                color="text-red-600"
+              />
+              <MetricaLinea
+                label="En tránsito"
+                valor={Math.floor((metricas?.guiasRastreadas || 100) * 0.7)}
+                color="text-blue-600"
+              />
               <div className="border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
-                <MetricaLinea label="Automatización" valor={`${metricas?.tasaAutomatizacion || 96}%`} color="text-indigo-600" bold />
+                <MetricaLinea
+                  label="Automatización"
+                  valor={`${metricas?.tasaAutomatizacion || 96}%`}
+                  color="text-indigo-600"
+                  bold
+                />
               </div>
             </div>
           </div>
@@ -802,7 +1033,9 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
               <div className="text-gray-500">Total Aprendizajes</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-pink-500 mb-1">{Math.floor(aprendizajes.length * 0.7)}</div>
+              <div className="text-4xl font-bold text-pink-500 mb-1">
+                {Math.floor(aprendizajes.length * 0.7)}
+              </div>
               <div className="text-gray-500">Aplicados</div>
             </div>
             <div className="text-center">
@@ -818,25 +1051,39 @@ export const CiudadAgentesTab: React.FC<CiudadAgentesTabProps> = ({ selectedCoun
           </div>
           <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-96 overflow-y-auto">
             {aprendizajes.slice(0, 10).map((aprendizaje, idx) => (
-              <div key={aprendizaje.id || idx} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+              <div
+                key={aprendizaje.id || idx}
+                className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+              >
                 <div className="flex items-start justify-between">
                   <div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      aprendizaje.tipo === 'experiencia' ? 'bg-blue-100 text-blue-700' :
-                      aprendizaje.tipo === 'patron' ? 'bg-purple-100 text-purple-700' :
-                      aprendizaje.tipo === 'optimizacion' ? 'bg-green-100 text-green-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        aprendizaje.tipo === 'experiencia'
+                          ? 'bg-blue-100 text-blue-700'
+                          : aprendizaje.tipo === 'patron'
+                            ? 'bg-purple-100 text-purple-700'
+                            : aprendizaje.tipo === 'optimizacion'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
                       {aprendizaje.tipo}
                     </span>
-                    <p className="text-gray-800 dark:text-white font-medium mt-1">{aprendizaje.descripcion}</p>
+                    <p className="text-gray-800 dark:text-white font-medium mt-1">
+                      {aprendizaje.descripcion}
+                    </p>
                     <p className="text-sm text-gray-500">{aprendizaje.categoria}</p>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded ${
-                    aprendizaje.impacto === 'alto' ? 'bg-red-100 text-red-700' :
-                    aprendizaje.impacto === 'medio' ? 'bg-amber-100 text-amber-700' :
-                    'bg-green-100 text-green-700'
-                  }`}>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded ${
+                      aprendizaje.impacto === 'alto'
+                        ? 'bg-red-100 text-red-700'
+                        : aprendizaje.impacto === 'medio'
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-green-100 text-green-700'
+                    }`}
+                  >
                     {aprendizaje.impacto}
                   </span>
                 </div>
@@ -926,7 +1173,7 @@ const MetricaLinea: React.FC<{
 
 const DistritoTarjeta: React.FC<{
   distrito: Distrito;
-  config: typeof DISTRITOS_CONFIG[0];
+  config: (typeof DISTRITOS_CONFIG)[0];
   expandido: boolean;
   onClick: () => void;
 }> = ({ distrito, config, expandido, onClick }) => (
@@ -938,11 +1185,15 @@ const DistritoTarjeta: React.FC<{
       <span className="text-3xl">{config.icono}</span>
       <div>
         <h3 className="font-bold text-gray-800 dark:text-white text-sm">{config.nombre}</h3>
-        <span className={`text-xs px-2 py-0.5 rounded-full ${
-          distrito.estado === 'operativo' ? 'bg-green-100 text-green-700' :
-          distrito.estado === 'degradado' ? 'bg-amber-100 text-amber-700' :
-          'bg-red-100 text-red-700'
-        }`}>
+        <span
+          className={`text-xs px-2 py-0.5 rounded-full ${
+            distrito.estado === 'operativo'
+              ? 'bg-green-100 text-green-700'
+              : distrito.estado === 'degradado'
+                ? 'bg-amber-100 text-amber-700'
+                : 'bg-red-100 text-red-700'
+          }`}
+        >
           {distrito.estado}
         </span>
       </div>
@@ -956,7 +1207,7 @@ const DistritoTarjeta: React.FC<{
 
 const DistritoCard: React.FC<{
   distrito: Distrito;
-  config: typeof DISTRITOS_CONFIG[0];
+  config: (typeof DISTRITOS_CONFIG)[0];
   expandido: boolean;
   paisSeleccionado: Pais;
   onToggle: () => void;
@@ -964,18 +1215,24 @@ const DistritoCard: React.FC<{
   const agentes = getAgentes(distrito.id, paisSeleccionado);
 
   return (
-    <div className={`${config.colorBg} rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all ${expandido ? 'ring-2 ring-indigo-500' : ''}`}>
+    <div
+      className={`${config.colorBg} rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all ${expandido ? 'ring-2 ring-indigo-500' : ''}`}
+    >
       <button
         onClick={onToggle}
         className="w-full p-4 text-left hover:bg-black/5 transition-colors"
       >
         <div className="flex items-start justify-between mb-3">
           <span className="text-4xl">{config.icono}</span>
-          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-            distrito.estado === 'operativo' ? 'bg-green-100 text-green-700' :
-            distrito.estado === 'degradado' ? 'bg-amber-100 text-amber-700' :
-            'bg-red-100 text-red-700'
-          }`}>
+          <span
+            className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+              distrito.estado === 'operativo'
+                ? 'bg-green-100 text-green-700'
+                : distrito.estado === 'degradado'
+                  ? 'bg-amber-100 text-amber-700'
+                  : 'bg-red-100 text-red-700'
+            }`}
+          >
             {distrito.estado}
           </span>
         </div>
@@ -996,7 +1253,9 @@ const DistritoCard: React.FC<{
 
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200/50 dark:border-gray-600/50">
           <span className="text-xs text-gray-500">Tasa: {distrito.tasaExitoHoy.toFixed(0)}%</span>
-          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandido ? 'rotate-180' : ''}`} />
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 transition-transform ${expandido ? 'rotate-180' : ''}`}
+          />
         </div>
       </button>
 
@@ -1011,7 +1270,10 @@ const DistritoCard: React.FC<{
               </h4>
               <div className="grid grid-cols-1 gap-1.5">
                 {config.caracteristicas.map((caracteristica, idx) => (
-                  <div key={idx} className="text-xs text-gray-600 dark:text-gray-300 bg-indigo-50 dark:bg-indigo-900/30 rounded px-2 py-1.5">
+                  <div
+                    key={idx}
+                    className="text-xs text-gray-600 dark:text-gray-300 bg-indigo-50 dark:bg-indigo-900/30 rounded px-2 py-1.5"
+                  >
                     {caracteristica}
                   </div>
                 ))}
@@ -1028,7 +1290,10 @@ const DistritoCard: React.FC<{
               </h4>
               <div className="grid grid-cols-2 gap-2">
                 {config.tareas.map((tarea, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300"
+                  >
                     <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0" />
                     <span>{tarea}</span>
                   </div>
@@ -1044,21 +1309,32 @@ const DistritoCard: React.FC<{
               Agentes del Distrito ({agentes.length})
             </h4>
             <div className="space-y-2 max-h-48 overflow-y-auto">
-              {agentes.slice(0, 5).map(agente => (
-                <div key={agente.id} className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-2 text-sm">
+              {agentes.slice(0, 5).map((agente) => (
+                <div
+                  key={agente.id}
+                  className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-2 text-sm"
+                >
                   <div className="flex items-center gap-2">
-                    <Bot className={`w-4 h-4 ${
-                      agente.estado === EstadoAgente.TRABAJANDO ? 'text-green-500' :
-                      agente.estado === EstadoAgente.ACTIVO ? 'text-blue-500' :
-                      'text-gray-400'
-                    }`} />
+                    <Bot
+                      className={`w-4 h-4 ${
+                        agente.estado === EstadoAgente.TRABAJANDO
+                          ? 'text-green-500'
+                          : agente.estado === EstadoAgente.ACTIVO
+                            ? 'text-blue-500'
+                            : 'text-gray-400'
+                      }`}
+                    />
                     <span className="text-gray-800 dark:text-white">{agente.nombre}</span>
                   </div>
-                  <span className={`text-xs ${
-                    agente.estado === EstadoAgente.TRABAJANDO ? 'text-green-600' :
-                    agente.estado === EstadoAgente.ACTIVO ? 'text-blue-600' :
-                    'text-gray-500'
-                  }`}>
+                  <span
+                    className={`text-xs ${
+                      agente.estado === EstadoAgente.TRABAJANDO
+                        ? 'text-green-600'
+                        : agente.estado === EstadoAgente.ACTIVO
+                          ? 'text-blue-600'
+                          : 'text-gray-500'
+                    }`}
+                  >
                     {agente.estado}
                   </span>
                 </div>
@@ -1082,24 +1358,36 @@ const AgenteCard: React.FC<{
   <button
     onClick={onClick}
     className={`w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg border p-4 text-left transition-all hover:shadow-xl ${
-      seleccionado ? 'border-indigo-500 ring-2 ring-indigo-200' : 'border-gray-200 dark:border-gray-700'
+      seleccionado
+        ? 'border-indigo-500 ring-2 ring-indigo-200'
+        : 'border-gray-200 dark:border-gray-700'
     }`}
   >
     <div className="flex items-start justify-between mb-3">
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-        agente.estado === EstadoAgente.TRABAJANDO ? 'bg-green-100 text-green-600' :
-        agente.estado === EstadoAgente.ACTIVO ? 'bg-blue-100 text-blue-600' :
-        agente.estado === EstadoAgente.PAUSADO ? 'bg-amber-100 text-amber-600' :
-        'bg-gray-100 text-gray-600'
-      }`}>
+      <div
+        className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+          agente.estado === EstadoAgente.TRABAJANDO
+            ? 'bg-green-100 text-green-600'
+            : agente.estado === EstadoAgente.ACTIVO
+              ? 'bg-blue-100 text-blue-600'
+              : agente.estado === EstadoAgente.PAUSADO
+                ? 'bg-amber-100 text-amber-600'
+                : 'bg-gray-100 text-gray-600'
+        }`}
+      >
         <Bot className="w-6 h-6" />
       </div>
-      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-        agente.estado === EstadoAgente.TRABAJANDO ? 'bg-green-100 text-green-700' :
-        agente.estado === EstadoAgente.ACTIVO ? 'bg-blue-100 text-blue-700' :
-        agente.estado === EstadoAgente.PAUSADO ? 'bg-amber-100 text-amber-700' :
-        'bg-gray-100 text-gray-700'
-      }`}>
+      <span
+        className={`px-2 py-0.5 rounded text-xs font-medium ${
+          agente.estado === EstadoAgente.TRABAJANDO
+            ? 'bg-green-100 text-green-700'
+            : agente.estado === EstadoAgente.ACTIVO
+              ? 'bg-blue-100 text-blue-700'
+              : agente.estado === EstadoAgente.PAUSADO
+                ? 'bg-amber-100 text-amber-700'
+                : 'bg-gray-100 text-gray-700'
+        }`}
+      >
         {agente.estado}
       </span>
     </div>
@@ -1113,7 +1401,9 @@ const AgenteCard: React.FC<{
         <div className="text-gray-500">Tareas</div>
       </div>
       <div className="bg-gray-50 dark:bg-gray-700 rounded p-2">
-        <div className="font-bold text-gray-800 dark:text-white">{agente.calificacionPromedio.toFixed(1)}</div>
+        <div className="font-bold text-gray-800 dark:text-white">
+          {agente.calificacionPromedio.toFixed(1)}
+        </div>
         <div className="text-gray-500">Puntuación</div>
       </div>
     </div>
@@ -1131,7 +1421,11 @@ const AgenteCard: React.FC<{
         <div className="flex justify-between text-sm">
           <span className="text-gray-500">País:</span>
           <span className="text-gray-800 dark:text-white">
-            {agente.pais === Pais.COLOMBIA ? 'Colombia' : agente.pais === Pais.CHILE ? 'Chile' : 'Ecuador'}
+            {agente.pais === Pais.COLOMBIA
+              ? 'Colombia'
+              : agente.pais === Pais.CHILE
+                ? 'Chile'
+                : 'Ecuador'}
           </span>
         </div>
       </div>

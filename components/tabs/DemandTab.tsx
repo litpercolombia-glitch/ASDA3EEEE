@@ -268,7 +268,10 @@ const DemandTab: React.FC<DemandTabProps> = ({ country }) => {
                     </h5>
                     <ul className="space-y-2">
                       {alert.recommendations.map((rec, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
+                        <li
+                          key={i}
+                          className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400"
+                        >
                           <Check className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
                           <span>{rec}</span>
                         </li>
@@ -307,13 +310,11 @@ const DemandTab: React.FC<DemandTabProps> = ({ country }) => {
         <div className="h-64 flex items-end gap-1 overflow-x-auto pb-2">
           {displayPredictions.map((pred, i) => {
             const height = (pred.predictedVolume / maxVolume) * 100;
-            const isWeekend = new Date(pred.date).getDay() === 0 || new Date(pred.date).getDay() === 6;
+            const isWeekend =
+              new Date(pred.date).getDay() === 0 || new Date(pred.date).getDay() === 6;
 
             return (
-              <div
-                key={pred.date}
-                className="flex-1 min-w-[20px] max-w-[40px] group relative"
-              >
+              <div key={pred.date} className="flex-1 min-w-[20px] max-w-[40px] group relative">
                 {/* Tooltip */}
                 <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
                   <div className="font-bold">{pred.dayOfWeek}</div>
@@ -438,7 +439,9 @@ const DemandTab: React.FC<DemandTabProps> = ({ country }) => {
           <div className="space-y-3">
             {forecast.estimatedBudget.breakdown.map((item) => (
               <div key={item.carrierId} className="flex items-center justify-between">
-                <span className="text-sm text-slate-600 dark:text-slate-400">{item.carrierName}</span>
+                <span className="text-sm text-slate-600 dark:text-slate-400">
+                  {item.carrierName}
+                </span>
                 <div className="text-right">
                   <span className="text-sm font-medium text-slate-800 dark:text-white">
                     {formatCurrency(country, item.amount)}
@@ -501,8 +504,8 @@ const DemandTab: React.FC<DemandTabProps> = ({ country }) => {
           </h4>
           <p className="text-sm text-purple-700 dark:text-purple-400">
             Nuestro modelo ML analiza tu historial de envíos (últimos 12 meses), detecta patrones
-            estacionales, considera eventos especiales y días festivos para generar predicciones
-            con niveles de confianza. Las predicciones mejoran con más datos históricos.
+            estacionales, considera eventos especiales y días festivos para generar predicciones con
+            niveles de confianza. Las predicciones mejoran con más datos históricos.
           </p>
         </div>
       </div>

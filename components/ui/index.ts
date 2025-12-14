@@ -11,7 +11,14 @@ export { Button } from './Button';
 export { Modal } from './Modal';
 export { SessionManager } from './SessionManager';
 export { DocumentAnalysisPanel } from './DocumentAnalysisPanel';
-export { LoadHistoryPanel, LoadHistoryButton, saveLoadEntry, getLoadEntries, deleteLoadEntry, toggleFavorite } from './LoadHistoryPanel';
+export {
+  LoadHistoryPanel,
+  LoadHistoryButton,
+  saveLoadEntry,
+  getLoadEntries,
+  deleteLoadEntry,
+  toggleFavorite,
+} from './LoadHistoryPanel';
 
 // Skeleton Loading Components
 export {
@@ -30,3 +37,27 @@ export {
   InlineLoader,
   PulseDots,
 } from './Skeleton';
+
+// ============================================
+// NUEVOS COMPONENTES - SISTEMA PRO
+// ============================================
+
+// Sistema de Fuentes de Datos
+export { DataSourceSelector, GuiaTimeline, DiscrepanciesPanel } from './DataSourceSelector';
+
+// Configurador de Excel (Protegido con contraseña)
+export { ExcelConfigurator } from './ExcelConfigurator';
+
+// Personalizador de Vista
+export {
+  QuickViewSelector,
+  DensitySelector,
+  ColumnSelector,
+  ColorSchemeSelector,
+  PresetSelector,
+  ViewCustomizerPanel,
+} from './ViewCustomizer';
+
+// Asistente IA Sidebar (Estilo Shopify)
+export { AISidebar } from './AISidebar';
+export type { AICommand } from './AISidebar';

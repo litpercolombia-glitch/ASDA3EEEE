@@ -161,22 +161,122 @@ const CATEGORIAS_CONSULTA: CategoriaConsulta[] = [
 
 // Datos de ejemplo
 const GUIAS_EJEMPLO: GuiaInfo[] = [
-  { id: '8001234567890', estado: 'EN REPARTO', transportadora: 'Interrapidísimo', ciudad: 'Bogotá', telefono: '3001234567', diasTransito: 2, nivelRiesgo: 'BAJO', ultimaActualizacion: '2024-12-08 10:30' },
-  { id: '8009876543210', estado: 'EN OFICINA', transportadora: 'Coordinadora', ciudad: 'Medellín', telefono: '3109876543', diasTransito: 4, nivelRiesgo: 'ALTO', ultimaActualizacion: '2024-12-06 15:45' },
-  { id: '9001122334455', estado: 'NOVEDAD', transportadora: 'Envía', ciudad: 'Cali', telefono: '3201122334', diasTransito: 3, nivelRiesgo: 'MEDIO', ultimaActualizacion: '2024-12-07 09:15' },
-  { id: '7005566778899', estado: 'EN TRÁNSITO', transportadora: 'Servientrega', ciudad: 'Barranquilla', telefono: '3155566778', diasTransito: 1, nivelRiesgo: 'BAJO', ultimaActualizacion: '2024-12-08 08:00' },
-  { id: '8002233445566', estado: 'DEVUELTO', transportadora: 'TCC', ciudad: 'Cartagena', telefono: '3182233445', diasTransito: 7, nivelRiesgo: 'CRITICO', ultimaActualizacion: '2024-12-01 14:20' },
-  { id: '9003344556677', estado: 'ENTREGADO', transportadora: 'Coordinadora', ciudad: 'Bogotá', telefono: '3193344556', diasTransito: 2, nivelRiesgo: 'BAJO', ultimaActualizacion: '2024-12-07 16:00' },
-  { id: '8004455667788', estado: 'EN REPARTO', transportadora: 'Interrapidísimo', ciudad: 'Cali', telefono: '3204455667', diasTransito: 3, nivelRiesgo: 'MEDIO', ultimaActualizacion: '2024-12-08 09:45' },
-  { id: '7006677889900', estado: 'NOVEDAD', transportadora: 'TCC', ciudad: 'Medellín', telefono: '3156677889', diasTransito: 5, nivelRiesgo: 'ALTO', ultimaActualizacion: '2024-12-05 11:30' },
+  {
+    id: '8001234567890',
+    estado: 'EN REPARTO',
+    transportadora: 'Interrapidísimo',
+    ciudad: 'Bogotá',
+    telefono: '3001234567',
+    diasTransito: 2,
+    nivelRiesgo: 'BAJO',
+    ultimaActualizacion: '2024-12-08 10:30',
+  },
+  {
+    id: '8009876543210',
+    estado: 'EN OFICINA',
+    transportadora: 'Coordinadora',
+    ciudad: 'Medellín',
+    telefono: '3109876543',
+    diasTransito: 4,
+    nivelRiesgo: 'ALTO',
+    ultimaActualizacion: '2024-12-06 15:45',
+  },
+  {
+    id: '9001122334455',
+    estado: 'NOVEDAD',
+    transportadora: 'Envía',
+    ciudad: 'Cali',
+    telefono: '3201122334',
+    diasTransito: 3,
+    nivelRiesgo: 'MEDIO',
+    ultimaActualizacion: '2024-12-07 09:15',
+  },
+  {
+    id: '7005566778899',
+    estado: 'EN TRÁNSITO',
+    transportadora: 'Servientrega',
+    ciudad: 'Barranquilla',
+    telefono: '3155566778',
+    diasTransito: 1,
+    nivelRiesgo: 'BAJO',
+    ultimaActualizacion: '2024-12-08 08:00',
+  },
+  {
+    id: '8002233445566',
+    estado: 'DEVUELTO',
+    transportadora: 'TCC',
+    ciudad: 'Cartagena',
+    telefono: '3182233445',
+    diasTransito: 7,
+    nivelRiesgo: 'CRITICO',
+    ultimaActualizacion: '2024-12-01 14:20',
+  },
+  {
+    id: '9003344556677',
+    estado: 'ENTREGADO',
+    transportadora: 'Coordinadora',
+    ciudad: 'Bogotá',
+    telefono: '3193344556',
+    diasTransito: 2,
+    nivelRiesgo: 'BAJO',
+    ultimaActualizacion: '2024-12-07 16:00',
+  },
+  {
+    id: '8004455667788',
+    estado: 'EN REPARTO',
+    transportadora: 'Interrapidísimo',
+    ciudad: 'Cali',
+    telefono: '3204455667',
+    diasTransito: 3,
+    nivelRiesgo: 'MEDIO',
+    ultimaActualizacion: '2024-12-08 09:45',
+  },
+  {
+    id: '7006677889900',
+    estado: 'NOVEDAD',
+    transportadora: 'TCC',
+    ciudad: 'Medellín',
+    telefono: '3156677889',
+    diasTransito: 5,
+    nivelRiesgo: 'ALTO',
+    ultimaActualizacion: '2024-12-05 11:30',
+  },
 ];
 
 // Estadísticas de transportadoras
 const TRANSPORTADORAS_STATS = [
-  { nombre: 'Coordinadora', guias: 4521, entregadas: 4298, retrasos: 156, tasaExito: 95.1, tiempoProm: 2.3 },
-  { nombre: 'Servientrega', guias: 3892, entregadas: 3543, retrasos: 234, tasaExito: 91.0, tiempoProm: 2.8 },
-  { nombre: 'Interrapidísimo', guias: 2987, entregadas: 2689, retrasos: 198, tasaExito: 90.0, tiempoProm: 3.1 },
-  { nombre: 'Envía', guias: 2156, entregadas: 1897, retrasos: 178, tasaExito: 88.0, tiempoProm: 3.5 },
+  {
+    nombre: 'Coordinadora',
+    guias: 4521,
+    entregadas: 4298,
+    retrasos: 156,
+    tasaExito: 95.1,
+    tiempoProm: 2.3,
+  },
+  {
+    nombre: 'Servientrega',
+    guias: 3892,
+    entregadas: 3543,
+    retrasos: 234,
+    tasaExito: 91.0,
+    tiempoProm: 2.8,
+  },
+  {
+    nombre: 'Interrapidísimo',
+    guias: 2987,
+    entregadas: 2689,
+    retrasos: 198,
+    tasaExito: 90.0,
+    tiempoProm: 3.1,
+  },
+  {
+    nombre: 'Envía',
+    guias: 2156,
+    entregadas: 1897,
+    retrasos: 178,
+    tasaExito: 88.0,
+    tiempoProm: 3.5,
+  },
   { nombre: 'TCC', guias: 1845, entregadas: 1567, retrasos: 189, tasaExito: 85.0, tiempoProm: 4.2 },
 ];
 
@@ -212,10 +312,34 @@ Estoy aquí para ayudarte con todo lo relacionado a tu logística. Puedo:
       timestamp: new Date(),
       tipo: 'texto',
       acciones: [
-        { id: 'guias-hoy', label: 'Ver guías de hoy', icon: '📦', comando: 'Muéstrame las guías de hoy', tipo: 'info' },
-        { id: 'resumen', label: 'Resumen del día', icon: '📊', comando: 'Dame el resumen del día', tipo: 'info' },
-        { id: 'novedades', label: 'Novedades activas', icon: '🚨', comando: 'Lista las novedades activas', tipo: 'info' },
-        { id: 'prediccion', label: 'Predicciones ML', icon: '🧠', comando: 'Muéstrame las predicciones de retraso', tipo: 'info' },
+        {
+          id: 'guias-hoy',
+          label: 'Ver guías de hoy',
+          icon: '📦',
+          comando: 'Muéstrame las guías de hoy',
+          tipo: 'info',
+        },
+        {
+          id: 'resumen',
+          label: 'Resumen del día',
+          icon: '📊',
+          comando: 'Dame el resumen del día',
+          tipo: 'info',
+        },
+        {
+          id: 'novedades',
+          label: 'Novedades activas',
+          icon: '🚨',
+          comando: 'Lista las novedades activas',
+          tipo: 'info',
+        },
+        {
+          id: 'prediccion',
+          label: 'Predicciones ML',
+          icon: '🧠',
+          comando: 'Muéstrame las predicciones de retraso',
+          tipo: 'info',
+        },
       ],
     };
     setMensajes([welcomeMessage]);
@@ -231,14 +355,22 @@ Estoy aquí para ayudarte con todo lo relacionado a tu logística. Puedo:
     const lowerMessage = userMessage.toLowerCase();
 
     // Simular delay de API
-    await new Promise(resolve => setTimeout(resolve, 600 + Math.random() * 800));
+    await new Promise((resolve) => setTimeout(resolve, 600 + Math.random() * 800));
 
     // ============ CONSULTAS DE GUÍAS ============
-    if (lowerMessage.includes('guía') || lowerMessage.includes('guias') || lowerMessage.includes('lista')) {
+    if (
+      lowerMessage.includes('guía') ||
+      lowerMessage.includes('guias') ||
+      lowerMessage.includes('lista')
+    ) {
       // Guías retrasadas
-      if (lowerMessage.includes('retrasad') || lowerMessage.includes('retraso') || lowerMessage.includes('demora')) {
-        const retrasadas = GUIAS_EJEMPLO.filter(g =>
-          g.diasTransito > 3 || g.nivelRiesgo === 'ALTO' || g.nivelRiesgo === 'CRITICO'
+      if (
+        lowerMessage.includes('retrasad') ||
+        lowerMessage.includes('retraso') ||
+        lowerMessage.includes('demora')
+      ) {
+        const retrasadas = GUIAS_EJEMPLO.filter(
+          (g) => g.diasTransito > 3 || g.nivelRiesgo === 'ALTO' || g.nivelRiesgo === 'CRITICO'
         );
         return {
           id: uuidv4(),
@@ -250,8 +382,20 @@ Estas guías necesitan atención prioritaria. Haz clic en cualquiera para ver de
           tipo: 'guias',
           datos: { guias: retrasadas, filtro: 'retrasadas' },
           acciones: [
-            { id: 'contactar-todos', label: 'Contactar todos los clientes', icon: '📞', comando: 'Contactar clientes de guías retrasadas', tipo: 'accion' },
-            { id: 'crear-tickets', label: 'Crear tickets masivos', icon: '🎫', comando: 'Crear tickets para guías retrasadas', tipo: 'accion' },
+            {
+              id: 'contactar-todos',
+              label: 'Contactar todos los clientes',
+              icon: '📞',
+              comando: 'Contactar clientes de guías retrasadas',
+              tipo: 'accion',
+            },
+            {
+              id: 'crear-tickets',
+              label: 'Crear tickets masivos',
+              icon: '🎫',
+              comando: 'Crear tickets para guías retrasadas',
+              tipo: 'accion',
+            },
           ],
           confianza: 0.95,
         };
@@ -259,7 +403,7 @@ Estas guías necesitan atención prioritaria. Haz clic en cualquiera para ver de
 
       // Guías en reparto
       if (lowerMessage.includes('reparto')) {
-        const enReparto = GUIAS_EJEMPLO.filter(g => g.estado === 'EN REPARTO');
+        const enReparto = GUIAS_EJEMPLO.filter((g) => g.estado === 'EN REPARTO');
         return {
           id: uuidv4(),
           rol: 'assistant',
@@ -270,7 +414,13 @@ Estas guías están en camino para entrega. El estado se actualiza cada 30 minut
           tipo: 'guias',
           datos: { guias: enReparto, filtro: 'en-reparto' },
           acciones: [
-            { id: 'notificar-clientes', label: 'Notificar clientes', icon: '📱', comando: 'Enviar notificación de reparto', tipo: 'accion' },
+            {
+              id: 'notificar-clientes',
+              label: 'Notificar clientes',
+              icon: '📱',
+              comando: 'Enviar notificación de reparto',
+              tipo: 'accion',
+            },
           ],
           confianza: 0.98,
         };
@@ -278,7 +428,7 @@ Estas guías están en camino para entrega. El estado se actualiza cada 30 minut
 
       // Guías en oficina
       if (lowerMessage.includes('oficina')) {
-        const enOficina = GUIAS_EJEMPLO.filter(g => g.estado === 'EN OFICINA');
+        const enOficina = GUIAS_EJEMPLO.filter((g) => g.estado === 'EN OFICINA');
         return {
           id: uuidv4(),
           rol: 'assistant',
@@ -291,8 +441,20 @@ Estas guías esperan ser reclamadas. Recuerda:
           tipo: 'guias',
           datos: { guias: enOficina, filtro: 'en-oficina' },
           acciones: [
-            { id: 'llamar-todos', label: 'Llamar a todos', icon: '📞', comando: 'Iniciar llamadas a clientes en oficina', tipo: 'accion' },
-            { id: 'enviar-plantilla', label: 'Enviar plantilla', icon: '📝', comando: 'Enviar plantilla de oficina', tipo: 'accion' },
+            {
+              id: 'llamar-todos',
+              label: 'Llamar a todos',
+              icon: '📞',
+              comando: 'Iniciar llamadas a clientes en oficina',
+              tipo: 'accion',
+            },
+            {
+              id: 'enviar-plantilla',
+              label: 'Enviar plantilla',
+              icon: '📝',
+              comando: 'Enviar plantilla de oficina',
+              tipo: 'accion',
+            },
           ],
           confianza: 0.97,
         };
@@ -306,19 +468,31 @@ Estas guías esperan ser reclamadas. Recuerda:
 
 | Estado | Cantidad | % |
 |--------|----------|---|
-| 🚚 En Reparto | ${GUIAS_EJEMPLO.filter(g => g.estado === 'EN REPARTO').length} | ${((GUIAS_EJEMPLO.filter(g => g.estado === 'EN REPARTO').length / GUIAS_EJEMPLO.length) * 100).toFixed(1)}% |
-| 📍 En Oficina | ${GUIAS_EJEMPLO.filter(g => g.estado === 'EN OFICINA').length} | ${((GUIAS_EJEMPLO.filter(g => g.estado === 'EN OFICINA').length / GUIAS_EJEMPLO.length) * 100).toFixed(1)}% |
-| 🚨 Con Novedad | ${GUIAS_EJEMPLO.filter(g => g.estado === 'NOVEDAD').length} | ${((GUIAS_EJEMPLO.filter(g => g.estado === 'NOVEDAD').length / GUIAS_EJEMPLO.length) * 100).toFixed(1)}% |
-| 🔄 En Tránsito | ${GUIAS_EJEMPLO.filter(g => g.estado === 'EN TRÁNSITO').length} | ${((GUIAS_EJEMPLO.filter(g => g.estado === 'EN TRÁNSITO').length / GUIAS_EJEMPLO.length) * 100).toFixed(1)}% |
-| ✅ Entregadas | ${GUIAS_EJEMPLO.filter(g => g.estado === 'ENTREGADO').length} | ${((GUIAS_EJEMPLO.filter(g => g.estado === 'ENTREGADO').length / GUIAS_EJEMPLO.length) * 100).toFixed(1)}% |
+| 🚚 En Reparto | ${GUIAS_EJEMPLO.filter((g) => g.estado === 'EN REPARTO').length} | ${((GUIAS_EJEMPLO.filter((g) => g.estado === 'EN REPARTO').length / GUIAS_EJEMPLO.length) * 100).toFixed(1)}% |
+| 📍 En Oficina | ${GUIAS_EJEMPLO.filter((g) => g.estado === 'EN OFICINA').length} | ${((GUIAS_EJEMPLO.filter((g) => g.estado === 'EN OFICINA').length / GUIAS_EJEMPLO.length) * 100).toFixed(1)}% |
+| 🚨 Con Novedad | ${GUIAS_EJEMPLO.filter((g) => g.estado === 'NOVEDAD').length} | ${((GUIAS_EJEMPLO.filter((g) => g.estado === 'NOVEDAD').length / GUIAS_EJEMPLO.length) * 100).toFixed(1)}% |
+| 🔄 En Tránsito | ${GUIAS_EJEMPLO.filter((g) => g.estado === 'EN TRÁNSITO').length} | ${((GUIAS_EJEMPLO.filter((g) => g.estado === 'EN TRÁNSITO').length / GUIAS_EJEMPLO.length) * 100).toFixed(1)}% |
+| ✅ Entregadas | ${GUIAS_EJEMPLO.filter((g) => g.estado === 'ENTREGADO').length} | ${((GUIAS_EJEMPLO.filter((g) => g.estado === 'ENTREGADO').length / GUIAS_EJEMPLO.length) * 100).toFixed(1)}% |
 
 Haz clic para ver detalles de cada guía:`,
         timestamp: new Date(),
         tipo: 'guias',
         datos: { guias: GUIAS_EJEMPLO, filtro: 'todas' },
         acciones: [
-          { id: 'ver-retrasadas', label: 'Ver retrasadas', icon: '⚠️', comando: 'Muéstrame las guías retrasadas', tipo: 'info' },
-          { id: 'exportar', label: 'Exportar Excel', icon: '📥', comando: 'Exportar listado a Excel', tipo: 'accion' },
+          {
+            id: 'ver-retrasadas',
+            label: 'Ver retrasadas',
+            icon: '⚠️',
+            comando: 'Muéstrame las guías retrasadas',
+            tipo: 'info',
+          },
+          {
+            id: 'exportar',
+            label: 'Exportar Excel',
+            icon: '📥',
+            comando: 'Exportar listado a Excel',
+            tipo: 'accion',
+          },
         ],
         confianza: 0.99,
       };
@@ -326,9 +500,14 @@ Haz clic para ver detalles de cada guía:`,
 
     // ============ CONSULTAS DE NOVEDADES ============
     if (lowerMessage.includes('novedad')) {
-      const novedades = GUIAS_EJEMPLO.filter(g => g.estado === 'NOVEDAD');
+      const novedades = GUIAS_EJEMPLO.filter((g) => g.estado === 'NOVEDAD');
 
-      if (lowerMessage.includes('cómo') || lowerMessage.includes('como') || lowerMessage.includes('resolver') || lowerMessage.includes('proceso')) {
+      if (
+        lowerMessage.includes('cómo') ||
+        lowerMessage.includes('como') ||
+        lowerMessage.includes('resolver') ||
+        lowerMessage.includes('proceso')
+      ) {
         return {
           id: uuidv4(),
           rol: 'assistant',
@@ -378,8 +557,20 @@ Haz clic para ver detalles de cada guía:`,
           timestamp: new Date(),
           tipo: 'texto',
           acciones: [
-            { id: 'ver-novedades', label: 'Ver novedades activas', icon: '🚨', comando: 'Lista las novedades activas', tipo: 'info' },
-            { id: 'ejemplo', label: 'Ver ejemplo práctico', icon: '💡', comando: 'Dame un ejemplo de resolución de novedad', tipo: 'info' },
+            {
+              id: 'ver-novedades',
+              label: 'Ver novedades activas',
+              icon: '🚨',
+              comando: 'Lista las novedades activas',
+              tipo: 'info',
+            },
+            {
+              id: 'ejemplo',
+              label: 'Ver ejemplo práctico',
+              icon: '💡',
+              comando: 'Dame un ejemplo de resolución de novedad',
+              tipo: 'info',
+            },
           ],
           confianza: 0.96,
         };
@@ -395,23 +586,42 @@ Estas novedades requieren gestión. Recuerda seguir el orden de la lista:`,
         tipo: 'guias',
         datos: { guias: novedades, filtro: 'novedades' },
         acciones: [
-          { id: 'proceso', label: 'Ver proceso', icon: '📋', comando: 'Cómo resolver una novedad', tipo: 'info' },
-          { id: 'resolver-todas', label: 'Resolver en lote', icon: '✅', comando: 'Resolver novedades en lote', tipo: 'accion' },
+          {
+            id: 'proceso',
+            label: 'Ver proceso',
+            icon: '📋',
+            comando: 'Cómo resolver una novedad',
+            tipo: 'info',
+          },
+          {
+            id: 'resolver-todas',
+            label: 'Resolver en lote',
+            icon: '✅',
+            comando: 'Resolver novedades en lote',
+            tipo: 'accion',
+          },
         ],
         confianza: 0.94,
       };
     }
 
     // ============ CONSULTAS DE ESTADÍSTICAS ============
-    if (lowerMessage.includes('resumen') || lowerMessage.includes('estadística') || lowerMessage.includes('métrica') || lowerMessage.includes('día')) {
+    if (
+      lowerMessage.includes('resumen') ||
+      lowerMessage.includes('estadística') ||
+      lowerMessage.includes('métrica') ||
+      lowerMessage.includes('día')
+    ) {
       const stats = {
         total: GUIAS_EJEMPLO.length,
-        entregadas: GUIAS_EJEMPLO.filter(g => g.estado === 'ENTREGADO').length,
-        enReparto: GUIAS_EJEMPLO.filter(g => g.estado === 'EN REPARTO').length,
-        enOficina: GUIAS_EJEMPLO.filter(g => g.estado === 'EN OFICINA').length,
-        novedades: GUIAS_EJEMPLO.filter(g => g.estado === 'NOVEDAD').length,
-        criticas: GUIAS_EJEMPLO.filter(g => g.nivelRiesgo === 'CRITICO').length,
-        promedioDias: (GUIAS_EJEMPLO.reduce((acc, g) => acc + g.diasTransito, 0) / GUIAS_EJEMPLO.length).toFixed(1),
+        entregadas: GUIAS_EJEMPLO.filter((g) => g.estado === 'ENTREGADO').length,
+        enReparto: GUIAS_EJEMPLO.filter((g) => g.estado === 'EN REPARTO').length,
+        enOficina: GUIAS_EJEMPLO.filter((g) => g.estado === 'EN OFICINA').length,
+        novedades: GUIAS_EJEMPLO.filter((g) => g.estado === 'NOVEDAD').length,
+        criticas: GUIAS_EJEMPLO.filter((g) => g.nivelRiesgo === 'CRITICO').length,
+        promedioDias: (
+          GUIAS_EJEMPLO.reduce((acc, g) => acc + g.diasTransito, 0) / GUIAS_EJEMPLO.length
+        ).toFixed(1),
       };
       const tasaEntrega = ((stats.entregadas / stats.total) * 100).toFixed(1);
 
@@ -439,18 +649,41 @@ ${stats.criticas > 0 ? `\n⚠️ **ALERTA:** Hay ${stats.criticas} guía(s) en e
         tipo: 'estadisticas',
         datos: stats,
         acciones: [
-          { id: 'ver-criticas', label: 'Ver críticas', icon: '🔴', comando: 'Muéstrame las guías críticas', tipo: 'info' },
-          { id: 'comparar', label: 'Comparar con ayer', icon: '📈', comando: 'Compara con el día anterior', tipo: 'info' },
-          { id: 'exportar', label: 'Generar reporte', icon: '📄', comando: 'Generar reporte del día', tipo: 'accion' },
+          {
+            id: 'ver-criticas',
+            label: 'Ver críticas',
+            icon: '🔴',
+            comando: 'Muéstrame las guías críticas',
+            tipo: 'info',
+          },
+          {
+            id: 'comparar',
+            label: 'Comparar con ayer',
+            icon: '📈',
+            comando: 'Compara con el día anterior',
+            tipo: 'info',
+          },
+          {
+            id: 'exportar',
+            label: 'Generar reporte',
+            icon: '📄',
+            comando: 'Generar reporte del día',
+            tipo: 'accion',
+          },
         ],
         confianza: 0.98,
       };
     }
 
     // ============ CONSULTAS DE TRANSPORTADORAS ============
-    if (lowerMessage.includes('transportadora') || lowerMessage.includes('mejor') || lowerMessage.includes('comparar') || lowerMessage.includes('ranking')) {
-      const mejor = TRANSPORTADORAS_STATS.reduce((a, b) => a.tasaExito > b.tasaExito ? a : b);
-      const peor = TRANSPORTADORAS_STATS.reduce((a, b) => a.tasaExito < b.tasaExito ? a : b);
+    if (
+      lowerMessage.includes('transportadora') ||
+      lowerMessage.includes('mejor') ||
+      lowerMessage.includes('comparar') ||
+      lowerMessage.includes('ranking')
+    ) {
+      const mejor = TRANSPORTADORAS_STATS.reduce((a, b) => (a.tasaExito > b.tasaExito ? a : b));
+      const peor = TRANSPORTADORAS_STATS.reduce((a, b) => (a.tasaExito < b.tasaExito ? a : b));
 
       return {
         id: uuidv4(),
@@ -474,15 +707,35 @@ ${stats.criticas > 0 ? `\n⚠️ **ALERTA:** Hay ${stats.criticas} guía(s) en e
         tipo: 'tabla',
         datos: { transportadoras: TRANSPORTADORAS_STATS },
         acciones: [
-          { id: 'detalles', label: 'Ver detalles', icon: '🔍', comando: `Dame detalles de ${mejor.nombre}`, tipo: 'info' },
-          { id: 'tendencia', label: 'Ver tendencia', icon: '📈', comando: 'Tendencia de transportadoras del mes', tipo: 'info' },
+          {
+            id: 'detalles',
+            label: 'Ver detalles',
+            icon: '🔍',
+            comando: `Dame detalles de ${mejor.nombre}`,
+            tipo: 'info',
+          },
+          {
+            id: 'tendencia',
+            label: 'Ver tendencia',
+            icon: '📈',
+            comando: 'Tendencia de transportadoras del mes',
+            tipo: 'info',
+          },
         ],
         confianza: 0.97,
       };
     }
 
     // ============ CONSULTAS DE ML ============
-    if (lowerMessage.includes('machine') || lowerMessage.includes('ml') || lowerMessage.includes('predicción') || lowerMessage.includes('prediccion') || lowerMessage.includes('patrón') || lowerMessage.includes('patron') || lowerMessage.includes('modelo')) {
+    if (
+      lowerMessage.includes('machine') ||
+      lowerMessage.includes('ml') ||
+      lowerMessage.includes('predicción') ||
+      lowerMessage.includes('prediccion') ||
+      lowerMessage.includes('patrón') ||
+      lowerMessage.includes('patron') ||
+      lowerMessage.includes('modelo')
+    ) {
       return {
         id: uuidv4(),
         rol: 'assistant',
@@ -516,16 +769,39 @@ ${stats.criticas > 0 ? `\n⚠️ **ALERTA:** Hay ${stats.criticas} guía(s) en e
         tipo: 'reporte',
         datos: { mlActivo: true },
         acciones: [
-          { id: 'resolver-patron', label: 'Resolver patrón crítico', icon: '🔴', comando: 'Resolver el patrón crítico', tipo: 'accion' },
-          { id: 'dashboard-ml', label: 'Dashboard ML', icon: '📊', comando: 'Abrir dashboard de ML', tipo: 'navegacion' },
-          { id: 'entrenar', label: 'Reentrenar modelos', icon: '🔄', comando: 'Reentrenar los modelos ML', tipo: 'accion' },
+          {
+            id: 'resolver-patron',
+            label: 'Resolver patrón crítico',
+            icon: '🔴',
+            comando: 'Resolver el patrón crítico',
+            tipo: 'accion',
+          },
+          {
+            id: 'dashboard-ml',
+            label: 'Dashboard ML',
+            icon: '📊',
+            comando: 'Abrir dashboard de ML',
+            tipo: 'navegacion',
+          },
+          {
+            id: 'entrenar',
+            label: 'Reentrenar modelos',
+            icon: '🔄',
+            comando: 'Reentrenar los modelos ML',
+            tipo: 'accion',
+          },
         ],
         confianza: 0.93,
       };
     }
 
     // ============ CONSULTAS DE PROCESOS ============
-    if (lowerMessage.includes('proceso') || lowerMessage.includes('flujo') || lowerMessage.includes('cómo') || lowerMessage.includes('como')) {
+    if (
+      lowerMessage.includes('proceso') ||
+      lowerMessage.includes('flujo') ||
+      lowerMessage.includes('cómo') ||
+      lowerMessage.includes('como')
+    ) {
       return {
         id: uuidv4(),
         rol: 'assistant',
@@ -545,9 +821,27 @@ Puedo explicarte paso a paso cualquiera de estos procesos con diagramas de flujo
         timestamp: new Date(),
         tipo: 'lista',
         acciones: [
-          { id: 'p01', label: 'P01: Seguimiento', icon: '📦', comando: 'Explícame el proceso de seguimiento de guías', tipo: 'info' },
-          { id: 'p02', label: 'P02: Novedades', icon: '🚨', comando: 'Explícame el proceso de novedades', tipo: 'info' },
-          { id: 'p04', label: 'P04: Chat en Vivo', icon: '💬', comando: 'Explícame el proceso de chat en vivo', tipo: 'info' },
+          {
+            id: 'p01',
+            label: 'P01: Seguimiento',
+            icon: '📦',
+            comando: 'Explícame el proceso de seguimiento de guías',
+            tipo: 'info',
+          },
+          {
+            id: 'p02',
+            label: 'P02: Novedades',
+            icon: '🚨',
+            comando: 'Explícame el proceso de novedades',
+            tipo: 'info',
+          },
+          {
+            id: 'p04',
+            label: 'P04: Chat en Vivo',
+            icon: '💬',
+            comando: 'Explícame el proceso de chat en vivo',
+            tipo: 'info',
+          },
         ],
         confianza: 0.99,
       };
@@ -597,9 +891,27 @@ Haz clic en cualquier plantilla para copiarla al portapapeles.`,
         timestamp: new Date(),
         tipo: 'lista',
         acciones: [
-          { id: 'copiar-reparto', label: 'Copiar REPARTO', icon: '📋', comando: 'Copiar plantilla de reparto', tipo: 'accion' },
-          { id: 'copiar-oficina', label: 'Copiar OFICINA', icon: '📋', comando: 'Copiar plantilla de oficina', tipo: 'accion' },
-          { id: 'copiar-novedad', label: 'Copiar NOVEDAD', icon: '📋', comando: 'Copiar plantilla de novedad', tipo: 'accion' },
+          {
+            id: 'copiar-reparto',
+            label: 'Copiar REPARTO',
+            icon: '📋',
+            comando: 'Copiar plantilla de reparto',
+            tipo: 'accion',
+          },
+          {
+            id: 'copiar-oficina',
+            label: 'Copiar OFICINA',
+            icon: '📋',
+            comando: 'Copiar plantilla de oficina',
+            tipo: 'accion',
+          },
+          {
+            id: 'copiar-novedad',
+            label: 'Copiar NOVEDAD',
+            icon: '📋',
+            comando: 'Copiar plantilla de novedad',
+            tipo: 'accion',
+          },
         ],
         confianza: 0.99,
       };
@@ -630,9 +942,27 @@ Haz clic en cualquier plantilla para copiarla al portapapeles.`,
       tipo: 'texto',
       acciones: [
         { id: 'guias', label: 'Ver guías', icon: '📦', comando: 'Lista las guías', tipo: 'info' },
-        { id: 'resumen', label: 'Resumen', icon: '📊', comando: 'Dame el resumen del día', tipo: 'info' },
-        { id: 'novedades', label: 'Novedades', icon: '🚨', comando: 'Lista las novedades', tipo: 'info' },
-        { id: 'ml', label: 'Sistema ML', icon: '🧠', comando: 'Estado del sistema ML', tipo: 'info' },
+        {
+          id: 'resumen',
+          label: 'Resumen',
+          icon: '📊',
+          comando: 'Dame el resumen del día',
+          tipo: 'info',
+        },
+        {
+          id: 'novedades',
+          label: 'Novedades',
+          icon: '🚨',
+          comando: 'Lista las novedades',
+          tipo: 'info',
+        },
+        {
+          id: 'ml',
+          label: 'Sistema ML',
+          icon: '🧠',
+          comando: 'Estado del sistema ML',
+          tipo: 'info',
+        },
       ],
       confianza: 0.85,
     };
@@ -650,21 +980,25 @@ Haz clic en cualquier plantilla para copiarla al portapapeles.`,
       timestamp: new Date(),
     };
 
-    setMensajes(prev => [...prev, userMessage]);
+    setMensajes((prev) => [...prev, userMessage]);
     setInputValue('');
     setMostrarSugerencias(false);
     setIsLoading(true);
 
     try {
       const response = await generateResponse(texto);
-      setMensajes(prev => [...prev, response]);
+      setMensajes((prev) => [...prev, response]);
     } catch (error) {
-      setMensajes(prev => [...prev, {
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: '❌ Lo siento, hubo un error procesando tu solicitud. Por favor intenta de nuevo.',
-        timestamp: new Date(),
-      }]);
+      setMensajes((prev) => [
+        ...prev,
+        {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido:
+            '❌ Lo siento, hubo un error procesando tu solicitud. Por favor intenta de nuevo.',
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -673,16 +1007,30 @@ Haz clic en cualquier plantilla para copiarla al portapapeles.`,
   // Limpiar chat
   const handleClear = () => {
     if (confirm('¿Limpiar el historial de conversación?')) {
-      setMensajes([{
-        id: uuidv4(),
-        rol: 'assistant',
-        contenido: '¡Conversación reiniciada! 🔄 ¿En qué puedo ayudarte?',
-        timestamp: new Date(),
-        acciones: [
-          { id: 'guias', label: 'Ver guías', icon: '📦', comando: 'Lista las guías', tipo: 'info' },
-          { id: 'resumen', label: 'Resumen', icon: '📊', comando: 'Dame el resumen del día', tipo: 'info' },
-        ],
-      }]);
+      setMensajes([
+        {
+          id: uuidv4(),
+          rol: 'assistant',
+          contenido: '¡Conversación reiniciada! 🔄 ¿En qué puedo ayudarte?',
+          timestamp: new Date(),
+          acciones: [
+            {
+              id: 'guias',
+              label: 'Ver guías',
+              icon: '📦',
+              comando: 'Lista las guías',
+              tipo: 'info',
+            },
+            {
+              id: 'resumen',
+              label: 'Resumen',
+              icon: '📊',
+              comando: 'Dame el resumen del día',
+              tipo: 'info',
+            },
+          ],
+        },
+      ]);
       setMostrarSugerencias(true);
     }
   };
@@ -699,10 +1047,10 @@ Haz clic en cualquier plantilla para copiarla al portapapeles.`,
     const estadoColors: Record<string, string> = {
       'EN REPARTO': 'bg-blue-100 text-blue-700',
       'EN OFICINA': 'bg-orange-100 text-orange-700',
-      'NOVEDAD': 'bg-red-100 text-red-700',
+      NOVEDAD: 'bg-red-100 text-red-700',
       'EN TRÁNSITO': 'bg-cyan-100 text-cyan-700',
-      'ENTREGADO': 'bg-green-100 text-green-700',
-      'DEVUELTO': 'bg-gray-100 text-gray-700',
+      ENTREGADO: 'bg-green-100 text-green-700',
+      DEVUELTO: 'bg-gray-100 text-gray-700',
     };
 
     return (
@@ -719,7 +1067,9 @@ Haz clic en cualquier plantilla para copiarla al portapapeles.`,
               {guia.transportadora}
             </p>
           </div>
-          <span className={`px-2 py-1 rounded-lg text-xs font-bold ${estadoColors[guia.estado] || 'bg-gray-100 text-gray-700'}`}>
+          <span
+            className={`px-2 py-1 rounded-lg text-xs font-bold ${estadoColors[guia.estado] || 'bg-gray-100 text-gray-700'}`}
+          >
             {guia.estado}
           </span>
         </div>
@@ -740,7 +1090,10 @@ Haz clic en cualquier plantilla para copiarla al portapapeles.`,
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                window.open(`https://wa.me/57${guia.telefono}?text=Hola! Le escribo de Litper sobre su pedido con guía ${guia.id}.`, '_blank');
+                window.open(
+                  `https://wa.me/57${guia.telefono}?text=Hola! Le escribo de Litper sobre su pedido con guía ${guia.id}.`,
+                  '_blank'
+                );
               }}
               className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs font-medium hover:bg-green-600 transition-colors"
             >
@@ -776,7 +1129,10 @@ Haz clic en cualquier plantilla para copiarla al portapapeles.`,
           <div className="max-w-[85%] bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl rounded-br-sm px-4 py-3 shadow-lg">
             <p className="text-sm">{mensaje.contenido}</p>
             <p className="text-xs text-white/60 mt-1 text-right">
-              {new Date(mensaje.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+              {new Date(mensaje.timestamp).toLocaleTimeString('es-CO', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
             </p>
           </div>
         </div>
@@ -790,7 +1146,9 @@ Haz clic en cualquier plantilla para copiarla al portapapeles.`,
             <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
               <Bot className="w-4 h-4 text-white" />
             </div>
-            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">Asistente LITPER</span>
+            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+              Asistente LITPER
+            </span>
             {mensaje.confianza && (
               <span className="text-xs text-gray-400 ml-auto">
                 {(mensaje.confianza * 100).toFixed(0)}% confianza
@@ -814,7 +1172,7 @@ Haz clic en cualquier plantilla para copiarla al portapapeles.`,
             <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
               <p className="text-xs text-gray-400 mb-2">Acciones sugeridas:</p>
               <div className="flex flex-wrap gap-2">
-                {mensaje.acciones.map(accion => (
+                {mensaje.acciones.map((accion) => (
                   <button
                     key={accion.id}
                     onClick={() => handleSend(accion.comando)}
@@ -822,8 +1180,8 @@ Haz clic en cualquier plantilla para copiarla al portapapeles.`,
                       accion.tipo === 'accion'
                         ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300'
                         : accion.tipo === 'navegacion'
-                        ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'
+                          ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'
                     }`}
                   >
                     <span>{accion.icon}</span>
@@ -835,7 +1193,10 @@ Haz clic en cualquier plantilla para copiarla al portapapeles.`,
           )}
 
           <p className="text-xs text-gray-400 mt-2 text-right">
-            {new Date(mensaje.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+            {new Date(mensaje.timestamp).toLocaleTimeString('es-CO', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
           </p>
         </div>
       </div>
@@ -854,7 +1215,9 @@ Haz clic en cualquier plantilla para copiarla al portapapeles.`,
             <h2 className="text-xl font-bold">Asistente IA LITPER</h2>
             <p className="text-xs text-indigo-200 flex items-center gap-2">
               <span className="flex items-center gap-1">
-                <span className={`w-2 h-2 rounded-full ${mlActivo ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+                <span
+                  className={`w-2 h-2 rounded-full ${mlActivo ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}
+                />
                 ML {mlActivo ? 'Activo' : 'Inactivo'}
               </span>
               <span>•</span>
@@ -888,9 +1251,11 @@ Haz clic en cualquier plantilla para copiarla al portapapeles.`,
       {/* Categorías de consulta */}
       {mostrarSugerencias && (
         <div className="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-100 dark:border-indigo-800">
-          <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-2">CONSULTAS RÁPIDAS:</p>
+          <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-2">
+            CONSULTAS RÁPIDAS:
+          </p>
           <div className="flex flex-wrap gap-2">
-            {CATEGORIAS_CONSULTA.map(cat => (
+            {CATEGORIAS_CONSULTA.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => {
@@ -911,15 +1276,17 @@ Haz clic en cualquier plantilla para copiarla al portapapeles.`,
           {/* Ejemplos de la categoría seleccionada */}
           {categoriaSeleccionada && (
             <div className="mt-2 flex flex-wrap gap-2">
-              {CATEGORIAS_CONSULTA.find(c => c.id === categoriaSeleccionada)?.ejemplos.map((ejemplo, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleSend(ejemplo)}
-                  className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors"
-                >
-                  "{ejemplo}"
-                </button>
-              ))}
+              {CATEGORIAS_CONSULTA.find((c) => c.id === categoriaSeleccionada)?.ejemplos.map(
+                (ejemplo, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSend(ejemplo)}
+                    className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors"
+                  >
+                    "{ejemplo}"
+                  </button>
+                )
+              )}
             </div>
           )}
         </div>
@@ -948,7 +1315,11 @@ Haz clic en cualquier plantilla para copiarla al portapapeles.`,
             onClick={() => setMostrarSugerencias(!mostrarSugerencias)}
             className="p-2 text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
           >
-            {mostrarSugerencias ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            {mostrarSugerencias ? (
+              <ChevronUp className="w-5 h-5" />
+            ) : (
+              <ChevronDown className="w-5 h-5" />
+            )}
           </button>
 
           <input

@@ -28,7 +28,7 @@ import {
   DISTRITOS_CONFIG,
   Aprendizaje,
   PatronDetectado,
-  Optimizacion
+  Optimizacion,
 } from '../types/agents';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -70,14 +70,14 @@ class CiudadDeAgentes {
       estadoPorPais: {
         [Pais.COLOMBIA]: this.crearEstadoPais(Pais.COLOMBIA),
         [Pais.CHILE]: this.crearEstadoPais(Pais.CHILE),
-        [Pais.ECUADOR]: this.crearEstadoPais(Pais.ECUADOR)
+        [Pais.ECUADOR]: this.crearEstadoPais(Pais.ECUADOR),
       },
       distritos,
       metricas: this.crearMetricasIniciales(Pais.COLOMBIA),
       alertasActivas: [],
       aprendizajesTotales: 0,
       iniciadoEn: new Date(),
-      ultimaActualizacion: new Date()
+      ultimaActualizacion: new Date(),
     };
 
     this.guardarEstado(estadoInicial);
@@ -85,7 +85,7 @@ class CiudadDeAgentes {
   }
 
   private crearDistritosIniciales(): Distrito[] {
-    return DISTRITOS_CONFIG.map(config => ({
+    return DISTRITOS_CONFIG.map((config) => ({
       id: config.id,
       nombre: config.nombre,
       descripcion: config.descripcion,
@@ -98,7 +98,7 @@ class CiudadDeAgentes {
       tareasHoy: 0,
       tareasCompletadasHoy: 0,
       tasaExitoHoy: 100,
-      tiempoPromedioHoy: 0
+      tiempoPromedioHoy: 0,
     }));
   }
 
@@ -127,14 +127,19 @@ class CiudadDeAgentes {
         creadoEn: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
         ultimaActividad: new Date(Date.now() - Math.random() * 60 * 60 * 1000),
         sistemaPrompt: this.getSistemaPromptPorTipo(tipoAgente),
-        parametros: {}
+        parametros: {},
       });
     }
 
     return agentes;
   }
 
-  private generarNombreAgente(distritoId: DistritoId, tipo: TipoAgente, pais: Pais, numero: number): string {
+  private generarNombreAgente(
+    distritoId: DistritoId,
+    tipo: TipoAgente,
+    pais: Pais,
+    numero: number
+  ): string {
     const prefijos: Record<DistritoId, string> = {
       [DistritoId.TRACKING]: 'Rastreador',
       [DistritoId.ORDERS]: 'Procesador',
@@ -142,13 +147,13 @@ class CiudadDeAgentes {
       [DistritoId.COMMUNICATIONS]: 'Comunicador',
       [DistritoId.QUALITY]: 'Supervisor',
       [DistritoId.INTELLIGENCE]: 'Analista',
-      [DistritoId.AUTOMATION]: 'Optimizador'
+      [DistritoId.AUTOMATION]: 'Optimizador',
     };
 
     const paisSufijo: Record<Pais, string> = {
       [Pais.COLOMBIA]: 'CO',
       [Pais.CHILE]: 'CL',
-      [Pais.ECUADOR]: 'EC'
+      [Pais.ECUADOR]: 'EC',
     };
 
     return `${prefijos[distritoId]}_${paisSufijo[pais]}_${numero.toString().padStart(2, '0')}`;
@@ -162,23 +167,30 @@ class CiudadDeAgentes {
       [DistritoId.COMMUNICATIONS]: 'atencion_multicanal',
       [DistritoId.QUALITY]: 'control_calidad',
       [DistritoId.INTELLIGENCE]: 'analisis_patrones',
-      [DistritoId.AUTOMATION]: 'optimizacion_procesos'
+      [DistritoId.AUTOMATION]: 'optimizacion_procesos',
     };
     return especialidades[distritoId];
   }
 
   private getSistemaPromptPorTipo(tipo: TipoAgente): string {
     const prompts: Record<TipoAgente, string> = {
-      [TipoAgente.PROCESADOR]: 'Agente procesador experto en ejecución de tareas operativas con precisión y eficiencia.',
-      [TipoAgente.ANALISTA]: 'Agente analista experto en análisis de datos, detección de patrones y generación de insights.',
-      [TipoAgente.CALIDAD]: 'Agente de calidad riguroso que revisa y valida el trabajo de otros agentes.',
-      [TipoAgente.OPTIMIZADOR]: 'Agente optimizador experto en mejora continua y eficiencia de procesos.',
-      [TipoAgente.ENTRENADOR]: 'Agente entrenador que documenta procesos y capacita a otros agentes.',
+      [TipoAgente.PROCESADOR]:
+        'Agente procesador experto en ejecución de tareas operativas con precisión y eficiencia.',
+      [TipoAgente.ANALISTA]:
+        'Agente analista experto en análisis de datos, detección de patrones y generación de insights.',
+      [TipoAgente.CALIDAD]:
+        'Agente de calidad riguroso que revisa y valida el trabajo de otros agentes.',
+      [TipoAgente.OPTIMIZADOR]:
+        'Agente optimizador experto en mejora continua y eficiencia de procesos.',
+      [TipoAgente.ENTRENADOR]:
+        'Agente entrenador que documenta procesos y capacita a otros agentes.',
       [TipoAgente.CREADOR]: 'Agente creador que diseña y configura nuevos agentes especializados.',
       [TipoAgente.COORDINADOR]: 'Agente coordinador que orquesta tareas entre múltiples agentes.',
-      [TipoAgente.SOLUCIONADOR]: 'Agente solucionador experto en resolver novedades y problemas de entrega.',
+      [TipoAgente.SOLUCIONADOR]:
+        'Agente solucionador experto en resolver novedades y problemas de entrega.',
       [TipoAgente.COMUNICADOR]: 'Agente comunicador experto en atención al cliente multicanal.',
-      [TipoAgente.RASTREADOR]: 'Agente rastreador especializado en seguimiento y validación de guías.'
+      [TipoAgente.RASTREADOR]:
+        'Agente rastreador especializado en seguimiento y validación de guías.',
     };
     return prompts[tipo];
   }
@@ -191,7 +203,7 @@ class CiudadDeAgentes {
       guiasActivas: Math.floor(Math.random() * 1000) + 500,
       novedadesActivas: Math.floor(Math.random() * 20) + 5,
       conversacionesActivas: Math.floor(Math.random() * 30) + 10,
-      metricas: this.crearMetricasIniciales(pais)
+      metricas: this.crearMetricasIniciales(pais),
     };
   }
 
@@ -216,7 +228,7 @@ class CiudadDeAgentes {
       pedidosProcesadosHoy: Math.floor(Math.random() * 300) + 100,
       pedidosPendientes: Math.floor(Math.random() * 30) + 10,
       tasaAutomatizacion: parseFloat((Math.random() * 5 + 92).toFixed(1)),
-      satisfaccionCliente: parseFloat((Math.random() * 10 + 85).toFixed(1))
+      satisfaccionCliente: parseFloat((Math.random() * 10 + 85).toFixed(1)),
     };
   }
 
@@ -229,7 +241,7 @@ class CiudadDeAgentes {
   }
 
   getDistrito(id: DistritoId): Distrito | undefined {
-    return this.estado.distritos.find(d => d.id === id);
+    return this.estado.distritos.find((d) => d.id === id);
   }
 
   getDistritos(): Distrito[] {
@@ -239,14 +251,14 @@ class CiudadDeAgentes {
   getAgentes(distritoId?: DistritoId, pais?: Pais): Agente[] {
     let agentes: Agente[] = [];
 
-    this.estado.distritos.forEach(distrito => {
+    this.estado.distritos.forEach((distrito) => {
       if (!distritoId || distrito.id === distritoId) {
         agentes = [...agentes, ...distrito.agentes];
       }
     });
 
     if (pais) {
-      agentes = agentes.filter(a => a.pais === pais);
+      agentes = agentes.filter((a) => a.pais === pais);
     }
 
     return agentes;
@@ -254,7 +266,7 @@ class CiudadDeAgentes {
 
   getAgente(id: string): Agente | undefined {
     for (const distrito of this.estado.distritos) {
-      const agente = distrito.agentes.find(a => a.id === id);
+      const agente = distrito.agentes.find((a) => a.id === id);
       if (agente) return agente;
     }
     return undefined;
@@ -273,7 +285,7 @@ class CiudadDeAgentes {
 
   getAlertas(pais?: Pais): AlertaCiudad[] {
     if (pais) {
-      return this.estado.alertasActivas.filter(a => a.pais === pais);
+      return this.estado.alertasActivas.filter((a) => a.pais === pais);
     }
     return this.estado.alertasActivas;
   }
@@ -292,29 +304,33 @@ class CiudadDeAgentes {
 
   getEstadisticasGenerales() {
     const totalAgentes = this.getAgentes().length;
-    const agentesActivos = this.getAgentes().filter(a =>
-      a.estado === EstadoAgente.ACTIVO || a.estado === EstadoAgente.TRABAJANDO
+    const agentesActivos = this.getAgentes().filter(
+      (a) => a.estado === EstadoAgente.ACTIVO || a.estado === EstadoAgente.TRABAJANDO
     ).length;
 
     const tareasTotal = this.estado.distritos.reduce((sum, d) => sum + d.tareasHoy, 0);
-    const tareasCompletadas = this.estado.distritos.reduce((sum, d) => sum + d.tareasCompletadasHoy, 0);
+    const tareasCompletadas = this.estado.distritos.reduce(
+      (sum, d) => sum + d.tareasCompletadasHoy,
+      0
+    );
 
     return {
       agentesTotales: totalAgentes,
       agentesActivos,
-      agentesTrabajando: this.getAgentes().filter(a => a.estado === EstadoAgente.TRABAJANDO).length,
-      distritosOperativos: this.estado.distritos.filter(d => d.estado === 'operativo').length,
+      agentesTrabajando: this.getAgentes().filter((a) => a.estado === EstadoAgente.TRABAJANDO)
+        .length,
+      distritosOperativos: this.estado.distritos.filter((d) => d.estado === 'operativo').length,
       distritosTotal: this.estado.distritos.length,
       tareasHoy: tareasTotal,
       tareasCompletadas,
-      tasaExito: tareasTotal > 0 ? (tareasCompletadas / tareasTotal * 100).toFixed(1) : '100',
-      alertasActivas: this.estado.alertasActivas.filter(a => a.activa).length,
+      tasaExito: tareasTotal > 0 ? ((tareasCompletadas / tareasTotal) * 100).toFixed(1) : '100',
+      alertasActivas: this.estado.alertasActivas.filter((a) => a.activa).length,
       aprendizajes: this.aprendizajes.length,
       paises: {
         colombia: this.estado.estadoPorPais[Pais.COLOMBIA],
         chile: this.estado.estadoPorPais[Pais.CHILE],
-        ecuador: this.estado.estadoPorPais[Pais.ECUADOR]
-      }
+        ecuador: this.estado.estadoPorPais[Pais.ECUADOR],
+      },
     };
   }
 
@@ -323,7 +339,7 @@ class CiudadDeAgentes {
     if (!agente) return null;
 
     const total = agente.tareasCompletadas + agente.tareasFallidas;
-    const tasaExito = total > 0 ? (agente.tareasCompletadas / total * 100) : 100;
+    const tasaExito = total > 0 ? (agente.tareasCompletadas / total) * 100 : 100;
 
     return {
       nombre: agente.nombre,
@@ -334,7 +350,7 @@ class CiudadDeAgentes {
       tasaExito,
       calificacion: agente.calificacionPromedio,
       experiencia: Math.floor(agente.tareasCompletadas / 10),
-      tiempoPromedioRespuesta: agente.tiempoPromedioTarea
+      tiempoPromedioRespuesta: agente.tiempoPromedioTarea,
     };
   }
 
@@ -348,7 +364,7 @@ class CiudadDeAgentes {
       comando,
       parametros: { pais },
       estado: 'analizando',
-      recibidoEn: new Date()
+      recibidoEn: new Date(),
     };
 
     try {
@@ -364,7 +380,6 @@ class CiudadDeAgentes {
       comandoMCP.estado = 'completado';
       comandoMCP.resultado = this.formatearResultados(resultados, analisis.plan);
       comandoMCP.completadoEn = new Date();
-
     } catch (error) {
       comandoMCP.estado = 'error';
       comandoMCP.error = error instanceof Error ? error.message : 'Error desconocido';
@@ -373,19 +388,22 @@ class CiudadDeAgentes {
     return comandoMCP;
   }
 
-  private async analizarComando(comando: string, pais?: Pais): Promise<{
+  private async analizarComando(
+    comando: string,
+    pais?: Pais
+  ): Promise<{
     entendimiento: string;
     plan: PlanEjecucion;
   }> {
     const estadoResumen = {
-      distritos: this.estado.distritos.map(d => ({
+      distritos: this.estado.distritos.map((d) => ({
         id: d.id,
         nombre: d.nombre,
         estado: d.estado,
         agentes: d.agentes.length,
-        alertas: d.alertasActivas
+        alertas: d.alertasActivas,
       })),
-      metricas: this.getMetricas(pais)
+      metricas: this.getMetricas(pais),
     };
 
     const prompt = `
@@ -442,18 +460,20 @@ Analiza el comando y genera un plan de ejecución. Responde en JSON con este for
         distritoPrincipal: DistritoId.INTELLIGENCE,
         distritosSecundarios: [],
         requiereValidacion: false,
-        pasos: [{
-          orden: 1,
-          descripcion: 'Procesar consulta',
-          distritoId: DistritoId.INTELLIGENCE,
-          tipoAgente: TipoAgente.ANALISTA,
-          datos: { comando },
-          paralelo: false,
-          critico: false
-        }],
+        pasos: [
+          {
+            orden: 1,
+            descripcion: 'Procesar consulta',
+            distritoId: DistritoId.INTELLIGENCE,
+            tipoAgente: TipoAgente.ANALISTA,
+            datos: { comando },
+            paralelo: false,
+            critico: false,
+          },
+        ],
         tiempoEstimado: 5,
-        riesgos: []
-      }
+        riesgos: [],
+      },
     };
   }
 
@@ -476,22 +496,22 @@ Analiza el comando y genera un plan de ejecución. Responde en JSON con este for
     const inicio = Date.now();
 
     // Simular ejecución del paso
-    await new Promise(resolve => setTimeout(resolve, Math.random() * 500 + 100));
+    await new Promise((resolve) => setTimeout(resolve, Math.random() * 500 + 100));
 
     return {
       estado: 'exitoso',
       datos: {
         paso: paso.orden,
         descripcion: paso.descripcion,
-        distrito: paso.distritoId
+        distrito: paso.distritoId,
       },
       tiempoProcesamiento: (Date.now() - inicio) / 1000,
-      agenteId: `AGENT_${paso.distritoId.toUpperCase()}_001`
+      agenteId: `AGENT_${paso.distritoId.toUpperCase()}_001`,
     };
   }
 
   private formatearResultados(resultados: TareaResultado[], plan: PlanEjecucion): string {
-    const exitosos = resultados.filter(r => r.estado === 'exitoso').length;
+    const exitosos = resultados.filter((r) => r.estado === 'exitoso').length;
     const total = resultados.length;
 
     return `${plan.resumen}
@@ -508,7 +528,7 @@ Tiempo total: ${resultados.reduce((sum, r) => sum + r.tiempoProcesamiento, 0).to
     const nuevaTarea: Tarea = {
       ...tarea,
       id: `TASK_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      creadaEn: new Date()
+      creadaEn: new Date(),
     };
 
     this.colaTareas.push(nuevaTarea);
@@ -518,7 +538,7 @@ Tiempo total: ${resultados.reduce((sum, r) => sum + r.tiempoProcesamiento, 0).to
   }
 
   async procesarTarea(tareaId: string): Promise<TareaResultado | null> {
-    const tarea = this.colaTareas.find(t => t.id === tareaId);
+    const tarea = this.colaTareas.find((t) => t.id === tareaId);
     if (!tarea) return null;
 
     tarea.estado = EstadoTarea.EN_PROGRESO;
@@ -528,13 +548,13 @@ Tiempo total: ${resultados.reduce((sum, r) => sum + r.tiempoProcesamiento, 0).to
 
     try {
       // Simular procesamiento
-      await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 500));
+      await new Promise((resolve) => setTimeout(resolve, Math.random() * 1000 + 500));
 
       const resultado: TareaResultado = {
         estado: 'exitoso',
         datos: { procesoCompletado: true },
         tiempoProcesamiento: (Date.now() - inicio) / 1000,
-        agenteId: tarea.agenteAsignado || 'AUTO_ASSIGNED'
+        agenteId: tarea.agenteAsignado || 'AUTO_ASSIGNED',
       };
 
       tarea.estado = EstadoTarea.COMPLETADA;
@@ -551,7 +571,7 @@ Tiempo total: ${resultados.reduce((sum, r) => sum + r.tiempoProcesamiento, 0).to
         descripcion: `Tarea completada: ${tarea.descripcion}`,
         datos: resultado.datos,
         impacto: 'bajo',
-        origenPais: tarea.pais
+        origenPais: tarea.pais,
       });
 
       return resultado;
@@ -562,7 +582,7 @@ Tiempo total: ${resultados.reduce((sum, r) => sum + r.tiempoProcesamiento, 0).to
         datos: {},
         mensaje: error instanceof Error ? error.message : 'Error',
         tiempoProcesamiento: (Date.now() - inicio) / 1000,
-        agenteId: tarea.agenteAsignado || 'AUTO_ASSIGNED'
+        agenteId: tarea.agenteAsignado || 'AUTO_ASSIGNED',
       };
     }
   }
@@ -598,7 +618,7 @@ Tiempo total: ${resultados.reduce((sum, r) => sum + r.tiempoProcesamiento, 0).to
       creadoEn: new Date(),
       ultimaActividad: new Date(),
       sistemaPrompt: this.getSistemaPromptPorTipo(config.tipo),
-      parametros: {}
+      parametros: {},
     };
 
     distrito.agentes.push(nuevoAgente);
@@ -631,7 +651,12 @@ Tiempo total: ${resultados.reduce((sum, r) => sum + r.tiempoProcesamiento, 0).to
   // APRENDIZAJE
   // ═══════════════════════════════════════════════════════════════════════════
 
-  registrarAprendizaje(datos: Omit<Aprendizaje, 'id' | 'aplicaciones' | 'tasaExito' | 'validado' | 'activo' | 'creadoEn'>): Aprendizaje {
+  registrarAprendizaje(
+    datos: Omit<
+      Aprendizaje,
+      'id' | 'aplicaciones' | 'tasaExito' | 'validado' | 'activo' | 'creadoEn'
+    >
+  ): Aprendizaje {
     const aprendizaje: Aprendizaje = {
       ...datos,
       id: `LEARN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -639,7 +664,7 @@ Tiempo total: ${resultados.reduce((sum, r) => sum + r.tiempoProcesamiento, 0).to
       tasaExito: 0,
       validado: false,
       activo: true,
-      creadoEn: new Date()
+      creadoEn: new Date(),
     };
 
     this.aprendizajes.push(aprendizaje);
@@ -656,7 +681,7 @@ Tiempo total: ${resultados.reduce((sum, r) => sum + r.tiempoProcesamiento, 0).to
     const nuevoPatron: PatronDetectado = {
       ...patron,
       id: `PATTERN_${Date.now()}`,
-      detectadoEn: new Date()
+      detectadoEn: new Date(),
     };
 
     this.patronesDetectados.push(nuevoPatron);
@@ -667,14 +692,16 @@ Tiempo total: ${resultados.reduce((sum, r) => sum + r.tiempoProcesamiento, 0).to
   // ALERTAS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  crearAlerta(datos: Omit<AlertaCiudad, 'id' | 'creadaEn' | 'activa' | 'leida' | 'resuelta'>): AlertaCiudad {
+  crearAlerta(
+    datos: Omit<AlertaCiudad, 'id' | 'creadaEn' | 'activa' | 'leida' | 'resuelta'>
+  ): AlertaCiudad {
     const alerta: AlertaCiudad = {
       ...datos,
       id: `ALERT_${Date.now()}`,
       activa: true,
       leida: false,
       resuelta: false,
-      creadaEn: new Date()
+      creadaEn: new Date(),
     };
 
     this.estado.alertasActivas.push(alerta);
@@ -684,7 +711,7 @@ Tiempo total: ${resultados.reduce((sum, r) => sum + r.tiempoProcesamiento, 0).to
   }
 
   resolverAlerta(alertaId: string): boolean {
-    const alerta = this.estado.alertasActivas.find(a => a.id === alertaId);
+    const alerta = this.estado.alertasActivas.find((a) => a.id === alertaId);
     if (!alerta) return false;
 
     alerta.activa = false;
@@ -699,7 +726,11 @@ Tiempo total: ${resultados.reduce((sum, r) => sum + r.tiempoProcesamiento, 0).to
   // MÉTRICAS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  private actualizarMetricasDistrito(distritoId: DistritoId, tipo: 'tareas' | 'completadas' | 'fallidas', cantidad: number) {
+  private actualizarMetricasDistrito(
+    distritoId: DistritoId,
+    tipo: 'tareas' | 'completadas' | 'fallidas',
+    cantidad: number
+  ) {
     const distrito = this.getDistrito(distritoId);
     if (!distrito) return;
 
@@ -709,14 +740,12 @@ Tiempo total: ${resultados.reduce((sum, r) => sum + r.tiempoProcesamiento, 0).to
         break;
       case 'completadas':
         distrito.tareasCompletadasHoy += cantidad;
-        distrito.tasaExitoHoy = distrito.tareasHoy > 0
-          ? (distrito.tareasCompletadasHoy / distrito.tareasHoy * 100)
-          : 100;
+        distrito.tasaExitoHoy =
+          distrito.tareasHoy > 0 ? (distrito.tareasCompletadasHoy / distrito.tareasHoy) * 100 : 100;
         break;
       case 'fallidas':
-        distrito.tasaExitoHoy = distrito.tareasHoy > 0
-          ? (distrito.tareasCompletadasHoy / distrito.tareasHoy * 100)
-          : 100;
+        distrito.tasaExitoHoy =
+          distrito.tareasHoy > 0 ? (distrito.tareasCompletadasHoy / distrito.tareasHoy) * 100 : 100;
         break;
     }
 
@@ -729,12 +758,12 @@ Tiempo total: ${resultados.reduce((sum, r) => sum + r.tiempoProcesamiento, 0).to
 
     estadoPais.metricas = {
       ...estadoPais.metricas,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     this.estado.metricas = {
       ...this.estado.metricas,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     this.estado.ultimaActualizacion = new Date();
@@ -813,7 +842,8 @@ export const ciudadAgentes = new CiudadDeAgentes();
 export const getEstadoCiudad = () => ciudadAgentes.getEstado();
 export const getDistritos = () => ciudadAgentes.getDistritos();
 export const getDistrito = (id: DistritoId) => ciudadAgentes.getDistrito(id);
-export const getAgentes = (distritoId?: DistritoId, pais?: Pais) => ciudadAgentes.getAgentes(distritoId, pais);
+export const getAgentes = (distritoId?: DistritoId, pais?: Pais) =>
+  ciudadAgentes.getAgentes(distritoId, pais);
 export const getAgente = (id: string) => ciudadAgentes.getAgente(id);
 export const getMetricas = (pais?: Pais) => ciudadAgentes.getMetricas(pais);
 export const getEstadoPais = (pais: Pais) => ciudadAgentes.getEstadoPais(pais);
@@ -823,18 +853,25 @@ export const getPatrones = () => ciudadAgentes.getPatrones();
 export const getEstadisticasGenerales = () => ciudadAgentes.getEstadisticasGenerales();
 export const getEstadisticasAgente = (id: string) => ciudadAgentes.getEstadisticasAgente(id);
 
-export const ejecutarComandoMCP = (comando: string, pais?: Pais) => ciudadAgentes.ejecutarComando(comando, pais);
-export const asignarTarea = (tarea: Omit<Tarea, 'id' | 'creadaEn'>) => ciudadAgentes.asignarTarea(tarea);
+export const ejecutarComandoMCP = (comando: string, pais?: Pais) =>
+  ciudadAgentes.ejecutarComando(comando, pais);
+export const asignarTarea = (tarea: Omit<Tarea, 'id' | 'creadaEn'>) =>
+  ciudadAgentes.asignarTarea(tarea);
 export const procesarTarea = (id: string) => ciudadAgentes.procesarTarea(id);
 
-export const crearAgente = (config: Parameters<typeof ciudadAgentes.crearAgente>[0]) => ciudadAgentes.crearAgente(config);
+export const crearAgente = (config: Parameters<typeof ciudadAgentes.crearAgente>[0]) =>
+  ciudadAgentes.crearAgente(config);
 export const pausarAgente = (id: string) => ciudadAgentes.pausarAgente(id);
 export const activarAgente = (id: string) => ciudadAgentes.activarAgente(id);
 
-export const registrarAprendizaje = (datos: Parameters<typeof ciudadAgentes.registrarAprendizaje>[0]) => ciudadAgentes.registrarAprendizaje(datos);
-export const detectarPatron = (patron: Parameters<typeof ciudadAgentes.detectarPatron>[0]) => ciudadAgentes.detectarPatron(patron);
+export const registrarAprendizaje = (
+  datos: Parameters<typeof ciudadAgentes.registrarAprendizaje>[0]
+) => ciudadAgentes.registrarAprendizaje(datos);
+export const detectarPatron = (patron: Parameters<typeof ciudadAgentes.detectarPatron>[0]) =>
+  ciudadAgentes.detectarPatron(patron);
 
-export const crearAlerta = (datos: Parameters<typeof ciudadAgentes.crearAlerta>[0]) => ciudadAgentes.crearAlerta(datos);
+export const crearAlerta = (datos: Parameters<typeof ciudadAgentes.crearAlerta>[0]) =>
+  ciudadAgentes.crearAlerta(datos);
 export const resolverAlerta = (id: string) => ciudadAgentes.resolverAlerta(id);
 
 export const resetearCiudad = () => ciudadAgentes.resetear();

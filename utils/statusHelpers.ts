@@ -33,7 +33,8 @@ export const parseDate = (dateStr: string | Date | undefined): Date => {
   const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(.*)$/);
   if (dmyMatch) {
     const [, day, month, year, timePart] = dmyMatch;
-    let hours = 0, minutes = 0;
+    let hours = 0,
+      minutes = 0;
 
     // Check if there's a time component
     const timeMatch = timePart.match(/(\d{1,2}):(\d{2})/);
@@ -42,20 +43,15 @@ export const parseDate = (dateStr: string | Date | undefined): Date => {
       minutes = parseInt(timeMatch[2], 10);
     }
 
-    return new Date(
-      parseInt(year, 10),
-      parseInt(month, 10) - 1,
-      parseInt(day, 10),
-      hours,
-      minutes
-    );
+    return new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10), hours, minutes);
   }
 
   // Try YYYY-MM-DD format
   const ymdMatch = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})(.*)$/);
   if (ymdMatch) {
     const [, year, month, day, timePart] = ymdMatch;
-    let hours = 0, minutes = 0;
+    let hours = 0,
+      minutes = 0;
 
     const timeMatch = timePart.match(/(\d{1,2}):(\d{2})/);
     if (timeMatch) {
@@ -63,13 +59,7 @@ export const parseDate = (dateStr: string | Date | undefined): Date => {
       minutes = parseInt(timeMatch[2], 10);
     }
 
-    return new Date(
-      parseInt(year, 10),
-      parseInt(month, 10) - 1,
-      parseInt(day, 10),
-      hours,
-      minutes
-    );
+    return new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10), hours, minutes);
   }
 
   // Fallback to epoch (beginning of time)
@@ -77,15 +67,18 @@ export const parseDate = (dateStr: string | Date | undefined): Date => {
 };
 
 // Status configuration for UI
-export const STATUS_CONFIG: Record<NormalizedStatus, {
-  label: string;
-  icon: string;
-  color: string;
-  bgColor: string;
-  borderColor: string;
-  semaforoColor: string;
-  priority: number;
-}> = {
+export const STATUS_CONFIG: Record<
+  NormalizedStatus,
+  {
+    label: string;
+    icon: string;
+    color: string;
+    bgColor: string;
+    borderColor: string;
+    semaforoColor: string;
+    priority: number;
+  }
+> = {
   ENTREGADO: {
     label: 'Entregado',
     icon: '✅',
@@ -93,7 +86,7 @@ export const STATUS_CONFIG: Record<NormalizedStatus, {
     bgColor: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
     borderColor: 'border-green-500',
     semaforoColor: '🟢',
-    priority: 5
+    priority: 5,
   },
   EN_REPARTO: {
     label: 'En Reparto',
@@ -102,7 +95,7 @@ export const STATUS_CONFIG: Record<NormalizedStatus, {
     bgColor: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
     borderColor: 'border-blue-500',
     semaforoColor: '🟡',
-    priority: 3
+    priority: 3,
   },
   EN_TRANSITO: {
     label: 'En Tránsito',
@@ -111,7 +104,7 @@ export const STATUS_CONFIG: Record<NormalizedStatus, {
     bgColor: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
     borderColor: 'border-indigo-500',
     semaforoColor: '🟡',
-    priority: 3
+    priority: 3,
   },
   EN_OFICINA: {
     label: 'En Oficina',
@@ -120,7 +113,7 @@ export const STATUS_CONFIG: Record<NormalizedStatus, {
     bgColor: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
     borderColor: 'border-orange-500',
     semaforoColor: '🟠',
-    priority: 2
+    priority: 2,
   },
   NOVEDAD: {
     label: 'Novedad',
@@ -129,7 +122,7 @@ export const STATUS_CONFIG: Record<NormalizedStatus, {
     bgColor: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
     borderColor: 'border-red-500',
     semaforoColor: '🔴',
-    priority: 1
+    priority: 1,
   },
   PENDIENTE: {
     label: 'Pendiente',
@@ -138,7 +131,7 @@ export const STATUS_CONFIG: Record<NormalizedStatus, {
     bgColor: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
     borderColor: 'border-gray-500',
     semaforoColor: '⚪',
-    priority: 4
+    priority: 4,
   },
   DESCONOCIDO: {
     label: 'Desconocido',
@@ -147,22 +140,22 @@ export const STATUS_CONFIG: Record<NormalizedStatus, {
     bgColor: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400',
     borderColor: 'border-slate-500',
     semaforoColor: '⚪',
-    priority: 6
-  }
+    priority: 6,
+  },
 };
 
 // Status mapping for normalization
 const STATUS_MAP: Record<string, NormalizedStatus> = {
   // Entregado
-  'ENTREGADO': 'ENTREGADO',
-  'DELIVERED': 'ENTREGADO',
+  ENTREGADO: 'ENTREGADO',
+  DELIVERED: 'ENTREGADO',
   'ENTREGA EXITOSA': 'ENTREGADO',
-  'RECOGIDO': 'ENTREGADO',
-  'ENTREGADA': 'ENTREGADO',
+  RECOGIDO: 'ENTREGADO',
+  ENTREGADA: 'ENTREGADO',
 
   // En reparto
   'EN REPARTO': 'EN_REPARTO',
-  'REPARTO': 'EN_REPARTO',
+  REPARTO: 'EN_REPARTO',
   'OUT FOR DELIVERY': 'EN_REPARTO',
   'MENSAJERO ASIGNADO': 'EN_REPARTO',
   'ASIGNADO A MENSAJERO': 'EN_REPARTO',
@@ -173,43 +166,43 @@ const STATUS_MAP: Record<string, NormalizedStatus> = {
   'EN OFICINA': 'EN_OFICINA',
   'DISPONIBLE EN OFICINA': 'EN_OFICINA',
   'RECLAMAR EN OFICINA': 'EN_OFICINA',
-  'BODEGA': 'EN_OFICINA',
-  'RETENCION': 'EN_OFICINA',
-  'RETENCIÓN': 'EN_OFICINA',
-  'ALMACENADO': 'EN_OFICINA',
+  BODEGA: 'EN_OFICINA',
+  RETENCION: 'EN_OFICINA',
+  RETENCIÓN: 'EN_OFICINA',
+  ALMACENADO: 'EN_OFICINA',
   'DISPONIBLE PARA RETIRO': 'EN_OFICINA',
 
   // En tránsito
   'EN TRANSITO': 'EN_TRANSITO',
   'EN CAMINO': 'EN_TRANSITO',
   'IN TRANSIT': 'EN_TRANSITO',
-  'DESPACHADO': 'EN_TRANSITO',
-  'VIAJANDO': 'EN_TRANSITO',
+  DESPACHADO: 'EN_TRANSITO',
+  VIAJANDO: 'EN_TRANSITO',
   'EN RUTA': 'EN_TRANSITO',
   'CENTRO LOGISTICO': 'EN_TRANSITO',
   'EN CENTRO LOGÍSTICO': 'EN_TRANSITO',
   'RECIBIDO EN CENTRO': 'EN_TRANSITO',
 
   // Novedades
-  'NOVEDAD': 'NOVEDAD',
-  'DEVOLUCION': 'NOVEDAD',
-  'DEVOLUCIÓN': 'NOVEDAD',
-  'RECHAZADO': 'NOVEDAD',
+  NOVEDAD: 'NOVEDAD',
+  DEVOLUCION: 'NOVEDAD',
+  DEVOLUCIÓN: 'NOVEDAD',
+  RECHAZADO: 'NOVEDAD',
   'NO ENTREGADO': 'NOVEDAD',
   'DIRECCION ERRADA': 'NOVEDAD',
   'DIRECCIÓN ERRÓNEA': 'NOVEDAD',
   'NO SE ENCONTRO': 'NOVEDAD',
-  'CERRADO': 'NOVEDAD',
-  'FALLIDO': 'NOVEDAD',
-  'RETORNO': 'NOVEDAD',
+  CERRADO: 'NOVEDAD',
+  FALLIDO: 'NOVEDAD',
+  RETORNO: 'NOVEDAD',
   'NO CONTESTA': 'NOVEDAD',
   'NO RECIBE': 'NOVEDAD',
 
   // Pendiente
-  'PENDIENTE': 'PENDIENTE',
-  'CREADO': 'PENDIENTE',
-  'RECIBIDO': 'PENDIENTE',
-  'REGISTRADO': 'PENDIENTE',
+  PENDIENTE: 'PENDIENTE',
+  CREADO: 'PENDIENTE',
+  RECIBIDO: 'PENDIENTE',
+  REGISTRADO: 'PENDIENTE',
 };
 
 /**
@@ -233,9 +226,22 @@ export const normalizeStatus = (rawStatus: string): NormalizedStatus => {
   // Additional heuristics
   if (status.includes('ENTREG')) return 'ENTREGADO';
   if (status.includes('OFICINA')) return 'EN_OFICINA';
-  if (status.includes('NOVEDAD') || status.includes('FALL') || status.includes('RECHAZ') || status.includes('DEVOL')) return 'NOVEDAD';
-  if (status.includes('TRANSIT') || status.includes('CAMINO') || status.includes('VIAJA') || status.includes('RUTA')) return 'EN_TRANSITO';
-  if (status.includes('REPARTO') || status.includes('MENSAJERO') || status.includes('DISTRIBU')) return 'EN_REPARTO';
+  if (
+    status.includes('NOVEDAD') ||
+    status.includes('FALL') ||
+    status.includes('RECHAZ') ||
+    status.includes('DEVOL')
+  )
+    return 'NOVEDAD';
+  if (
+    status.includes('TRANSIT') ||
+    status.includes('CAMINO') ||
+    status.includes('VIAJA') ||
+    status.includes('RUTA')
+  )
+    return 'EN_TRANSITO';
+  if (status.includes('REPARTO') || status.includes('MENSAJERO') || status.includes('DISTRIBU'))
+    return 'EN_REPARTO';
 
   return 'DESCONOCIDO';
 };
@@ -297,13 +303,20 @@ export const getActualStatus = (guia: Shipment): NormalizedStatus => {
  */
 export const normalizedToShipmentStatus = (normalized: NormalizedStatus): ShipmentStatus => {
   switch (normalized) {
-    case 'ENTREGADO': return ShipmentStatus.DELIVERED;
-    case 'EN_REPARTO': return ShipmentStatus.IN_TRANSIT;
-    case 'EN_TRANSITO': return ShipmentStatus.IN_TRANSIT;
-    case 'EN_OFICINA': return ShipmentStatus.IN_OFFICE;
-    case 'NOVEDAD': return ShipmentStatus.ISSUE;
-    case 'PENDIENTE': return ShipmentStatus.PENDING;
-    default: return ShipmentStatus.PENDING;
+    case 'ENTREGADO':
+      return ShipmentStatus.DELIVERED;
+    case 'EN_REPARTO':
+      return ShipmentStatus.IN_TRANSIT;
+    case 'EN_TRANSITO':
+      return ShipmentStatus.IN_TRANSIT;
+    case 'EN_OFICINA':
+      return ShipmentStatus.IN_OFFICE;
+    case 'NOVEDAD':
+      return ShipmentStatus.ISSUE;
+    case 'PENDIENTE':
+      return ShipmentStatus.PENDING;
+    default:
+      return ShipmentStatus.PENDING;
   }
 };
 
@@ -335,12 +348,15 @@ export const getSemaforoColor = (guia: Shipment): SemaforoColor => {
  * Groups shipments by their semaphore color
  */
 export const groupBySemaforo = (shipments: Shipment[]): Record<SemaforoColor, Shipment[]> => {
-  return shipments.reduce((acc, shipment) => {
-    const color = getSemaforoColor(shipment);
-    if (!acc[color]) acc[color] = [];
-    acc[color].push(shipment);
-    return acc;
-  }, { green: [], yellow: [], orange: [], red: [] } as Record<SemaforoColor, Shipment[]>);
+  return shipments.reduce(
+    (acc, shipment) => {
+      const color = getSemaforoColor(shipment);
+      if (!acc[color]) acc[color] = [];
+      acc[color].push(shipment);
+      return acc;
+    },
+    { green: [], yellow: [], orange: [], red: [] } as Record<SemaforoColor, Shipment[]>
+  );
 };
 
 /**

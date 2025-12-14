@@ -69,9 +69,7 @@ const LoadSummaryView: React.FC<LoadSummaryViewProps> = ({
   };
 
   const successRate =
-    stats.total > 0
-      ? Math.round(((stats.total - stats.errorsCount) / stats.total) * 100)
-      : 100;
+    stats.total > 0 ? Math.round(((stats.total - stats.errorsCount) / stats.total) * 100) : 100;
 
   // Group by carrier
   const byCarrier = Object.values(CarrierName).reduce(
@@ -388,9 +386,7 @@ const LoadSummaryView: React.FC<LoadSummaryViewProps> = ({
               <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full mb-4">
                 <CheckCircle className="w-8 h-8 text-green-500" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                Sin Errores
-              </h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Sin Errores</h3>
               <p className="text-gray-500 dark:text-gray-400">
                 Todas las guías se procesaron correctamente en esta carga
               </p>

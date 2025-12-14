@@ -91,7 +91,12 @@ const DISTRITOS: Distrito[] = [
     gradiente: 'from-red-500 to-orange-600',
     procesos: ['P02: Novedades', 'P03: Reclamo en Oficina'],
     stats: { tareas: 320, resueltas: 285, pendientes: 35, eficiencia: 89.1 },
-    capacidades: ['Resolver novedades', 'Gestionar reclamos', 'Escalar casos', 'Coordinar entregas'],
+    capacidades: [
+      'Resolver novedades',
+      'Gestionar reclamos',
+      'Escalar casos',
+      'Coordinar entregas',
+    ],
     estado: 'procesando',
   },
   {
@@ -103,7 +108,12 @@ const DISTRITOS: Distrito[] = [
     gradiente: 'from-purple-500 to-pink-600',
     procesos: ['P04: Chat en Vivo'],
     stats: { tareas: 2100, resueltas: 1950, pendientes: 150, eficiencia: 92.9 },
-    capacidades: ['Responder chats', 'Enviar plantillas', 'Gestionar tableros', 'Automatizar respuestas'],
+    capacidades: [
+      'Responder chats',
+      'Enviar plantillas',
+      'Gestionar tableros',
+      'Automatizar respuestas',
+    ],
     estado: 'activo',
   },
   {
@@ -115,7 +125,12 @@ const DISTRITOS: Distrito[] = [
     gradiente: 'from-teal-500 to-green-600',
     procesos: ['Gestión de Garantías'],
     stats: { tareas: 180, resueltas: 165, pendientes: 15, eficiencia: 91.7 },
-    capacidades: ['Verificar entregas', 'Procesar garantías', 'Validar evidencias', 'Auditar procesos'],
+    capacidades: [
+      'Verificar entregas',
+      'Procesar garantías',
+      'Validar evidencias',
+      'Auditar procesos',
+    ],
     estado: 'activo',
   },
   {
@@ -139,7 +154,12 @@ const DISTRITOS: Distrito[] = [
     gradiente: 'from-gray-500 to-slate-600',
     procesos: ['Workflows Automáticos'],
     stats: { tareas: 560, resueltas: 540, pendientes: 20, eficiencia: 96.4 },
-    capacidades: ['Ejecutar flujos', 'Programar tareas', 'Integrar sistemas', 'Monitorear procesos'],
+    capacidades: [
+      'Ejecutar flujos',
+      'Programar tareas',
+      'Integrar sistemas',
+      'Monitorear procesos',
+    ],
     estado: 'activo',
   },
 ];
@@ -203,24 +223,29 @@ export const DistritosIATab: React.FC<DistritosIATabProps> = ({ selectedCountry 
               <div className="flex items-center gap-3 mb-2">
                 <Building2 className="w-10 h-10 text-purple-400" />
                 <div>
-                  <h1 className="text-3xl lg:text-4xl font-bold">
-                    🌆 Ciudad de Agentes IA
-                  </h1>
+                  <h1 className="text-3xl lg:text-4xl font-bold">🌆 Ciudad de Agentes IA</h1>
                   <p className="text-purple-200 text-lg">Sistema de Distritos Inteligentes</p>
                 </div>
               </div>
               <p className="text-purple-100 mt-4 max-w-2xl">
-                Cada distrito tiene su propio asistente IA especializado. Haz clic en cualquier distrito
-                para abrir su centro de control con chat inteligente, gestión de tareas y análisis en tiempo real.
+                Cada distrito tiene su propio asistente IA especializado. Haz clic en cualquier
+                distrito para abrir su centro de control con chat inteligente, gestión de tareas y
+                análisis en tiempo real.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3">
               {/* Estado ML */}
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-xl ${
-                mlActivo ? 'bg-green-500/20 border border-green-400/30' : 'bg-red-500/20 border border-red-400/30'
-              }`}>
-                <div className={`w-2 h-2 rounded-full ${mlActivo ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+              <div
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl ${
+                  mlActivo
+                    ? 'bg-green-500/20 border border-green-400/30'
+                    : 'bg-red-500/20 border border-red-400/30'
+                }`}
+              >
+                <div
+                  className={`w-2 h-2 rounded-full ${mlActivo ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}
+                />
                 <span className="font-medium">Sistema ML {mlActivo ? 'Activo' : 'Inactivo'}</span>
                 <button
                   onClick={() => setMlActivo(!mlActivo)}
@@ -234,8 +259,11 @@ export const DistritosIATab: React.FC<DistritosIATabProps> = ({ selectedCountry 
               <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-xl">
                 <Globe className="w-4 h-4" />
                 <span className="font-medium">
-                  {selectedCountry === 'COLOMBIA' ? 'Colombia' :
-                   selectedCountry === 'CHILE' ? 'Chile' : 'Ecuador'}
+                  {selectedCountry === 'COLOMBIA'
+                    ? 'Colombia'
+                    : selectedCountry === 'CHILE'
+                      ? 'Chile'
+                      : 'Ecuador'}
                 </span>
               </div>
             </div>
@@ -244,15 +272,37 @@ export const DistritosIATab: React.FC<DistritosIATabProps> = ({ selectedCountry 
           {/* Stats rápidas */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
             {[
-              { label: 'Tareas Totales', value: statsGlobales.tareas.toLocaleString(), icon: Target, color: 'from-blue-400 to-cyan-400' },
-              { label: 'Resueltas', value: statsGlobales.resueltas.toLocaleString(), icon: CheckCircle2, color: 'from-green-400 to-emerald-400' },
-              { label: 'Pendientes', value: statsGlobales.pendientes.toLocaleString(), icon: Clock, color: 'from-orange-400 to-red-400' },
-              { label: 'Eficiencia', value: `${statsGlobales.eficiencia}%`, icon: TrendingUp, color: 'from-purple-400 to-pink-400' },
+              {
+                label: 'Tareas Totales',
+                value: statsGlobales.tareas.toLocaleString(),
+                icon: Target,
+                color: 'from-blue-400 to-cyan-400',
+              },
+              {
+                label: 'Resueltas',
+                value: statsGlobales.resueltas.toLocaleString(),
+                icon: CheckCircle2,
+                color: 'from-green-400 to-emerald-400',
+              },
+              {
+                label: 'Pendientes',
+                value: statsGlobales.pendientes.toLocaleString(),
+                icon: Clock,
+                color: 'from-orange-400 to-red-400',
+              },
+              {
+                label: 'Eficiencia',
+                value: `${statsGlobales.eficiencia}%`,
+                icon: TrendingUp,
+                color: 'from-purple-400 to-pink-400',
+              },
             ].map((stat, idx) => (
               <div key={idx} className="bg-white/10 backdrop-blur rounded-xl p-4">
                 <div className="flex items-center justify-between mb-2">
                   <stat.icon className="w-5 h-5 text-purple-300" />
-                  <span className={`text-2xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}>
+                  <span
+                    className={`text-2xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}
+                  >
                     {stat.value}
                   </span>
                 </div>
@@ -271,7 +321,8 @@ export const DistritosIATab: React.FC<DistritosIATabProps> = ({ selectedCountry 
             Cada distrito se abre con su propio asistente IA
           </p>
           <p className="text-sm text-indigo-600 dark:text-indigo-300">
-            Haz clic en cualquier distrito para acceder a su chat inteligente con todas las funcionalidades
+            Haz clic en cualquier distrito para acceder a su chat inteligente con todas las
+            funcionalidades
           </p>
         </div>
       </div>
@@ -285,7 +336,9 @@ export const DistritosIATab: React.FC<DistritosIATabProps> = ({ selectedCountry 
             className="group relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border-2 border-transparent hover:border-indigo-400 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-2xl text-left"
           >
             {/* Header del distrito */}
-            <div className={`bg-gradient-to-r ${distrito.gradiente} p-6 text-white relative overflow-hidden`}>
+            <div
+              className={`bg-gradient-to-r ${distrito.gradiente} p-6 text-white relative overflow-hidden`}
+            >
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl transform translate-x-1/2 -translate-y-1/2" />
 
               <div className="relative z-10 flex items-start justify-between">
@@ -297,13 +350,20 @@ export const DistritosIATab: React.FC<DistritosIATabProps> = ({ selectedCountry 
                   </div>
                 </div>
 
-                <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                  distrito.estado === 'activo' ? 'bg-green-400/30 text-green-100' :
-                  distrito.estado === 'procesando' ? 'bg-yellow-400/30 text-yellow-100' :
-                  'bg-gray-400/30 text-gray-100'
-                }`}>
-                  {distrito.estado === 'activo' ? '🟢 Activo' :
-                   distrito.estado === 'procesando' ? '🟡 Procesando' : '⚪ Pausado'}
+                <span
+                  className={`px-2 py-1 rounded-full text-xs font-bold ${
+                    distrito.estado === 'activo'
+                      ? 'bg-green-400/30 text-green-100'
+                      : distrito.estado === 'procesando'
+                        ? 'bg-yellow-400/30 text-yellow-100'
+                        : 'bg-gray-400/30 text-gray-100'
+                  }`}
+                >
+                  {distrito.estado === 'activo'
+                    ? '🟢 Activo'
+                    : distrito.estado === 'procesando'
+                      ? '🟡 Procesando'
+                      : '⚪ Pausado'}
                 </span>
               </div>
 
@@ -321,11 +381,15 @@ export const DistritosIATab: React.FC<DistritosIATabProps> = ({ selectedCountry 
             <div className="p-6">
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="text-center p-3 bg-slate-50 dark:bg-gray-700/50 rounded-xl">
-                  <p className="text-2xl font-bold text-slate-800 dark:text-white">{distrito.stats.resueltas}</p>
+                  <p className="text-2xl font-bold text-slate-800 dark:text-white">
+                    {distrito.stats.resueltas}
+                  </p>
                   <p className="text-xs text-slate-500">Resueltas</p>
                 </div>
                 <div className="text-center p-3 bg-slate-50 dark:bg-gray-700/50 rounded-xl">
-                  <p className="text-2xl font-bold text-slate-800 dark:text-white">{distrito.stats.pendientes}</p>
+                  <p className="text-2xl font-bold text-slate-800 dark:text-white">
+                    {distrito.stats.pendientes}
+                  </p>
                   <p className="text-xs text-slate-500">Pendientes</p>
                 </div>
               </div>
@@ -334,7 +398,9 @@ export const DistritosIATab: React.FC<DistritosIATabProps> = ({ selectedCountry 
               <div className="mb-4">
                 <div className="flex items-center justify-between text-sm mb-1">
                   <span className="text-slate-500">Eficiencia</span>
-                  <span className="font-bold text-slate-800 dark:text-white">{distrito.stats.eficiencia}%</span>
+                  <span className="font-bold text-slate-800 dark:text-white">
+                    {distrito.stats.eficiencia}%
+                  </span>
                 </div>
                 <div className="w-full h-2 bg-slate-200 dark:bg-gray-600 rounded-full overflow-hidden">
                   <div
@@ -349,7 +415,10 @@ export const DistritosIATab: React.FC<DistritosIATabProps> = ({ selectedCountry 
                 <p className="text-xs font-bold text-slate-400 uppercase">Capacidades:</p>
                 <div className="flex flex-wrap gap-1">
                   {distrito.capacidades.slice(0, 3).map((cap, idx) => (
-                    <span key={idx} className="px-2 py-1 bg-slate-100 dark:bg-gray-700 rounded text-xs text-slate-600 dark:text-slate-300">
+                    <span
+                      key={idx}
+                      className="px-2 py-1 bg-slate-100 dark:bg-gray-700 rounded text-xs text-slate-600 dark:text-slate-300"
+                    >
                       {cap}
                     </span>
                   ))}
@@ -362,7 +431,9 @@ export const DistritosIATab: React.FC<DistritosIATabProps> = ({ selectedCountry 
               </div>
 
               {/* CTA */}
-              <div className={`flex items-center justify-center gap-2 p-3 bg-gradient-to-r ${distrito.gradiente} rounded-xl text-white font-bold group-hover:shadow-lg transition-all`}>
+              <div
+                className={`flex items-center justify-center gap-2 p-3 bg-gradient-to-r ${distrito.gradiente} rounded-xl text-white font-bold group-hover:shadow-lg transition-all`}
+              >
                 <Bot className="w-5 h-5" />
                 <span>Abrir Chat Inteligente</span>
                 <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -405,14 +476,20 @@ export const DistritosIATab: React.FC<DistritosIATabProps> = ({ selectedCountry 
                   <span className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded font-mono text-sm font-bold">
                     {proceso.id}
                   </span>
-                  <span className="font-medium text-slate-700 dark:text-slate-200">{proceso.nombre}</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-200">
+                    {proceso.nombre}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`px-2 py-1 rounded text-xs font-bold ${
-                    proceso.prioridad === 'CRÍTICO' ? 'bg-red-100 text-red-700' :
-                    proceso.prioridad === 'ALTO' ? 'bg-orange-100 text-orange-700' :
-                    'bg-green-100 text-green-700'
-                  }`}>
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-bold ${
+                      proceso.prioridad === 'CRÍTICO'
+                        ? 'bg-red-100 text-red-700'
+                        : proceso.prioridad === 'ALTO'
+                          ? 'bg-orange-100 text-orange-700'
+                          : 'bg-green-100 text-green-700'
+                    }`}
+                  >
                     {proceso.prioridad}
                   </span>
                   <span className="text-sm text-slate-500">{proceso.auto}</span>
@@ -436,13 +513,33 @@ export const DistritosIATab: React.FC<DistritosIATabProps> = ({ selectedCountry 
 
           <div className="space-y-4">
             {[
-              { nombre: 'Predictor de Retrasos', accuracy: 92.3, estado: 'activo', predicciones: 1247 },
-              { nombre: 'Detector de Novedades', accuracy: 87.6, estado: 'activo', predicciones: 892 },
-              { nombre: 'Optimizador de Rutas', accuracy: 89.1, estado: 'activo', predicciones: 456 },
+              {
+                nombre: 'Predictor de Retrasos',
+                accuracy: 92.3,
+                estado: 'activo',
+                predicciones: 1247,
+              },
+              {
+                nombre: 'Detector de Novedades',
+                accuracy: 87.6,
+                estado: 'activo',
+                predicciones: 892,
+              },
+              {
+                nombre: 'Optimizador de Rutas',
+                accuracy: 89.1,
+                estado: 'activo',
+                predicciones: 456,
+              },
             ].map((modelo, idx) => (
-              <div key={idx} className="p-4 bg-gradient-to-r from-slate-50 to-purple-50 dark:from-gray-700/50 dark:to-purple-900/20 rounded-xl">
+              <div
+                key={idx}
+                className="p-4 bg-gradient-to-r from-slate-50 to-purple-50 dark:from-gray-700/50 dark:to-purple-900/20 rounded-xl"
+              >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-slate-700 dark:text-slate-200">{modelo.nombre}</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-200">
+                    {modelo.nombre}
+                  </span>
                   <span className="flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs font-bold">
                     <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                     {modelo.estado.toUpperCase()}
@@ -451,11 +548,15 @@ export const DistritosIATab: React.FC<DistritosIATabProps> = ({ selectedCountry 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-slate-500">Accuracy</p>
-                    <p className="text-lg font-bold text-purple-600 dark:text-purple-400">{modelo.accuracy}%</p>
+                    <p className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                      {modelo.accuracy}%
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-slate-500">Predicciones hoy</p>
-                    <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{modelo.predicciones}</p>
+                    <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                      {modelo.predicciones}
+                    </p>
                   </div>
                 </div>
               </div>

@@ -342,9 +342,7 @@ const HelpTooltip: React.FC<HelpTooltipProps> = ({
           {title && (
             <div className="flex items-center gap-2 mb-2 pb-2 border-b-2 border-blue-500">
               <Lightbulb size={18} className="text-blue-500" />
-              <span className="font-semibold text-gray-800 dark:text-white">
-                {title}
-              </span>
+              <span className="font-semibold text-gray-800 dark:text-white">{title}</span>
             </div>
           )}
 
@@ -364,10 +362,7 @@ const HelpTooltip: React.FC<HelpTooltipProps> = ({
               </div>
               <ol className="list-decimal list-inside space-y-1">
                 {steps.map((step, index) => (
-                  <li
-                    key={index}
-                    className="text-xs text-gray-600 dark:text-gray-400"
-                  >
+                  <li key={index} className="text-xs text-gray-600 dark:text-gray-400">
                     {step}
                   </li>
                 ))}

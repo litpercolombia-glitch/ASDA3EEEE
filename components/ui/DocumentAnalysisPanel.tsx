@@ -58,20 +58,29 @@ export const DocumentAnalysisPanel: React.FC<DocumentAnalysisPanelProps> = ({
 
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
-      case 'positive': return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-      case 'negative': return 'text-red-600 bg-red-50 border-red-200';
-      default: return 'text-blue-600 bg-blue-50 border-blue-200';
+      case 'positive':
+        return 'text-emerald-600 bg-emerald-50 border-emerald-200';
+      case 'negative':
+        return 'text-red-600 bg-red-50 border-red-200';
+      default:
+        return 'text-blue-600 bg-blue-50 border-blue-200';
     }
   };
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'logistica': return <Truck className="w-5 h-5" />;
-      case 'finanzas': return <DollarSign className="w-5 h-5" />;
-      case 'ventas': return <TrendingUp className="w-5 h-5" />;
-      case 'atencion': return <Activity className="w-5 h-5" />;
-      case 'operaciones': return <Target className="w-5 h-5" />;
-      default: return <FileText className="w-5 h-5" />;
+      case 'logistica':
+        return <Truck className="w-5 h-5" />;
+      case 'finanzas':
+        return <DollarSign className="w-5 h-5" />;
+      case 'ventas':
+        return <TrendingUp className="w-5 h-5" />;
+      case 'atencion':
+        return <Activity className="w-5 h-5" />;
+      case 'operaciones':
+        return <Target className="w-5 h-5" />;
+      default:
+        return <FileText className="w-5 h-5" />;
     }
   };
 
@@ -151,7 +160,9 @@ export const DocumentAnalysisPanel: React.FC<DocumentAnalysisPanelProps> = ({
           <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-red-700 dark:text-red-400">Error en el procesamiento</p>
+              <p className="font-medium text-red-700 dark:text-red-400">
+                Error en el procesamiento
+              </p>
               <p className="text-sm text-red-600 dark:text-red-300 mt-1">{document.error}</p>
             </div>
           </div>
@@ -210,9 +221,14 @@ export const DocumentAnalysisPanel: React.FC<DocumentAnalysisPanelProps> = ({
             >
               <div className="space-y-4">
                 <div className="flex items-start gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getSentimentColor(analysis.sentiment)}`}>
-                    {analysis.sentiment === 'positive' ? 'Positivo' :
-                      analysis.sentiment === 'negative' ? 'Negativo' : 'Neutral'}
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-bold border ${getSentimentColor(analysis.sentiment)}`}
+                  >
+                    {analysis.sentiment === 'positive'
+                      ? 'Positivo'
+                      : analysis.sentiment === 'negative'
+                        ? 'Negativo'
+                        : 'Neutral'}
                   </span>
                 </div>
                 <p className="text-slate-700 dark:text-slate-300 text-base leading-relaxed">
@@ -233,12 +249,17 @@ export const DocumentAnalysisPanel: React.FC<DocumentAnalysisPanelProps> = ({
               title="Puntos Clave Identificados"
               icon={<Target className="w-5 h-5 text-blue-500" />}
               isExpanded={expandedSection === 'keypoints'}
-              onToggle={() => setExpandedSection(expandedSection === 'keypoints' ? null : 'keypoints')}
+              onToggle={() =>
+                setExpandedSection(expandedSection === 'keypoints' ? null : 'keypoints')
+              }
               badge={analysis.keyPoints.length}
             >
               <div className="space-y-3">
                 {analysis.keyPoints.map((point, idx) => (
-                  <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-navy-800 rounded-xl">
+                  <div
+                    key={idx}
+                    className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-navy-800 rounded-xl"
+                  >
                     <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
                       {idx + 1}
                     </span>
@@ -253,7 +274,9 @@ export const DocumentAnalysisPanel: React.FC<DocumentAnalysisPanelProps> = ({
               title="Recomendaciones IA"
               icon={<Lightbulb className="w-5 h-5 text-amber-500" />}
               isExpanded={expandedSection === 'recommendations'}
-              onToggle={() => setExpandedSection(expandedSection === 'recommendations' ? null : 'recommendations')}
+              onToggle={() =>
+                setExpandedSection(expandedSection === 'recommendations' ? null : 'recommendations')
+              }
               badge={analysis.recommendations.length}
               highlight
             >
@@ -281,7 +304,9 @@ export const DocumentAnalysisPanel: React.FC<DocumentAnalysisPanelProps> = ({
                 title="Acciones a Tomar"
                 icon={<CheckCircle className="w-5 h-5 text-emerald-500" />}
                 isExpanded={expandedSection === 'actions'}
-                onToggle={() => setExpandedSection(expandedSection === 'actions' ? null : 'actions')}
+                onToggle={() =>
+                  setExpandedSection(expandedSection === 'actions' ? null : 'actions')
+                }
                 badge={analysis.actionItems.length}
               >
                 <div className="space-y-2">
@@ -306,7 +331,9 @@ export const DocumentAnalysisPanel: React.FC<DocumentAnalysisPanelProps> = ({
               title="Entidades Detectadas"
               icon={<MapPin className="w-5 h-5 text-purple-500" />}
               isExpanded={expandedSection === 'entities'}
-              onToggle={() => setExpandedSection(expandedSection === 'entities' ? null : 'entities')}
+              onToggle={() =>
+                setExpandedSection(expandedSection === 'entities' ? null : 'entities')
+              }
             >
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {/* Ciudades */}
@@ -361,7 +388,9 @@ export const DocumentAnalysisPanel: React.FC<DocumentAnalysisPanelProps> = ({
 
           <button
             onClick={() => {
-              const blob = new Blob([JSON.stringify(document, null, 2)], { type: 'application/json' });
+              const blob = new Blob([JSON.stringify(document, null, 2)], {
+                type: 'application/json',
+              });
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;
@@ -389,11 +418,15 @@ const MetricCard: React.FC<{
 }> = ({ label, value, icon, color }) => {
   const colorClasses = {
     blue: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
-    emerald: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
-    purple: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800',
-    amber: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+    emerald:
+      'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+    purple:
+      'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800',
+    amber:
+      'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800',
     red: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800',
-    indigo: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800',
+    indigo:
+      'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800',
   };
 
   return (
@@ -418,14 +451,18 @@ const CollapsibleSection: React.FC<{
   children: React.ReactNode;
 }> = ({ title, icon, isExpanded, onToggle, badge, highlight, children }) => {
   return (
-    <div className={`rounded-xl border ${highlight
-        ? 'border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10'
-        : 'border-slate-200 dark:border-navy-700'
-      } overflow-hidden`}>
+    <div
+      className={`rounded-xl border ${
+        highlight
+          ? 'border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10'
+          : 'border-slate-200 dark:border-navy-700'
+      } overflow-hidden`}
+    >
       <button
         onClick={onToggle}
-        className={`w-full p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-navy-800/50 transition-colors ${highlight ? 'hover:bg-amber-100/50 dark:hover:bg-amber-900/20' : ''
-          }`}
+        className={`w-full p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-navy-800/50 transition-colors ${
+          highlight ? 'hover:bg-amber-100/50 dark:hover:bg-amber-900/20' : ''
+        }`}
       >
         <div className="flex items-center gap-3">
           {icon}
@@ -442,11 +479,7 @@ const CollapsibleSection: React.FC<{
           <ChevronDown className="w-5 h-5 text-slate-400" />
         )}
       </button>
-      {isExpanded && (
-        <div className="p-4 pt-0 animate-fade-in">
-          {children}
-        </div>
-      )}
+      {isExpanded && <div className="p-4 pt-0 animate-fade-in">{children}</div>}
     </div>
   );
 };

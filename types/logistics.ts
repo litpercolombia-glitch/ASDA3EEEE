@@ -9,10 +9,28 @@ import { Shipment, ShipmentStatus, CarrierName } from '../types';
 // TAB NAVIGATION TYPES
 // ============================================
 
-// Nueva navegación simplificada (5 tabs principales)
-export type MainTabNew = 'operaciones' | 'inteligencia-ia' | 'analisis' | 'procesos-litper' | 'admin' |
+// Nueva navegación simplificada con todos los tabs
+export type MainTabNew =
+  | 'operaciones'
+  | 'inteligencia-ia'
+  | 'analisis'
+  | 'procesos-litper'
+  | 'admin'
+  | 'negocio'
   // Legacy tabs (para compatibilidad)
-  'seguimiento' | 'demanda' | 'gamificacion' | 'inteligencia-logistica' | 'semaforo' | 'predicciones' | 'asistente' | 'ml' | 'ciudad-agentes' | 'mcp-connections' | 'conexiones' | 'reporte' | 'aprendizaje-ia';
+  | 'seguimiento'
+  | 'demanda'
+  | 'gamificacion'
+  | 'inteligencia-logistica'
+  | 'semaforo'
+  | 'predicciones'
+  | 'asistente'
+  | 'ml'
+  | 'ciudad-agentes'
+  | 'mcp-connections'
+  | 'conexiones'
+  | 'reporte'
+  | 'aprendizaje-ia';
 
 // ============================================
 // GUIA RETRASADA (DELAYED SHIPMENT)
@@ -63,9 +81,9 @@ export interface TasaEntregaRow {
   ciudad: string;
   transportadora: string;
   devoluciones: number;
-  devolucionesPct: number;  // Percentage of returns
+  devolucionesPct: number; // Percentage of returns
   entregas: number;
-  entregasPct: number;      // Percentage of deliveries
+  entregasPct: number; // Percentage of deliveries
   total: number;
 }
 
@@ -91,11 +109,11 @@ export interface TiempoPromedioRow {
  * Used during Excel parsing before normalization
  */
 export interface PivotTableRawRow {
-  etiqueta: string;              // "CIUDAD" or "  TRANSPORTADORA"
-  devolucionesCant?: number;     // DEVOLUCION count
-  devolucionesPct?: number;      // DEVOLUCION percentage
-  entregasCant?: number;         // ENTREGADO count
-  entregasPct?: number;          // ENTREGADO percentage
+  etiqueta: string; // "CIUDAD" or "  TRANSPORTADORA"
+  devolucionesCant?: number; // DEVOLUCION count
+  devolucionesPct?: number; // DEVOLUCION percentage
+  entregasCant?: number; // ENTREGADO count
+  entregasPct?: number; // ENTREGADO percentage
   total?: number;
 }
 

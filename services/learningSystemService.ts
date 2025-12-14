@@ -27,7 +27,7 @@ import {
   EstructuraCurso,
   ModuloCurso,
   VideoCurso,
-  AnalisisVideo
+  AnalisisVideo,
 } from '../types/learning';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -78,7 +78,7 @@ class SistemaAprendizaje {
       conceptosExtraidos: Math.floor(Math.random() * 200) + 50,
       recomendacionesGeneradas: Math.floor(Math.random() * 30) + 5,
       horasProcesadas: parseFloat((Math.random() * 100 + 20).toFixed(1)),
-      ultimaActividad: new Date(Date.now() - Math.random() * 3600000)
+      ultimaActividad: new Date(Date.now() - Math.random() * 3600000),
     }));
   }
 
@@ -91,7 +91,7 @@ class SistemaAprendizaje {
       [TipoAgenteAprendiz.KNOWLEDGE_PROCESSOR]: 'KnowledgeProcessor',
       [TipoAgenteAprendiz.REPORT_GENERATOR]: 'GeneradorReportes',
       [TipoAgenteAprendiz.MEMORY_MANAGER]: 'MemoriaConocimiento',
-      [TipoAgenteAprendiz.PROFESSOR]: 'AgenteProfesor'
+      [TipoAgenteAprendiz.PROFESSOR]: 'AgenteProfesor',
     };
     return nombres[tipo];
   }
@@ -110,20 +110,28 @@ class SistemaAprendizaje {
       conceptosTotales: this.conceptos.length,
       recomendacionesTotales: this.recomendaciones.length,
       conocimientoPorCategoria: this.calcularConocimientoPorCategoria(),
-      accionesImplementadas: this.recomendaciones.filter(r => r.estado === EstadoRecomendacion.IMPLEMENTADA).length,
+      accionesImplementadas: this.recomendaciones.filter(
+        (r) => r.estado === EstadoRecomendacion.IMPLEMENTADA
+      ).length,
       impactoEstimado: '+18% eficiencia operativa',
-      ultimaActualizacion: new Date()
+      ultimaActualizacion: new Date(),
     };
   }
 
   private calcularConocimientoPorCategoria() {
     const resultado: BaseConocimiento['conocimientoPorCategoria'] = {};
 
-    Object.values(CategoriaConocimiento).forEach(cat => {
+    Object.values(CategoriaConocimiento).forEach((cat) => {
       resultado[cat] = {
-        fuentes: this.contenidos.filter(c => c.conceptosClave?.some(cc => cc.categoria === cat)).length || Math.floor(Math.random() * 10) + 1,
-        conceptos: this.conceptos.filter(c => c.categoria === cat).length || Math.floor(Math.random() * 30) + 5,
-        acciones: this.recomendaciones.filter(r => r.categoria === cat).length || Math.floor(Math.random() * 8) + 2
+        fuentes:
+          this.contenidos.filter((c) => c.conceptosClave?.some((cc) => cc.categoria === cat))
+            .length || Math.floor(Math.random() * 10) + 1,
+        conceptos:
+          this.conceptos.filter((c) => c.categoria === cat).length ||
+          Math.floor(Math.random() * 30) + 5,
+        acciones:
+          this.recomendaciones.filter((r) => r.categoria === cat).length ||
+          Math.floor(Math.random() * 8) + 2,
       };
     });
 
@@ -146,7 +154,7 @@ class SistemaAprendizaje {
       id: `CONTENT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       tipo,
       plataforma: plataformaDetectada,
-      titulo: titulo || await this.extraerTitulo(url) || 'Contenido sin título',
+      titulo: titulo || (await this.extraerTitulo(url)) || 'Contenido sin título',
       url,
       estado: EstadoProcesamiento.PENDIENTE,
       progreso: 0,
@@ -154,7 +162,7 @@ class SistemaAprendizaje {
       duracionProcesada: 0,
       palabrasTranscritas: 0,
       conceptosExtraidos: 0,
-      agregadoEn: new Date()
+      agregadoEn: new Date(),
     };
 
     this.contenidos.push(contenido);
@@ -189,7 +197,7 @@ class SistemaAprendizaje {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async procesarContenido(contenidoId: string): Promise<ReporteAprendizaje | null> {
-    const contenido = this.contenidos.find(c => c.id === contenidoId);
+    const contenido = this.contenidos.find((c) => c.id === contenidoId);
     if (!contenido) return null;
 
     contenido.estado = EstadoProcesamiento.EXPLORANDO;
@@ -216,10 +224,10 @@ class SistemaAprendizaje {
         datos: {
           contenidoId: contenido.id,
           conceptos: contenido.conceptosExtraidos,
-          recomendaciones: contenido.recomendaciones?.length || 0
+          recomendaciones: contenido.recomendaciones?.length || 0,
         },
         impacto: 'medio',
-        origenPais: Pais.COLOMBIA
+        origenPais: Pais.COLOMBIA,
       });
 
       return reporte;
@@ -231,7 +239,9 @@ class SistemaAprendizaje {
     }
   }
 
-  private async simularProcesoAprendizaje(contenido: ContenidoAprendizaje): Promise<ProcesoAprendizaje> {
+  private async simularProcesoAprendizaje(
+    contenido: ContenidoAprendizaje
+  ): Promise<ProcesoAprendizaje> {
     const proceso: ProcesoAprendizaje = {
       id: `PROCESS_${Date.now()}`,
       contenidoId: contenido.id,
@@ -244,13 +254,13 @@ class SistemaAprendizaje {
         { nombre: 'Transcripción', orden: 3, estado: 'pendiente', progreso: 0 },
         { nombre: 'Análisis IA', orden: 4, estado: 'pendiente', progreso: 0 },
         { nombre: 'Síntesis', orden: 5, estado: 'pendiente', progreso: 0 },
-        { nombre: 'Generación Reporte', orden: 6, estado: 'pendiente', progreso: 0 }
+        { nombre: 'Generación Reporte', orden: 6, estado: 'pendiente', progreso: 0 },
       ],
       tiempoTranscurrido: 0,
       tiempoEstimadoRestante: 600,
       errores: [],
       iniciadoEn: new Date(),
-      actualizadoEn: new Date()
+      actualizadoEn: new Date(),
     };
 
     this.procesosActivos.push(proceso);
@@ -266,7 +276,7 @@ class SistemaAprendizaje {
       // Simular progreso
       for (let p = 0; p <= 100; p += 20) {
         proceso.etapas[i].progreso = p;
-        proceso.progreso = ((i * 100) + p) / proceso.etapas.length;
+        proceso.progreso = (i * 100 + p) / proceso.etapas.length;
         contenido.progreso = proceso.progreso;
         await this.delay(50);
       }
@@ -308,7 +318,7 @@ class SistemaAprendizaje {
           duracion: Math.floor(Math.random() * 20) + 5,
           estado: EstadoProcesamiento.COMPLETADO,
           slidesDetectados: Math.floor(Math.random() * 10) + 2,
-          screenshotsCapturados: Math.floor(Math.random() * 20) + 5
+          screenshotsCapturados: Math.floor(Math.random() * 20) + 5,
         });
       }
 
@@ -320,9 +330,9 @@ class SistemaAprendizaje {
         videos,
         recursos: [
           { id: `RES_${m}_1`, nombre: 'Presentación.pdf', tipo: 'pdf', procesado: true },
-          { id: `RES_${m}_2`, nombre: 'Ejercicios.xlsx', tipo: 'excel', procesado: true }
+          { id: `RES_${m}_2`, nombre: 'Ejercicios.xlsx', tipo: 'excel', procesado: true },
         ],
-        procesado: true
+        procesado: true,
       });
     }
 
@@ -330,7 +340,7 @@ class SistemaAprendizaje {
       modulos,
       totalVideos: modulos.reduce((sum, m) => sum + m.videos.length, 0),
       totalRecursos: modulos.reduce((sum, m) => sum + m.recursos.length, 0),
-      duracionEstimada: modulos.reduce((sum, m) => sum + m.duracion, 0)
+      duracionEstimada: modulos.reduce((sum, m) => sum + m.duracion, 0),
     };
   }
 
@@ -343,21 +353,55 @@ class SistemaAprendizaje {
       'Automatización práctica',
       'Análisis de datos',
       'Implementación real',
-      'Mejores prácticas'
+      'Mejores prácticas',
     ];
     return nombres[Math.floor(Math.random() * nombres.length)];
   }
 
   private async extraerConceptos(contenido: ContenidoAprendizaje): Promise<ConceptoClave[]> {
     const conceptosBase = [
-      { nombre: 'Just-in-Time Inventory', descripcion: 'Sistema de inventario que reduce costos de almacenamiento sincronizando con demanda real', categoria: CategoriaConocimiento.LOGISTICA },
-      { nombre: 'Last Mile Optimization', descripcion: 'Optimización de la última milla de entrega para reducir costos y tiempo', categoria: CategoriaConocimiento.LOGISTICA },
-      { nombre: 'Customer Experience First', descripcion: 'Priorizar la experiencia del cliente en cada punto de contacto', categoria: CategoriaConocimiento.ATENCION_CLIENTE },
-      { nombre: 'Predictive Analytics', descripcion: 'Uso de datos históricos para predecir comportamientos futuros', categoria: CategoriaConocimiento.TECNOLOGIA },
-      { nombre: 'Notificación Proactiva', descripcion: 'Notificar antes de que el cliente pregunte reduce quejas significativamente', categoria: CategoriaConocimiento.ATENCION_CLIENTE },
-      { nombre: 'Cross-docking', descripcion: 'Técnica para reducir tiempo de almacenamiento moviendo productos directamente', categoria: CategoriaConocimiento.LOGISTICA },
-      { nombre: 'Omnicanalidad', descripcion: 'Integración perfecta de todos los canales de comunicación', categoria: CategoriaConocimiento.ECOMMERCE },
-      { nombre: 'Automatización Inteligente', descripcion: 'Automatizar procesos repetitivos con IA para escalar operaciones', categoria: CategoriaConocimiento.TECNOLOGIA }
+      {
+        nombre: 'Just-in-Time Inventory',
+        descripcion:
+          'Sistema de inventario que reduce costos de almacenamiento sincronizando con demanda real',
+        categoria: CategoriaConocimiento.LOGISTICA,
+      },
+      {
+        nombre: 'Last Mile Optimization',
+        descripcion: 'Optimización de la última milla de entrega para reducir costos y tiempo',
+        categoria: CategoriaConocimiento.LOGISTICA,
+      },
+      {
+        nombre: 'Customer Experience First',
+        descripcion: 'Priorizar la experiencia del cliente en cada punto de contacto',
+        categoria: CategoriaConocimiento.ATENCION_CLIENTE,
+      },
+      {
+        nombre: 'Predictive Analytics',
+        descripcion: 'Uso de datos históricos para predecir comportamientos futuros',
+        categoria: CategoriaConocimiento.TECNOLOGIA,
+      },
+      {
+        nombre: 'Notificación Proactiva',
+        descripcion: 'Notificar antes de que el cliente pregunte reduce quejas significativamente',
+        categoria: CategoriaConocimiento.ATENCION_CLIENTE,
+      },
+      {
+        nombre: 'Cross-docking',
+        descripcion:
+          'Técnica para reducir tiempo de almacenamiento moviendo productos directamente',
+        categoria: CategoriaConocimiento.LOGISTICA,
+      },
+      {
+        nombre: 'Omnicanalidad',
+        descripcion: 'Integración perfecta de todos los canales de comunicación',
+        categoria: CategoriaConocimiento.ECOMMERCE,
+      },
+      {
+        nombre: 'Automatización Inteligente',
+        descripcion: 'Automatizar procesos repetitivos con IA para escalar operaciones',
+        categoria: CategoriaConocimiento.TECNOLOGIA,
+      },
     ];
 
     const numConceptos = Math.floor(Math.random() * 10) + 5;
@@ -378,7 +422,7 @@ class SistemaAprendizaje {
         distritosRelacionados: ['tracking', 'crisis', 'orders'],
         procesosAfectados: ['seguimiento', 'novedades', 'pedidos'],
         vecesUsado: 0,
-        creadoEn: new Date()
+        creadoEn: new Date(),
       });
     }
 
@@ -389,43 +433,47 @@ class SistemaAprendizaje {
     return conceptos;
   }
 
-  private async generarRecomendaciones(contenido: ContenidoAprendizaje): Promise<RecomendacionLitper[]> {
+  private async generarRecomendaciones(
+    contenido: ContenidoAprendizaje
+  ): Promise<RecomendacionLitper[]> {
     const recomendacionesBase = [
       {
         titulo: 'Implementar notificación 1 hora antes de entrega',
-        descripcion: 'Notificar al cliente 1 hora antes de la entrega aumenta la tasa de entrega exitosa en primer intento',
+        descripcion:
+          'Notificar al cliente 1 hora antes de la entrega aumenta la tasa de entrega exitosa en primer intento',
         impacto: '+25% entregas primer intento',
         prioridad: NivelPrioridadRecomendacion.INMEDIATA,
-        esfuerzo: 'bajo' as const
+        esfuerzo: 'bajo' as const,
       },
       {
         titulo: 'Agregar foto del conductor en notificación',
         descripcion: 'Incluir la foto del conductor genera mayor confianza y reduce rechazos',
         impacto: '+15% confianza cliente',
         prioridad: NivelPrioridadRecomendacion.ALTA,
-        esfuerzo: 'medio' as const
+        esfuerzo: 'medio' as const,
       },
       {
         titulo: 'Crear predictor de novedades',
         descripcion: 'Usar ML para predecir qué guías tendrán novedad antes de que ocurra',
         impacto: '-30% novedades',
         prioridad: NivelPrioridadRecomendacion.ALTA,
-        esfuerzo: 'alto' as const
+        esfuerzo: 'alto' as const,
       },
       {
         titulo: 'Implementar respuesta empática en primeros 10 segundos',
-        descripcion: 'Responder con empatía en los primeros 10 segundos reduce quejas significativamente',
+        descripcion:
+          'Responder con empatía en los primeros 10 segundos reduce quejas significativamente',
         impacto: '-45% quejas',
         prioridad: NivelPrioridadRecomendacion.INMEDIATA,
-        esfuerzo: 'bajo' as const
+        esfuerzo: 'bajo' as const,
       },
       {
         titulo: 'Ofrecer puntos de recogida alternativos',
         descripcion: 'Cuando hay novedad, ofrecer punto de recogida cercano salva entregas',
         impacto: '+40% recuperación',
         prioridad: NivelPrioridadRecomendacion.MEDIA,
-        esfuerzo: 'medio' as const
-      }
+        esfuerzo: 'medio' as const,
+      },
     ];
 
     const numRecs = Math.floor(Math.random() * 4) + 2;
@@ -451,7 +499,7 @@ class SistemaAprendizaje {
         procesosAfectados: ['seguimiento', 'novedades'],
         requiereDesarrollo: base.esfuerzo === 'alto',
         creadaEn: new Date(),
-        actualizadaEn: new Date()
+        actualizadaEn: new Date(),
       });
     }
 
@@ -483,7 +531,10 @@ Las mejores prácticas identificadas incluyen notificaciones proactivas, respues
     }
   }
 
-  private async generarReporte(contenido: ContenidoAprendizaje, proceso: ProcesoAprendizaje): Promise<ReporteAprendizaje> {
+  private async generarReporte(
+    contenido: ContenidoAprendizaje,
+    proceso: ProcesoAprendizaje
+  ): Promise<ReporteAprendizaje> {
     const reporte: ReporteAprendizaje = {
       id: `REPORT_${Date.now()}`,
       contenidoId: contenido.id,
@@ -497,21 +548,33 @@ Las mejores prácticas identificadas incluyen notificaciones proactivas, respues
         palabrasTranscritas: contenido.palabrasTranscritas,
         conceptosExtraidos: contenido.conceptosExtraidos,
         recomendacionesGeneradas: contenido.recomendaciones?.length || 0,
-        aplicablesLitper: contenido.conceptosClave?.filter(c => c.aplicableLitper).length || 0,
-        porcentajeAplicabilidad: 75
+        aplicablesLitper: contenido.conceptosClave?.filter((c) => c.aplicableLitper).length || 0,
+        porcentajeAplicabilidad: 75,
       },
       resumenEjecutivo: contenido.resumenEjecutivo || '',
       conceptosClave: contenido.conceptosClave || [],
-      recomendacionesInmediatas: contenido.recomendaciones?.filter(r => r.prioridad === NivelPrioridadRecomendacion.INMEDIATA) || [],
-      recomendacionesAlta: contenido.recomendaciones?.filter(r => r.prioridad === NivelPrioridadRecomendacion.ALTA) || [],
-      recomendacionesMedia: contenido.recomendaciones?.filter(r => r.prioridad === NivelPrioridadRecomendacion.MEDIA) || [],
-      recomendacionesFutura: contenido.recomendaciones?.filter(r => r.prioridad === NivelPrioridadRecomendacion.FUTURA) || [],
+      recomendacionesInmediatas:
+        contenido.recomendaciones?.filter(
+          (r) => r.prioridad === NivelPrioridadRecomendacion.INMEDIATA
+        ) || [],
+      recomendacionesAlta:
+        contenido.recomendaciones?.filter(
+          (r) => r.prioridad === NivelPrioridadRecomendacion.ALTA
+        ) || [],
+      recomendacionesMedia:
+        contenido.recomendaciones?.filter(
+          (r) => r.prioridad === NivelPrioridadRecomendacion.MEDIA
+        ) || [],
+      recomendacionesFutura:
+        contenido.recomendaciones?.filter(
+          (r) => r.prioridad === NivelPrioridadRecomendacion.FUTURA
+        ) || [],
       archivosGenerados: [
         { nombre: 'reporte_completo.pdf', tipo: 'pdf' },
         { nombre: 'conceptos.json', tipo: 'json' },
-        { nombre: 'plan_implementacion.xlsx', tipo: 'xlsx' }
+        { nombre: 'plan_implementacion.xlsx', tipo: 'xlsx' },
       ],
-      generadoEn: new Date()
+      generadoEn: new Date(),
     };
 
     this.reportes.push(reporte);
@@ -529,33 +592,34 @@ Las mejores prácticas identificadas incluyen notificaciones proactivas, respues
   }
 
   getContenido(id: string): ContenidoAprendizaje | undefined {
-    return this.contenidos.find(c => c.id === id);
+    return this.contenidos.find((c) => c.id === id);
   }
 
   getContenidosEnProceso(): ContenidoAprendizaje[] {
-    return this.contenidos.filter(c =>
-      c.estado !== EstadoProcesamiento.COMPLETADO &&
-      c.estado !== EstadoProcesamiento.ERROR &&
-      c.estado !== EstadoProcesamiento.PENDIENTE
+    return this.contenidos.filter(
+      (c) =>
+        c.estado !== EstadoProcesamiento.COMPLETADO &&
+        c.estado !== EstadoProcesamiento.ERROR &&
+        c.estado !== EstadoProcesamiento.PENDIENTE
     );
   }
 
   getConceptos(categoria?: CategoriaConocimiento): ConceptoClave[] {
     if (categoria) {
-      return this.conceptos.filter(c => c.categoria === categoria);
+      return this.conceptos.filter((c) => c.categoria === categoria);
     }
     return this.conceptos;
   }
 
   getRecomendaciones(estado?: EstadoRecomendacion): RecomendacionLitper[] {
     if (estado) {
-      return this.recomendaciones.filter(r => r.estado === estado);
+      return this.recomendaciones.filter((r) => r.estado === estado);
     }
     return this.recomendaciones;
   }
 
   getRecomendacionesPorPrioridad(prioridad: NivelPrioridadRecomendacion): RecomendacionLitper[] {
-    return this.recomendaciones.filter(r => r.prioridad === prioridad);
+    return this.recomendaciones.filter((r) => r.prioridad === prioridad);
   }
 
   getReportes(): ReporteAprendizaje[] {
@@ -563,7 +627,7 @@ Las mejores prácticas identificadas incluyen notificaciones proactivas, respues
   }
 
   getReporte(id: string): ReporteAprendizaje | undefined {
-    return this.reportes.find(r => r.id === id);
+    return this.reportes.find((r) => r.id === id);
   }
 
   getAgentes(): AgenteAprendiz[] {
@@ -575,7 +639,7 @@ Las mejores prácticas identificadas incluyen notificaciones proactivas, respues
   }
 
   getProcesosActivos(): ProcesoAprendizaje[] {
-    return this.procesosActivos.filter(p => p.estado !== EstadoProcesamiento.COMPLETADO);
+    return this.procesosActivos.filter((p) => p.estado !== EstadoProcesamiento.COMPLETADO);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -583,35 +647,47 @@ Las mejores prácticas identificadas incluyen notificaciones proactivas, respues
   // ═══════════════════════════════════════════════════════════════════════════
 
   getEstadisticas(): EstadisticasAprendizaje {
-    const completados = this.contenidos.filter(c => c.estado === EstadoProcesamiento.COMPLETADO);
-    const enProceso = this.contenidos.filter(c =>
-      c.estado !== EstadoProcesamiento.COMPLETADO &&
-      c.estado !== EstadoProcesamiento.ERROR &&
-      c.estado !== EstadoProcesamiento.PENDIENTE
+    const completados = this.contenidos.filter((c) => c.estado === EstadoProcesamiento.COMPLETADO);
+    const enProceso = this.contenidos.filter(
+      (c) =>
+        c.estado !== EstadoProcesamiento.COMPLETADO &&
+        c.estado !== EstadoProcesamiento.ERROR &&
+        c.estado !== EstadoProcesamiento.PENDIENTE
     );
 
     return {
       contenidosTotales: this.contenidos.length,
       contenidosCompletados: completados.length,
       contenidosEnProceso: enProceso.length,
-      contenidosPendientes: this.contenidos.filter(c => c.estado === EstadoProcesamiento.PENDIENTE).length,
+      contenidosPendientes: this.contenidos.filter(
+        (c) => c.estado === EstadoProcesamiento.PENDIENTE
+      ).length,
 
-      cursosProcesados: completados.filter(c => c.tipo === TipoContenido.CURSO).length,
-      videosProcesados: completados.filter(c => c.tipo === TipoContenido.VIDEO).length,
-      documentosProcesados: completados.filter(c => c.tipo === TipoContenido.PDF || c.tipo === TipoContenido.DOCUMENTO).length,
-      audiosProcesados: completados.filter(c => c.tipo === TipoContenido.AUDIO || c.tipo === TipoContenido.PODCAST).length,
+      cursosProcesados: completados.filter((c) => c.tipo === TipoContenido.CURSO).length,
+      videosProcesados: completados.filter((c) => c.tipo === TipoContenido.VIDEO).length,
+      documentosProcesados: completados.filter(
+        (c) => c.tipo === TipoContenido.PDF || c.tipo === TipoContenido.DOCUMENTO
+      ).length,
+      audiosProcesados: completados.filter(
+        (c) => c.tipo === TipoContenido.AUDIO || c.tipo === TipoContenido.PODCAST
+      ).length,
 
-      horasTotalesProcesadas: completados.reduce((sum, c) => sum + (c.duracionTotal / 60), 0),
+      horasTotalesProcesadas: completados.reduce((sum, c) => sum + c.duracionTotal / 60, 0),
       palabrasTotalesTranscritas: completados.reduce((sum, c) => sum + c.palabrasTranscritas, 0),
 
       conceptosTotales: this.conceptos.length,
-      conceptosAplicables: this.conceptos.filter(c => c.aplicableLitper).length,
-      porcentajeAplicabilidad: this.conceptos.length > 0
-        ? Math.round((this.conceptos.filter(c => c.aplicableLitper).length / this.conceptos.length) * 100)
-        : 0,
+      conceptosAplicables: this.conceptos.filter((c) => c.aplicableLitper).length,
+      porcentajeAplicabilidad:
+        this.conceptos.length > 0
+          ? Math.round(
+              (this.conceptos.filter((c) => c.aplicableLitper).length / this.conceptos.length) * 100
+            )
+          : 0,
 
       recomendacionesTotales: this.recomendaciones.length,
-      recomendacionesImplementadas: this.recomendaciones.filter(r => r.estado === EstadoRecomendacion.IMPLEMENTADA).length,
+      recomendacionesImplementadas: this.recomendaciones.filter(
+        (r) => r.estado === EstadoRecomendacion.IMPLEMENTADA
+      ).length,
       impactoEstimado: '+18% eficiencia operativa',
 
       ultimoMes: {
@@ -619,8 +695,8 @@ Las mejores prácticas identificadas incluyen notificaciones proactivas, respues
         horasProcesadas: Math.floor(Math.random() * 50) + 20,
         conceptosNuevos: Math.floor(Math.random() * 100) + 30,
         recomendacionesImplementadas: Math.floor(Math.random() * 10) + 5,
-        impactoMedido: '+12% en tasa de entrega'
-      }
+        impactoMedido: '+12% en tasa de entrega',
+      },
     };
   }
 
@@ -629,7 +705,7 @@ Las mejores prácticas identificadas incluyen notificaciones proactivas, respues
   // ═══════════════════════════════════════════════════════════════════════════
 
   async implementarRecomendacion(recomendacionId: string): Promise<boolean> {
-    const recomendacion = this.recomendaciones.find(r => r.id === recomendacionId);
+    const recomendacion = this.recomendaciones.find((r) => r.id === recomendacionId);
     if (!recomendacion) return false;
 
     recomendacion.estado = EstadoRecomendacion.IMPLEMENTANDO;
@@ -651,24 +727,29 @@ Las mejores prácticas identificadas incluyen notificaciones proactivas, respues
       descripcion: `Recomendación implementada: ${recomendacion.titulo}`,
       datos: { recomendacionId, impacto: recomendacion.impactoMetrica },
       impacto: 'alto',
-      origenPais: Pais.COLOMBIA
+      origenPais: Pais.COLOMBIA,
     });
 
     return true;
   }
 
-  buscarEnConocimiento(query: string): { conceptos: ConceptoClave[]; recomendaciones: RecomendacionLitper[] } {
+  buscarEnConocimiento(query: string): {
+    conceptos: ConceptoClave[];
+    recomendaciones: RecomendacionLitper[];
+  } {
     const queryLower = query.toLowerCase();
 
-    const conceptos = this.conceptos.filter(c =>
-      c.nombre.toLowerCase().includes(queryLower) ||
-      c.descripcion.toLowerCase().includes(queryLower) ||
-      c.tagsPalabras.some(t => t.includes(queryLower))
+    const conceptos = this.conceptos.filter(
+      (c) =>
+        c.nombre.toLowerCase().includes(queryLower) ||
+        c.descripcion.toLowerCase().includes(queryLower) ||
+        c.tagsPalabras.some((t) => t.includes(queryLower))
     );
 
-    const recomendaciones = this.recomendaciones.filter(r =>
-      r.titulo.toLowerCase().includes(queryLower) ||
-      r.descripcion.toLowerCase().includes(queryLower)
+    const recomendaciones = this.recomendaciones.filter(
+      (r) =>
+        r.titulo.toLowerCase().includes(queryLower) ||
+        r.descripcion.toLowerCase().includes(queryLower)
     );
 
     return { conceptos, recomendaciones };
@@ -717,7 +798,7 @@ Las mejores prácticas identificadas incluyen notificaciones proactivas, respues
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   resetear() {
@@ -744,8 +825,12 @@ export const sistemaAprendizaje = new SistemaAprendizaje();
 // FUNCIONES EXPORTADAS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export const agregarContenido = (url: string, tipo: TipoContenido, titulo?: string, plataforma?: PlataformaOrigen) =>
-  sistemaAprendizaje.agregarContenido(url, tipo, titulo, plataforma);
+export const agregarContenido = (
+  url: string,
+  tipo: TipoContenido,
+  titulo?: string,
+  plataforma?: PlataformaOrigen
+) => sistemaAprendizaje.agregarContenido(url, tipo, titulo, plataforma);
 
 export const procesarContenido = (id: string) => sistemaAprendizaje.procesarContenido(id);
 
@@ -753,8 +838,10 @@ export const getContenidos = () => sistemaAprendizaje.getContenidos();
 export const getContenido = (id: string) => sistemaAprendizaje.getContenido(id);
 export const getContenidosEnProceso = () => sistemaAprendizaje.getContenidosEnProceso();
 
-export const getConceptos = (categoria?: CategoriaConocimiento) => sistemaAprendizaje.getConceptos(categoria);
-export const getRecomendaciones = (estado?: EstadoRecomendacion) => sistemaAprendizaje.getRecomendaciones(estado);
+export const getConceptos = (categoria?: CategoriaConocimiento) =>
+  sistemaAprendizaje.getConceptos(categoria);
+export const getRecomendaciones = (estado?: EstadoRecomendacion) =>
+  sistemaAprendizaje.getRecomendaciones(estado);
 export const getRecomendacionesPorPrioridad = (prioridad: NivelPrioridadRecomendacion) =>
   sistemaAprendizaje.getRecomendacionesPorPrioridad(prioridad);
 
@@ -766,7 +853,9 @@ export const getBaseConocimiento = () => sistemaAprendizaje.getBaseConocimiento(
 export const getProcesosActivos = () => sistemaAprendizaje.getProcesosActivos();
 export const getEstadisticasAprendizaje = () => sistemaAprendizaje.getEstadisticas();
 
-export const implementarRecomendacion = (id: string) => sistemaAprendizaje.implementarRecomendacion(id);
-export const buscarEnConocimiento = (query: string) => sistemaAprendizaje.buscarEnConocimiento(query);
+export const implementarRecomendacion = (id: string) =>
+  sistemaAprendizaje.implementarRecomendacion(id);
+export const buscarEnConocimiento = (query: string) =>
+  sistemaAprendizaje.buscarEnConocimiento(query);
 
 export const resetearAprendizaje = () => sistemaAprendizaje.resetear();

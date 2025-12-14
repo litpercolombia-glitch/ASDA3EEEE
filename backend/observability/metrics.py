@@ -6,10 +6,10 @@ Este módulo define todas las métricas de negocio y técnicas
 para monitoreo con Prometheus y visualización en Grafana.
 """
 
-from prometheus_client import Counter, Histogram, Gauge, Info
+from prometheus_client import Counter, Histogram, Gauge
 import time
 from functools import wraps
-from typing import Dict, Any, Callable
+from typing import Dict, Callable
 
 # ═══════════════════════════════════════════
 # MÉTRICAS DE NEGOCIO
@@ -282,7 +282,7 @@ def track_counter(metric: Counter, labels: Dict[str, str]):
                 result = await func(*args, **kwargs)
                 metric.labels(**{**labels, 'status': 'success'}).inc()
                 return result
-            except Exception as e:
+            except Exception:
                 metric.labels(**{**labels, 'status': 'error'}).inc()
                 raise
 
@@ -292,7 +292,7 @@ def track_counter(metric: Counter, labels: Dict[str, str]):
                 result = func(*args, **kwargs)
                 metric.labels(**{**labels, 'status': 'success'}).inc()
                 return result
-            except Exception as e:
+            except Exception:
                 metric.labels(**{**labels, 'status': 'error'}).inc()
                 raise
 

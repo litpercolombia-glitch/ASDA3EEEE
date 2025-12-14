@@ -71,8 +71,12 @@ export const generateDemandForecast = (
   const estimatedBudget = calculateEstimatedBudget(country, dailyPredictions);
 
   const totalPredictedVolume = dailyPredictions.reduce((sum, d) => sum + d.predictedVolume, 0);
-  const peakDay = dailyPredictions.reduce((max, d) => (d.predictedVolume > max.predictedVolume ? d : max));
-  const lowDay = dailyPredictions.reduce((min, d) => (d.predictedVolume < min.predictedVolume ? d : min));
+  const peakDay = dailyPredictions.reduce((max, d) =>
+    d.predictedVolume > max.predictedVolume ? d : max
+  );
+  const lowDay = dailyPredictions.reduce((min, d) =>
+    d.predictedVolume < min.predictedVolume ? d : min
+  );
 
   const forecast: DemandForecast = {
     country,
@@ -113,9 +117,10 @@ const generateDailyPredictions = (
 
   // Calcular promedios históricos por día de la semana
   const dayAverages = calculateDayAverages(historical);
-  const overallAverage = historical.length > 0
-    ? historical.reduce((sum, d) => sum + d.volume, 0) / historical.length
-    : 50;
+  const overallAverage =
+    historical.length > 0
+      ? historical.reduce((sum, d) => sum + d.volume, 0) / historical.length
+      : 50;
 
   for (let i = 0; i < config.forecastDays; i++) {
     const date = new Date(today);
@@ -124,7 +129,7 @@ const generateDailyPredictions = (
     const dayOfWeek = date.getDay();
 
     // Base prediction from historical day-of-week average
-    let basePrediction = dayAverages[dayOfWeek] || overallAverage;
+    const basePrediction = dayAverages[dayOfWeek] || overallAverage;
 
     // Apply factors
     const factors = calculateDemandFactors(country, date, historical);
@@ -288,23 +293,36 @@ const generateCityBreakdown = (
   // Distribución típica por ciudad (simulada basada en población)
   const cityWeights: Record<string, number> = {
     // Colombia
-    'Bogotá': 35, 'Medellín': 18, 'Cali': 12, 'Barranquilla': 8, 'Cartagena': 6,
+    Bogotá: 35,
+    Medellín: 18,
+    Cali: 12,
+    Barranquilla: 8,
+    Cartagena: 6,
     // Ecuador
-    'Quito': 32, 'Guayaquil': 35, 'Cuenca': 10, 'Santo Domingo': 5, 'Machala': 4,
+    Quito: 32,
+    Guayaquil: 35,
+    Cuenca: 10,
+    'Santo Domingo': 5,
+    Machala: 4,
     // Chile
-    'Santiago': 45, 'Valparaíso': 12, 'Concepción': 10, 'Antofagasta': 5, 'Viña del Mar': 6,
+    Santiago: 45,
+    Valparaíso: 12,
+    Concepción: 10,
+    Antofagasta: 5,
+    'Viña del Mar': 6,
   };
 
   // Calcular tendencia por ciudad
   return cities.map((city, index) => {
-    const weight = cityWeights[city] || (15 - index);
+    const weight = cityWeights[city] || 15 - index;
     const percentage = weight;
     const predictedVolume = Math.round((totalVolume * percentage) / 100);
 
     // Simular tendencia
     const trends: ('up' | 'down' | 'stable')[] = ['up', 'down', 'stable'];
     const trend = trends[index % 3];
-    const trendPercentage = trend === 'stable' ? 0 : trend === 'up' ? Math.random() * 15 : -Math.random() * 10;
+    const trendPercentage =
+      trend === 'stable' ? 0 : trend === 'up' ? Math.random() * 15 : -Math.random() * 10;
 
     return {
       city,
@@ -425,9 +443,9 @@ const calculateEstimatedBudget = (
   // Distribución estimada por transportadora
   const breakdown = [
     { carrierId: 'main', carrierName: 'Principal', amount: total * 0.45, percentage: 45 },
-    { carrierId: 'secondary', carrierName: 'Secundaria', amount: total * 0.30, percentage: 30 },
+    { carrierId: 'secondary', carrierName: 'Secundaria', amount: total * 0.3, percentage: 30 },
     { carrierId: 'express', carrierName: 'Express', amount: total * 0.15, percentage: 15 },
-    { carrierId: 'other', carrierName: 'Otros', amount: total * 0.10, percentage: 10 },
+    { carrierId: 'other', carrierName: 'Otros', amount: total * 0.1, percentage: 10 },
   ];
 
   return {
@@ -546,9 +564,7 @@ const formatDate = (dateStr: string): string => {
 
 export const getNextPeakDays = (country: Country, limit: number = 5): DemandPrediction[] => {
   const forecast = getSavedForecast(country) || generateDemandForecast(country);
-  return forecast.dailyPredictions
-    .filter((p) => p.isPeak || p.isHighDemand)
-    .slice(0, limit);
+  return forecast.dailyPredictions.filter((p) => p.isPeak || p.isHighDemand).slice(0, limit);
 };
 
 export const getWeeklyForecast = (country: Country): DemandPrediction[] => {

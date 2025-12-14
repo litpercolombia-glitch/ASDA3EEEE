@@ -123,8 +123,10 @@ const ProBubble: React.FC<ProBubbleProps> = ({ shipmentsContext = [] }) => {
             {isProcessing ? (
               <Zap className="w-6 h-6 text-white drop-shadow-lg animate-pulse" />
             ) : (
-              <Sparkles className="w-6 h-6 text-white drop-shadow-lg group-hover:animate-spin"
-                style={{ animationDuration: '2s' }} />
+              <Sparkles
+                className="w-6 h-6 text-white drop-shadow-lg group-hover:animate-spin"
+                style={{ animationDuration: '2s' }}
+              />
             )}
           </>
         )}

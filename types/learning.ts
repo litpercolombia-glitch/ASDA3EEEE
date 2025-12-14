@@ -19,7 +19,7 @@ export enum TipoContenido {
   WEBINAR = 'webinar',
   ARTICULO = 'articulo',
   EBOOK = 'ebook',
-  PRESENTACION = 'presentacion'
+  PRESENTACION = 'presentacion',
 }
 
 export enum PlataformaOrigen {
@@ -32,7 +32,7 @@ export enum PlataformaOrigen {
   SKILLSHARE = 'skillshare',
   LOCAL = 'local',
   WEB = 'web',
-  OTRO = 'otro'
+  OTRO = 'otro',
 }
 
 export enum EstadoProcesamiento {
@@ -44,7 +44,7 @@ export enum EstadoProcesamiento {
   SINTETIZANDO = 'sintetizando',
   COMPLETADO = 'completado',
   ERROR = 'error',
-  PAUSADO = 'pausado'
+  PAUSADO = 'pausado',
 }
 
 export enum CategoriaConocimiento {
@@ -59,7 +59,7 @@ export enum CategoriaConocimiento {
   RECURSOS_HUMANOS = 'rh',
   LEGAL = 'legal',
   CASOS_ESTUDIO = 'casos_estudio',
-  OTRO = 'otro'
+  OTRO = 'otro',
 }
 
 export enum NivelPrioridadRecomendacion {
@@ -67,7 +67,7 @@ export enum NivelPrioridadRecomendacion {
   ALTA = 'alta',
   MEDIA = 'media',
   BAJA = 'baja',
-  FUTURA = 'futura'
+  FUTURA = 'futura',
 }
 
 export enum EstadoRecomendacion {
@@ -77,7 +77,7 @@ export enum EstadoRecomendacion {
   IMPLEMENTANDO = 'implementando',
   IMPLEMENTADA = 'implementada',
   RECHAZADA = 'rechazada',
-  ARCHIVADA = 'archivada'
+  ARCHIVADA = 'archivada',
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -438,7 +438,7 @@ export enum TipoAgenteAprendiz {
   KNOWLEDGE_PROCESSOR = 'knowledge_processor',
   REPORT_GENERATOR = 'report_generator',
   MEMORY_MANAGER = 'memory_manager',
-  PROFESSOR = 'professor'
+  PROFESSOR = 'professor',
 }
 
 export interface ProcesoAprendizaje {
@@ -583,7 +583,7 @@ export const CONFIGURACION_DEFAULT: ConfiguracionAprendizaje = {
   maxContenidosSimultaneos: 3,
   maxHorasDiarias: 24,
   actualizarAgentesAutomaticamente: true,
-  implementarBajaComplejidadAuto: false
+  implementarBajaComplejidadAuto: false,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

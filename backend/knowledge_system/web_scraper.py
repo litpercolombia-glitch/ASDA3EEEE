@@ -13,7 +13,6 @@ Autor: Litper IA System
 Versión: 1.0.0
 """
 
-import os
 import asyncio
 from typing import Dict, Optional
 from loguru import logger

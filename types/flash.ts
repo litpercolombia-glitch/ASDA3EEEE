@@ -95,7 +95,13 @@ export interface FlashShipment {
   product: FlashProduct;
 
   // Estado
-  status: 'pending' | 'label_generated' | 'pickup_scheduled' | 'in_transit' | 'delivered' | 'cancelled';
+  status:
+    | 'pending'
+    | 'label_generated'
+    | 'pickup_scheduled'
+    | 'in_transit'
+    | 'delivered'
+    | 'cancelled';
 
   // Costos
   shippingCost?: number;

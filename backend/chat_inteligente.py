@@ -12,7 +12,7 @@ from typing import Optional, Dict, List, Any, Tuple
 from enum import Enum
 
 from anthropic import Anthropic
-from sqlalchemy import func, and_, or_
+from sqlalchemy import func, and_, Integer
 from sqlalchemy.orm import Session
 from loguru import logger
 from dotenv import load_dotenv
@@ -20,7 +20,6 @@ from dotenv import load_dotenv
 from database.models import (
     GuiaHistorica,
     ConversacionChat,
-    MetricaModelo,
 )
 
 load_dotenv()
@@ -267,11 +266,11 @@ class ChatInteligente:
             ).scalar() or 0
 
             guias_retraso = session.query(func.count(GuiaHistorica.id)).filter(
-                GuiaHistorica.tiene_retraso == True
+                GuiaHistorica.tiene_retraso
             ).scalar() or 0
 
             guias_novedad = session.query(func.count(GuiaHistorica.id)).filter(
-                GuiaHistorica.tiene_novedad == True
+                GuiaHistorica.tiene_novedad
             ).scalar() or 0
 
             # Top transportadoras
@@ -358,10 +357,10 @@ class ChatInteligente:
             and_(filtro, GuiaHistorica.estatus.ilike('%entregad%'))
         ).scalar() or 0
         retrasos = session.query(func.count(GuiaHistorica.id)).filter(
-            and_(filtro, GuiaHistorica.tiene_retraso == True)
+            and_(filtro, GuiaHistorica.tiene_retraso)
         ).scalar() or 0
         novedades = session.query(func.count(GuiaHistorica.id)).filter(
-            and_(filtro, GuiaHistorica.tiene_novedad == True)
+            and_(filtro, GuiaHistorica.tiene_novedad)
         ).scalar() or 0
 
         avg_dias = session.query(func.avg(GuiaHistorica.dias_transito)).filter(
@@ -391,7 +390,7 @@ class ChatInteligente:
             and_(filtro, GuiaHistorica.estatus.ilike('%entregad%'))
         ).scalar() or 0
         retrasos = session.query(func.count(GuiaHistorica.id)).filter(
-            and_(filtro, GuiaHistorica.tiene_retraso == True)
+            and_(filtro, GuiaHistorica.tiene_retraso)
         ).scalar() or 0
 
         # Por transportadora en esta ciudad
@@ -464,7 +463,6 @@ class ChatInteligente:
             GuiaHistorica.transportadora
         ).all()
 
-        from sqlalchemy import Integer
 
         resultados = []
         for t in comparativa:
@@ -493,7 +491,7 @@ class ChatInteligente:
     def _analizar_retrasos(self, parametros: Dict, session: Session) -> Dict[str, Any]:
         """Analiza guías con retrasos"""
         query = session.query(GuiaHistorica).filter(
-            GuiaHistorica.tiene_retraso == True
+            GuiaHistorica.tiene_retraso
         )
 
         total_retrasos = query.count()
@@ -504,7 +502,7 @@ class ChatInteligente:
             func.count(GuiaHistorica.id).label('total')
         ).filter(
             and_(
-                GuiaHistorica.tiene_retraso == True,
+                GuiaHistorica.tiene_retraso,
                 GuiaHistorica.transportadora.isnot(None)
             )
         ).group_by(
@@ -519,7 +517,7 @@ class ChatInteligente:
             func.count(GuiaHistorica.id).label('total')
         ).filter(
             and_(
-                GuiaHistorica.tiene_retraso == True,
+                GuiaHistorica.tiene_retraso,
                 GuiaHistorica.ciudad_destino.isnot(None)
             )
         ).group_by(

@@ -87,22 +87,24 @@ const calculateSemaforoScore = (
   // Score = (TasaEntrega × 0.40) + ((10 - TiempoPromedio) × 0.30) + (VolumenHistorico × 0.20) + (Consistencia × 0.10)
 
   // Factor 1: Tasa de entrega (40% weight)
-  const tasaEntregaFactor = tasaEntrega * 0.40;
+  const tasaEntregaFactor = tasaEntrega * 0.4;
 
   // Factor 2: Velocidad - inverse of time, normalized to 0-100 (30% weight)
   const tiempoNormalizado = Math.max(0, Math.min(10, tiempoPromedio));
-  const velocidadFactor = ((10 - tiempoNormalizado) / 10) * 100 * 0.30;
+  const velocidadFactor = ((10 - tiempoNormalizado) / 10) * 100 * 0.3;
 
   // Factor 3: Volumen - confidence based on sample size (20% weight)
   const volumenNormalizado = Math.min(volumenHistorico / 100, 1.0) * 100;
-  const volumenFactor = volumenNormalizado * 0.20;
+  const volumenFactor = volumenNormalizado * 0.2;
 
   // Factor 4: Consistencia - placeholder for consistency metric (10% weight)
   // In real scenario, this would calculate month-over-month variance
-  const consistenciaFactor = (tasaEntrega > 70 ? 80 : tasaEntrega > 50 ? 60 : 40) * 0.10;
+  const consistenciaFactor = (tasaEntrega > 70 ? 80 : tasaEntrega > 50 ? 60 : 40) * 0.1;
 
   // Final score
-  const score = Math.round(tasaEntregaFactor + velocidadFactor + volumenFactor + consistenciaFactor);
+  const score = Math.round(
+    tasaEntregaFactor + velocidadFactor + volumenFactor + consistenciaFactor
+  );
 
   // Determine color based on score
   let color: SemaforoColor;
@@ -147,7 +149,9 @@ const calculateSemaforoScore = (
 };
 
 // Process Excel data with enhanced scoring
-const procesarExcelConScore = (data: SemaforoExcelData): (CiudadSemaforo & { score: number; factors: SemaforoScoreResult['factors'] })[] => {
+const procesarExcelConScore = (
+  data: SemaforoExcelData
+): (CiudadSemaforo & { score: number; factors: SemaforoScoreResult['factors'] })[] => {
   const tiemposMap = new Map<string, number>();
 
   // Build time lookup
@@ -234,7 +238,9 @@ const CityDetailModal: React.FC<CityDetailModalProps> = ({ ciudad, onClose }) =>
         <div className="p-6 space-y-6">
           {/* Score display */}
           <div className="text-center">
-            <div className={`inline-flex items-center justify-center w-24 h-24 ${config.bg} rounded-full text-white`}>
+            <div
+              className={`inline-flex items-center justify-center w-24 h-24 ${config.bg} rounded-full text-white`}
+            >
               <div>
                 <p className="text-3xl font-bold">{ciudad.score}</p>
                 <p className="text-xs">SCORE</p>
@@ -250,7 +256,9 @@ const CityDetailModal: React.FC<CityDetailModalProps> = ({ ciudad, onClose }) =>
             </h4>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-600 dark:text-slate-400">Tasa de Entrega (40%)</span>
+                <span className="text-sm text-slate-600 dark:text-slate-400">
+                  Tasa de Entrega (40%)
+                </span>
                 <span className="font-bold text-emerald-600">{ciudad.factors.tasaEntrega} pts</span>
               </div>
               <div className="flex items-center justify-between">
@@ -262,7 +270,9 @@ const CityDetailModal: React.FC<CityDetailModalProps> = ({ ciudad, onClose }) =>
                 <span className="font-bold text-purple-600">{ciudad.factors.volumen} pts</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-600 dark:text-slate-400">Consistencia (10%)</span>
+                <span className="text-sm text-slate-600 dark:text-slate-400">
+                  Consistencia (10%)
+                </span>
                 <span className="font-bold text-amber-600">{ciudad.factors.consistencia} pts</span>
               </div>
             </div>
@@ -289,12 +299,18 @@ const CityDetailModal: React.FC<CityDetailModalProps> = ({ ciudad, onClose }) =>
           </div>
 
           {/* AI Recommendation */}
-          <div className={`${config.light} dark:bg-opacity-20 rounded-xl p-4 border border-${ciudad.semaforo === 'VERDE' ? 'emerald' : ciudad.semaforo === 'AMARILLO' ? 'yellow' : ciudad.semaforo === 'NARANJA' ? 'orange' : 'red'}-200 dark:border-opacity-30`}>
+          <div
+            className={`${config.light} dark:bg-opacity-20 rounded-xl p-4 border border-${ciudad.semaforo === 'VERDE' ? 'emerald' : ciudad.semaforo === 'AMARILLO' ? 'yellow' : ciudad.semaforo === 'NARANJA' ? 'orange' : 'red'}-200 dark:border-opacity-30`}
+          >
             <div className="flex items-start gap-2">
               <Bot className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="font-bold text-slate-700 dark:text-white text-sm mb-1">Recomendación IA</p>
-                <p className="text-sm text-slate-600 dark:text-slate-300">{ciudad.recomendacionIA}</p>
+                <p className="font-bold text-slate-700 dark:text-white text-sm mb-1">
+                  Recomendación IA
+                </p>
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                  {ciudad.recomendacionIA}
+                </p>
               </div>
             </div>
           </div>
@@ -311,32 +327,40 @@ interface InsightsPanelProps {
 
 const InsightsPanel: React.FC<InsightsPanelProps> = ({ ciudades }) => {
   const insights = useMemo(() => {
-    const result: { type: 'warning' | 'success' | 'info' | 'strategy'; icon: string; title: string; message: string }[] = [];
+    const result: {
+      type: 'warning' | 'success' | 'info' | 'strategy';
+      icon: string;
+      title: string;
+      message: string;
+    }[] = [];
 
     // Critical routes
-    const critical = ciudades.filter(c => c.semaforo === 'ROJO');
+    const critical = ciudades.filter((c) => c.semaforo === 'ROJO');
     if (critical.length > 0) {
       result.push({
         type: 'warning',
         icon: '⚠️',
         title: 'Rutas Críticas Detectadas',
-        message: `${critical.length} rutas tienen alto riesgo de devolución. Ciudades: ${critical.slice(0, 3).map(c => c.ciudad).join(', ')}${critical.length > 3 ? ` y ${critical.length - 3} más` : ''}`,
+        message: `${critical.length} rutas tienen alto riesgo de devolución. Ciudades: ${critical
+          .slice(0, 3)
+          .map((c) => c.ciudad)
+          .join(', ')}${critical.length > 3 ? ` y ${critical.length - 3} más` : ''}`,
       });
     }
 
     // Top performers
-    const topPerformers = ciudades.filter(c => c.semaforo === 'VERDE').slice(0, 3);
+    const topPerformers = ciudades.filter((c) => c.semaforo === 'VERDE').slice(0, 3);
     if (topPerformers.length > 0) {
       result.push({
         type: 'success',
         icon: '✅',
         title: 'Rutas Óptimas',
-        message: `Las mejores opciones son: ${topPerformers.map(c => `${c.ciudad} (${c.transportadora})`).join(', ')}`,
+        message: `Las mejores opciones son: ${topPerformers.map((c) => `${c.ciudad} (${c.transportadora})`).join(', ')}`,
       });
     }
 
     // Low volume routes
-    const lowVolume = ciudades.filter(c => c.total < 10);
+    const lowVolume = ciudades.filter((c) => c.total < 10);
     if (lowVolume.length > 0) {
       result.push({
         type: 'info',
@@ -352,19 +376,36 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({ ciudades }) => {
       type: 'strategy',
       icon: '🎯',
       title: 'Estrategia Recomendada',
-      message: avgScore >= 70
-        ? `Score promedio: ${avgScore.toFixed(1)}/100. Tu red logística está optimizada. Mantén estas rutas.`
-        : `Score promedio: ${avgScore.toFixed(1)}/100. Considera renegociar con transportadoras de bajo rendimiento.`,
+      message:
+        avgScore >= 70
+          ? `Score promedio: ${avgScore.toFixed(1)}/100. Tu red logística está optimizada. Mantén estas rutas.`
+          : `Score promedio: ${avgScore.toFixed(1)}/100. Considera renegociar con transportadoras de bajo rendimiento.`,
     });
 
     return result;
   }, [ciudades]);
 
   const typeConfig = {
-    warning: { bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-200 dark:border-red-800', text: 'text-red-700 dark:text-red-400' },
-    success: { bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-200 dark:border-emerald-800', text: 'text-emerald-700 dark:text-emerald-400' },
-    info: { bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800', text: 'text-blue-700 dark:text-blue-400' },
-    strategy: { bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800', text: 'text-purple-700 dark:text-purple-400' },
+    warning: {
+      bg: 'bg-red-50 dark:bg-red-900/20',
+      border: 'border-red-200 dark:border-red-800',
+      text: 'text-red-700 dark:text-red-400',
+    },
+    success: {
+      bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+      border: 'border-emerald-200 dark:border-emerald-800',
+      text: 'text-emerald-700 dark:text-emerald-400',
+    },
+    info: {
+      bg: 'bg-blue-50 dark:bg-blue-900/20',
+      border: 'border-blue-200 dark:border-blue-800',
+      text: 'text-blue-700 dark:text-blue-400',
+    },
+    strategy: {
+      bg: 'bg-purple-50 dark:bg-purple-900/20',
+      border: 'border-purple-200 dark:border-purple-800',
+      text: 'text-purple-700 dark:text-purple-400',
+    },
   };
 
   return (
@@ -380,7 +421,7 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({ ciudades }) => {
             'Detecta rutas problemáticas antes de enviar',
             'Identifica las mejores transportadoras por ciudad',
             'Sugiere estrategias de optimización',
-            'Calcula el impacto financiero de cambios'
+            'Calcula el impacto financiero de cambios',
           ]}
           position="right"
         >
@@ -391,10 +432,7 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({ ciudades }) => {
         {insights.map((insight, idx) => {
           const config = typeConfig[insight.type];
           return (
-            <div
-              key={idx}
-              className={`${config.bg} ${config.border} border rounded-lg p-3`}
-            >
+            <div key={idx} className={`${config.bg} ${config.border} border rounded-lg p-3`}>
               <p className={`font-bold text-sm ${config.text} flex items-center gap-2`}>
                 <span>{insight.icon}</span>
                 {insight.title}
@@ -445,7 +483,9 @@ interface CarrierCityComparison {
 }
 
 const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudades }) => {
-  const [expandedSection, setExpandedSection] = useState<'optimizations' | 'comparisons' | 'report' | null>('optimizations');
+  const [expandedSection, setExpandedSection] = useState<
+    'optimizations' | 'comparisons' | 'report' | null
+  >('optimizations');
 
   // Generate route optimizations
   const optimizations = useMemo((): RouteOptimization[] => {
@@ -453,7 +493,7 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
 
     // Group by city
     const cityGroups: Record<string, typeof ciudades> = {};
-    ciudades.forEach(c => {
+    ciudades.forEach((c) => {
       const city = c.ciudad.toUpperCase();
       if (!cityGroups[city]) cityGroups[city] = [];
       cityGroups[city].push(c);
@@ -497,7 +537,7 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
   // Generate carrier comparisons by city
   const carrierComparisons = useMemo((): CarrierCityComparison[] => {
     const cityGroups: Record<string, typeof ciudades> = {};
-    ciudades.forEach(c => {
+    ciudades.forEach((c) => {
       const city = c.ciudad.toUpperCase();
       if (!cityGroups[city]) cityGroups[city] = [];
       cityGroups[city].push(c);
@@ -512,13 +552,15 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
 
         return {
           city,
-          carriers: carriers.map(c => ({
-            name: c.transportadora,
-            score: c.score,
-            successRate: c.tasaExito,
-            time: c.tiempoPromedio,
-            total: c.total,
-          })).sort((a, b) => b.score - a.score),
+          carriers: carriers
+            .map((c) => ({
+              name: c.transportadora,
+              score: c.score,
+              successRate: c.tasaExito,
+              time: c.tiempoPromedio,
+              total: c.total,
+            }))
+            .sort((a, b) => b.score - a.score),
           bestCarrier: best.transportadora,
           worstCarrier: worst.transportadora,
           speedDifference: worst.tiempoPromedio - best.tiempoPromedio,
@@ -531,28 +573,35 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
 
   // Generate optimization report summary
   const reportSummary = useMemo(() => {
-    const highPriority = optimizations.filter(o => o.priority === 'ALTA');
-    const mediumPriority = optimizations.filter(o => o.priority === 'MEDIA');
+    const highPriority = optimizations.filter((o) => o.priority === 'ALTA');
+    const mediumPriority = optimizations.filter((o) => o.priority === 'MEDIA');
 
     const totalTimeReduction = optimizations.reduce((sum, o) => sum + o.timeImprovement, 0);
-    const avgSuccessImprovement = optimizations.length > 0
-      ? optimizations.reduce((sum, o) => sum + (o.recommendedSuccessRate - o.currentSuccessRate), 0) / optimizations.length
-      : 0;
+    const avgSuccessImprovement =
+      optimizations.length > 0
+        ? optimizations.reduce(
+            (sum, o) => sum + (o.recommendedSuccessRate - o.currentSuccessRate),
+            0
+          ) / optimizations.length
+        : 0;
 
     // Carrier rankings
-    const carrierScores: Record<string, { wins: number; losses: number; avgScore: number; count: number }> = {};
-    ciudades.forEach(c => {
+    const carrierScores: Record<
+      string,
+      { wins: number; losses: number; avgScore: number; count: number }
+    > = {};
+    ciudades.forEach((c) => {
       const key = c.transportadora.toUpperCase();
       if (!carrierScores[key]) carrierScores[key] = { wins: 0, losses: 0, avgScore: 0, count: 0 };
       carrierScores[key].avgScore += c.score;
       carrierScores[key].count++;
     });
 
-    Object.keys(carrierScores).forEach(k => {
+    Object.keys(carrierScores).forEach((k) => {
       carrierScores[k].avgScore = carrierScores[k].avgScore / carrierScores[k].count;
     });
 
-    optimizations.forEach(o => {
+    optimizations.forEach((o) => {
       const recKey = o.recommendedCarrier.toUpperCase();
       const currKey = o.currentCarrier.toUpperCase();
       if (carrierScores[recKey]) carrierScores[recKey].wins++;
@@ -574,9 +623,24 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
   }, [optimizations, ciudades]);
 
   const priorityColors = {
-    ALTA: { bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-200 dark:border-red-800', text: 'text-red-700 dark:text-red-400', badge: 'bg-red-500' },
-    MEDIA: { bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800', text: 'text-amber-700 dark:text-amber-400', badge: 'bg-amber-500' },
-    BAJA: { bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800', text: 'text-blue-700 dark:text-blue-400', badge: 'bg-blue-500' },
+    ALTA: {
+      bg: 'bg-red-50 dark:bg-red-900/20',
+      border: 'border-red-200 dark:border-red-800',
+      text: 'text-red-700 dark:text-red-400',
+      badge: 'bg-red-500',
+    },
+    MEDIA: {
+      bg: 'bg-amber-50 dark:bg-amber-900/20',
+      border: 'border-amber-200 dark:border-amber-800',
+      text: 'text-amber-700 dark:text-amber-400',
+      badge: 'bg-amber-500',
+    },
+    BAJA: {
+      bg: 'bg-blue-50 dark:bg-blue-900/20',
+      border: 'border-blue-200 dark:border-blue-800',
+      text: 'text-blue-700 dark:text-blue-400',
+      badge: 'bg-blue-500',
+    },
   };
 
   if (optimizations.length === 0 && carrierComparisons.length === 0) {
@@ -606,7 +670,9 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
       {/* Navigation Tabs */}
       <div className="flex border-b border-slate-200 dark:border-navy-700">
         <button
-          onClick={() => setExpandedSection(expandedSection === 'optimizations' ? null : 'optimizations')}
+          onClick={() =>
+            setExpandedSection(expandedSection === 'optimizations' ? null : 'optimizations')
+          }
           className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
             expandedSection === 'optimizations'
               ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-b-2 border-blue-500'
@@ -617,7 +683,9 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
           Sugerencias ({optimizations.length})
         </button>
         <button
-          onClick={() => setExpandedSection(expandedSection === 'comparisons' ? null : 'comparisons')}
+          onClick={() =>
+            setExpandedSection(expandedSection === 'comparisons' ? null : 'comparisons')
+          }
           className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
             expandedSection === 'comparisons'
               ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-b-2 border-blue-500'
@@ -658,7 +726,10 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
             ) : (
               <>
                 <p className="text-sm text-slate-500 mb-4">
-                  Se detectaron <span className="font-bold text-blue-600">{optimizations.length}</span> oportunidades de optimización basadas en el rendimiento histórico de transportadoras
+                  Se detectaron{' '}
+                  <span className="font-bold text-blue-600">{optimizations.length}</span>{' '}
+                  oportunidades de optimización basadas en el rendimiento histórico de
+                  transportadoras
                 </p>
 
                 {optimizations.map((opt, idx) => {
@@ -672,12 +743,16 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
                         <div className="flex items-center gap-2">
                           <MapPin className="w-5 h-5 text-slate-500" />
                           <h4 className="font-bold text-slate-800 dark:text-white">{opt.ciudad}</h4>
-                          <span className={`${colors.badge} text-white text-xs font-bold px-2 py-0.5 rounded-full`}>
+                          <span
+                            className={`${colors.badge} text-white text-xs font-bold px-2 py-0.5 rounded-full`}
+                          >
                             {opt.priority}
                           </span>
                         </div>
                         <div className="text-right">
-                          <p className="text-emerald-600 font-bold text-lg">+{opt.improvement}pts</p>
+                          <p className="text-emerald-600 font-bold text-lg">
+                            +{opt.improvement}pts
+                          </p>
                           <p className="text-xs text-slate-500">mejora score</p>
                         </div>
                       </div>
@@ -687,13 +762,19 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
                         <div className="bg-red-50 dark:bg-red-900/10 rounded-lg p-3 border border-red-200 dark:border-red-800">
                           <div className="flex items-center gap-2 mb-2">
                             <XCircle className="w-4 h-4 text-red-500" />
-                            <span className="text-xs font-bold text-red-700 dark:text-red-400">ACTUAL</span>
+                            <span className="text-xs font-bold text-red-700 dark:text-red-400">
+                              ACTUAL
+                            </span>
                           </div>
-                          <p className="font-bold text-slate-800 dark:text-white">{opt.currentCarrier}</p>
+                          <p className="font-bold text-slate-800 dark:text-white">
+                            {opt.currentCarrier}
+                          </p>
                           <div className="flex items-center gap-3 mt-2 text-sm">
                             <span className="text-red-600">Score: {opt.currentScore}</span>
                             <span className="text-slate-500">|</span>
-                            <span className="text-slate-600">{opt.currentSuccessRate.toFixed(0)}% éxito</span>
+                            <span className="text-slate-600">
+                              {opt.currentSuccessRate.toFixed(0)}% éxito
+                            </span>
                             <span className="text-slate-500">|</span>
                             <span className="text-slate-600">{opt.currentTime}d</span>
                           </div>
@@ -702,13 +783,21 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
                         <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-lg p-3 border border-emerald-200 dark:border-emerald-800">
                           <div className="flex items-center gap-2 mb-2">
                             <CheckCircle className="w-4 h-4 text-emerald-500" />
-                            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">RECOMENDADO</span>
+                            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                              RECOMENDADO
+                            </span>
                           </div>
-                          <p className="font-bold text-slate-800 dark:text-white">{opt.recommendedCarrier}</p>
+                          <p className="font-bold text-slate-800 dark:text-white">
+                            {opt.recommendedCarrier}
+                          </p>
                           <div className="flex items-center gap-3 mt-2 text-sm">
-                            <span className="text-emerald-600 font-bold">Score: {opt.recommendedScore}</span>
+                            <span className="text-emerald-600 font-bold">
+                              Score: {opt.recommendedScore}
+                            </span>
                             <span className="text-slate-500">|</span>
-                            <span className="text-slate-600">{opt.recommendedSuccessRate.toFixed(0)}% éxito</span>
+                            <span className="text-slate-600">
+                              {opt.recommendedSuccessRate.toFixed(0)}% éxito
+                            </span>
                             <span className="text-slate-500">|</span>
                             <span className="text-slate-600">{opt.recommendedTime}d</span>
                           </div>
@@ -724,8 +813,9 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
                           </span>
                         )}
                         <span className="flex items-center gap-1 px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-lg text-xs font-medium">
-                          <TrendingUp className="w-3 h-3" />
-                          +{(opt.recommendedSuccessRate - opt.currentSuccessRate).toFixed(0)}% efectividad
+                          <TrendingUp className="w-3 h-3" />+
+                          {(opt.recommendedSuccessRate - opt.currentSuccessRate).toFixed(0)}%
+                          efectividad
                         </span>
                       </div>
 
@@ -733,7 +823,9 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
                       <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
                         <div className="flex items-start gap-2">
                           <Brain className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
-                          <p className="text-sm text-purple-800 dark:text-purple-200">{opt.recommendation}</p>
+                          <p className="text-sm text-purple-800 dark:text-purple-200">
+                            {opt.recommendation}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -752,7 +844,10 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
             </p>
 
             {carrierComparisons.map((comp, idx) => (
-              <div key={`${comp.city}-${idx}`} className="bg-slate-50 dark:bg-navy-950 rounded-xl p-4">
+              <div
+                key={`${comp.city}-${idx}`}
+                className="bg-slate-50 dark:bg-navy-950 rounded-xl p-4"
+              >
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-blue-500" />
@@ -784,7 +879,9 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
                           {isLast && <AlertTriangle className="w-4 h-4 text-red-500" />}
                           {!isFirst && !isLast && <Truck className="w-4 h-4 text-slate-400" />}
                           <div>
-                            <p className={`font-bold text-sm ${isFirst ? 'text-emerald-700' : isLast ? 'text-red-700' : 'text-slate-700'} dark:text-white`}>
+                            <p
+                              className={`font-bold text-sm ${isFirst ? 'text-emerald-700' : isLast ? 'text-red-700' : 'text-slate-700'} dark:text-white`}
+                            >
                               {carrier.name}
                             </p>
                             <p className="text-xs text-slate-500">{carrier.total} envíos</p>
@@ -792,17 +889,23 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
                         </div>
                         <div className="flex items-center gap-4 text-sm">
                           <div className="text-center">
-                            <p className={`font-bold ${carrier.score >= 70 ? 'text-emerald-600' : carrier.score >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                            <p
+                              className={`font-bold ${carrier.score >= 70 ? 'text-emerald-600' : carrier.score >= 50 ? 'text-amber-600' : 'text-red-600'}`}
+                            >
                               {carrier.score}
                             </p>
                             <p className="text-[10px] text-slate-400">Score</p>
                           </div>
                           <div className="text-center">
-                            <p className="font-medium text-slate-700 dark:text-slate-300">{carrier.successRate.toFixed(0)}%</p>
+                            <p className="font-medium text-slate-700 dark:text-slate-300">
+                              {carrier.successRate.toFixed(0)}%
+                            </p>
                             <p className="text-[10px] text-slate-400">Éxito</p>
                           </div>
                           <div className="text-center">
-                            <p className="font-medium text-slate-700 dark:text-slate-300">{carrier.time}d</p>
+                            <p className="font-medium text-slate-700 dark:text-slate-300">
+                              {carrier.time}d
+                            </p>
                             <p className="text-[10px] text-slate-400">Tiempo</p>
                           </div>
                         </div>
@@ -814,7 +917,9 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
                 {/* Summary */}
                 <div className="mt-3 pt-3 border-t border-slate-200 dark:border-navy-700 flex items-center justify-between text-xs text-slate-500">
                   <span>
-                    <strong className="text-emerald-600">{comp.bestCarrier}</strong> es {comp.speedDifference.toFixed(1)}d más rápido y {comp.successDifference.toFixed(0)}% más efectivo
+                    <strong className="text-emerald-600">{comp.bestCarrier}</strong> es{' '}
+                    {comp.speedDifference.toFixed(1)}d más rápido y{' '}
+                    {comp.successDifference.toFixed(0)}% más efectivo
                   </span>
                 </div>
               </div>
@@ -837,7 +942,9 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-center">
-                <p className="text-3xl font-bold text-blue-600">{reportSummary.totalOptimizations}</p>
+                <p className="text-3xl font-bold text-blue-600">
+                  {reportSummary.totalOptimizations}
+                </p>
                 <p className="text-xs text-slate-500">Optimizaciones</p>
               </div>
               <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 text-center">
@@ -845,11 +952,15 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
                 <p className="text-xs text-slate-500">Prioridad Alta</p>
               </div>
               <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 text-center">
-                <p className="text-3xl font-bold text-emerald-600">+{reportSummary.avgSuccessImprovement.toFixed(1)}%</p>
+                <p className="text-3xl font-bold text-emerald-600">
+                  +{reportSummary.avgSuccessImprovement.toFixed(1)}%
+                </p>
                 <p className="text-xs text-slate-500">Mejora Promedio</p>
               </div>
               <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 text-center">
-                <p className="text-3xl font-bold text-purple-600">-{reportSummary.totalTimeReduction.toFixed(1)}d</p>
+                <p className="text-3xl font-bold text-purple-600">
+                  -{reportSummary.totalTimeReduction.toFixed(1)}d
+                </p>
                 <p className="text-xs text-slate-500">Tiempo Total</p>
               </div>
             </div>
@@ -862,14 +973,22 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
               </h5>
               <div className="space-y-2">
                 {reportSummary.carrierRanking.map((carrier, idx) => (
-                  <div key={carrier.name} className="flex items-center justify-between p-2 bg-white dark:bg-navy-900 rounded-lg">
+                  <div
+                    key={carrier.name}
+                    className="flex items-center justify-between p-2 bg-white dark:bg-navy-900 rounded-lg"
+                  >
                     <div className="flex items-center gap-3">
-                      <span className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                        idx === 0 ? 'bg-yellow-500' :
-                        idx === 1 ? 'bg-slate-400' :
-                        idx === 2 ? 'bg-amber-600' :
-                        'bg-slate-300'
-                      }`}>
+                      <span
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                          idx === 0
+                            ? 'bg-yellow-500'
+                            : idx === 1
+                              ? 'bg-slate-400'
+                              : idx === 2
+                                ? 'bg-amber-600'
+                                : 'bg-slate-300'
+                        }`}
+                      >
                         {idx + 1}
                       </span>
                       <div>
@@ -879,7 +998,9 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-center">
-                        <p className={`font-bold ${carrier.avgScore >= 70 ? 'text-emerald-600' : carrier.avgScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                        <p
+                          className={`font-bold ${carrier.avgScore >= 70 ? 'text-emerald-600' : carrier.avgScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}
+                        >
                           {carrier.avgScore.toFixed(0)}
                         </p>
                         <p className="text-[10px] text-slate-400">Score Prom.</p>
@@ -903,12 +1024,13 @@ const RouteOptimizationPanel: React.FC<RouteOptimizationPanelProps> = ({ ciudade
               <div className="flex items-start gap-3">
                 <Brain className="w-6 h-6 text-purple-600 mt-0.5" />
                 <div>
-                  <h5 className="font-bold text-purple-700 dark:text-purple-300 mb-2">Resumen IA</h5>
+                  <h5 className="font-bold text-purple-700 dark:text-purple-300 mb-2">
+                    Resumen IA
+                  </h5>
                   <p className="text-sm text-purple-800 dark:text-purple-200">
                     {reportSummary.totalOptimizations > 0
                       ? `Se identificaron ${reportSummary.totalOptimizations} oportunidades de optimización. Implementando estas sugerencias podrías mejorar la tasa de éxito promedio en un ${reportSummary.avgSuccessImprovement.toFixed(1)}% y reducir el tiempo de entrega total en ${reportSummary.totalTimeReduction.toFixed(1)} días. ${reportSummary.highPriority > 0 ? `Las ${reportSummary.highPriority} optimizaciones de alta prioridad deberían implementarse primero para maximizar el impacto.` : ''}`
-                      : 'Tu distribución de transportadoras por ruta está bien optimizada. Continúa monitoreando para detectar cambios en el rendimiento.'
-                    }
+                      : 'Tu distribución de transportadoras por ruta está bien optimizada. Continúa monitoreando para detectar cambios en el rendimiento.'}
                   </p>
                 </div>
               </div>
@@ -949,7 +1071,9 @@ const generateOptimizationRecommendation = (
 // Main component
 export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) => {
   const [excelData, setExcelData] = useState<SemaforoExcelData | null>(null);
-  const [ciudades, setCiudades] = useState<(CiudadSemaforo & { score: number; factors: SemaforoScoreResult['factors'] })[]>([]);
+  const [ciudades, setCiudades] = useState<
+    (CiudadSemaforo & { score: number; factors: SemaforoScoreResult['factors'] })[]
+  >([]);
   const [lastUpload, setLastUpload] = useState<Date | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
 
@@ -958,7 +1082,9 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
   const [sortBy, setSortBy] = useState<'score' | 'tasaExito' | 'total' | 'tiempoPromedio'>('score');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  const [selectedCiudad, setSelectedCiudad] = useState<(CiudadSemaforo & { score: number; factors: SemaforoScoreResult['factors'] }) | null>(null);
+  const [selectedCiudad, setSelectedCiudad] = useState<
+    (CiudadSemaforo & { score: number; factors: SemaforoScoreResult['factors'] }) | null
+  >(null);
   const [showTable, setShowTable] = useState(true);
 
   // Autocompletado de ciudades
@@ -1026,7 +1152,7 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
 
   // Filter and sort cities
   const filteredCiudades = useMemo(() => {
-    let result = ciudades.filter((c) => {
+    const result = ciudades.filter((c) => {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         if (
@@ -1095,10 +1221,34 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
 
   // Color config
   const semaforoConfig = {
-    VERDE: { emoji: '🟢', label: 'Recomendado', bg: 'bg-emerald-500', light: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-400' },
-    AMARILLO: { emoji: '🟡', label: 'Con reservas', bg: 'bg-yellow-500', light: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-400' },
-    NARANJA: { emoji: '🟠', label: 'Alerta', bg: 'bg-orange-500', light: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-400' },
-    ROJO: { emoji: '🔴', label: 'No recomendado', bg: 'bg-red-500', light: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400' },
+    VERDE: {
+      emoji: '🟢',
+      label: 'Recomendado',
+      bg: 'bg-emerald-500',
+      light: 'bg-emerald-100 dark:bg-emerald-900/30',
+      text: 'text-emerald-700 dark:text-emerald-400',
+    },
+    AMARILLO: {
+      emoji: '🟡',
+      label: 'Con reservas',
+      bg: 'bg-yellow-500',
+      light: 'bg-yellow-100 dark:bg-yellow-900/30',
+      text: 'text-yellow-700 dark:text-yellow-400',
+    },
+    NARANJA: {
+      emoji: '🟠',
+      label: 'Alerta',
+      bg: 'bg-orange-500',
+      light: 'bg-orange-100 dark:bg-orange-900/30',
+      text: 'text-orange-700 dark:text-orange-400',
+    },
+    ROJO: {
+      emoji: '🔴',
+      label: 'No recomendado',
+      bg: 'bg-red-500',
+      light: 'bg-red-100 dark:bg-red-900/30',
+      text: 'text-red-700 dark:text-red-400',
+    },
   };
 
   // If no data, show upload screen
@@ -1113,7 +1263,8 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
             Semáforo de Ciudades
           </h2>
           <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-            Sistema inteligente de clasificación de rutas logísticas basado en datos históricos masivos
+            Sistema inteligente de clasificación de rutas logísticas basado en datos históricos
+            masivos
           </p>
         </div>
 
@@ -1260,17 +1411,25 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
                 'Tasa de Entrega (40%): Porcentaje de entregas exitosas',
                 'Velocidad (30%): Tiempo promedio de entrega',
                 'Volumen (20%): Cantidad de envíos históricos',
-                'Consistencia (10%): Estabilidad del rendimiento'
+                'Consistencia (10%): Estabilidad del rendimiento',
               ]}
               position="right"
             >
               <HelpCircle className="w-3.5 h-3.5 text-slate-400 hover:text-amber-500 cursor-help" />
             </HelpTooltip>
           </span>
-          <span className="flex items-center gap-1.5">🟢 <span className="text-slate-600 dark:text-slate-300">Score ≥75 (Excelente)</span></span>
-          <span className="flex items-center gap-1.5">🟡 <span className="text-slate-600 dark:text-slate-300">Score 65-74 (Bueno)</span></span>
-          <span className="flex items-center gap-1.5">🟠 <span className="text-slate-600 dark:text-slate-300">Score 50-64 (Alerta)</span></span>
-          <span className="flex items-center gap-1.5">🔴 <span className="text-slate-600 dark:text-slate-300">Score &lt;50 (Crítico)</span></span>
+          <span className="flex items-center gap-1.5">
+            🟢 <span className="text-slate-600 dark:text-slate-300">Score ≥75 (Excelente)</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            🟡 <span className="text-slate-600 dark:text-slate-300">Score 65-74 (Bueno)</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            🟠 <span className="text-slate-600 dark:text-slate-300">Score 50-64 (Alerta)</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            🔴 <span className="text-slate-600 dark:text-slate-300">Score &lt;50 (Crítico)</span>
+          </span>
         </div>
       </div>
 
@@ -1308,12 +1467,16 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors border-b border-slate-100 dark:border-navy-800 last:border-b-0"
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        ciudad.esCapital
-                          ? 'bg-amber-100 dark:bg-amber-900/30'
-                          : 'bg-slate-100 dark:bg-slate-700'
-                      }`}>
-                        <MapPin className={`w-4 h-4 ${ciudad.esCapital ? 'text-amber-500' : 'text-slate-400'}`} />
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          ciudad.esCapital
+                            ? 'bg-amber-100 dark:bg-amber-900/30'
+                            : 'bg-slate-100 dark:bg-slate-700'
+                        }`}
+                      >
+                        <MapPin
+                          className={`w-4 h-4 ${ciudad.esCapital ? 'text-amber-500' : 'text-slate-400'}`}
+                        />
                       </div>
                       <div className="text-left">
                         <p className="font-semibold text-slate-800 dark:text-white text-sm">
@@ -1333,7 +1496,8 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
                           ? `${(ciudad.poblacion / 1000000).toFixed(1)}M`
                           : ciudad.poblacion >= 1000
                             ? `${(ciudad.poblacion / 1000).toFixed(0)}K`
-                            : ciudad.poblacion} hab.
+                            : ciudad.poblacion}{' '}
+                        hab.
                       </span>
                     )}
                   </button>
@@ -1358,7 +1522,11 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
               onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
               className="p-2.5 bg-slate-50 dark:bg-navy-950 border border-slate-200 dark:border-navy-700 rounded-lg hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors"
             >
-              {sortOrder === 'desc' ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
+              {sortOrder === 'desc' ? (
+                <ChevronDown className="w-5 h-5" />
+              ) : (
+                <ChevronUp className="w-5 h-5" />
+              )}
             </button>
 
             {filterSemaforo !== 'ALL' && (
@@ -1379,8 +1547,12 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
           <table className="w-full">
             <thead className="bg-slate-50 dark:bg-navy-950">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Ciudad</th>
-                <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Transportadora</th>
+                <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">
+                  Ciudad
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">
+                  Transportadora
+                </th>
                 <th
                   className="px-4 py-3 text-center text-xs font-bold uppercase text-slate-500 cursor-pointer hover:text-amber-600"
                   onClick={() => handleSort('score')}
@@ -1417,8 +1589,12 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
                     <ArrowUpDown className="w-3 h-3" />
                   </span>
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-bold uppercase text-slate-500">Estado</th>
-                <th className="px-4 py-3 text-center text-xs font-bold uppercase text-slate-500">Acción</th>
+                <th className="px-4 py-3 text-center text-xs font-bold uppercase text-slate-500">
+                  Estado
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-bold uppercase text-slate-500">
+                  Acción
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-navy-800">
@@ -1436,12 +1612,16 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
                       {ciudad.transportadora}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`inline-flex items-center justify-center w-12 h-8 ${config.bg} text-white font-bold rounded-lg text-sm`}>
+                      <span
+                        className={`inline-flex items-center justify-center w-12 h-8 ${config.bg} text-white font-bold rounded-lg text-sm`}
+                      >
                         {ciudad.score}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`font-bold ${config.text}`}>{ciudad.tasaExito.toFixed(0)}%</span>
+                      <span className={`font-bold ${config.text}`}>
+                        {ciudad.tasaExito.toFixed(0)}%
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-center text-slate-600 dark:text-slate-400">
                       {ciudad.tiempoPromedio}d
@@ -1449,7 +1629,9 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
                     <td className="px-4 py-3 text-center">
                       <span className="text-slate-600 dark:text-slate-400">{ciudad.total}</span>
                       {ciudad.total < 10 && (
-                        <span className="text-orange-500 text-xs ml-1" title="Muestra limitada">⚠️</span>
+                        <span className="text-orange-500 text-xs ml-1" title="Muestra limitada">
+                          ⚠️
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -1499,10 +1681,7 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
 
       {/* City Detail Modal */}
       {selectedCiudad && (
-        <CityDetailModal
-          ciudad={selectedCiudad}
-          onClose={() => setSelectedCiudad(null)}
-        />
+        <CityDetailModal ciudad={selectedCiudad} onClose={() => setSelectedCiudad(null)} />
       )}
     </div>
   );

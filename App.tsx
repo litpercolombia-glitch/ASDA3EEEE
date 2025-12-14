@@ -26,6 +26,7 @@ import {
   DemandTab,
   GamificationTab,
   ProcesosLitperTab,
+  CentroNegocioTab,
 } from './components/tabs';
 import { CiudadAgentesTab } from './components/tabs/CiudadAgentesTab';
 import { InteligenciaLogisticaTab } from './components/tabs/InteligenciaLogisticaTab';
@@ -669,10 +670,11 @@ const App: React.FC = () => {
               </button>
 
               {[
-                // Navegación simplificada: 5 tabs principales
-                { id: 'operaciones', icon: Package, label: '📦 Operaciones', isNew: true },
-                { id: 'inteligencia-ia', icon: Brain, label: '🧠 Inteligencia IA', isNew: true },
-                { id: 'analisis', icon: BarChart3, label: '📊 Análisis', isNew: true },
+                // Navegación simplificada: 6 tabs principales
+                { id: 'negocio', icon: Users, label: '💼 Negocio', isNew: true },
+                { id: 'operaciones', icon: Package, label: '📦 Operaciones', isNew: false },
+                { id: 'inteligencia-ia', icon: Brain, label: '🧠 Inteligencia IA', isNew: false },
+                { id: 'analisis', icon: BarChart3, label: '📊 Análisis', isNew: false },
                 { id: 'procesos-litper', icon: Layers, label: '🏢 Procesos' },
                 { id: 'admin', icon: Shield, label: '⚙️ Config' },
               ].map((item) => (
@@ -895,6 +897,11 @@ const App: React.FC = () => {
               userProfile={userProfile}
             />
           )}
+
+          {/* ====================================== */}
+          {/* CENTRO DE NEGOCIO - HERRAMIENTAS OPERATIVAS */}
+          {/* ====================================== */}
+          {currentTab === 'negocio' && <CentroNegocioTab />}
 
           {/* ====================================== */}
           {/* NUEVOS TABS UNIFICADOS */}
