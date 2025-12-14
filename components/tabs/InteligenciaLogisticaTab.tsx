@@ -52,6 +52,11 @@ import {
   Users,
   Phone,
   MessageSquare,
+  Sun,
+  Settings,
+  LifeBuoy,
+  Lock,
+  Columns,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -125,6 +130,31 @@ interface AlertaLogistica {
 // =====================================
 const STORAGE_KEY = 'litper_inteligencia_logistica_sesiones';
 const MAX_SESIONES = 30;
+const CONFIG_PASSWORD = 'LITPERTUPAPA';
+const COLUMN_CONFIG_KEY = 'litper_column_config';
+
+// Configuración de columnas disponibles
+interface ColumnConfig {
+  id: string;
+  name: string;
+  enabled: boolean;
+  excelHeaders: string[]; // Posibles nombres en Excel
+}
+
+const DEFAULT_COLUMNS: ColumnConfig[] = [
+  { id: 'guia', name: 'Número de Guía', enabled: true, excelHeaders: ['guia', 'numero', 'tracking', 'n°', 'id', 'numero guia', 'numero_guia'] },
+  { id: 'estado', name: 'Estado', enabled: true, excelHeaders: ['estado', 'status', 'estatus'] },
+  { id: 'transportadora', name: 'Transportadora', enabled: true, excelHeaders: ['transportadora', 'carrier', 'empresa', 'transporte'] },
+  { id: 'ciudad', name: 'Ciudad Destino', enabled: true, excelHeaders: ['ciudad', 'destino', 'city', 'ciudad destino'] },
+  { id: 'dias', name: 'Días Transcurridos', enabled: true, excelHeaders: ['dias', 'days', 'tiempo', 'dias transcurridos'] },
+  { id: 'telefono', name: 'Teléfono', enabled: true, excelHeaders: ['telefono', 'celular', 'phone', 'tel', 'movil'] },
+  { id: 'novedad', name: 'Novedad', enabled: true, excelHeaders: ['novedad', 'issue', 'problema', 'tiene novedad'] },
+  { id: 'cliente', name: 'Cliente', enabled: true, excelHeaders: ['cliente', 'customer', 'nombre', 'destinatario'] },
+  { id: 'producto', name: 'Producto', enabled: true, excelHeaders: ['producto', 'product', 'item', 'articulo'] },
+  { id: 'valor', name: 'Valor', enabled: true, excelHeaders: ['valor', 'value', 'precio', 'monto', 'total'] },
+  { id: 'fecha', name: 'Fecha de Envío', enabled: true, excelHeaders: ['fecha', 'date', 'fecha envio', 'fecha_envio'] },
+  { id: 'direccion', name: 'Dirección', enabled: true, excelHeaders: ['direccion', 'address', 'domicilio'] },
+];
 
 // =====================================
 // HELPERS
@@ -428,6 +458,24 @@ const saveSesiones = (sesiones: Sesion[]) => {
   }
 };
 
+// Column config storage helpers
+const loadColumnConfig = (): ColumnConfig[] => {
+  try {
+    const data = localStorage.getItem(COLUMN_CONFIG_KEY);
+    return data ? JSON.parse(data) : DEFAULT_COLUMNS;
+  } catch {
+    return DEFAULT_COLUMNS;
+  }
+};
+
+const saveColumnConfig = (config: ColumnConfig[]) => {
+  try {
+    localStorage.setItem(COLUMN_CONFIG_KEY, JSON.stringify(config));
+  } catch (e) {
+    console.error('Error saving column config:', e);
+  }
+};
+
 // =====================================
 // COMPARACIÓN DE SESIONES
 // =====================================
@@ -523,9 +571,20 @@ export const InteligenciaLogisticaTab: React.FC = () => {
   const [textInput, setTextInput] = useState('');
   const [vistaActiva, setVistaActiva] = useState<'tabla' | 'comparacion' | 'timeline'>('tabla');
 
+  // Nuevos estados para funcionalidades restauradas
+  const [showSessionsPanel, setShowSessionsPanel] = useState(false);
+  const [showCompareModal, setShowCompareModal] = useState(false);
+  const [showColumnConfigModal, setShowColumnConfigModal] = useState(false);
+  const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
+  const [configPassword, setConfigPassword] = useState('');
+  const [configPasswordError, setConfigPasswordError] = useState(false);
+  const [isConfigAuthenticated, setIsConfigAuthenticated] = useState(false);
+  const [sesionParaComparar, setSesionParaComparar] = useState<string | null>(null);
+  const [modoMiDia, setModoMiDia] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Cargar sesiones al montar
+  // Cargar sesiones y configuración al montar
   useEffect(() => {
     const sesionesGuardadas = loadSesiones();
     setSesiones(sesionesGuardadas);
@@ -539,6 +598,10 @@ export const InteligenciaLogisticaTab: React.FC = () => {
         setComparacion(compararSesiones(sesionAnterior, ultimaSesion));
       }
     }
+
+    // Cargar configuración de columnas
+    const savedColumnConfig = loadColumnConfig();
+    setColumnConfig(savedColumnConfig);
   }, []);
 
   // Crear nueva sesión desde datos
@@ -664,12 +727,115 @@ export const InteligenciaLogisticaTab: React.FC = () => {
     });
   };
 
+  // Handler para verificar contraseña de configuración
+  const handleConfigPasswordSubmit = () => {
+    if (configPassword === CONFIG_PASSWORD) {
+      setIsConfigAuthenticated(true);
+      setConfigPasswordError(false);
+      setConfigPassword('');
+    } else {
+      setConfigPasswordError(true);
+    }
+  };
+
+  // Handler para toggle de columnas
+  const handleColumnToggle = (columnId: string) => {
+    const newConfig = columnConfig.map((col) =>
+      col.id === columnId ? { ...col, enabled: !col.enabled } : col
+    );
+    setColumnConfig(newConfig);
+    saveColumnConfig(newConfig);
+  };
+
+  // Handler para guardar sesión actual
+  const handleGuardarSesion = () => {
+    if (!sesionActiva) return;
+    const nombreNuevo = prompt('Nombre para la sesión:', sesionActiva.nombre);
+    if (nombreNuevo && nombreNuevo.trim()) {
+      setSesiones((prev) => {
+        const nuevas = prev.map((s) =>
+          s.id === sesionActiva.id ? { ...s, nombre: nombreNuevo.trim() } : s
+        );
+        saveSesiones(nuevas);
+        return nuevas;
+      });
+      setSesionActiva((prev) => prev ? { ...prev, nombre: nombreNuevo.trim() } : null);
+    }
+  };
+
+  // Handler para "Mi Día" - Filtrar guías que necesitan atención hoy
+  const handleMiDia = () => {
+    setModoMiDia(!modoMiDia);
+    if (!modoMiDia) {
+      setFiltroEstado('ALL');
+      setSearchQuery('');
+    }
+  };
+
+  // Handler para limpiar todos los datos
+  const handleLimpiar = () => {
+    if (!confirm('¿Estás seguro de que deseas limpiar todos los datos de la sesión actual?')) return;
+    setSearchQuery('');
+    setFiltroTransportadora('ALL');
+    setFiltroEstado('ALL');
+    setExpandedGuia(null);
+    setComparacion(null);
+  };
+
+  // Handler para exportar Excel con todos los datos
+  const handleExportarExcel = () => {
+    if (!sesionActiva) return;
+
+    const wb = XLSX.utils.book_new();
+
+    // Hoja principal con todas las guías
+    const guiasData = [
+      ['Guía', 'Transportadora', 'Destino', 'Estado', 'Días', 'Teléfono', 'Novedad'],
+      ...guiasFiltradas.map((g) => [
+        g.numeroGuia,
+        g.transportadora,
+        g.ciudadDestino,
+        g.estadoActual,
+        g.diasTranscurridos,
+        g.telefono || '',
+        g.tieneNovedad ? 'Sí' : 'No',
+      ]),
+    ];
+    const wsGuias = XLSX.utils.aoa_to_sheet(guiasData);
+    XLSX.utils.book_append_sheet(wb, wsGuias, 'Guías');
+
+    XLSX.writeFile(wb, `Guias_${sesionActiva.fecha}.xlsx`);
+  };
+
   // Guías de la sesión activa
   const guiasActivas = sesionActiva?.guias || [];
 
+  // Calcular guías para "rescate" (con novedad que pueden recuperarse)
+  const guiasRescate = useMemo(() => {
+    return guiasActivas.filter(
+      (g) =>
+        g.tieneNovedad &&
+        !g.estadoActual.toLowerCase().includes('entregado') &&
+        !g.estadoActual.toLowerCase().includes('devuelto') &&
+        g.diasTranscurridos <= 7
+    );
+  }, [guiasActivas]);
+
+  // Filtrar guías para "Mi Día"
+  const guiasMiDia = useMemo(() => {
+    return guiasActivas.filter(
+      (g) =>
+        !g.estadoActual.toLowerCase().includes('entregado') &&
+        (g.tieneNovedad || g.diasTranscurridos >= 3 || g.estadoActual.toLowerCase().includes('reparto'))
+    );
+  }, [guiasActivas]);
+
   // Filtrado
   const guiasFiltradas = useMemo(() => {
-    return guiasActivas.filter((g) => {
+    // Si está en modo "Mi Día", usar ese filtro primero
+    const baseGuias = modoMiDia ? guiasMiDia : guiasActivas;
+
+    return baseGuias.filter((g) => {
       if (
         searchQuery &&
         !g.numeroGuia.toLowerCase().includes(searchQuery.toLowerCase()) &&
@@ -687,7 +853,7 @@ export const InteligenciaLogisticaTab: React.FC = () => {
       }
       return true;
     });
-  }, [guiasActivas, searchQuery, filtroTransportadora, filtroEstado]);
+  }, [guiasActivas, guiasMiDia, modoMiDia, searchQuery, filtroTransportadora, filtroEstado]);
 
   // Estadísticas
   const estadisticas = useMemo(() => {
@@ -949,23 +1115,106 @@ export const InteligenciaLogisticaTab: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            {/* Barra de Herramientas Completa */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Cargar Datos */}
               <button
                 onClick={() => setShowUploadModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-medium transition-colors"
+                className="flex items-center gap-2 px-3 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-medium transition-colors text-sm"
               >
                 <Upload className="w-4 h-4" />
                 Cargar Datos
               </button>
-              {comparacion && (
-                <button
-                  onClick={exportarComparacion}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                  Exportar
-                </button>
-              )}
+
+              {/* Mi Día */}
+              <button
+                onClick={handleMiDia}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm ${
+                  modoMiDia
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50'
+                }`}
+              >
+                <Sun className="w-4 h-4" />
+                Mi Día
+                {guiasMiDia.length > 0 && (
+                  <span className="px-1.5 py-0.5 bg-white/20 rounded text-xs">{guiasMiDia.length}</span>
+                )}
+              </button>
+
+              {/* Guardar Sesión */}
+              <button
+                onClick={handleGuardarSesion}
+                disabled={!sesionActiva}
+                className="flex items-center gap-2 px-3 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium transition-colors text-sm"
+              >
+                <Save className="w-4 h-4" />
+                Guardar Sesión
+              </button>
+
+              {/* Sesiones */}
+              <button
+                onClick={() => setShowSidebar(!showSidebar)}
+                className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg font-medium transition-colors text-sm"
+              >
+                <Folder className="w-4 h-4" />
+                Sesiones ({sesiones.length})
+              </button>
+
+              {/* Comparar */}
+              <button
+                onClick={() => setVistaActiva(vistaActiva === 'comparacion' ? 'tabla' : 'comparacion')}
+                disabled={!comparacion}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm ${
+                  vistaActiva === 'comparacion'
+                    ? 'bg-indigo-500 text-white'
+                    : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/50'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <GitCompare className="w-4 h-4" />
+                Comparar
+              </button>
+
+              {/* Rescate */}
+              <button
+                onClick={() => setFiltroEstado(filtroEstado === 'novedad' ? 'ALL' : 'novedad')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm ${
+                  filtroEstado === 'novedad'
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50'
+                }`}
+              >
+                <LifeBuoy className="w-4 h-4" />
+                Rescate ({guiasRescate.length})
+              </button>
+
+              {/* Configurar Columnas */}
+              <button
+                onClick={() => setShowColumnConfigModal(true)}
+                className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg font-medium transition-colors text-sm"
+              >
+                <Columns className="w-4 h-4" />
+                Columnas
+              </button>
+
+              {/* Exportar Excel */}
+              <button
+                onClick={handleExportarExcel}
+                disabled={!sesionActiva}
+                className="flex items-center gap-2 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors text-sm"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                Exportar Excel
+              </button>
+
+              {/* Limpiar */}
+              <button
+                onClick={handleLimpiar}
+                className="flex items-center gap-2 px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 rounded-lg font-medium transition-colors text-sm"
+              >
+                <Trash2 className="w-4 h-4" />
+                Limpiar
+              </button>
             </div>
           </div>
 
@@ -1379,6 +1628,152 @@ export const InteligenciaLogisticaTab: React.FC = () => {
                   {isLoading ? 'Procesando...' : 'Cargar desde Texto'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Configuración de Columnas */}
+      {showColumnConfigModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-navy-900 rounded-2xl w-full max-w-lg shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-navy-700">
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                <Columns className="w-6 h-6 text-cyan-500" />
+                Configurar Columnas
+              </h3>
+              <button
+                onClick={() => {
+                  setShowColumnConfigModal(false);
+                  setIsConfigAuthenticated(false);
+                  setConfigPassword('');
+                  setConfigPasswordError(false);
+                }}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-navy-800 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {!isConfigAuthenticated ? (
+                // Pantalla de contraseña
+                <div className="space-y-4">
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Lock className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <h4 className="font-bold text-slate-800 dark:text-white mb-2">
+                      Acceso Protegido
+                    </h4>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Ingresa la contraseña de administrador para configurar las columnas
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                      Contraseña
+                    </label>
+                    <input
+                      type="password"
+                      value={configPassword}
+                      onChange={(e) => {
+                        setConfigPassword(e.target.value);
+                        setConfigPasswordError(false);
+                      }}
+                      onKeyDown={(e) => e.key === 'Enter' && handleConfigPasswordSubmit()}
+                      placeholder="Ingresa la contraseña..."
+                      className={`w-full px-4 py-3 rounded-lg border ${
+                        configPasswordError
+                          ? 'border-red-500 bg-red-50 dark:bg-red-900/10'
+                          : 'border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-800'
+                      } text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500`}
+                    />
+                    {configPasswordError && (
+                      <p className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4" />
+                        Contraseña incorrecta
+                      </p>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={handleConfigPasswordSubmit}
+                    className="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-bold rounded-xl transition-colors"
+                  >
+                    Acceder
+                  </button>
+                </div>
+              ) : (
+                // Panel de configuración de columnas
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Selecciona las columnas que deseas cargar del archivo Excel
+                    </p>
+                    <button
+                      onClick={() => {
+                        setColumnConfig(DEFAULT_COLUMNS);
+                        saveColumnConfig(DEFAULT_COLUMNS);
+                      }}
+                      className="text-xs text-cyan-600 dark:text-cyan-400 hover:underline"
+                    >
+                      Restablecer
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                    {columnConfig.map((col) => (
+                      <label
+                        key={col.id}
+                        className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
+                          col.enabled
+                            ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-900/20'
+                            : 'border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-800 hover:border-slate-300 dark:hover:border-navy-600'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={col.enabled}
+                            onChange={() => handleColumnToggle(col.id)}
+                            className="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                          />
+                          <div>
+                            <span className="font-medium text-slate-800 dark:text-white">
+                              {col.name}
+                            </span>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              Busca: {col.excelHeaders.slice(0, 3).join(', ')}...
+                            </p>
+                          </div>
+                        </div>
+                        {col.enabled && (
+                          <CheckCircle2 className="w-5 h-5 text-cyan-500" />
+                        )}
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-200 dark:border-navy-700">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-500 dark:text-slate-400">
+                        {columnConfig.filter((c) => c.enabled).length} columnas activas
+                      </span>
+                      <button
+                        onClick={() => {
+                          setShowColumnConfigModal(false);
+                          setIsConfigAuthenticated(false);
+                        }}
+                        className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white font-medium rounded-lg transition-colors"
+                      >
+                        Guardar y Cerrar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
