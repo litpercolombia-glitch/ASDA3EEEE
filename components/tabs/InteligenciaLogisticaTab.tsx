@@ -581,6 +581,7 @@ export const InteligenciaLogisticaTab: React.FC = () => {
   const [isConfigAuthenticated, setIsConfigAuthenticated] = useState(false);
   const [sesionParaComparar, setSesionParaComparar] = useState<string | null>(null);
   const [modoMiDia, setModoMiDia] = useState(false);
+  const [modoRescate, setModoRescate] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -765,85 +766,272 @@ export const InteligenciaLogisticaTab: React.FC = () => {
 
   // Handler para "Mi Día" - Filtrar guías que necesitan atención hoy
   const handleMiDia = () => {
-    setModoMiDia(!modoMiDia);
-    if (!modoMiDia) {
+    const nuevoModo = !modoMiDia;
+    setModoMiDia(nuevoModo);
+    if (nuevoModo) {
+      setModoRescate(false); // Desactivar rescate si activo
       setFiltroEstado('ALL');
+      setFiltroTransportadora('ALL');
       setSearchQuery('');
     }
   };
 
-  // Handler para limpiar todos los datos
+  // Handler para "Rescate" - Mostrar guías recuperables
+  const handleRescate = () => {
+    const nuevoModo = !modoRescate;
+    setModoRescate(nuevoModo);
+    if (nuevoModo) {
+      setModoMiDia(false); // Desactivar Mi Día si activo
+      setFiltroEstado('ALL');
+      setFiltroTransportadora('ALL');
+      setSearchQuery('');
+    }
+  };
+
+  // Handler para limpiar filtros (no borra datos)
   const handleLimpiar = () => {
-    if (!confirm('¿Estás seguro de que deseas limpiar todos los datos de la sesión actual?')) return;
     setSearchQuery('');
     setFiltroTransportadora('ALL');
     setFiltroEstado('ALL');
     setExpandedGuia(null);
-    setComparacion(null);
+    setModoMiDia(false);
+    setModoRescate(false);
   };
 
-  // Handler para exportar Excel con todos los datos
+  // Handler para exportar Excel COMPLETO con múltiples hojas
   const handleExportarExcel = () => {
     if (!sesionActiva) return;
 
     const wb = XLSX.utils.book_new();
 
-    // Hoja principal con todas las guías
-    const guiasData = [
-      ['Guía', 'Transportadora', 'Destino', 'Estado', 'Días', 'Teléfono', 'Novedad'],
-      ...guiasFiltradas.map((g) => [
+    // ===== HOJA 1: TODAS LAS GUÍAS =====
+    const todasGuiasData = [
+      ['REPORTE COMPLETO DE GUÍAS - ' + sesionActiva.nombre],
+      ['Fecha de generación: ' + new Date().toLocaleString()],
+      [''],
+      ['Guía', 'Transportadora', 'Ciudad Destino', 'Estado', 'Días', 'Teléfono', 'Novedad', 'Prioridad'],
+      ...guiasActivas.map((g) => [
         g.numeroGuia,
         g.transportadora,
         g.ciudadDestino,
         g.estadoActual,
         g.diasTranscurridos,
-        g.telefono || '',
-        g.tieneNovedad ? 'Sí' : 'No',
+        g.telefono || 'N/A',
+        g.tieneNovedad ? 'SÍ' : 'NO',
+        g.diasTranscurridos > 5 ? 'CRÍTICA' : g.diasTranscurridos > 3 ? 'ALTA' : g.tieneNovedad ? 'MEDIA' : 'NORMAL',
       ]),
     ];
-    const wsGuias = XLSX.utils.aoa_to_sheet(guiasData);
-    XLSX.utils.book_append_sheet(wb, wsGuias, 'Guías');
+    const wsTodas = XLSX.utils.aoa_to_sheet(todasGuiasData);
+    XLSX.utils.book_append_sheet(wb, wsTodas, 'Todas las Guías');
 
-    XLSX.writeFile(wb, `Guias_${sesionActiva.fecha}.xlsx`);
+    // ===== HOJA 2: MI DÍA (Trabajo del día) =====
+    const miDiaData = [
+      ['MI DÍA - Guías que requieren atención'],
+      [''],
+      ['Guía', 'Estado', 'Días', 'Transportadora', 'Ciudad', 'Teléfono', 'Acción Sugerida'],
+      ...guiasMiDia.map((g) => {
+        let accion = 'Monitorear';
+        if (g.tieneNovedad) accion = 'GESTIONAR NOVEDAD';
+        else if (g.estadoActual.toLowerCase().includes('reparto')) accion = 'Confirmar entrega';
+        else if (g.diasTranscurridos > 5) accion = 'CONTACTAR TRANSPORTADORA';
+        else if (g.diasTranscurridos > 3) accion = 'Hacer seguimiento';
+        return [
+          g.numeroGuia,
+          g.estadoActual,
+          g.diasTranscurridos,
+          g.transportadora,
+          g.ciudadDestino,
+          g.telefono || 'N/A',
+          accion,
+        ];
+      }),
+    ];
+    const wsMiDia = XLSX.utils.aoa_to_sheet(miDiaData);
+    XLSX.utils.book_append_sheet(wb, wsMiDia, 'Mi Día');
+
+    // ===== HOJA 3: RESCATE (Guías recuperables) =====
+    const rescateData = [
+      ['GUÍAS PARA RESCATE - Con novedad recuperable'],
+      [''],
+      ['Guía', 'Estado', 'Días', 'Transportadora', 'Ciudad', 'Teléfono', 'Estrategia de Rescate'],
+      ...guiasRescate.map((g) => {
+        let estrategia = 'Contactar cliente';
+        const estado = g.estadoActual.toLowerCase();
+        if (estado.includes('dirección') || estado.includes('direccion')) estrategia = 'Verificar y corregir dirección';
+        else if (estado.includes('no contesta') || estado.includes('ausente')) estrategia = 'Reprogramar entrega, llamar cliente';
+        else if (estado.includes('rechaz')) estrategia = 'Llamar cliente, ofrecer solución';
+        else if (estado.includes('zona') || estado.includes('dificil')) estrategia = 'Coordinar punto de entrega alterno';
+        return [
+          g.numeroGuia,
+          g.estadoActual,
+          g.diasTranscurridos,
+          g.transportadora,
+          g.ciudadDestino,
+          g.telefono || 'OBTENER TELÉFONO',
+          estrategia,
+        ];
+      }),
+    ];
+    const wsRescate = XLSX.utils.aoa_to_sheet(rescateData);
+    XLSX.utils.book_append_sheet(wb, wsRescate, 'Rescate');
+
+    // ===== HOJA 4: POR ESTADO =====
+    const entregadas = guiasActivas.filter(g => g.estadoActual.toLowerCase().includes('entregado'));
+    const enReparto = guiasActivas.filter(g => g.estadoActual.toLowerCase().includes('reparto'));
+    const conNovedad = guiasActivas.filter(g => g.tieneNovedad);
+    const devueltas = guiasActivas.filter(g => g.estadoActual.toLowerCase().includes('devuelto'));
+    const enTransito = guiasActivas.filter(g =>
+      !g.estadoActual.toLowerCase().includes('entregado') &&
+      !g.estadoActual.toLowerCase().includes('reparto') &&
+      !g.estadoActual.toLowerCase().includes('devuelto') &&
+      !g.tieneNovedad
+    );
+
+    const resumenData = [
+      ['RESUMEN EJECUTIVO'],
+      ['Sesión: ' + sesionActiva.nombre],
+      ['Fecha: ' + sesionActiva.fecha],
+      [''],
+      ['MÉTRICAS PRINCIPALES'],
+      ['Total de Guías', guiasActivas.length],
+      ['Entregadas', entregadas.length, ((entregadas.length / guiasActivas.length) * 100).toFixed(1) + '%'],
+      ['En Reparto', enReparto.length, ((enReparto.length / guiasActivas.length) * 100).toFixed(1) + '%'],
+      ['En Tránsito', enTransito.length, ((enTransito.length / guiasActivas.length) * 100).toFixed(1) + '%'],
+      ['Con Novedad', conNovedad.length, ((conNovedad.length / guiasActivas.length) * 100).toFixed(1) + '%'],
+      ['Devueltas', devueltas.length, ((devueltas.length / guiasActivas.length) * 100).toFixed(1) + '%'],
+      [''],
+      ['INDICADORES DE GESTIÓN'],
+      ['Tasa de Entrega', ((entregadas.length / guiasActivas.length) * 100).toFixed(1) + '%'],
+      ['Tasa de Devolución', ((devueltas.length / guiasActivas.length) * 100).toFixed(1) + '%'],
+      ['Guías Críticas (+5 días)', guiasActivas.filter(g => g.diasTranscurridos > 5 && !g.estadoActual.toLowerCase().includes('entregado')).length],
+      ['Guías para Rescate', guiasRescate.length],
+      ['Trabajo del Día (Mi Día)', guiasMiDia.length],
+    ];
+    const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
+    XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+
+    // ===== HOJA 5: COMPARACIÓN (si existe) =====
+    if (comparacion) {
+      const comparacionData = [
+        ['COMPARACIÓN CON SESIÓN ANTERIOR'],
+        ['Sesión Anterior: ' + comparacion.sesionAnterior.nombre],
+        ['Sesión Actual: ' + comparacion.sesionActual.nombre],
+        [''],
+        ['CAMBIOS DETECTADOS'],
+        ['Guías Nuevas', comparacion.guiasNuevas.length],
+        ['Guías Desaparecidas', comparacion.guiasDesaparecidas.length],
+        ['Cambios de Estado', comparacion.cambiosEstado.length],
+        ['Entregas Nuevas', comparacion.guiasEntregadasHoy.length],
+        ['Guías Estancadas', comparacion.guiasEstancadas.length],
+        [''],
+        ['VARIACIONES'],
+        ['Variación Entregas', comparacion.metricas.variacionEntregas > 0 ? '+' + comparacion.metricas.variacionEntregas : comparacion.metricas.variacionEntregas],
+        ['Variación Novedades', comparacion.metricas.variacionNovedades > 0 ? '+' + comparacion.metricas.variacionNovedades : comparacion.metricas.variacionNovedades],
+        ['Variación Devoluciones', comparacion.metricas.variacionDevoluciones > 0 ? '+' + comparacion.metricas.variacionDevoluciones : comparacion.metricas.variacionDevoluciones],
+        [''],
+        ['DETALLE DE CAMBIOS DE ESTADO'],
+        ['Guía', 'Estado Anterior', 'Estado Actual', '¿Mejoró?'],
+        ...comparacion.cambiosEstado.map(c => [
+          c.guia.numeroGuia,
+          c.estadoAnterior,
+          c.estadoActual,
+          c.mejora ? 'SÍ ✓' : 'NO ✗'
+        ])
+      ];
+      const wsComparacion = XLSX.utils.aoa_to_sheet(comparacionData);
+      XLSX.utils.book_append_sheet(wb, wsComparacion, 'Comparación');
+    }
+
+    XLSX.writeFile(wb, `Reporte_Logistico_${sesionActiva.fecha}.xlsx`);
   };
 
   // Guías de la sesión activa
   const guiasActivas = sesionActiva?.guias || [];
 
-  // Calcular guías para "rescate" (con novedad que pueden recuperarse)
+  // Calcular guías para "RESCATE" - Guías con novedad que AÚN pueden recuperarse
+  // Estrategia: Guías que tienen problema pero no están perdidas (no devueltas, no +10 días)
   const guiasRescate = useMemo(() => {
-    return guiasActivas.filter(
-      (g) =>
-        g.tieneNovedad &&
-        !g.estadoActual.toLowerCase().includes('entregado') &&
-        !g.estadoActual.toLowerCase().includes('devuelto') &&
-        g.diasTranscurridos <= 7
-    );
+    return guiasActivas.filter((g) => {
+      const estado = g.estadoActual.toLowerCase();
+
+      // Excluir entregadas (ya ok) y devueltas (ya perdidas)
+      if (estado.includes('entregado') || estado.includes('devuelto')) return false;
+
+      // Incluir si tiene novedad y no ha pasado demasiado tiempo
+      if (g.tieneNovedad && g.diasTranscurridos <= 10) return true;
+
+      // Incluir estados problemáticos específicos que pueden rescatarse
+      const estadosRescatables = [
+        'no contesta', 'ausente', 'dirección', 'direccion', 'rechaz',
+        'zona', 'dificil', 'reprogramad', 'intento', 'fallid', 'cerrado',
+        'no ubicado', 'incompleta', 'incorrecta'
+      ];
+
+      return estadosRescatables.some(e => estado.includes(e));
+    }).sort((a, b) => {
+      // Ordenar por prioridad: primero los más urgentes (más días)
+      return b.diasTranscurridos - a.diasTranscurridos;
+    });
   }, [guiasActivas]);
 
-  // Filtrar guías para "Mi Día"
+  // Filtrar guías para "MI DÍA" - Todo lo que necesita atención HOY
+  // Objetivo: Lista de trabajo diario del equipo logístico
   const guiasMiDia = useMemo(() => {
-    return guiasActivas.filter(
-      (g) =>
-        !g.estadoActual.toLowerCase().includes('entregado') &&
-        (g.tieneNovedad || g.diasTranscurridos >= 3 || g.estadoActual.toLowerCase().includes('reparto'))
-    );
+    return guiasActivas.filter((g) => {
+      const estado = g.estadoActual.toLowerCase();
+
+      // Excluir entregadas (trabajo terminado)
+      if (estado.includes('entregado')) return false;
+
+      // PRIORIDAD 1: En reparto HOY - confirmar entregas
+      if (estado.includes('reparto')) return true;
+
+      // PRIORIDAD 2: Con novedad - gestionar urgente
+      if (g.tieneNovedad) return true;
+
+      // PRIORIDAD 3: Guías críticas (+5 días sin entrega)
+      if (g.diasTranscurridos >= 5) return true;
+
+      // PRIORIDAD 4: Guías que llevan tiempo (+3 días) - hacer seguimiento
+      if (g.diasTranscurridos >= 3) return true;
+
+      // PRIORIDAD 5: Estados que requieren acción
+      const estadosAccion = [
+        'oficina', 'centro', 'bodega', 'almacen', 'retenido', 'pendiente'
+      ];
+      if (estadosAccion.some(e => estado.includes(e))) return true;
+
+      return false;
+    }).sort((a, b) => {
+      // Ordenar: primero novedades, luego por días (descendente)
+      if (a.tieneNovedad && !b.tieneNovedad) return -1;
+      if (!a.tieneNovedad && b.tieneNovedad) return 1;
+      return b.diasTranscurridos - a.diasTranscurridos;
+    });
   }, [guiasActivas]);
 
-  // Filtrado
+  // Filtrado inteligente
   const guiasFiltradas = useMemo(() => {
-    // Si está en modo "Mi Día", usar ese filtro primero
-    const baseGuias = modoMiDia ? guiasMiDia : guiasActivas;
+    // Determinar base de guías según modo activo
+    let baseGuias = guiasActivas;
+    if (modoMiDia) baseGuias = guiasMiDia;
+    else if (modoRescate) baseGuias = guiasRescate;
 
     return baseGuias.filter((g) => {
-      if (
-        searchQuery &&
-        !g.numeroGuia.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !g.ciudadDestino.toLowerCase().includes(searchQuery.toLowerCase())
-      ) {
-        return false;
+      // Filtro de búsqueda (guía, ciudad, teléfono)
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchGuia = g.numeroGuia.toLowerCase().includes(query);
+        const matchCiudad = g.ciudadDestino.toLowerCase().includes(query);
+        const matchTelefono = g.telefono?.toLowerCase().includes(query);
+        const matchTransportadora = g.transportadora.toLowerCase().includes(query);
+        if (!matchGuia && !matchCiudad && !matchTelefono && !matchTransportadora) return false;
       }
+
+      // Filtro por transportadora
       if (filtroTransportadora !== 'ALL' && g.transportadora !== filtroTransportadora) return false;
+
+      // Filtro por estado
       if (filtroEstado !== 'ALL') {
         const estado = g.estadoActual.toLowerCase();
         if (filtroEstado === 'entregado' && !estado.includes('entregado')) return false;
@@ -851,9 +1039,10 @@ export const InteligenciaLogisticaTab: React.FC = () => {
         if (filtroEstado === 'novedad' && !g.tieneNovedad) return false;
         if (filtroEstado === 'devuelto' && !estado.includes('devuelto')) return false;
       }
+
       return true;
     });
-  }, [guiasActivas, guiasMiDia, modoMiDia, searchQuery, filtroTransportadora, filtroEstado]);
+  }, [guiasActivas, guiasMiDia, guiasRescate, modoMiDia, modoRescate, searchQuery, filtroTransportadora, filtroEstado]);
 
   // Estadísticas
   const estadisticas = useMemo(() => {
@@ -1175,12 +1364,12 @@ export const InteligenciaLogisticaTab: React.FC = () => {
                 Comparar
               </button>
 
-              {/* Rescate */}
+              {/* Rescate - Guías recuperables */}
               <button
-                onClick={() => setFiltroEstado(filtroEstado === 'novedad' ? 'ALL' : 'novedad')}
+                onClick={handleRescate}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm ${
-                  filtroEstado === 'novedad'
-                    ? 'bg-orange-500 text-white'
+                  modoRescate
+                    ? 'bg-orange-500 text-white shadow-lg'
                     : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50'
                 }`}
               >
