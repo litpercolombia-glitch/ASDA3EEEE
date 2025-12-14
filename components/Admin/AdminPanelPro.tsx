@@ -64,14 +64,21 @@ import { DateFilter, FiltroFecha, calcularRangoFecha } from '../ui/DateFilter';
 import { ConexionesTab } from '../tabs/ConexionesTab';
 import { SessionManager } from '../ui/SessionManager';
 import { DocumentAnalysisPanel } from '../ui/DocumentAnalysisPanel';
-import {
-  documentProcessor,
-  ProcessedDocument,
-  SessionData,
-} from '../../services/documentProcessingService';
+import { documentProcessor, ProcessedDocument, SessionData } from '../../services/documentProcessingService';
 import { Shipment, ShipmentStatus, CarrierName } from '../../types';
 import { SemaforoExcelData, CiudadSemaforo, STORAGE_KEYS } from '../../types/logistics';
 import { saveTabData, loadTabData } from '../../utils/tabStorage';
+import { FinanceDashboard } from './FinanceCenter';
+import { ApiDashboard } from './ApiCenter';
+import { MCPDashboard } from './MCPCenter';
+import { LearningDashboard } from './LearningCenter';
+import { ReportsDashboard } from './ReportsCenter';
+import { CRMDashboard } from './CRMCenter';
+import { OrdersDashboard } from './OrdersCenter';
+import { MarketingDashboard } from './MarketingCenter';
+import { SupportDashboard } from './SupportCenter';
+import { NotificationsDashboard } from './NotificationsCenter';
+import { SecurityDashboard } from './SecurityCenter';
 
 // ============================================
 // TIPOS E INTERFACES
@@ -158,15 +165,7 @@ export const AdminPanelPro: React.FC = () => {
 
   // Estados de UI
   const [filtroFecha, setFiltroFecha] = useState<FiltroFecha>('todo');
-  const [activeTab, setActiveTab] = useState<
-    | 'procesamiento'
-    | 'documentos'
-    | 'financial'
-    | 'conocimiento'
-    | 'integraciones'
-    | 'predicciones'
-    | 'info-logistica'
-  >('procesamiento');
+  const [activeTab, setActiveTab] = useState<'procesamiento' | 'documentos' | 'financial' | 'centro-financiero' | 'conocimiento' | 'integraciones' | 'predicciones' | 'info-logistica' | 'api-publica' | 'mcp-conexiones' | 'aprendizaje' | 'reportes' | 'crm' | 'pedidos' | 'marketing' | 'soporte' | 'notificaciones' | 'seguridad'>('procesamiento');
 
   // Estados de documentos
   const [documentos, setDocumentos] = useState<DocumentoCargado[]>([]);
@@ -186,17 +185,12 @@ export const AdminPanelPro: React.FC = () => {
   const [knowledgeEntries, setKnowledgeEntries] = useState<any[]>([]);
 
   // Notificaciones
-  const [notification, setNotification] = useState<{
-    type: 'success' | 'error' | 'info';
-    message: string;
-  } | null>(null);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
   // Info Logística
   const [logisticsData, setLogisticsData] = useState<CiudadSemaforo[]>([]);
   const [selectedLogisticItem, setSelectedLogisticItem] = useState<CiudadSemaforo | null>(null);
-  const [excelFiles, setExcelFiles] = useState<
-    Array<{ id: string; nombre: string; fecha: string; registros: number; tipo: string }>
-  >([]);
+  const [excelFiles, setExcelFiles] = useState<Array<{id: string, nombre: string, fecha: string, registros: number, tipo: string}>>([]);
   const [isLoadingLogistics, setIsLoadingLogistics] = useState(false);
 
   // ============================================
@@ -265,7 +259,7 @@ export const AdminPanelPro: React.FC = () => {
     setProcessedDocs(docs);
 
     // Convertir a formato de lista
-    const docList: DocumentoCargado[] = docs.map((d) => ({
+    const docList: DocumentoCargado[] = docs.map(d => ({
       id: d.id,
       nombre: d.fileName,
       tipo: d.fileType,
@@ -296,42 +290,32 @@ export const AdminPanelPro: React.FC = () => {
       }
 
       // Cargar archivos Excel procesados
-      const files: Array<{
-        id: string;
-        nombre: string;
-        fecha: string;
-        registros: number;
-        tipo: string;
-      }> = [];
+      const files: Array<{id: string, nombre: string, fecha: string, registros: number, tipo: string}> = [];
 
       // Buscar documentos tipo Excel
       const docs = documentProcessor.getProcessedDocuments();
-      docs
-        .filter((d) => d.fileType === 'excel')
-        .forEach((doc) => {
-          files.push({
-            id: doc.id,
-            nombre: doc.fileName,
-            fecha: new Date(doc.processedAt).toLocaleDateString('es-CO'),
-            registros: doc.rowCount || 0,
-            tipo: 'Excel',
-          });
+      docs.filter(d => d.fileType === 'excel').forEach(doc => {
+        files.push({
+          id: doc.id,
+          nombre: doc.fileName,
+          fecha: new Date(doc.processedAt).toLocaleDateString('es-CO'),
+          registros: doc.rowCount || 0,
+          tipo: 'Excel'
         });
+      });
 
       // Agregar datos del semáforo si existen
       if (savedSemaforo) {
         const parsed = JSON.parse(savedSemaforo);
         if (parsed.excelFileName) {
-          const existingFile = files.find((f) => f.nombre === parsed.excelFileName);
+          const existingFile = files.find(f => f.nombre === parsed.excelFileName);
           if (!existingFile) {
             files.unshift({
               id: 'semaforo-excel',
               nombre: parsed.excelFileName || 'Datos Semáforo',
-              fecha: parsed.lastUpdate
-                ? new Date(parsed.lastUpdate).toLocaleDateString('es-CO')
-                : 'N/A',
+              fecha: parsed.lastUpdate ? new Date(parsed.lastUpdate).toLocaleDateString('es-CO') : 'N/A',
               registros: parsed.ciudadesSemaforo?.length || 0,
-              tipo: 'Semáforo',
+              tipo: 'Semáforo'
             });
           }
         }
@@ -557,15 +541,10 @@ export const AdminPanelPro: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100 dark:from-navy-950 dark:via-slate-900 dark:to-navy-950">
       {/* Notificación */}
       {notification && (
-        <div
-          className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-xl shadow-xl flex items-center gap-3 animate-slide-in-right ${
-            notification.type === 'success'
-              ? 'bg-emerald-500 text-white'
-              : notification.type === 'error'
-                ? 'bg-red-500 text-white'
-                : 'bg-blue-500 text-white'
-          }`}
-        >
+        <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-xl shadow-xl flex items-center gap-3 animate-slide-in-right ${notification.type === 'success' ? 'bg-emerald-500 text-white' :
+            notification.type === 'error' ? 'bg-red-500 text-white' :
+              'bg-blue-500 text-white'
+          }`}>
           {notification.type === 'success' && <CheckCircle className="w-5 h-5" />}
           {notification.type === 'error' && <AlertTriangle className="w-5 h-5" />}
           {notification.type === 'info' && <Info className="w-5 h-5" />}
@@ -592,7 +571,9 @@ export const AdminPanelPro: React.FC = () => {
                   ADMIN
                 </span>
               </div>
-              <p className="text-slate-500 dark:text-slate-400">Centro de Control Inteligente</p>
+              <p className="text-slate-500 dark:text-slate-400">
+                Centro de Control Inteligente
+              </p>
             </div>
           </div>
 
@@ -633,54 +614,40 @@ export const AdminPanelPro: React.FC = () => {
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
           {[
             { id: 'procesamiento', label: 'Procesamiento IA', icon: Brain, color: 'purple' },
-            {
-              id: 'documentos',
-              label: 'Documentos',
-              icon: FileText,
-              color: 'blue',
-              badge: documentos.length,
-            },
+            { id: 'documentos', label: 'Documentos', icon: FileText, color: 'blue', badge: documentos.length },
+            { id: 'centro-financiero', label: 'Centro Financiero', icon: PieChart, color: 'success' },
             { id: 'financial', label: 'Análisis Financiero', icon: DollarSign, color: 'emerald' },
-            {
-              id: 'conocimiento',
-              label: 'Base de Conocimiento',
-              icon: BookOpen,
-              color: 'amber',
-              badge: knowledgeEntries.length,
-            },
+            { id: 'conocimiento', label: 'Base de Conocimiento', icon: BookOpen, color: 'amber', badge: knowledgeEntries.length },
             { id: 'predicciones', label: 'Predicciones ML', icon: Activity, color: 'pink' },
             { id: 'integraciones', label: 'Integraciones', icon: Plug, color: 'orange' },
-            {
-              id: 'info-logistica',
-              label: 'Info Logística',
-              icon: Truck,
-              color: 'cyan',
-              badge: logisticsData.length,
-            },
+            { id: 'info-logistica', label: 'Info Logística', icon: Truck, color: 'cyan', badge: logisticsData.length },
+            { id: 'api-publica', label: 'API Pública', icon: Globe, color: 'indigo' },
+            { id: 'mcp-conexiones', label: 'Conexiones MCP', icon: Link, color: 'violet' },
+            { id: 'aprendizaje', label: 'IA Learning', icon: Brain, color: 'fuchsia' },
+            { id: 'reportes', label: 'Reportes', icon: BarChart3, color: 'sky' },
+            { id: 'crm', label: 'CRM Clientes', icon: Target, color: 'rose' },
+            { id: 'pedidos', label: 'Pedidos', icon: Package, color: 'teal' },
+            { id: 'marketing', label: 'Marketing', icon: Zap, color: 'lime' },
+            { id: 'soporte', label: 'Soporte', icon: Activity, color: 'cyan' },
+            { id: 'notificaciones', label: 'Alertas', icon: Bell, color: 'amber' },
+            { id: 'seguridad', label: 'Seguridad', icon: Shield, color: 'red' },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-3 rounded-xl font-medium whitespace-nowrap transition-all ${
-                activeTab === tab.id
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl font-medium whitespace-nowrap transition-all ${activeTab === tab.id
                   ? `bg-${tab.color}-500 text-white shadow-lg shadow-${tab.color}-500/30`
                   : 'bg-white dark:bg-navy-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-navy-700'
-              }`}
+                }`}
               style={{
-                backgroundColor:
-                  activeTab === tab.id
-                    ? COLORS[tab.color as keyof typeof COLORS] || COLORS.primary
-                    : undefined,
+                backgroundColor: activeTab === tab.id ? COLORS[tab.color as keyof typeof COLORS] || COLORS.primary : undefined,
               }}
             >
               <tab.icon className="w-4 h-4" />
               {tab.label}
               {tab.badge !== undefined && tab.badge > 0 && (
-                <span
-                  className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
-                    activeTab === tab.id ? 'bg-white/20' : 'bg-slate-200 dark:bg-navy-700'
-                  }`}
-                >
+                <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${activeTab === tab.id ? 'bg-white/20' : 'bg-slate-200 dark:bg-navy-700'
+                  }`}>
                   {tab.badge}
                 </span>
               )}
@@ -690,6 +657,7 @@ export const AdminPanelPro: React.FC = () => {
 
         {/* Contenido Principal */}
         <div className="bg-white dark:bg-navy-900 rounded-3xl shadow-xl border border-slate-200 dark:border-navy-700 overflow-hidden">
+
           {/* ============================================ */}
           {/* TAB: PROCESAMIENTO IA */}
           {/* ============================================ */}
@@ -705,8 +673,7 @@ export const AdminPanelPro: React.FC = () => {
                     Centro de Procesamiento IA
                   </h2>
                   <p className="text-slate-500 dark:text-slate-400">
-                    Carga documentos o URLs para análisis inteligente con resúmenes y
-                    recomendaciones
+                    Carga documentos o URLs para análisis inteligente con resúmenes y recomendaciones
                   </p>
                 </div>
 
@@ -724,11 +691,10 @@ export const AdminPanelPro: React.FC = () => {
                     />
                     <label
                       htmlFor="file-upload-pro"
-                      className={`block p-8 border-2 border-dashed rounded-2xl text-center cursor-pointer transition-all ${
-                        isProcessing
+                      className={`block p-8 border-2 border-dashed rounded-2xl text-center cursor-pointer transition-all ${isProcessing
                           ? 'border-purple-300 bg-purple-50 dark:bg-purple-900/20'
                           : 'border-slate-300 dark:border-navy-600 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20'
-                      }`}
+                        }`}
                     >
                       {isProcessing ? (
                         <>
@@ -748,7 +714,9 @@ export const AdminPanelPro: React.FC = () => {
                           <p className="text-lg font-bold text-slate-700 dark:text-white mb-2">
                             Subir Archivo
                           </p>
-                          <p className="text-sm text-slate-500">Excel, CSV, PDF, Word, TXT</p>
+                          <p className="text-sm text-slate-500">
+                            Excel, CSV, PDF, Word, TXT
+                          </p>
                         </>
                       )}
                     </label>
@@ -813,13 +781,10 @@ export const AdminPanelPro: React.FC = () => {
                         >
                           <div className="flex items-start justify-between mb-2">
                             {getTypeIcon(doc.fileType)}
-                            <span
-                              className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                                doc.status === 'completed'
-                                  ? 'bg-emerald-100 text-emerald-700'
-                                  : 'bg-red-100 text-red-700'
-                              }`}
-                            >
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${doc.status === 'completed'
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-red-100 text-red-700'
+                              }`}>
                               {doc.status === 'completed' ? 'Listo' : 'Error'}
                             </span>
                           </div>
@@ -874,24 +839,12 @@ export const AdminPanelPro: React.FC = () => {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-slate-200 dark:border-navy-700">
-                        <th className="text-left py-4 px-4 text-xs font-bold uppercase text-slate-500">
-                          Documento
-                        </th>
-                        <th className="text-left py-4 px-4 text-xs font-bold uppercase text-slate-500">
-                          Tipo
-                        </th>
-                        <th className="text-left py-4 px-4 text-xs font-bold uppercase text-slate-500">
-                          Fecha
-                        </th>
-                        <th className="text-left py-4 px-4 text-xs font-bold uppercase text-slate-500">
-                          Estado
-                        </th>
-                        <th className="text-left py-4 px-4 text-xs font-bold uppercase text-slate-500">
-                          Análisis
-                        </th>
-                        <th className="text-right py-4 px-4 text-xs font-bold uppercase text-slate-500">
-                          Acciones
-                        </th>
+                        <th className="text-left py-4 px-4 text-xs font-bold uppercase text-slate-500">Documento</th>
+                        <th className="text-left py-4 px-4 text-xs font-bold uppercase text-slate-500">Tipo</th>
+                        <th className="text-left py-4 px-4 text-xs font-bold uppercase text-slate-500">Fecha</th>
+                        <th className="text-left py-4 px-4 text-xs font-bold uppercase text-slate-500">Estado</th>
+                        <th className="text-left py-4 px-4 text-xs font-bold uppercase text-slate-500">Análisis</th>
+                        <th className="text-right py-4 px-4 text-xs font-bold uppercase text-slate-500">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -917,20 +870,14 @@ export const AdminPanelPro: React.FC = () => {
                             {new Date(doc.fecha_carga).toLocaleDateString('es-CO')}
                           </td>
                           <td className="py-4 px-4">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-bold ${
-                                doc.estado === 'completed'
-                                  ? 'bg-emerald-100 text-emerald-700'
-                                  : doc.estado === 'processing'
-                                    ? 'bg-amber-100 text-amber-700'
-                                    : 'bg-red-100 text-red-700'
-                              }`}
-                            >
-                              {doc.estado === 'completed'
-                                ? 'Completado'
+                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${doc.estado === 'completed'
+                                ? 'bg-emerald-100 text-emerald-700'
                                 : doc.estado === 'processing'
-                                  ? 'Procesando'
-                                  : 'Error'}
+                                  ? 'bg-amber-100 text-amber-700'
+                                  : 'bg-red-100 text-red-700'
+                              }`}>
+                              {doc.estado === 'completed' ? 'Completado' :
+                                doc.estado === 'processing' ? 'Procesando' : 'Error'}
                             </span>
                           </td>
                           <td className="py-4 px-4">
@@ -973,6 +920,13 @@ export const AdminPanelPro: React.FC = () => {
           )}
 
           {/* ============================================ */}
+          {/* TAB: CENTRO FINANCIERO */}
+          {/* ============================================ */}
+          {activeTab === 'centro-financiero' && (
+            <FinanceDashboard />
+          )}
+
+          {/* ============================================ */}
           {/* TAB: ANÁLISIS FINANCIERO */}
           {/* ============================================ */}
           {activeTab === 'financial' && (
@@ -985,56 +939,53 @@ export const AdminPanelPro: React.FC = () => {
                   Análisis Financiero Automático
                 </h3>
                 <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-8">
-                  Sube un archivo Excel de Dropi para generar un Estado de Pérdidas y Ganancias
-                  completo con análisis IA
+                  Sube un archivo Excel de Dropi para generar un Estado de Pérdidas y Ganancias completo con análisis IA
                 </p>
 
                 {/* Documentos con métricas financieras */}
-                {processedDocs.filter((d) => d.financialMetrics).length > 0 ? (
+                {processedDocs.filter(d => d.financialMetrics).length > 0 ? (
                   <div className="max-w-4xl mx-auto">
                     <h4 className="text-left text-lg font-bold text-slate-700 dark:text-white mb-4">
                       Reportes Financieros Generados
                     </h4>
                     <div className="grid md:grid-cols-2 gap-4">
-                      {processedDocs
-                        .filter((d) => d.financialMetrics)
-                        .map((doc) => (
-                          <div
-                            key={doc.id}
-                            onClick={() => setCurrentProcessingDoc(doc)}
-                            className="p-6 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-800 cursor-pointer hover:shadow-lg transition-all text-left"
-                          >
-                            <div className="flex items-start justify-between mb-4">
-                              <div className="flex items-center gap-3">
-                                <FileSpreadsheet className="w-8 h-8 text-emerald-500" />
-                                <div>
-                                  <h5 className="font-bold text-slate-700 dark:text-white truncate">
-                                    {doc.fileName}
-                                  </h5>
-                                  <p className="text-xs text-slate-500">
-                                    {new Date(doc.processedAt).toLocaleDateString('es-CO')}
-                                  </p>
-                                </div>
+                      {processedDocs.filter(d => d.financialMetrics).map((doc) => (
+                        <div
+                          key={doc.id}
+                          onClick={() => setCurrentProcessingDoc(doc)}
+                          className="p-6 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-800 cursor-pointer hover:shadow-lg transition-all text-left"
+                        >
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              <FileSpreadsheet className="w-8 h-8 text-emerald-500" />
+                              <div>
+                                <h5 className="font-bold text-slate-700 dark:text-white truncate">
+                                  {doc.fileName}
+                                </h5>
+                                <p className="text-xs text-slate-500">
+                                  {new Date(doc.processedAt).toLocaleDateString('es-CO')}
+                                </p>
                               </div>
-                              <ArrowRight className="w-5 h-5 text-emerald-500" />
                             </div>
+                            <ArrowRight className="w-5 h-5 text-emerald-500" />
+                          </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="p-3 bg-white dark:bg-navy-800 rounded-xl">
-                                <p className="text-xs text-slate-500 mb-1">Ventas</p>
-                                <p className="text-lg font-bold text-emerald-600">
-                                  {formatCurrency(doc.financialMetrics!.totalSales)}
-                                </p>
-                              </div>
-                              <div className="p-3 bg-white dark:bg-navy-800 rounded-xl">
-                                <p className="text-xs text-slate-500 mb-1">Margen</p>
-                                <p className="text-lg font-bold text-blue-600">
-                                  {doc.financialMetrics!.profitMargin.toFixed(1)}%
-                                </p>
-                              </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="p-3 bg-white dark:bg-navy-800 rounded-xl">
+                              <p className="text-xs text-slate-500 mb-1">Ventas</p>
+                              <p className="text-lg font-bold text-emerald-600">
+                                {formatCurrency(doc.financialMetrics!.totalSales)}
+                              </p>
+                            </div>
+                            <div className="p-3 bg-white dark:bg-navy-800 rounded-xl">
+                              <p className="text-xs text-slate-500 mb-1">Margen</p>
+                              <p className="text-lg font-bold text-blue-600">
+                                {doc.financialMetrics!.profitMargin.toFixed(1)}%
+                              </p>
                             </div>
                           </div>
-                        ))}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ) : (
@@ -1068,9 +1019,7 @@ export const AdminPanelPro: React.FC = () => {
               {knowledgeEntries.length === 0 ? (
                 <div className="text-center py-16">
                   <BookOpen className="w-16 h-16 mx-auto text-slate-300 dark:text-navy-600 mb-4" />
-                  <p className="text-lg font-medium text-slate-500 mb-2">
-                    Base de conocimiento vacía
-                  </p>
+                  <p className="text-lg font-medium text-slate-500 mb-2">Base de conocimiento vacía</p>
                   <p className="text-sm text-slate-400">
                     Procesa documentos y guárdalos aquí para que el asistente IA los use
                   </p>
@@ -1083,17 +1032,11 @@ export const AdminPanelPro: React.FC = () => {
                       className="p-4 bg-slate-50 dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700"
                     >
                       <div className="flex items-start justify-between mb-2">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                            entry.type === 'proceso'
-                              ? 'bg-blue-100 text-blue-700'
-                              : entry.type === 'regla'
-                                ? 'bg-purple-100 text-purple-700'
-                                : entry.type === 'plantilla'
-                                  ? 'bg-emerald-100 text-emerald-700'
-                                  : 'bg-slate-100 text-slate-700'
-                          }`}
-                        >
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${entry.type === 'proceso' ? 'bg-blue-100 text-blue-700' :
+                            entry.type === 'regla' ? 'bg-purple-100 text-purple-700' :
+                              entry.type === 'plantilla' ? 'bg-emerald-100 text-emerald-700' :
+                                'bg-slate-100 text-slate-700'
+                          }`}>
                           {entry.type}
                         </span>
                         <button
@@ -1106,13 +1049,12 @@ export const AdminPanelPro: React.FC = () => {
                       <h4 className="font-bold text-slate-700 dark:text-white mb-1 truncate">
                         {entry.title}
                       </h4>
-                      <p className="text-xs text-slate-500 line-clamp-2 mb-2">{entry.summary}</p>
+                      <p className="text-xs text-slate-500 line-clamp-2 mb-2">
+                        {entry.summary}
+                      </p>
                       <div className="flex flex-wrap gap-1">
                         {entry.tags.slice(0, 3).map((tag: string, idx: number) => (
-                          <span
-                            key={idx}
-                            className="px-1.5 py-0.5 bg-slate-200 dark:bg-navy-700 rounded text-[10px] text-slate-600 dark:text-slate-400"
-                          >
+                          <span key={idx} className="px-1.5 py-0.5 bg-slate-200 dark:bg-navy-700 rounded text-[10px] text-slate-600 dark:text-slate-400">
                             {tag}
                           </span>
                         ))}
@@ -1137,8 +1079,7 @@ export const AdminPanelPro: React.FC = () => {
                   Sistema de Predicciones ML
                 </h3>
                 <p className="text-slate-500 dark:text-slate-400 mb-8">
-                  Machine Learning para predecir tasas de éxito, tiempos de entrega y detectar
-                  patrones
+                  Machine Learning para predecir tasas de éxito, tiempos de entrega y detectar patrones
                 </p>
 
                 <div className="grid md:grid-cols-3 gap-4 mb-8">
@@ -1168,6 +1109,99 @@ export const AdminPanelPro: React.FC = () => {
           {activeTab === 'integraciones' && (
             <div className="p-0">
               <ConexionesTab />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: INFO LOGÍSTICA */}
+          {/* ============================================ */}
+          {/* ============================================ */}
+          {/* TAB: API PÚBLICA */}
+          {/* ============================================ */}
+          {activeTab === 'api-publica' && (
+            <div className="p-6">
+              <ApiDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: CONEXIONES MCP */}
+          {/* ============================================ */}
+          {activeTab === 'mcp-conexiones' && (
+            <div className="p-6">
+              <MCPDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: APRENDIZAJE IA */}
+          {/* ============================================ */}
+          {activeTab === 'aprendizaje' && (
+            <div className="p-6">
+              <LearningDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: REPORTES */}
+          {/* ============================================ */}
+          {activeTab === 'reportes' && (
+            <div className="p-6">
+              <ReportsDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: CRM CLIENTES */}
+          {/* ============================================ */}
+          {activeTab === 'crm' && (
+            <div className="p-6">
+              <CRMDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: PEDIDOS */}
+          {/* ============================================ */}
+          {activeTab === 'pedidos' && (
+            <div className="p-6">
+              <OrdersDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: MARKETING */}
+          {/* ============================================ */}
+          {activeTab === 'marketing' && (
+            <div className="p-6">
+              <MarketingDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: SOPORTE */}
+          {/* ============================================ */}
+          {activeTab === 'soporte' && (
+            <div className="p-6">
+              <SupportDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: NOTIFICACIONES */}
+          {/* ============================================ */}
+          {activeTab === 'notificaciones' && (
+            <div className="p-6">
+              <NotificationsDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: SEGURIDAD */}
+          {/* ============================================ */}
+          {activeTab === 'seguridad' && (
+            <div className="p-6">
+              <SecurityDashboard />
             </div>
           )}
 
@@ -1210,12 +1244,8 @@ export const AdminPanelPro: React.FC = () => {
                 {excelFiles.length === 0 ? (
                   <div className="text-center py-8">
                     <FileSpreadsheet className="w-12 h-12 mx-auto text-slate-300 dark:text-navy-600 mb-3" />
-                    <p className="text-slate-500 dark:text-slate-400">
-                      No hay archivos Excel cargados
-                    </p>
-                    <p className="text-xs text-slate-400 mt-1">
-                      Sube archivos en "Procesamiento IA" o "Semáforo"
-                    </p>
+                    <p className="text-slate-500 dark:text-slate-400">No hay archivos Excel cargados</p>
+                    <p className="text-xs text-slate-400 mt-1">Sube archivos en "Procesamiento IA" o "Semáforo"</p>
                   </div>
                 ) : (
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1227,7 +1257,7 @@ export const AdminPanelPro: React.FC = () => {
                             loadLogisticsData();
                             showNotification('info', 'Datos del semáforo actualizados');
                           } else {
-                            const doc = processedDocs.find((d) => d.id === file.id);
+                            const doc = processedDocs.find(d => d.id === file.id);
                             if (doc) setCurrentProcessingDoc(doc);
                           }
                         }}
@@ -1237,13 +1267,11 @@ export const AdminPanelPro: React.FC = () => {
                           <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
                             <FileSpreadsheet className="w-5 h-5 text-cyan-600" />
                           </div>
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                              file.tipo === 'Semáforo'
-                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                                : 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400'
-                            }`}
-                          >
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                            file.tipo === 'Semáforo'
+                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                              : 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400'
+                          }`}>
                             {file.tipo}
                           </span>
                         </div>
@@ -1252,9 +1280,7 @@ export const AdminPanelPro: React.FC = () => {
                         </h4>
                         <div className="flex items-center justify-between text-xs text-slate-500">
                           <span>{file.fecha}</span>
-                          <span className="font-medium text-cyan-600">
-                            {file.registros} registros
-                          </span>
+                          <span className="font-medium text-cyan-600">{file.registros} registros</span>
                         </div>
                         <div className="mt-3 flex items-center gap-1 text-cyan-500 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
                           <Eye className="w-3 h-3" />
@@ -1284,8 +1310,7 @@ export const AdminPanelPro: React.FC = () => {
                     <MapPin className="w-16 h-16 mx-auto text-slate-300 dark:text-navy-600 mb-4" />
                     <p className="text-lg font-medium text-slate-500 mb-2">Sin datos logísticos</p>
                     <p className="text-sm text-slate-400 max-w-md mx-auto mb-6">
-                      Carga un archivo Excel en la pestaña "Semáforo" para ver las métricas de
-                      entregas por ciudad y transportadora
+                      Carga un archivo Excel en la pestaña "Semáforo" para ver las métricas de entregas por ciudad y transportadora
                     </p>
                     <button
                       onClick={() => setActiveTab('procesamiento')}
@@ -1299,30 +1324,14 @@ export const AdminPanelPro: React.FC = () => {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b-2 border-slate-200 dark:border-navy-700">
-                          <th className="text-left py-4 px-4 text-xs font-bold uppercase text-slate-500">
-                            Ciudad
-                          </th>
-                          <th className="text-left py-4 px-4 text-xs font-bold uppercase text-slate-500">
-                            Transportadora
-                          </th>
-                          <th className="text-center py-4 px-4 text-xs font-bold uppercase text-slate-500">
-                            Entregas
-                          </th>
-                          <th className="text-center py-4 px-4 text-xs font-bold uppercase text-slate-500">
-                            Devoluciones
-                          </th>
-                          <th className="text-center py-4 px-4 text-xs font-bold uppercase text-slate-500">
-                            Tasa Éxito
-                          </th>
-                          <th className="text-center py-4 px-4 text-xs font-bold uppercase text-slate-500">
-                            Tiempo Prom.
-                          </th>
-                          <th className="text-center py-4 px-4 text-xs font-bold uppercase text-slate-500">
-                            Semáforo
-                          </th>
-                          <th className="text-right py-4 px-4 text-xs font-bold uppercase text-slate-500">
-                            Acción
-                          </th>
+                          <th className="text-left py-4 px-4 text-xs font-bold uppercase text-slate-500">Ciudad</th>
+                          <th className="text-left py-4 px-4 text-xs font-bold uppercase text-slate-500">Transportadora</th>
+                          <th className="text-center py-4 px-4 text-xs font-bold uppercase text-slate-500">Entregas</th>
+                          <th className="text-center py-4 px-4 text-xs font-bold uppercase text-slate-500">Devoluciones</th>
+                          <th className="text-center py-4 px-4 text-xs font-bold uppercase text-slate-500">Tasa Éxito</th>
+                          <th className="text-center py-4 px-4 text-xs font-bold uppercase text-slate-500">Tiempo Prom.</th>
+                          <th className="text-center py-4 px-4 text-xs font-bold uppercase text-slate-500">Semáforo</th>
+                          <th className="text-right py-4 px-4 text-xs font-bold uppercase text-slate-500">Acción</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1335,9 +1344,7 @@ export const AdminPanelPro: React.FC = () => {
                             <td className="py-4 px-4">
                               <div className="flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-slate-400" />
-                                <span className="font-medium text-slate-700 dark:text-white">
-                                  {item.ciudad}
-                                </span>
+                                <span className="font-medium text-slate-700 dark:text-white">{item.ciudad}</span>
                               </div>
                             </td>
                             <td className="py-4 px-4">
@@ -1356,50 +1363,31 @@ export const AdminPanelPro: React.FC = () => {
                                 <div className="w-16 h-2 bg-slate-200 dark:bg-navy-700 rounded-full overflow-hidden">
                                   <div
                                     className={`h-full rounded-full ${
-                                      item.tasaExito >= 90
-                                        ? 'bg-emerald-500'
-                                        : item.tasaExito >= 75
-                                          ? 'bg-amber-500'
-                                          : item.tasaExito >= 60
-                                            ? 'bg-orange-500'
-                                            : 'bg-red-500'
+                                      item.tasaExito >= 90 ? 'bg-emerald-500' :
+                                      item.tasaExito >= 75 ? 'bg-amber-500' :
+                                      item.tasaExito >= 60 ? 'bg-orange-500' : 'bg-red-500'
                                     }`}
                                     style={{ width: `${item.tasaExito}%` }}
                                   />
                                 </div>
-                                <span className="font-bold text-sm">
-                                  {item.tasaExito.toFixed(1)}%
-                                </span>
+                                <span className="font-bold text-sm">{item.tasaExito.toFixed(1)}%</span>
                               </div>
                             </td>
                             <td className="py-4 px-4 text-center">
-                              <span className="font-medium text-slate-600 dark:text-slate-300">
-                                {item.tiempoPromedio} días
-                              </span>
+                              <span className="font-medium text-slate-600 dark:text-slate-300">{item.tiempoPromedio} días</span>
                             </td>
                             <td className="py-4 px-4 text-center">
-                              <span
-                                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
-                                  item.semaforo === 'VERDE'
-                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                    : item.semaforo === 'AMARILLO'
-                                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                                      : item.semaforo === 'NARANJA'
-                                        ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                }`}
-                              >
-                                <span
-                                  className={`w-2 h-2 rounded-full ${
-                                    item.semaforo === 'VERDE'
-                                      ? 'bg-emerald-500'
-                                      : item.semaforo === 'AMARILLO'
-                                        ? 'bg-amber-500'
-                                        : item.semaforo === 'NARANJA'
-                                          ? 'bg-orange-500'
-                                          : 'bg-red-500'
-                                  }`}
-                                />
+                              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
+                                item.semaforo === 'VERDE' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                item.semaforo === 'AMARILLO' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                item.semaforo === 'NARANJA' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                                'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                              }`}>
+                                <span className={`w-2 h-2 rounded-full ${
+                                  item.semaforo === 'VERDE' ? 'bg-emerald-500' :
+                                  item.semaforo === 'AMARILLO' ? 'bg-amber-500' :
+                                  item.semaforo === 'NARANJA' ? 'bg-orange-500' : 'bg-red-500'
+                                }`} />
                                 {item.semaforo}
                               </span>
                             </td>
@@ -1441,11 +1429,7 @@ export const AdminPanelPro: React.FC = () => {
                     <div className="flex items-center justify-between mb-2">
                       <Target className="w-6 h-6 text-white/70" />
                       <span className="text-2xl font-bold">
-                        {(
-                          logisticsData.reduce((sum, item) => sum + item.tasaExito, 0) /
-                          logisticsData.length
-                        ).toFixed(1)}
-                        %
+                        {(logisticsData.reduce((sum, item) => sum + item.tasaExito, 0) / logisticsData.length).toFixed(1)}%
                       </span>
                     </div>
                     <p className="text-sm text-white/80">Tasa Promedio</p>
@@ -1454,10 +1438,7 @@ export const AdminPanelPro: React.FC = () => {
                     <div className="flex items-center justify-between mb-2">
                       <Clock className="w-6 h-6 text-white/70" />
                       <span className="text-2xl font-bold">
-                        {(
-                          logisticsData.reduce((sum, item) => sum + item.tiempoPromedio, 0) /
-                          logisticsData.length
-                        ).toFixed(1)}
+                        {(logisticsData.reduce((sum, item) => sum + item.tiempoPromedio, 0) / logisticsData.length).toFixed(1)}
                       </span>
                     </div>
                     <p className="text-sm text-white/80">Días Promedio</p>
@@ -1498,57 +1479,37 @@ export const AdminPanelPro: React.FC = () => {
                   <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
                     <div className="flex items-center gap-2 mb-2">
                       <CheckCircle className="w-5 h-5 text-emerald-500" />
-                      <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                        Entregas
-                      </span>
+                      <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Entregas</span>
                     </div>
-                    <p className="text-3xl font-bold text-emerald-600">
-                      {selectedLogisticItem.entregas}
-                    </p>
+                    <p className="text-3xl font-bold text-emerald-600">{selectedLogisticItem.entregas}</p>
                   </div>
                   <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
                     <div className="flex items-center gap-2 mb-2">
                       <AlertTriangle className="w-5 h-5 text-red-500" />
-                      <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                        Devoluciones
-                      </span>
+                      <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Devoluciones</span>
                     </div>
-                    <p className="text-3xl font-bold text-red-600">
-                      {selectedLogisticItem.devoluciones}
-                    </p>
+                    <p className="text-3xl font-bold text-red-600">{selectedLogisticItem.devoluciones}</p>
                   </div>
                 </div>
 
                 {/* Tasa de éxito */}
                 <div className="p-4 bg-slate-50 dark:bg-navy-800 rounded-xl">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                      Tasa de Éxito
-                    </span>
-                    <span
-                      className={`text-2xl font-bold ${
-                        selectedLogisticItem.tasaExito >= 90
-                          ? 'text-emerald-600'
-                          : selectedLogisticItem.tasaExito >= 75
-                            ? 'text-amber-600'
-                            : selectedLogisticItem.tasaExito >= 60
-                              ? 'text-orange-600'
-                              : 'text-red-600'
-                      }`}
-                    >
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Tasa de Éxito</span>
+                    <span className={`text-2xl font-bold ${
+                      selectedLogisticItem.tasaExito >= 90 ? 'text-emerald-600' :
+                      selectedLogisticItem.tasaExito >= 75 ? 'text-amber-600' :
+                      selectedLogisticItem.tasaExito >= 60 ? 'text-orange-600' : 'text-red-600'
+                    }`}>
                       {selectedLogisticItem.tasaExito.toFixed(1)}%
                     </span>
                   </div>
                   <div className="w-full h-4 bg-slate-200 dark:bg-navy-700 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all ${
-                        selectedLogisticItem.tasaExito >= 90
-                          ? 'bg-emerald-500'
-                          : selectedLogisticItem.tasaExito >= 75
-                            ? 'bg-amber-500'
-                            : selectedLogisticItem.tasaExito >= 60
-                              ? 'bg-orange-500'
-                              : 'bg-red-500'
+                        selectedLogisticItem.tasaExito >= 90 ? 'bg-emerald-500' :
+                        selectedLogisticItem.tasaExito >= 75 ? 'bg-amber-500' :
+                        selectedLogisticItem.tasaExito >= 60 ? 'bg-orange-500' : 'bg-red-500'
                       }`}
                       style={{ width: `${selectedLogisticItem.tasaExito}%` }}
                     />
@@ -1562,18 +1523,14 @@ export const AdminPanelPro: React.FC = () => {
                       <Clock className="w-4 h-4 text-blue-500" />
                       <span className="text-sm text-slate-500">Tiempo Promedio</span>
                     </div>
-                    <p className="text-xl font-bold text-blue-600">
-                      {selectedLogisticItem.tiempoPromedio} días
-                    </p>
+                    <p className="text-xl font-bold text-blue-600">{selectedLogisticItem.tiempoPromedio} días</p>
                   </div>
                   <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
                     <div className="flex items-center gap-2 mb-1">
                       <Package className="w-4 h-4 text-purple-500" />
                       <span className="text-sm text-slate-500">Total Envíos</span>
                     </div>
-                    <p className="text-xl font-bold text-purple-600">
-                      {selectedLogisticItem.total}
-                    </p>
+                    <p className="text-xl font-bold text-purple-600">{selectedLogisticItem.total}</p>
                   </div>
                 </div>
 
@@ -1585,12 +1542,8 @@ export const AdminPanelPro: React.FC = () => {
                         <Sparkles className="w-5 h-5 text-purple-500" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-slate-700 dark:text-white mb-1">
-                          Recomendación IA
-                        </h4>
-                        <p className="text-sm text-slate-600 dark:text-slate-300">
-                          {selectedLogisticItem.recomendacionIA}
-                        </p>
+                        <h4 className="font-bold text-slate-700 dark:text-white mb-1">Recomendación IA</h4>
+                        <p className="text-sm text-slate-600 dark:text-slate-300">{selectedLogisticItem.recomendacionIA}</p>
                       </div>
                     </div>
                   </div>
@@ -1598,28 +1551,17 @@ export const AdminPanelPro: React.FC = () => {
 
                 {/* Semáforo */}
                 <div className="flex items-center justify-center">
-                  <div
-                    className={`px-6 py-3 rounded-full font-bold flex items-center gap-2 ${
-                      selectedLogisticItem.semaforo === 'VERDE'
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : selectedLogisticItem.semaforo === 'AMARILLO'
-                          ? 'bg-amber-100 text-amber-700'
-                          : selectedLogisticItem.semaforo === 'NARANJA'
-                            ? 'bg-orange-100 text-orange-700'
-                            : 'bg-red-100 text-red-700'
-                    }`}
-                  >
-                    <span
-                      className={`w-4 h-4 rounded-full animate-pulse ${
-                        selectedLogisticItem.semaforo === 'VERDE'
-                          ? 'bg-emerald-500'
-                          : selectedLogisticItem.semaforo === 'AMARILLO'
-                            ? 'bg-amber-500'
-                            : selectedLogisticItem.semaforo === 'NARANJA'
-                              ? 'bg-orange-500'
-                              : 'bg-red-500'
-                      }`}
-                    />
+                  <div className={`px-6 py-3 rounded-full font-bold flex items-center gap-2 ${
+                    selectedLogisticItem.semaforo === 'VERDE' ? 'bg-emerald-100 text-emerald-700' :
+                    selectedLogisticItem.semaforo === 'AMARILLO' ? 'bg-amber-100 text-amber-700' :
+                    selectedLogisticItem.semaforo === 'NARANJA' ? 'bg-orange-100 text-orange-700' :
+                    'bg-red-100 text-red-700'
+                  }`}>
+                    <span className={`w-4 h-4 rounded-full animate-pulse ${
+                      selectedLogisticItem.semaforo === 'VERDE' ? 'bg-emerald-500' :
+                      selectedLogisticItem.semaforo === 'AMARILLO' ? 'bg-amber-500' :
+                      selectedLogisticItem.semaforo === 'NARANJA' ? 'bg-orange-500' : 'bg-red-500'
+                    }`} />
                     Estado: {selectedLogisticItem.semaforo}
                   </div>
                 </div>

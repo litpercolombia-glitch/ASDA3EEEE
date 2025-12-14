@@ -14,3 +14,11 @@ export { DistritosIATab } from './DistritosIATab';
 export { MCPConnectionsTab } from './MCPConnectionsTab';
 export { ConexionesTab } from './ConexionesTab';
 export { InteligenciaLogisticaTab } from './InteligenciaLogisticaTab';
+
+// Nuevos tabs unificados (Fase 1 de optimización)
+export { OperacionesUnificadoTab } from './OperacionesUnificadoTab';
+export { InteligenciaIAUnificadoTab } from './InteligenciaIAUnificadoTab';
+export { AnalisisUnificadoTab } from './AnalisisUnificadoTab';
+
+// Centro de Negocio - Herramientas Operativas
+export { CentroNegocioTab } from './CentroNegocioTab';

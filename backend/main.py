@@ -73,6 +73,42 @@ except ImportError as e:
     ADMIN_SYSTEM_AVAILABLE = False
     logger.warning(f"Sistema de Administracion no disponible: {e}")
 
+# Sistema de Tracking Multi-Transportadora
+try:
+    from routes.tracking_routes import router as tracking_router
+    TRACKING_SYSTEM_AVAILABLE = True
+    logger.info("🚚 Sistema de Tracking cargado")
+except ImportError as e:
+    TRACKING_SYSTEM_AVAILABLE = False
+    logger.warning(f"Sistema de Tracking no disponible: {e}")
+
+# Sistema de Rescate de Guías
+try:
+    from routes.rescue_routes import router as rescue_router
+    RESCUE_SYSTEM_AVAILABLE = True
+    logger.info("🆘 Sistema de Rescate cargado")
+except ImportError as e:
+    RESCUE_SYSTEM_AVAILABLE = False
+    logger.warning(f"Sistema de Rescate no disponible: {e}")
+
+# Sistema de WhatsApp
+try:
+    from routes.whatsapp_routes import router as whatsapp_router
+    WHATSAPP_SYSTEM_AVAILABLE = True
+    logger.info("💬 Sistema de WhatsApp cargado")
+except ImportError as e:
+    WHATSAPP_SYSTEM_AVAILABLE = False
+    logger.warning(f"Sistema de WhatsApp no disponible: {e}")
+
+# Sistema de WebSocket
+try:
+    from routes.websocket_routes import router as websocket_router
+    WEBSOCKET_SYSTEM_AVAILABLE = True
+    logger.info("🔌 Sistema de WebSocket cargado")
+except ImportError as e:
+    WEBSOCKET_SYSTEM_AVAILABLE = False
+    logger.warning(f"Sistema de WebSocket no disponible: {e}")
+
 
 # ==================== CONFIGURACIÓN ====================
 
@@ -190,6 +226,26 @@ if ASSISTANT_SYSTEM_AVAILABLE:
 if ADMIN_SYSTEM_AVAILABLE:
     app.include_router(admin_router, prefix="/api")
     logger.success("🔐 Rutas de administracion registradas en /api/admin")
+
+# Incluir router de Tracking
+if TRACKING_SYSTEM_AVAILABLE:
+    app.include_router(tracking_router, prefix="/api")
+    logger.success("🚚 Rutas de tracking registradas en /api/tracking")
+
+# Incluir router de Rescate
+if RESCUE_SYSTEM_AVAILABLE:
+    app.include_router(rescue_router, prefix="/api")
+    logger.success("🆘 Rutas de rescate registradas en /api/rescue")
+
+# Incluir router de WhatsApp
+if WHATSAPP_SYSTEM_AVAILABLE:
+    app.include_router(whatsapp_router, prefix="/api")
+    logger.success("💬 Rutas de WhatsApp registradas en /api/whatsapp")
+
+# Incluir router de WebSocket
+if WEBSOCKET_SYSTEM_AVAILABLE:
+    app.include_router(websocket_router)
+    logger.success("🔌 WebSocket registrado en /ws")
 
 
 # ==================== ENDPOINTS DE SISTEMA ====================

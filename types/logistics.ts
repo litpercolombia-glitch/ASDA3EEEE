@@ -9,7 +9,15 @@ import { Shipment, ShipmentStatus, CarrierName } from '../types';
 // TAB NAVIGATION TYPES
 // ============================================
 
+// Nueva navegación simplificada con todos los tabs
 export type MainTabNew =
+  | 'operaciones'
+  | 'inteligencia-ia'
+  | 'analisis'
+  | 'procesos-litper'
+  | 'admin'
+  | 'negocio'
+  // Legacy tabs (para compatibilidad)
   | 'seguimiento'
   | 'demanda'
   | 'gamificacion'
@@ -18,11 +26,9 @@ export type MainTabNew =
   | 'predicciones'
   | 'asistente'
   | 'ml'
-  | 'procesos-litper'
   | 'ciudad-agentes'
   | 'mcp-connections'
   | 'conexiones'
-  | 'admin'
   | 'reporte'
   | 'aprendizaje-ia';
 
