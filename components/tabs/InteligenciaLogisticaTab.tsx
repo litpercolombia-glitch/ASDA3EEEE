@@ -80,6 +80,12 @@ interface GuiaLogistica {
   tieneNovedad: boolean;
   ultimos2Estados: EventoLogistico[];
   historialCompleto: EventoLogistico[];
+  // Campos adicionales del Excel
+  cliente?: string;
+  producto?: string;
+  valor?: string;
+  fechaEnvio?: string;
+  direccion?: string;
 }
 
 interface Sesion {
@@ -277,7 +283,7 @@ const formatDateTime = (dateStr: string): string => {
 };
 
 // =====================================
-// PARSER DE EXCEL
+// PARSER DE EXCEL - Lee TODOS los campos
 // =====================================
 const parseExcelFile = async (file: File): Promise<GuiaLogistica[]> => {
   return new Promise((resolve, reject) => {
@@ -293,46 +299,92 @@ const parseExcelFile = async (file: File): Promise<GuiaLogistica[]> => {
         const guias: GuiaLogistica[] = [];
         const headers = jsonData[0] || [];
 
-        // Buscar índices de columnas
+        // Función mejorada para buscar índice de columna
         const findColumnIndex = (names: string[]) => {
-          return headers.findIndex((h: any) =>
-            names.some((name) => String(h).toLowerCase().includes(name.toLowerCase()))
-          );
+          return headers.findIndex((h: any) => {
+            const headerStr = String(h).toLowerCase().trim();
+            return names.some((name) => {
+              const nameLower = name.toLowerCase();
+              // Coincidencia exacta o parcial
+              return headerStr === nameLower ||
+                     headerStr.includes(nameLower) ||
+                     nameLower.includes(headerStr);
+            });
+          });
         };
 
-        const guiaIdx = findColumnIndex(['guia', 'numero', 'tracking', 'n°', 'id']);
-        const estadoIdx = findColumnIndex(['estado', 'status', 'estatus']);
-        const transportadoraIdx = findColumnIndex(['transportadora', 'carrier', 'empresa']);
-        const ciudadIdx = findColumnIndex(['ciudad', 'destino', 'city']);
-        const diasIdx = findColumnIndex(['dias', 'days', 'tiempo']);
-        const telefonoIdx = findColumnIndex(['telefono', 'celular', 'phone', 'tel']);
-        const novedadIdx = findColumnIndex(['novedad', 'issue', 'problema']);
+        // Mapear TODAS las columnas posibles
+        const columnIndexes = {
+          guia: findColumnIndex(['guia', 'numero', 'tracking', 'n°', 'id', 'numero guia', 'numero_guia', 'nro', 'número']),
+          estado: findColumnIndex(['estado', 'status', 'estatus', 'estado actual', 'estado_actual']),
+          transportadora: findColumnIndex(['transportadora', 'carrier', 'empresa', 'transporte', 'courier', 'mensajeria']),
+          ciudad: findColumnIndex(['ciudad', 'destino', 'city', 'ciudad destino', 'ciudad_destino', 'municipio']),
+          dias: findColumnIndex(['dias', 'days', 'tiempo', 'dias transcurridos', 'dias_transcurridos', 'antiguedad']),
+          telefono: findColumnIndex(['telefono', 'celular', 'phone', 'tel', 'movil', 'móvil', 'contacto', 'numero celular']),
+          novedad: findColumnIndex(['novedad', 'issue', 'problema', 'tiene novedad', 'tiene_novedad', 'observacion']),
+          cliente: findColumnIndex(['cliente', 'customer', 'nombre', 'destinatario', 'nombre cliente', 'nombre_cliente', 'receptor']),
+          producto: findColumnIndex(['producto', 'product', 'item', 'articulo', 'artículo', 'descripcion', 'descripción', 'referencia']),
+          valor: findColumnIndex(['valor', 'value', 'precio', 'monto', 'total', 'valor total', 'valor_total', 'costo', 'recaudo']),
+          fecha: findColumnIndex(['fecha', 'date', 'fecha envio', 'fecha_envio', 'fecha creacion', 'fecha_creacion', 'fec']),
+          direccion: findColumnIndex(['direccion', 'dirección', 'address', 'domicilio', 'dir', 'direccion destino']),
+        };
+
+        // Log para debug (se puede remover en producción)
+        console.log('Columnas encontradas:', {
+          headers: headers.map((h: any, i: number) => `${i}: ${h}`),
+          indexes: columnIndexes
+        });
 
         for (let i = 1; i < jsonData.length; i++) {
           const row = jsonData[i];
           if (!row || row.length === 0) continue;
 
-          const numeroGuia = guiaIdx >= 0 ? String(row[guiaIdx] || '') : '';
+          // Obtener valor seguro de una celda
+          const getValue = (idx: number, defaultVal: string = ''): string => {
+            if (idx < 0 || idx >= row.length) return defaultVal;
+            const val = row[idx];
+            if (val === null || val === undefined) return defaultVal;
+            return String(val).trim();
+          };
+
+          const getNumericValue = (idx: number, defaultVal: number = 0): number => {
+            const val = getValue(idx, '');
+            const num = parseInt(val) || parseFloat(val);
+            return isNaN(num) ? defaultVal : num;
+          };
+
+          const numeroGuia = getValue(columnIndexes.guia);
           if (!numeroGuia) continue;
 
-          const estadoActual = estadoIdx >= 0 ? String(row[estadoIdx] || 'Pendiente') : 'Pendiente';
-          const transportadora =
-            transportadoraIdx >= 0
-              ? String(row[transportadoraIdx] || 'Desconocido')
-              : 'Desconocido';
-          const ciudadDestino =
-            ciudadIdx >= 0 ? String(row[ciudadIdx] || 'Desconocido') : 'Desconocido';
-          const diasTranscurridos = diasIdx >= 0 ? parseInt(String(row[diasIdx] || '0')) || 0 : 0;
-          const telefono = telefonoIdx >= 0 ? String(row[telefonoIdx] || '') : '';
+          const estadoActual = getValue(columnIndexes.estado, 'Pendiente');
+          const transportadora = getValue(columnIndexes.transportadora, 'Desconocido');
+          const ciudadDestino = getValue(columnIndexes.ciudad, 'Desconocido');
+          const diasTranscurridos = getNumericValue(columnIndexes.dias, 0);
+          const telefono = getValue(columnIndexes.telefono);
+
+          // Campos adicionales
+          const cliente = getValue(columnIndexes.cliente);
+          const producto = getValue(columnIndexes.producto);
+          const valor = getValue(columnIndexes.valor);
+          const fechaEnvio = getValue(columnIndexes.fecha);
+          const direccion = getValue(columnIndexes.direccion);
+
+          // Determinar si tiene novedad
+          const novedadVal = getValue(columnIndexes.novedad).toLowerCase();
           const tieneNovedad =
-            novedadIdx >= 0
-              ? Boolean(row[novedadIdx])
-              : estadoActual.toLowerCase().includes('novedad') ||
-                estadoActual.toLowerCase().includes('devuelto');
+            novedadVal === 'si' ||
+            novedadVal === 'sí' ||
+            novedadVal === 'yes' ||
+            novedadVal === '1' ||
+            novedadVal === 'true' ||
+            estadoActual.toLowerCase().includes('novedad') ||
+            estadoActual.toLowerCase().includes('devuelto') ||
+            estadoActual.toLowerCase().includes('rechaz') ||
+            estadoActual.toLowerCase().includes('problem');
 
           guias.push({
             numeroGuia,
-            telefono,
+            telefono: telefono || undefined,
             transportadora,
             ciudadOrigen: 'Colombia',
             ciudadDestino,
@@ -341,11 +393,19 @@ const parseExcelFile = async (file: File): Promise<GuiaLogistica[]> => {
             tieneNovedad,
             ultimos2Estados: [],
             historialCompleto: [],
+            // Campos adicionales
+            cliente: cliente || undefined,
+            producto: producto || undefined,
+            valor: valor || undefined,
+            fechaEnvio: fechaEnvio || undefined,
+            direccion: direccion || undefined,
           });
         }
 
+        console.log(`Parseadas ${guias.length} guías del Excel`);
         resolve(guias);
       } catch (error) {
+        console.error('Error parseando Excel:', error);
         reject(error);
       }
     };
@@ -806,19 +866,26 @@ export const InteligenciaLogisticaTab: React.FC = () => {
 
     const wb = XLSX.utils.book_new();
 
-    // ===== HOJA 1: TODAS LAS GUÍAS =====
+    // ===== HOJA 1: TODAS LAS GUÍAS (con todos los campos) =====
     const todasGuiasData = [
       ['REPORTE COMPLETO DE GUÍAS - ' + sesionActiva.nombre],
       ['Fecha de generación: ' + new Date().toLocaleString()],
+      ['Total de guías: ' + guiasActivas.length],
       [''],
-      ['Guía', 'Transportadora', 'Ciudad Destino', 'Estado', 'Días', 'Teléfono', 'Novedad', 'Prioridad'],
-      ...guiasActivas.map((g) => [
+      ['#', 'Guía', 'Transportadora', 'Ciudad Destino', 'Estado', 'Días', 'Teléfono', 'Cliente', 'Producto', 'Valor', 'Fecha Envío', 'Dirección', 'Novedad', 'Prioridad'],
+      ...guiasActivas.map((g, idx) => [
+        idx + 1,
         g.numeroGuia,
         g.transportadora,
         g.ciudadDestino,
         g.estadoActual,
         g.diasTranscurridos,
-        g.telefono || 'N/A',
+        g.telefono || '',
+        g.cliente || '',
+        g.producto || '',
+        g.valor || '',
+        g.fechaEnvio || '',
+        g.direccion || '',
         g.tieneNovedad ? 'SÍ' : 'NO',
         g.diasTranscurridos > 5 ? 'CRÍTICA' : g.diasTranscurridos > 3 ? 'ALTA' : g.tieneNovedad ? 'MEDIA' : 'NORMAL',
       ]),
@@ -1067,19 +1134,19 @@ export const InteligenciaLogisticaTab: React.FC = () => {
   // Función para obtener el valor de una guía según la columna
   const getGuiaValue = (guia: GuiaLogistica, columnId: string): string => {
     switch (columnId) {
-      case 'guia': return guia.numeroGuia;
-      case 'estado': return guia.estadoActual;
-      case 'transportadora': return guia.transportadora;
-      case 'ciudad': return guia.ciudadDestino;
-      case 'dias': return String(guia.diasTranscurridos);
-      case 'telefono': return guia.telefono || 'N/A';
+      case 'guia': return guia.numeroGuia || '';
+      case 'estado': return guia.estadoActual || '';
+      case 'transportadora': return guia.transportadora || '';
+      case 'ciudad': return guia.ciudadDestino || '';
+      case 'dias': return String(guia.diasTranscurridos || 0);
+      case 'telefono': return guia.telefono || '';
       case 'novedad': return guia.tieneNovedad ? 'SÍ' : 'NO';
-      case 'cliente': return (guia as any).cliente || 'N/A';
-      case 'producto': return (guia as any).producto || 'N/A';
-      case 'valor': return (guia as any).valor || 'N/A';
-      case 'fecha': return (guia as any).fechaEnvio || 'N/A';
-      case 'direccion': return (guia as any).direccion || 'N/A';
-      default: return 'N/A';
+      case 'cliente': return guia.cliente || '';
+      case 'producto': return guia.producto || '';
+      case 'valor': return guia.valor || '';
+      case 'fecha': return guia.fechaEnvio || '';
+      case 'direccion': return guia.direccion || '';
+      default: return '';
     }
   };
 
