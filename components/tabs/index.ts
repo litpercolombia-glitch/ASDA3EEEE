@@ -1,24 +1,55 @@
-export { TabNavigationNew } from './TabNavigationNew';
+// ============================================
+// TABS PRINCIPALES - USAR ESTOS
+// ============================================
+
+// Navegacion (version consolidada)
+export { TabNavigationNew as TabNavigation } from './TabNavigationNew';
+
+// Semaforo (version consolidada)
+export { SemaforoTabNew as SemaforoTab } from './SemaforoTabNew';
+
+// Seguimiento
 export { SeguimientoTab } from './SeguimientoTab';
-export { SemaforoTabNew } from './SemaforoTabNew';
+
+// Predicciones y ML
 export { PrediccionesTab } from './PrediccionesTab';
+export { MLSystemTab } from './MLSystemTab';
+
+// IA y Asistente
 export { ReporteIATab } from './ReporteIATab';
 export { AsistenteTab } from './AsistenteTab';
-export { MLSystemTab } from './MLSystemTab';
+export { AprendizajeIATab } from './AprendizajeIATab';
+
+// Logistica
+export { InteligenciaLogisticaTab } from './InteligenciaLogisticaTab';
+export { CiudadAgentesTab } from './CiudadAgentesTab';
+export { DistritosIATab } from './DistritosIATab';
+
+// Funcionalidades
 export { default as DemandTab } from './DemandTab';
 export { default as GamificationTab } from './GamificationTab';
 export { ProcesosLitperTab } from './ProcesosLitperTab';
-export { CiudadAgentesTab } from './CiudadAgentesTab';
-export { AprendizajeIATab } from './AprendizajeIATab';
-export { DistritosIATab } from './DistritosIATab';
 export { MCPConnectionsTab } from './MCPConnectionsTab';
 export { ConexionesTab } from './ConexionesTab';
-export { InteligenciaLogisticaTab } from './InteligenciaLogisticaTab';
 
-// Nuevos tabs unificados (Fase 1 de optimización)
+// Tabs unificados
 export { OperacionesUnificadoTab } from './OperacionesUnificadoTab';
 export { InteligenciaIAUnificadoTab } from './InteligenciaIAUnificadoTab';
 export { AnalisisUnificadoTab } from './AnalisisUnificadoTab';
 
-// Centro de Negocio - Herramientas Operativas
+// Centro de Negocio
 export { CentroNegocioTab } from './CentroNegocioTab';
+
+// ============================================
+// DEPRECADOS - NO USAR
+// ============================================
+
+/**
+ * @deprecated Usar TabNavigation en su lugar
+ */
+export { TabNavigationNew } from './TabNavigationNew';
+
+/**
+ * @deprecated Usar SemaforoTab en su lugar
+ */
+export { SemaforoTabNew } from './SemaforoTabNew';
