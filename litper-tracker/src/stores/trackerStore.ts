@@ -133,7 +133,7 @@ export interface TrackerState {
   // === PERSISTENCIA ===
   cargarDatos: () => Promise<void>;
   guardarDatos: () => Promise<void>;
-  sincronizarUsuarios: () => void;
+  sincronizarUsuarios: () => Promise<void>;
 }
 
 // ============================================
@@ -165,6 +165,52 @@ const valoresNovedadesIniciales = {
 
 // Key para sincronización con Procesos 2.0
 const SYNC_KEY = 'litper-tracker-sync';
+const PROCESOS_KEY = 'litper-procesos-v2';
+
+// Función para reproducir sonido de éxito
+const playSuccessSound = () => {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    // Sonido de éxito (tono ascendente)
+    osc.frequency.setValueAtTime(523, ctx.currentTime); // Do
+    osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1); // Mi
+    osc.frequency.setValueAtTime(784, ctx.currentTime + 0.2); // Sol
+
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+
+    osc.start();
+    osc.stop(ctx.currentTime + 0.4);
+  } catch (e) {
+    console.log('No se pudo reproducir sonido');
+  }
+};
+
+// Función para reproducir sonido de alarma (timer terminado)
+const playAlarmSound = () => {
+  try {
+    const ctx = new AudioContext();
+    // Tres beeps
+    for (let i = 0; i < 3; i++) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.3);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.3 + 0.2);
+      osc.start(ctx.currentTime + i * 0.3);
+      osc.stop(ctx.currentTime + i * 0.3 + 0.2);
+    }
+  } catch (e) {
+    console.log('No se pudo reproducir alarma');
+  }
+};
 
 // ============================================
 // STORE
@@ -271,18 +317,7 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
 
     if (tiempoRestante <= 1) {
       set({ tiempoRestante: 0, estadoTimer: 'finished' });
-      try {
-        const ctx = new AudioContext();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = 880;
-        gain.gain.setValueAtTime(0.3, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.8);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.8);
-      } catch (e) {}
+      playAlarmSound(); // Sonido de alarma cuando termina el timer
     } else {
       set({ tiempoRestante: tiempoRestante - 1 });
     }
@@ -397,6 +432,9 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
       horaInicio: '',
     });
 
+    // Sonido de éxito al guardar ronda
+    playSuccessSound();
+
     get().guardarDatos();
   },
 
@@ -428,25 +466,55 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
   },
 
   // === PERSISTENCIA ===
-  sincronizarUsuarios: () => {
+  sincronizarUsuarios: async () => {
+    let usuariosEncontrados: Usuario[] = [];
+
     try {
-      // Leer usuarios de Procesos 2.0
-      const procesosData = localStorage.getItem('litper-procesos-v2');
+      // 1. Intentar desde localStorage (web/desarrollo)
+      const procesosData = localStorage.getItem(PROCESOS_KEY);
       if (procesosData) {
         const parsed = JSON.parse(procesosData);
         if (parsed.state?.usuarios) {
-          const usuariosActivos = parsed.state.usuarios.filter((u: Usuario) => u.activo);
-          set({ usuarios: usuariosActivos });
+          usuariosEncontrados = parsed.state.usuarios.filter((u: Usuario) => u.activo);
         }
       }
+
+      // 2. Intentar desde electron-store si está disponible
+      if (window.electronAPI && usuariosEncontrados.length === 0) {
+        const usuariosGuardados = await window.electronAPI.getStore('usuarios');
+        if (usuariosGuardados && Array.isArray(usuariosGuardados)) {
+          usuariosEncontrados = usuariosGuardados.filter((u: Usuario) => u.activo);
+        }
+      }
+
+      // 3. Si no hay usuarios, crear algunos de ejemplo
+      if (usuariosEncontrados.length === 0) {
+        usuariosEncontrados = [
+          { id: 'user1', nombre: 'Usuario 1', avatar: '😊', color: '#8B5CF6', metaDiaria: 50, activo: true },
+          { id: 'user2', nombre: 'Usuario 2', avatar: '🚀', color: '#10B981', metaDiaria: 60, activo: true },
+          { id: 'user3', nombre: 'Usuario 3', avatar: '⭐', color: '#F59E0B', metaDiaria: 40, activo: true },
+        ];
+        // Guardar los usuarios de ejemplo en electron-store
+        if (window.electronAPI) {
+          await window.electronAPI.setStore('usuarios', usuariosEncontrados);
+        }
+      }
+
+      set({ usuarios: usuariosEncontrados });
     } catch (e) {
       console.error('Error sincronizando usuarios:', e);
+      // Usuarios por defecto en caso de error
+      set({
+        usuarios: [
+          { id: 'default1', nombre: 'Usuario 1', avatar: '😊', color: '#8B5CF6', metaDiaria: 50, activo: true },
+        ],
+      });
     }
   },
 
   cargarDatos: async () => {
     // Sincronizar usuarios
-    get().sincronizarUsuarios();
+    await get().sincronizarUsuarios();
 
     const fechaHoy = hoy();
 
