@@ -19,12 +19,20 @@ interface RankingEntry {
 }
 
 const LiveRanking: React.FC<{ className?: string }> = ({ className = '' }) => {
-  const { usuarios, getRondasHoy, getTotalHoy } = useProcesosStore();
+  const { usuarios, getRondasHoy, getTotalHoy, usuarioActual } = useProcesosStore();
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [animatingId, setAnimatingId] = useState<string | null>(null);
 
   const getColorHex = (colorId: string) =>
     COLORES_USUARIO.find((c) => c.id === colorId)?.hex || '#8B5CF6';
+
+  // Función para ocultar nombre de otros usuarios
+  const getNombreMostrado = (entry: RankingEntry) => {
+    if (usuarioActual && entry.id === usuarioActual.id) {
+      return entry.nombre; // Mostrar nombre real del usuario actual
+    }
+    return '*****'; // Ocultar nombres de otros
+  };
 
   // Actualizar ranking cada 5 segundos
   useEffect(() => {
@@ -91,8 +99,10 @@ const LiveRanking: React.FC<{ className?: string }> = ({ className = '' }) => {
           <div
             key={entry.id}
             className={`flex items-center gap-3 p-2 rounded-lg transition-all duration-500 ${
-              animatingId === entry.id ? 'bg-amber-500/20 scale-105' : 'bg-slate-700/50'
-            } ${index === 0 ? 'border border-amber-500/30' : ''}`}
+              animatingId === entry.id ? 'bg-amber-500/20 scale-105' :
+              usuarioActual && entry.id === usuarioActual.id ? 'bg-amber-500/10 border border-amber-500/40' :
+              'bg-slate-700/50'
+            } ${index === 0 && !(usuarioActual && entry.id === usuarioActual.id) ? 'border border-amber-500/30' : ''}`}
           >
             {/* Posición */}
             <div className="w-8 text-center font-bold text-lg">
@@ -102,15 +112,24 @@ const LiveRanking: React.FC<{ className?: string }> = ({ className = '' }) => {
             {/* Avatar */}
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center text-xl"
-              style={{ backgroundColor: `${getColorHex(entry.color)}30` }}
+              style={{ backgroundColor: usuarioActual && entry.id === usuarioActual.id
+                ? `${getColorHex(entry.color)}30`
+                : '#475569' }}
             >
-              {entry.avatar}
+              {usuarioActual && entry.id === usuarioActual.id ? entry.avatar : '👤'}
             </div>
 
             {/* Info */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="text-white font-medium truncate">{entry.nombre}</span>
+                <span className={`font-medium truncate ${
+                  usuarioActual && entry.id === usuarioActual.id
+                    ? 'text-amber-400'
+                    : 'text-slate-400'
+                }`}>
+                  {getNombreMostrado(entry)}
+                  {usuarioActual && entry.id === usuarioActual.id && ' (Tú)'}
+                </span>
                 <span className="text-emerald-400 font-bold">{entry.guiasHoy}</span>
               </div>
 
