@@ -163,9 +163,9 @@ const valoresNovedadesIniciales = {
   litper: 0,
 };
 
-// Key para sincronización con Procesos 2.0
+// Key para sincronización con Procesos 2.0 (app web)
 const SYNC_KEY = 'litper-tracker-sync';
-const PROCESOS_KEY = 'litper-procesos-v2';
+const PROCESOS_KEY = 'litper-procesos-store'; // Debe coincidir con el store de la app web
 
 // URL del API Backend (cambiar en producción)
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/tracker';

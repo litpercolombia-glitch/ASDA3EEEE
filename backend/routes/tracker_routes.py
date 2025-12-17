@@ -25,7 +25,7 @@ class UsuarioTrackerBase(BaseModel):
 
 class UsuarioTrackerCreate(UsuarioTrackerBase):
     """Para crear usuario"""
-    pass
+    id: Optional[str] = None  # ID opcional - si viene de la app web, usar el mismo ID
 
 
 class UsuarioTrackerUpdate(BaseModel):
@@ -160,8 +160,22 @@ async def listar_usuarios():
 
 @router.post("/usuarios", response_model=dict)
 async def crear_usuario(usuario: UsuarioTrackerCreate):
-    """Crea un nuevo usuario del tracker"""
-    usuario_id = _generar_id()
+    """Crea un nuevo usuario del tracker o actualiza si ya existe"""
+    # Usar ID proporcionado o generar uno nuevo
+    usuario_id = usuario.id if usuario.id else _generar_id()
+
+    # Si ya existe, actualizar
+    if usuario_id in _usuarios_tracker:
+        _usuarios_tracker[usuario_id].update({
+            "nombre": usuario.nombre,
+            "avatar": usuario.avatar,
+            "color": usuario.color,
+            "meta_diaria": usuario.meta_diaria,
+            "activo": usuario.activo,
+        })
+        logger.info(f"Usuario tracker actualizado: {usuario.nombre}")
+        return {**_usuarios_tracker[usuario_id], "id": usuario_id}
+
     nuevo_usuario = {
         "id": usuario_id,
         "nombre": usuario.nombre,

@@ -21,6 +21,40 @@ import {
 } from '../types';
 
 // ============================================
+// API SYNC - Sincronización con el backend
+// ============================================
+
+const API_URL = 'http://localhost:8000/api/tracker';
+
+const syncUsuarioToAPI = async (usuario: Usuario & { id: string }) => {
+  try {
+    await fetch(`${API_URL}/usuarios`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: usuario.id,
+        nombre: usuario.nombre,
+        avatar: usuario.avatar,
+        color: usuario.color,
+        meta_diaria: usuario.metaDiaria || 50,
+        activo: usuario.activo !== false,
+      }),
+    });
+    console.log('✅ Usuario sincronizado con backend:', usuario.nombre);
+  } catch (error) {
+    console.warn('⚠️ No se pudo sincronizar usuario con backend:', error);
+  }
+};
+
+const deleteUsuarioFromAPI = async (id: string) => {
+  try {
+    await fetch(`${API_URL}/usuarios/${id}`, { method: 'DELETE' });
+  } catch (error) {
+    console.warn('⚠️ No se pudo eliminar usuario del backend:', error);
+  }
+};
+
+// ============================================
 // TIPOS DEL STORE
 // ============================================
 
@@ -169,6 +203,9 @@ export const useProcesosStore = create<ProcesosState>()(
           usuarios: [...state.usuarios, nuevoUsuario],
           perfiles: [...state.perfiles, nuevoPerfil],
         }));
+
+        // Sincronizar con el backend (para el Tracker desktop)
+        syncUsuarioToAPI(nuevoUsuario as Usuario & { id: string });
       },
 
       eliminarUsuario: (id) => {
@@ -180,6 +217,9 @@ export const useProcesosStore = create<ProcesosState>()(
           notas: state.notas.filter((n) => n.usuarioId !== id),
           usuarioActual: state.usuarioActual?.id === id ? null : state.usuarioActual,
         }));
+
+        // Sincronizar eliminación con el backend
+        deleteUsuarioFromAPI(id);
       },
 
       actualizarUsuario: (id, datos) => {
