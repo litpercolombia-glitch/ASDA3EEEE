@@ -147,6 +147,10 @@ interface ProcesosState {
   getReporteSemanal: () => ReporteSemanal;
   getReporteMensual: () => ReporteMensual;
   getEstadisticasUsuario: (usuarioId: string) => EstadisticasUsuario;
+
+  // === SYNC CON TRACKER ===
+  getTrackerData: () => TrackerSyncData | null;
+  getRondasTrackerHoy: () => RondaTracker[];
 }
 
 // Tipos de reportes
@@ -217,12 +221,64 @@ export interface EstadisticasUsuario {
 }
 
 // ============================================
+// TIPOS SYNC CON TRACKER
+// ============================================
+
+export type TipoProcesoTracker = 'guias' | 'novedades';
+
+export interface RondaTrackerGuias {
+  id: string;
+  usuarioId: string;
+  usuarioNombre: string;
+  numero: number;
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
+  tiempoUsado: number;
+  tipo: 'guias';
+  pedidosIniciales: number;
+  realizado: number;
+  cancelado: number;
+  agendado: number;
+  dificiles: number;
+  pendientes: number;
+  revisado: number;
+}
+
+export interface RondaTrackerNovedades {
+  id: string;
+  usuarioId: string;
+  usuarioNombre: string;
+  numero: number;
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
+  tiempoUsado: number;
+  tipo: 'novedades';
+  revisadas: number;
+  solucionadas: number;
+  devolucion: number;
+  cliente: number;
+  transportadora: number;
+  litper: number;
+}
+
+export type RondaTracker = RondaTrackerGuias | RondaTrackerNovedades;
+
+export interface TrackerSyncData {
+  rondasHoy: RondaTracker[];
+  fecha: string;
+  ultimaSync: string;
+}
+
+// ============================================
 // HELPERS
 // ============================================
 
 const generarId = () => Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 const hoy = () => new Date().toISOString().split('T')[0];
 const horaActual = () => new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+const TRACKER_SYNC_KEY = 'litper-tracker-sync';
 
 // ============================================
 // STORE
@@ -604,6 +660,27 @@ export const useProcesosStore = create<ProcesosState>()(
           diasTrabajados: dias.length,
           mejorDia: mejorDia && mejorDia.total > 0 ? mejorDia : null,
         };
+      },
+
+      // === SYNC CON TRACKER ===
+      getTrackerData: () => {
+        try {
+          const data = localStorage.getItem(TRACKER_SYNC_KEY);
+          if (data) {
+            return JSON.parse(data) as TrackerSyncData;
+          }
+        } catch (e) {
+          console.error('Error leyendo datos del Tracker:', e);
+        }
+        return null;
+      },
+
+      getRondasTrackerHoy: () => {
+        const trackerData = get().getTrackerData();
+        if (!trackerData || trackerData.fecha !== hoy()) {
+          return [];
+        }
+        return trackerData.rondasHoy;
       },
     }),
     {

@@ -1,13 +1,34 @@
 import { create } from 'zustand';
 
-// Tipos
-export interface RondaData {
+// ============================================
+// TIPOS
+// ============================================
+
+export interface Usuario {
   id: string;
+  nombre: string;
+  avatar: string;
+  color: string;
+  metaDiaria: number;
+  activo: boolean;
+}
+
+export type TipoProceso = 'guias' | 'novedades';
+
+export interface RondaBase {
+  id: string;
+  usuarioId: string;
+  usuarioNombre: string;
   numero: number;
   fecha: string;
   horaInicio: string;
   horaFin: string;
   tiempoUsado: number;
+  tipo: TipoProceso;
+}
+
+export interface RondaGuias extends RondaBase {
+  tipo: 'guias';
   pedidosIniciales: number;
   realizado: number;
   cancelado: number;
@@ -17,20 +38,40 @@ export interface RondaData {
   revisado: number;
 }
 
+export interface RondaNovedades extends RondaBase {
+  tipo: 'novedades';
+  revisadas: number;
+  solucionadas: number;
+  devolucion: number;
+  cliente: number;
+  transportadora: number;
+  litper: number;
+}
+
+export type Ronda = RondaGuias | RondaNovedades;
+
 export interface TrackerState {
+  // Pantalla actual
+  pantalla: 'seleccion-usuario' | 'seleccion-proceso' | 'trabajo';
+
   // Usuario
-  nombreUsuario: string;
-  metaDiaria: number;
+  usuarios: Usuario[];
+  usuarioActual: Usuario | null;
+
+  // Proceso
+  procesoActual: TipoProceso | null;
 
   // Timer
-  tiempoTotal: number; // segundos totales
-  tiempoRestante: number; // segundos restantes
+  tiempoTotal: number;
+  tiempoRestante: number;
   estadoTimer: 'idle' | 'running' | 'paused' | 'finished';
 
   // Ronda actual
   rondaNumero: number;
   horaInicio: string;
-  valores: {
+
+  // Valores GUÍAS
+  valoresGuias: {
     pedidosIniciales: number;
     realizado: number;
     cancelado: number;
@@ -40,49 +81,70 @@ export interface TrackerState {
     revisado: number;
   };
 
-  // Historial del dia
-  rondasHoy: RondaData[];
-  totalHoy: number;
+  // Valores NOVEDADES
+  valoresNovedades: {
+    revisadas: number;
+    solucionadas: number;
+    devolucion: number;
+    cliente: number;
+    transportadora: number;
+    litper: number;
+  };
+
+  // Historial
+  rondasHoy: Ronda[];
+  totalHoyGuias: number;
+  totalHoyNovedades: number;
 
   // UI
   modo: 'normal' | 'mini' | 'super-mini';
   alwaysOnTop: boolean;
-  opacity: number;
 
-  // Acciones Timer
+  // === NAVEGACIÓN ===
+  seleccionarUsuario: (usuario: Usuario) => void;
+  seleccionarProceso: (proceso: TipoProceso) => void;
+  volverASeleccion: () => void;
+  cerrarSesion: () => void;
+
+  // === TIMER ===
   setTiempoTotal: (minutos: number) => void;
   iniciarTimer: () => void;
   pausarTimer: () => void;
   resetTimer: () => void;
   tick: () => void;
 
-  // Acciones Valores
-  incrementar: (campo: keyof TrackerState['valores'], cantidad?: number) => void;
-  decrementar: (campo: keyof TrackerState['valores'], cantidad?: number) => void;
-  setValor: (campo: keyof TrackerState['valores'], valor: number) => void;
-  resetValores: () => void;
+  // === VALORES GUÍAS ===
+  incrementarGuias: (campo: keyof TrackerState['valoresGuias'], cantidad?: number) => void;
+  decrementarGuias: (campo: keyof TrackerState['valoresGuias'], cantidad?: number) => void;
+  setValorGuias: (campo: keyof TrackerState['valoresGuias'], valor: number) => void;
 
-  // Acciones Ronda
+  // === VALORES NOVEDADES ===
+  incrementarNovedades: (campo: keyof TrackerState['valoresNovedades'], cantidad?: number) => void;
+  decrementarNovedades: (campo: keyof TrackerState['valoresNovedades'], cantidad?: number) => void;
+  setValorNovedades: (campo: keyof TrackerState['valoresNovedades'], valor: number) => void;
+
+  // === RONDA ===
   guardarRonda: () => void;
 
-  // Acciones UI
+  // === UI ===
   setModo: (modo: 'normal' | 'mini' | 'super-mini') => void;
   toggleAlwaysOnTop: () => void;
-  setOpacity: (opacity: number) => void;
 
-  // Acciones Usuario
-  setUsuario: (nombre: string, meta: number) => void;
-
-  // Persistencia
+  // === PERSISTENCIA ===
   cargarDatos: () => Promise<void>;
   guardarDatos: () => Promise<void>;
+  sincronizarUsuarios: () => void;
 }
 
-const generarId = () => Math.random().toString(36).substring(2, 9);
+// ============================================
+// HELPERS
+// ============================================
+
+const generarId = () => Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 const hoy = () => new Date().toISOString().split('T')[0];
 const horaActual = () => new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
 
-const valoresIniciales = {
+const valoresGuiasIniciales = {
   pedidosIniciales: 0,
   realizado: 0,
   cancelado: 0,
@@ -92,10 +154,28 @@ const valoresIniciales = {
   revisado: 0,
 };
 
+const valoresNovedadesIniciales = {
+  revisadas: 0,
+  solucionadas: 0,
+  devolucion: 0,
+  cliente: 0,
+  transportadora: 0,
+  litper: 0,
+};
+
+// Key para sincronización con Procesos 2.0
+const SYNC_KEY = 'litper-tracker-sync';
+
+// ============================================
+// STORE
+// ============================================
+
 export const useTrackerStore = create<TrackerState>((set, get) => ({
   // Estado inicial
-  nombreUsuario: 'Usuario',
-  metaDiaria: 50,
+  pantalla: 'seleccion-usuario',
+  usuarios: [],
+  usuarioActual: null,
+  procesoActual: null,
 
   tiempoTotal: 25 * 60,
   tiempoRestante: 25 * 60,
@@ -103,16 +183,63 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
 
   rondaNumero: 1,
   horaInicio: '',
-  valores: { ...valoresIniciales },
+
+  valoresGuias: { ...valoresGuiasIniciales },
+  valoresNovedades: { ...valoresNovedadesIniciales },
 
   rondasHoy: [],
-  totalHoy: 0,
+  totalHoyGuias: 0,
+  totalHoyNovedades: 0,
 
   modo: 'normal',
   alwaysOnTop: true,
-  opacity: 1,
 
-  // Timer
+  // === NAVEGACIÓN ===
+  seleccionarUsuario: (usuario) => {
+    set({
+      usuarioActual: usuario,
+      pantalla: 'seleccion-proceso',
+    });
+  },
+
+  seleccionarProceso: (proceso) => {
+    const state = get();
+    const rondasProceso = state.rondasHoy.filter(
+      r => r.tipo === proceso && r.usuarioId === state.usuarioActual?.id
+    );
+    set({
+      procesoActual: proceso,
+      pantalla: 'trabajo',
+      rondaNumero: rondasProceso.length + 1,
+    });
+  },
+
+  volverASeleccion: () => {
+    set({
+      pantalla: 'seleccion-proceso',
+      procesoActual: null,
+      estadoTimer: 'idle',
+      tiempoRestante: get().tiempoTotal,
+      valoresGuias: { ...valoresGuiasIniciales },
+      valoresNovedades: { ...valoresNovedadesIniciales },
+      horaInicio: '',
+    });
+  },
+
+  cerrarSesion: () => {
+    set({
+      pantalla: 'seleccion-usuario',
+      usuarioActual: null,
+      procesoActual: null,
+      estadoTimer: 'idle',
+      tiempoRestante: get().tiempoTotal,
+      valoresGuias: { ...valoresGuiasIniciales },
+      valoresNovedades: { ...valoresNovedadesIniciales },
+      horaInicio: '',
+    });
+  },
+
+  // === TIMER ===
   setTiempoTotal: (minutos) => {
     set({
       tiempoTotal: minutos * 60,
@@ -144,7 +271,6 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
 
     if (tiempoRestante <= 1) {
       set({ tiempoRestante: 0, estadoTimer: 'finished' });
-      // Sonido
       try {
         const ctx = new AudioContext();
         const osc = ctx.createOscillator();
@@ -162,60 +288,110 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
     }
   },
 
-  // Valores
-  incrementar: (campo, cantidad = 1) => {
+  // === VALORES GUÍAS ===
+  incrementarGuias: (campo, cantidad = 1) => {
     set((state) => ({
-      valores: {
-        ...state.valores,
-        [campo]: Math.max(0, state.valores[campo] + cantidad),
+      valoresGuias: {
+        ...state.valoresGuias,
+        [campo]: Math.max(0, state.valoresGuias[campo] + cantidad),
       },
     }));
-    get().guardarDatos();
   },
 
-  decrementar: (campo, cantidad = 1) => {
+  decrementarGuias: (campo, cantidad = 1) => {
     set((state) => ({
-      valores: {
-        ...state.valores,
-        [campo]: Math.max(0, state.valores[campo] - cantidad),
+      valoresGuias: {
+        ...state.valoresGuias,
+        [campo]: Math.max(0, state.valoresGuias[campo] - cantidad),
       },
     }));
-    get().guardarDatos();
   },
 
-  setValor: (campo, valor) => {
+  setValorGuias: (campo, valor) => {
     set((state) => ({
-      valores: {
-        ...state.valores,
+      valoresGuias: {
+        ...state.valoresGuias,
         [campo]: Math.max(0, valor),
       },
     }));
-    get().guardarDatos();
   },
 
-  resetValores: () => set({ valores: { ...valoresIniciales } }),
+  // === VALORES NOVEDADES ===
+  incrementarNovedades: (campo, cantidad = 1) => {
+    set((state) => ({
+      valoresNovedades: {
+        ...state.valoresNovedades,
+        [campo]: Math.max(0, state.valoresNovedades[campo] + cantidad),
+      },
+    }));
+  },
 
-  // Ronda
+  decrementarNovedades: (campo, cantidad = 1) => {
+    set((state) => ({
+      valoresNovedades: {
+        ...state.valoresNovedades,
+        [campo]: Math.max(0, state.valoresNovedades[campo] - cantidad),
+      },
+    }));
+  },
+
+  setValorNovedades: (campo, valor) => {
+    set((state) => ({
+      valoresNovedades: {
+        ...state.valoresNovedades,
+        [campo]: Math.max(0, valor),
+      },
+    }));
+  },
+
+  // === GUARDAR RONDA ===
   guardarRonda: () => {
     const state = get();
-    const nuevaRonda: RondaData = {
+    if (!state.usuarioActual || !state.procesoActual) return;
+
+    const baseRonda: RondaBase = {
       id: generarId(),
+      usuarioId: state.usuarioActual.id,
+      usuarioNombre: state.usuarioActual.nombre,
       numero: state.rondaNumero,
       fecha: hoy(),
       horaInicio: state.horaInicio || horaActual(),
       horaFin: horaActual(),
       tiempoUsado: Math.floor((state.tiempoTotal - state.tiempoRestante) / 60),
-      ...state.valores,
+      tipo: state.procesoActual,
     };
 
+    let nuevaRonda: Ronda;
+
+    if (state.procesoActual === 'guias') {
+      nuevaRonda = {
+        ...baseRonda,
+        tipo: 'guias',
+        ...state.valoresGuias,
+      } as RondaGuias;
+    } else {
+      nuevaRonda = {
+        ...baseRonda,
+        tipo: 'novedades',
+        ...state.valoresNovedades,
+      } as RondaNovedades;
+    }
+
     const nuevasRondas = [...state.rondasHoy, nuevaRonda];
-    const nuevoTotal = nuevasRondas.reduce((acc, r) => acc + r.realizado, 0);
+    const totalGuias = nuevasRondas
+      .filter((r): r is RondaGuias => r.tipo === 'guias')
+      .reduce((acc, r) => acc + r.realizado, 0);
+    const totalNovedades = nuevasRondas
+      .filter((r): r is RondaNovedades => r.tipo === 'novedades')
+      .reduce((acc, r) => acc + r.solucionadas, 0);
 
     set({
       rondasHoy: nuevasRondas,
-      totalHoy: nuevoTotal,
+      totalHoyGuias: totalGuias,
+      totalHoyNovedades: totalNovedades,
       rondaNumero: state.rondaNumero + 1,
-      valores: { ...valoresIniciales },
+      valoresGuias: { ...valoresGuiasIniciales },
+      valoresNovedades: { ...valoresNovedadesIniciales },
       tiempoRestante: state.tiempoTotal,
       estadoTimer: 'idle',
       horaInicio: '',
@@ -224,20 +400,19 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
     get().guardarDatos();
   },
 
-  // UI
+  // === UI ===
   setModo: (modo) => {
     set({ modo });
-    // Ajustar tamaño de ventana
     if (window.electronAPI) {
       switch (modo) {
         case 'super-mini':
-          window.electronAPI.setSize(160, 50);
+          window.electronAPI.setSize(180, 60);
           break;
         case 'mini':
-          window.electronAPI.setSize(280, 120);
+          window.electronAPI.setSize(320, 180);
           break;
         case 'normal':
-          window.electronAPI.setSize(320, 480);
+          window.electronAPI.setSize(360, 580);
           break;
       }
     }
@@ -247,70 +422,117 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
     if (window.electronAPI) {
       const newValue = await window.electronAPI.toggleAlwaysOnTop();
       set({ alwaysOnTop: newValue });
+    } else {
+      set((state) => ({ alwaysOnTop: !state.alwaysOnTop }));
     }
   },
 
-  setOpacity: (opacity) => {
-    set({ opacity });
-    if (window.electronAPI) {
-      window.electronAPI.setOpacity(opacity);
-    }
-  },
-
-  // Usuario
-  setUsuario: (nombre, meta) => {
-    set({ nombreUsuario: nombre, metaDiaria: meta });
-    get().guardarDatos();
-  },
-
-  // Persistencia
-  cargarDatos: async () => {
-    if (!window.electronAPI) return;
-
+  // === PERSISTENCIA ===
+  sincronizarUsuarios: () => {
     try {
-      const fechaGuardada = await window.electronAPI.getStore('fecha');
-      const fechaHoy = hoy();
-
-      // Si es un nuevo dia, resetear rondas
-      if (fechaGuardada !== fechaHoy) {
-        set({ rondasHoy: [], totalHoy: 0, rondaNumero: 1 });
-        await window.electronAPI.setStore('fecha', fechaHoy);
-      } else {
-        const rondas = await window.electronAPI.getStore('rondasHoy');
-        if (rondas) {
-          const total = rondas.reduce((acc: number, r: RondaData) => acc + r.realizado, 0);
-          set({
-            rondasHoy: rondas,
-            totalHoy: total,
-            rondaNumero: rondas.length + 1,
-          });
+      // Leer usuarios de Procesos 2.0
+      const procesosData = localStorage.getItem('litper-procesos-v2');
+      if (procesosData) {
+        const parsed = JSON.parse(procesosData);
+        if (parsed.state?.usuarios) {
+          const usuariosActivos = parsed.state.usuarios.filter((u: Usuario) => u.activo);
+          set({ usuarios: usuariosActivos });
         }
       }
-
-      const nombre = await window.electronAPI.getStore('nombreUsuario');
-      const meta = await window.electronAPI.getStore('metaDiaria');
-      const tiempoTotal = await window.electronAPI.getStore('tiempoTotal');
-
-      if (nombre) set({ nombreUsuario: nombre });
-      if (meta) set({ metaDiaria: meta });
-      if (tiempoTotal) set({ tiempoTotal, tiempoRestante: tiempoTotal });
     } catch (e) {
-      console.error('Error cargando datos:', e);
+      console.error('Error sincronizando usuarios:', e);
+    }
+  },
+
+  cargarDatos: async () => {
+    // Sincronizar usuarios
+    get().sincronizarUsuarios();
+
+    const fechaHoy = hoy();
+
+    if (window.electronAPI) {
+      try {
+        const fechaGuardada = await window.electronAPI.getStore('fecha');
+
+        if (fechaGuardada !== fechaHoy) {
+          set({ rondasHoy: [], totalHoyGuias: 0, totalHoyNovedades: 0, rondaNumero: 1 });
+          await window.electronAPI.setStore('fecha', fechaHoy);
+        } else {
+          const rondas = await window.electronAPI.getStore('rondasHoy');
+          if (rondas && Array.isArray(rondas)) {
+            const totalGuias = rondas
+              .filter((r: Ronda) => r.tipo === 'guias')
+              .reduce((acc: number, r: RondaGuias) => acc + (r.realizado || 0), 0);
+            const totalNovedades = rondas
+              .filter((r: Ronda) => r.tipo === 'novedades')
+              .reduce((acc: number, r: RondaNovedades) => acc + (r.solucionadas || 0), 0);
+            set({
+              rondasHoy: rondas,
+              totalHoyGuias: totalGuias,
+              totalHoyNovedades: totalNovedades,
+            });
+          }
+        }
+
+        const tiempoTotal = await window.electronAPI.getStore('tiempoTotal');
+        if (tiempoTotal) set({ tiempoTotal, tiempoRestante: tiempoTotal });
+      } catch (e) {
+        console.error('Error cargando datos:', e);
+      }
+    } else {
+      // Modo navegador (desarrollo)
+      try {
+        const saved = localStorage.getItem('litper-tracker-data');
+        if (saved) {
+          const data = JSON.parse(saved);
+          if (data.fecha === fechaHoy && data.rondasHoy) {
+            const totalGuias = data.rondasHoy
+              .filter((r: Ronda) => r.tipo === 'guias')
+              .reduce((acc: number, r: RondaGuias) => acc + (r.realizado || 0), 0);
+            const totalNovedades = data.rondasHoy
+              .filter((r: Ronda) => r.tipo === 'novedades')
+              .reduce((acc: number, r: RondaNovedades) => acc + (r.solucionadas || 0), 0);
+            set({
+              rondasHoy: data.rondasHoy,
+              totalHoyGuias: totalGuias,
+              totalHoyNovedades: totalNovedades,
+            });
+          }
+        }
+      } catch (e) {}
     }
   },
 
   guardarDatos: async () => {
-    if (!window.electronAPI) return;
-
     const state = get();
-    try {
-      await window.electronAPI.setStore('fecha', hoy());
-      await window.electronAPI.setStore('rondasHoy', state.rondasHoy);
-      await window.electronAPI.setStore('nombreUsuario', state.nombreUsuario);
-      await window.electronAPI.setStore('metaDiaria', state.metaDiaria);
-      await window.electronAPI.setStore('tiempoTotal', state.tiempoTotal);
-    } catch (e) {
-      console.error('Error guardando datos:', e);
+    const fechaHoy = hoy();
+
+    const dataToSave = {
+      fecha: fechaHoy,
+      rondasHoy: state.rondasHoy,
+      totalHoyGuias: state.totalHoyGuias,
+      totalHoyNovedades: state.totalHoyNovedades,
+    };
+
+    // Guardar en Electron store
+    if (window.electronAPI) {
+      try {
+        await window.electronAPI.setStore('fecha', fechaHoy);
+        await window.electronAPI.setStore('rondasHoy', state.rondasHoy);
+        await window.electronAPI.setStore('tiempoTotal', state.tiempoTotal);
+      } catch (e) {
+        console.error('Error guardando datos:', e);
+      }
     }
+
+    // Guardar también en localStorage para sync con Procesos 2.0
+    try {
+      localStorage.setItem('litper-tracker-data', JSON.stringify(dataToSave));
+      localStorage.setItem(SYNC_KEY, JSON.stringify({
+        rondasHoy: state.rondasHoy,
+        fecha: fechaHoy,
+        ultimaSync: new Date().toISOString(),
+      }));
+    } catch (e) {}
   },
 }));
