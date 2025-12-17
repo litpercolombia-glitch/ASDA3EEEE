@@ -115,7 +115,17 @@ class SyncResponse(BaseModel):
 # En producción, usar la base de datos PostgreSQL
 
 # Almacenamiento temporal en memoria
-_usuarios_tracker: dict = {}
+_usuarios_tracker: dict = {
+    "cat1": {"id": "cat1", "nombre": "CATALINA", "avatar": "😊", "color": "#F59E0B", "meta_diaria": 50, "activo": True},
+    "ang1": {"id": "ang1", "nombre": "ANGIE", "avatar": "😊", "color": "#F59E0B", "meta_diaria": 50, "activo": True},
+    "car1": {"id": "car1", "nombre": "CAROLINA", "avatar": "😊", "color": "#F59E0B", "meta_diaria": 50, "activo": True},
+    "ale1": {"id": "ale1", "nombre": "ALEJANDRA", "avatar": "😊", "color": "#F59E0B", "meta_diaria": 50, "activo": True},
+    "eva1": {"id": "eva1", "nombre": "EVAN", "avatar": "😊", "color": "#F59E0B", "meta_diaria": 50, "activo": True},
+    "jim1": {"id": "jim1", "nombre": "JIMMY", "avatar": "😊", "color": "#F59E0B", "meta_diaria": 50, "activo": True},
+    "fel1": {"id": "fel1", "nombre": "FELIPE", "avatar": "😊", "color": "#F59E0B", "meta_diaria": 50, "activo": True},
+    "nor1": {"id": "nor1", "nombre": "NORMA", "avatar": "😊", "color": "#F59E0B", "meta_diaria": 50, "activo": True},
+    "kar1": {"id": "kar1", "nombre": "KAREN", "avatar": "😊", "color": "#F59E0B", "meta_diaria": 50, "activo": True},
+}
 _rondas_tracker: dict = {}
 
 def _generar_id() -> str:
@@ -143,18 +153,6 @@ async def listar_usuarios():
         for uid, u in _usuarios_tracker.items()
         if u.get("activo", True)
     ]
-
-    # Si no hay usuarios, crear algunos por defecto
-    if not usuarios:
-        usuarios_default = [
-            {"id": "user1", "nombre": "Usuario 1", "avatar": "😊", "color": "#8B5CF6", "meta_diaria": 50, "activo": True},
-            {"id": "user2", "nombre": "Usuario 2", "avatar": "🚀", "color": "#10B981", "meta_diaria": 60, "activo": True},
-            {"id": "user3", "nombre": "Usuario 3", "avatar": "⭐", "color": "#F59E0B", "meta_diaria": 40, "activo": True},
-        ]
-        for u in usuarios_default:
-            _usuarios_tracker[u["id"]] = u
-        return usuarios_default
-
     return usuarios
 
 
@@ -347,17 +345,6 @@ async def sincronizar(request: SyncRequest):
         for uid, u in _usuarios_tracker.items()
         if u.get("activo", True)
     ]
-
-    # Si no hay usuarios, crear por defecto
-    if not usuarios_response:
-        usuarios_default = [
-            {"id": "user1", "nombre": "Usuario 1", "avatar": "😊", "color": "#8B5CF6", "meta_diaria": 50, "activo": True},
-            {"id": "user2", "nombre": "Usuario 2", "avatar": "🚀", "color": "#10B981", "meta_diaria": 60, "activo": True},
-            {"id": "user3", "nombre": "Usuario 3", "avatar": "⭐", "color": "#F59E0B", "meta_diaria": 40, "activo": True},
-        ]
-        for u in usuarios_default:
-            _usuarios_tracker[u["id"]] = u
-        usuarios_response = usuarios_default
 
     rondas_hoy = [
         {**r, "id": rid}
