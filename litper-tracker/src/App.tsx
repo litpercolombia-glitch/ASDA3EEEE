@@ -56,7 +56,11 @@ const SeleccionUsuario: React.FC = () => {
   const { usuarios, seleccionarUsuario, sincronizarUsuarios } = useTrackerStore();
 
   useEffect(() => {
-    sincronizarUsuarios();
+    // Sincronizar usuarios al cargar
+    const sync = async () => {
+      await sincronizarUsuarios();
+    };
+    sync();
   }, [sincronizarUsuarios]);
 
   const handleClose = () => {
