@@ -1,7 +1,6 @@
 /**
- * PROCESOS TAB 2.0 - VERSIÓN FINAL
- * Con selección de usuario, autenticación admin y reportes completos
- * SIN ranking visible para usuarios
+ * PROCESOS TAB 3.0 - VERSIÓN DINÁMICA
+ * Con ranking en vivo, celebraciones y métricas animadas
  */
 
 import React, { useState, useEffect } from 'react';
@@ -30,7 +29,12 @@ import {
   AlertTriangle,
   Target,
   Clock,
+  Trophy,
+  Sparkles,
 } from 'lucide-react';
+import LiveRanking from './components/LiveRanking';
+import Confetti from './components/Confetti';
+import LiveMetricCard from './components/LiveMetricCard';
 import {
   useProcesosStore,
   ADMIN_PASSWORD,
@@ -90,10 +94,14 @@ const PantallaSeleccion: React.FC = () => {
       <div className="max-w-2xl w-full">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent mb-2">
-            Procesos 2.0
-          </h1>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Sparkles className="w-8 h-8 text-amber-400" />
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
+              Procesos 3.0
+            </h1>
+          </div>
           <p className="text-slate-400">Selecciona tu usuario para comenzar</p>
+          <p className="text-xs text-amber-400/60 mt-1">Interfaz dinámica con métricas en vivo</p>
         </div>
 
         {/* User Grid */}
@@ -207,6 +215,8 @@ const PantallaTrabajo: React.FC = () => {
   } = useProcesosStore();
 
   const [showRoundModal, setShowRoundModal] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [lastProgress, setLastProgress] = useState(0);
   const [formData, setFormData] = useState({
     pedidosIniciales: 0,
     realizado: 0,
@@ -236,6 +246,14 @@ const PantallaTrabajo: React.FC = () => {
   const progresoMeta = getProgresoMeta(usuarioActual.id);
   const timerPercentage = (tiempoRestante / (configCronometro.duracionMinutos * 60)) * 100;
 
+  // Celebrar cuando se alcanza la meta
+  useEffect(() => {
+    if (progresoMeta >= 100 && lastProgress < 100) {
+      setShowConfetti(true);
+    }
+    setLastProgress(progresoMeta);
+  }, [progresoMeta, lastProgress]);
+
   const handleGuardarRonda = (e: React.FormEvent) => {
     e.preventDefault();
     guardarRonda({
@@ -260,14 +278,18 @@ const PantallaTrabajo: React.FC = () => {
   const tiempoOptions = [15, 20, 25, 30, 35, 40, 45];
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
+    <div className="min-h-screen bg-slate-900 text-white relative">
+      {/* Confetti celebration */}
+      <Confetti active={showConfetti} onComplete={() => setShowConfetti(false)} />
+
       {/* Header */}
       <header className="bg-slate-800/80 backdrop-blur-lg border-b border-slate-700/50 sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
-                Procesos 2.0
+              <h1 className="text-xl font-bold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-amber-400" />
+                Procesos 3.0
               </h1>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-700/50 rounded-full">
                 <div
@@ -291,8 +313,8 @@ const PantallaTrabajo: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-5xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <main className="max-w-6xl mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Timer Column */}
           <div className="lg:col-span-1">
             <div className="bg-slate-800 rounded-xl p-6 sticky top-24">
@@ -379,6 +401,24 @@ const PantallaTrabajo: React.FC = () => {
 
           {/* Work Column */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Meta cumplida celebration banner */}
+            {progresoMeta >= 100 && (
+              <div className="bg-gradient-to-r from-emerald-500/20 to-amber-500/20 border border-emerald-500/30 rounded-xl p-4 flex items-center justify-between animate-pulse">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-emerald-500/30 rounded-full flex items-center justify-center text-2xl">
+                    🏆
+                  </div>
+                  <div>
+                    <p className="text-emerald-400 font-bold text-lg">¡META CUMPLIDA!</p>
+                    <p className="text-slate-400 text-sm">Excelente trabajo, {usuarioActual.nombre}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-3xl font-bold text-white">{progresoMeta}%</p>
+                  <p className="text-xs text-slate-400">de tu meta</p>
+                </div>
+              </div>
+            )}
             {/* Progress Bar */}
             <div className="bg-slate-800 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
@@ -485,6 +525,11 @@ const PantallaTrabajo: React.FC = () => {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Ranking Column */}
+          <div className="lg:col-span-1">
+            <LiveRanking className="sticky top-24" />
           </div>
         </div>
       </main>
