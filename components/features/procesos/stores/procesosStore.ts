@@ -54,6 +54,15 @@ const deleteUsuarioFromAPI = async (id: string) => {
   }
 };
 
+// Sincronizar TODOS los usuarios existentes al backend
+const syncAllUsersToAPI = async (usuarios: Usuario[]) => {
+  console.log('🔄 Sincronizando todos los usuarios al backend...');
+  for (const usuario of usuarios) {
+    await syncUsuarioToAPI(usuario as Usuario & { id: string });
+  }
+  console.log('✅ Sincronización completa:', usuarios.length, 'usuarios');
+};
+
 // ============================================
 // TIPOS DEL STORE
 // ============================================
@@ -90,6 +99,7 @@ interface ProcesosState {
   eliminarUsuario: (id: string) => void;
   actualizarUsuario: (id: string, datos: Partial<Usuario>) => void;
   seleccionarUsuario: (id: string) => void;
+  sincronizarConBackend: () => Promise<void>;
 
   // === ACCIONES CRONÓMETRO ===
   iniciarCronometro: () => void;
@@ -237,6 +247,11 @@ export const useProcesosStore = create<ProcesosState>()(
       seleccionarUsuario: (id) => {
         const usuario = get().usuarios.find((u) => u.id === id);
         set({ usuarioActual: usuario || null });
+      },
+
+      sincronizarConBackend: async () => {
+        const usuarios = get().usuarios;
+        await syncAllUsersToAPI(usuarios);
       },
 
       // === ACCIONES CRONÓMETRO ===
@@ -494,6 +509,13 @@ export const useProcesosStore = create<ProcesosState>()(
     {
       name: 'litper-procesos-store',
       storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        // Sincronizar usuarios al backend cuando se carga la app
+        if (state && state.usuarios.length > 0) {
+          console.log('🔄 Auto-sincronizando usuarios con el backend...');
+          syncAllUsersToAPI(state.usuarios);
+        }
+      },
     }
   )
 );
