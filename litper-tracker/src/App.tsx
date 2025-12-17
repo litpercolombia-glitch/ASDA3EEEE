@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useTrackerStore, Usuario, TipoProceso } from './stores/trackerStore';
+import { useTrackerStore, Usuario } from './stores/trackerStore';
 import TitleBar from './components/TitleBar';
 import Timer from './components/Timer';
 import QuickCounter from './components/QuickCounter';
