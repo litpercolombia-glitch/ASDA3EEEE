@@ -21,9 +21,11 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Play,
 } from 'lucide-react';
 import { useProcesosStore } from '../stores/procesosStore';
 import { AlertaIA, ReporteUsuario, COLORES_DISPONIBLES } from '../types';
+import TrackerPopup from './TrackerPopup';
 
 interface AdminDashboardProps {
   className?: string;
@@ -42,6 +44,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
 
   const [showAllAlerts, setShowAllAlerts] = useState(false);
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
+  const [trackerUsuario, setTrackerUsuario] = useState<{
+    id: string;
+    nombre: string;
+    avatar: string;
+    color: string;
+  } | null>(null);
 
   // Calculate reports
   const reportes: ReporteUsuario[] = useMemo(() => {
@@ -331,6 +339,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
                 <th className="px-4 py-3 text-center text-xs font-medium text-slate-400 uppercase">
                   Tendencia
                 </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-slate-400 uppercase">
+                  Acción
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/50">
@@ -393,6 +404,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
                         )}
                       </div>
                     </td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const usuario = usuarios.find(u => u.id === reporte.usuarioId);
+                          if (usuario) {
+                            setTrackerUsuario({
+                              id: usuario.id,
+                              nombre: usuario.nombre,
+                              avatar: usuario.avatar,
+                              color: getColorHex(usuario.color),
+                            });
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium flex items-center gap-1 mx-auto transition-colors"
+                      >
+                        <Play className="w-3 h-3" />
+                        Iniciar
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -407,6 +438,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
           </div>
         )}
       </div>
+
+      {/* Tracker Popup */}
+      {trackerUsuario && (
+        <TrackerPopup
+          usuarioId={trackerUsuario.id}
+          usuarioNombre={trackerUsuario.nombre}
+          usuarioAvatar={trackerUsuario.avatar}
+          usuarioColor={trackerUsuario.color}
+          onClose={() => setTrackerUsuario(null)}
+        />
+      )}
     </div>
   );
 };
