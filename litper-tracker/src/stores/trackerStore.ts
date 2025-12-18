@@ -546,78 +546,46 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
 
   // === PERSISTENCIA ===
   sincronizarUsuarios: async () => {
-    let usuariosEncontrados: Usuario[] = [];
+    // USUARIOS LITPER - SIEMPRE CARGAR ESTOS 9 USUARIOS
+    const USUARIOS_LITPER: Usuario[] = [
+      { id: 'cat1', nombre: 'CATALINA', avatar: '👑', color: '#8B5CF6', metaDiaria: 60, activo: true },
+      { id: 'ang1', nombre: 'ANGIE', avatar: '🌟', color: '#EC4899', metaDiaria: 60, activo: true },
+      { id: 'car1', nombre: 'CAROLINA', avatar: '💜', color: '#6366F1', metaDiaria: 60, activo: true },
+      { id: 'ale1', nombre: 'ALEJANDRA', avatar: '🔥', color: '#F59E0B', metaDiaria: 60, activo: true },
+      { id: 'eva1', nombre: 'EVAN', avatar: '🚀', color: '#10B981', metaDiaria: 60, activo: true },
+      { id: 'jim1', nombre: 'JIMMY', avatar: '⚡', color: '#3B82F6', metaDiaria: 60, activo: true },
+      { id: 'fel1', nombre: 'FELIPE', avatar: '🎯', color: '#14B8A6', metaDiaria: 60, activo: true },
+      { id: 'nor1', nombre: 'NORMA', avatar: '💎', color: '#A855F7', metaDiaria: 60, activo: true },
+      { id: 'kar1', nombre: 'KAREN', avatar: '✨', color: '#F43F5E', metaDiaria: 60, activo: true },
+    ];
 
     try {
-      // 1. PRIMERO: Intentar desde API Backend (sincronización en la nube)
+      // Intentar cargar desde API para obtener datos actualizados
       const apiUsuarios = await apiRequest('/usuarios');
       if (apiUsuarios && Array.isArray(apiUsuarios) && apiUsuarios.length > 0) {
-        usuariosEncontrados = apiUsuarios.map((u: any) => ({
+        const usuariosAPI = apiUsuarios.map((u: any) => ({
           id: u.id,
           nombre: u.nombre,
           avatar: u.avatar || '😊',
           color: u.color || '#8B5CF6',
-          metaDiaria: u.meta_diaria || 50,
+          metaDiaria: u.meta_diaria || 60,
           activo: u.activo !== false,
         }));
-        console.log('✅ Usuarios sincronizados desde API:', usuariosEncontrados.length);
+        console.log('✅ Usuarios sincronizados desde API:', usuariosAPI.length);
+        set({ usuarios: usuariosAPI });
+      } else {
+        // Si no hay API, usar los 9 usuarios de LITPER
+        console.log('📋 Usando usuarios LITPER por defecto');
+        set({ usuarios: USUARIOS_LITPER });
       }
 
-      // 2. Fallback: Intentar desde localStorage (web/desarrollo)
-      if (usuariosEncontrados.length === 0) {
-        const procesosData = localStorage.getItem(PROCESOS_KEY);
-        if (procesosData) {
-          const parsed = JSON.parse(procesosData);
-          if (parsed.state?.usuarios) {
-            usuariosEncontrados = parsed.state.usuarios.filter((u: Usuario) => u.activo);
-          }
-        }
+      // Guardar en electron-store
+      if (window.electronAPI) {
+        await window.electronAPI.setStore('usuarios', USUARIOS_LITPER);
       }
-
-      // 3. Fallback: Intentar desde electron-store si está disponible
-      if (window.electronAPI && usuariosEncontrados.length === 0) {
-        const usuariosGuardados = await window.electronAPI.getStore('usuarios');
-        if (usuariosGuardados && Array.isArray(usuariosGuardados)) {
-          usuariosEncontrados = usuariosGuardados.filter((u: Usuario) => u.activo);
-        }
-      }
-
-      // 4. Si no hay usuarios, usar los 9 usuarios reales de LITPER
-      if (usuariosEncontrados.length === 0) {
-        usuariosEncontrados = [
-          { id: 'cat1', nombre: 'CATALINA', avatar: '👑', color: '#8B5CF6', metaDiaria: 60, activo: true },
-          { id: 'ang1', nombre: 'ANGIE', avatar: '🌟', color: '#EC4899', metaDiaria: 60, activo: true },
-          { id: 'car1', nombre: 'CAROLINA', avatar: '💜', color: '#6366F1', metaDiaria: 60, activo: true },
-          { id: 'ale1', nombre: 'ALEJANDRA', avatar: '🔥', color: '#F59E0B', metaDiaria: 60, activo: true },
-          { id: 'eva1', nombre: 'EVAN', avatar: '🚀', color: '#10B981', metaDiaria: 60, activo: true },
-          { id: 'jim1', nombre: 'JIMMY', avatar: '⚡', color: '#3B82F6', metaDiaria: 60, activo: true },
-          { id: 'fel1', nombre: 'FELIPE', avatar: '🎯', color: '#14B8A6', metaDiaria: 60, activo: true },
-          { id: 'nor1', nombre: 'NORMA', avatar: '💎', color: '#A855F7', metaDiaria: 60, activo: true },
-          { id: 'kar1', nombre: 'KAREN', avatar: '✨', color: '#F43F5E', metaDiaria: 60, activo: true },
-        ];
-        // Guardar los usuarios de ejemplo en electron-store
-        if (window.electronAPI) {
-          await window.electronAPI.setStore('usuarios', usuariosEncontrados);
-        }
-      }
-
-      set({ usuarios: usuariosEncontrados });
     } catch (e) {
-      console.error('Error sincronizando usuarios:', e);
-      // Usuarios LITPER por defecto en caso de error
-      set({
-        usuarios: [
-          { id: 'cat1', nombre: 'CATALINA', avatar: '👑', color: '#8B5CF6', metaDiaria: 60, activo: true },
-          { id: 'ang1', nombre: 'ANGIE', avatar: '🌟', color: '#EC4899', metaDiaria: 60, activo: true },
-          { id: 'car1', nombre: 'CAROLINA', avatar: '💜', color: '#6366F1', metaDiaria: 60, activo: true },
-          { id: 'ale1', nombre: 'ALEJANDRA', avatar: '🔥', color: '#F59E0B', metaDiaria: 60, activo: true },
-          { id: 'eva1', nombre: 'EVAN', avatar: '🚀', color: '#10B981', metaDiaria: 60, activo: true },
-          { id: 'jim1', nombre: 'JIMMY', avatar: '⚡', color: '#3B82F6', metaDiaria: 60, activo: true },
-          { id: 'fel1', nombre: 'FELIPE', avatar: '🎯', color: '#14B8A6', metaDiaria: 60, activo: true },
-          { id: 'nor1', nombre: 'NORMA', avatar: '💎', color: '#A855F7', metaDiaria: 60, activo: true },
-          { id: 'kar1', nombre: 'KAREN', avatar: '✨', color: '#F43F5E', metaDiaria: 60, activo: true },
-        ],
-      });
+      console.error('Error sincronizando usuarios, usando LITPER por defecto:', e);
+      set({ usuarios: USUARIOS_LITPER });
     }
   },
 
