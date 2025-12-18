@@ -63,6 +63,10 @@ export interface TrackerState {
   syncStatus: 'idle' | 'syncing' | 'success' | 'error';
   lastSync: string | null;
 
+  // Configuración de conexión
+  apiUrl: string;
+  connectionConfigured: boolean;
+
   // Proceso
   procesoActual: TipoProceso | null;
 
@@ -142,6 +146,11 @@ export interface TrackerState {
 
   // === EXPORTAR ===
   exportarExcel: () => Promise<void>;
+
+  // === CONEXIÓN ===
+  setApiUrl: (url: string) => void;
+  testConnection: (url: string) => Promise<boolean>;
+  cargarConfiguracionConexion: () => void;
 }
 
 // ============================================
@@ -174,14 +183,31 @@ const valoresNovedadesIniciales = {
 // Key para sincronización con Procesos 2.0 (app web)
 const SYNC_KEY = 'litper-tracker-sync';
 const PROCESOS_KEY = 'litper-procesos-store'; // Debe coincidir con el store de la app web
+const CONNECTION_CONFIG_KEY = 'litper-connection-config';
 
-// URL del API Backend (cambiar en producción)
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/tracker';
+// Contraseña para configurar conexión
+const CONNECTION_PASSWORD = 'Litper2020?01';
+
+// URL del API Backend por defecto
+const DEFAULT_API_URL = 'http://localhost:8000/api/tracker';
+
+// Función para obtener la URL del API (desde localStorage o default)
+const getApiUrl = (): string => {
+  try {
+    const config = localStorage.getItem(CONNECTION_CONFIG_KEY);
+    if (config) {
+      const parsed = JSON.parse(config);
+      return parsed.apiUrl || DEFAULT_API_URL;
+    }
+  } catch (e) {}
+  return DEFAULT_API_URL;
+};
 
 // Helper para hacer peticiones al API
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
+  const apiUrl = getApiUrl();
   try {
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const response = await fetch(`${apiUrl}${endpoint}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -260,6 +286,23 @@ const LITPER_USUARIOS: Usuario[] = [
   { id: 'kar1', nombre: 'KAREN', avatar: '💫', color: '#A855F7', metaDiaria: 50, activo: true },
 ];
 
+// Función para verificar si la conexión está configurada
+const isConnectionConfigured = (): boolean => {
+  try {
+    const config = localStorage.getItem(CONNECTION_CONFIG_KEY);
+    if (config) {
+      const parsed = JSON.parse(config);
+      return parsed.configured === true;
+    }
+  } catch (e) {}
+  return false;
+};
+
+// Función para verificar contraseña
+export const verifyConnectionPassword = (password: string): boolean => {
+  return password === CONNECTION_PASSWORD;
+};
+
 export const useTrackerStore = create<TrackerState>((set, get) => ({
   // Estado inicial
   pantalla: 'seleccion-usuario',
@@ -268,6 +311,8 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
   isOnline: false,
   syncStatus: 'idle',
   lastSync: null,
+  apiUrl: getApiUrl(),
+  connectionConfigured: isConnectionConfigured(),
   procesoActual: null,
 
   tiempoTotal: 25 * 60,
@@ -870,6 +915,46 @@ Total Rondas: ${state.rondasHoy.length}
       window.URL.revokeObjectURL(url);
       a.remove();
       playSuccessSound();
+    }
+  },
+
+  // === CONEXIÓN ===
+  setApiUrl: (url: string) => {
+    const config = {
+      apiUrl: url,
+      configured: true,
+      configuredAt: new Date().toISOString(),
+    };
+    localStorage.setItem(CONNECTION_CONFIG_KEY, JSON.stringify(config));
+    set({ apiUrl: url, connectionConfigured: true });
+    // Sincronizar usuarios con la nueva URL
+    get().sincronizarUsuarios();
+  },
+
+  testConnection: async (url: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${url}/usuarios`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return response.ok;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  cargarConfiguracionConexion: () => {
+    try {
+      const config = localStorage.getItem(CONNECTION_CONFIG_KEY);
+      if (config) {
+        const parsed = JSON.parse(config);
+        set({
+          apiUrl: parsed.apiUrl || DEFAULT_API_URL,
+          connectionConfigured: parsed.configured === true,
+        });
+      }
+    } catch (e) {
+      console.error('Error cargando configuración de conexión:', e);
     }
   },
 }));

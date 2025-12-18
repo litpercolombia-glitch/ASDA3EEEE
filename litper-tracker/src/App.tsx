@@ -1,12 +1,12 @@
-import React, { useEffect } from 'react';
-import { useTrackerStore, Usuario } from './stores/trackerStore';
+import React, { useEffect, useState } from 'react';
+import { useTrackerStore, Usuario, verifyConnectionPassword } from './stores/trackerStore';
 import TitleBar from './components/TitleBar';
 import Timer from './components/Timer';
 import QuickCounter from './components/QuickCounter';
 import ProgressBar from './components/ProgressBar';
 import MiniMode from './components/MiniMode';
 import SuperMiniMode from './components/SuperMiniMode';
-import { LogOut, ArrowLeft, FileText, AlertTriangle, User, Download, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { LogOut, ArrowLeft, FileText, AlertTriangle, User, Download, Wifi, WifiOff, RefreshCw, Settings, Lock, Check, X } from 'lucide-react';
 
 // ============================================
 // Componente: Indicador de Conexión
@@ -42,6 +42,202 @@ const ConnectionIndicator: React.FC = () => {
         <RefreshCw className={`w-3 h-3 text-slate-400 hover:text-white ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
       </button>
     </div>
+  );
+};
+
+// ============================================
+// Componente: Configuración de Conexión
+// ============================================
+const ConnectionConfig: React.FC = () => {
+  const { apiUrl, connectionConfigured, setApiUrl, testConnection, isOnline } = useTrackerStore();
+  const [showConfig, setShowConfig] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
+  const [newUrl, setNewUrl] = useState(apiUrl);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<'none' | 'success' | 'error'>('none');
+
+  const handleOpenConfig = () => {
+    if (connectionConfigured) {
+      // Si ya está configurado, pedir contraseña
+      setShowPasswordModal(true);
+      setPassword('');
+      setPasswordError(false);
+    } else {
+      // Primera vez, pedir contraseña también
+      setShowPasswordModal(true);
+      setPassword('');
+      setPasswordError(false);
+    }
+  };
+
+  const handlePasswordSubmit = () => {
+    if (verifyConnectionPassword(password)) {
+      setShowPasswordModal(false);
+      setShowConfig(true);
+      setNewUrl(apiUrl);
+      setTestResult('none');
+    } else {
+      setPasswordError(true);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    setTesting(true);
+    setTestResult('none');
+    const result = await testConnection(newUrl);
+    setTestResult(result ? 'success' : 'error');
+    setTesting(false);
+  };
+
+  const handleSaveConnection = () => {
+    setApiUrl(newUrl);
+    setShowConfig(false);
+  };
+
+  return (
+    <>
+      {/* Botón para abrir configuración */}
+      <button
+        onClick={handleOpenConfig}
+        className="w-full mb-3 p-3 bg-dark-700 hover:bg-dark-600 border border-dark-600 hover:border-amber-500/50 rounded-lg transition-all flex items-center justify-between"
+      >
+        <div className="flex items-center gap-2">
+          <Settings className="w-4 h-4 text-amber-400" />
+          <span className="text-sm text-white">Conexión</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {connectionConfigured && (
+            <Lock className="w-3 h-3 text-slate-500" />
+          )}
+          {isOnline ? (
+            <span className="text-xs text-emerald-400">Conectado</span>
+          ) : (
+            <span className="text-xs text-slate-400">Sin conexión</span>
+          )}
+        </div>
+      </button>
+
+      {/* Modal de Contraseña */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-dark-800 rounded-xl p-4 w-80 border border-dark-600">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-bold flex items-center gap-2">
+                <Lock className="w-4 h-4 text-amber-400" />
+                Contraseña requerida
+              </h3>
+              <button
+                onClick={() => setShowPasswordModal(false)}
+                className="p-1 hover:bg-dark-700 rounded text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-slate-400 text-xs mb-3">
+              Ingresa la contraseña para configurar la conexión
+            </p>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setPasswordError(false);
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && handlePasswordSubmit()}
+              placeholder="Contraseña..."
+              className={`w-full p-2 bg-dark-700 border rounded text-white text-sm mb-3 ${
+                passwordError ? 'border-red-500' : 'border-dark-600'
+              }`}
+              autoFocus
+            />
+            {passwordError && (
+              <p className="text-red-400 text-xs mb-3">Contraseña incorrecta</p>
+            )}
+            <button
+              onClick={handlePasswordSubmit}
+              className="w-full py-2 bg-amber-500 hover:bg-amber-600 rounded text-white font-bold text-sm"
+            >
+              Ingresar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Configuración */}
+      {showConfig && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-dark-800 rounded-xl p-4 w-80 border border-dark-600">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-bold flex items-center gap-2">
+                <Settings className="w-4 h-4 text-amber-400" />
+                Configurar Conexión
+              </h3>
+              <button
+                onClick={() => setShowConfig(false)}
+                className="p-1 hover:bg-dark-700 rounded text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <label className="text-slate-400 text-xs mb-1 block">URL del Servidor</label>
+            <input
+              type="text"
+              value={newUrl}
+              onChange={(e) => {
+                setNewUrl(e.target.value);
+                setTestResult('none');
+              }}
+              placeholder="https://tu-servidor.glitch.me/api/tracker"
+              className="w-full p-2 bg-dark-700 border border-dark-600 rounded text-white text-sm mb-3"
+            />
+
+            {/* Botón probar conexión */}
+            <button
+              onClick={handleTestConnection}
+              disabled={testing}
+              className="w-full py-2 bg-slate-700 hover:bg-slate-600 rounded text-white text-sm mb-3 flex items-center justify-center gap-2"
+            >
+              {testing ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Probando...
+                </>
+              ) : (
+                <>
+                  <Wifi className="w-4 h-4" />
+                  Probar Conexión
+                </>
+              )}
+            </button>
+
+            {/* Resultado del test */}
+            {testResult === 'success' && (
+              <div className="flex items-center gap-2 p-2 bg-emerald-500/20 rounded mb-3">
+                <Check className="w-4 h-4 text-emerald-400" />
+                <span className="text-emerald-400 text-sm">Conexión exitosa</span>
+              </div>
+            )}
+            {testResult === 'error' && (
+              <div className="flex items-center gap-2 p-2 bg-red-500/20 rounded mb-3">
+                <X className="w-4 h-4 text-red-400" />
+                <span className="text-red-400 text-sm">No se pudo conectar</span>
+              </div>
+            )}
+
+            {/* Botón guardar */}
+            <button
+              onClick={handleSaveConnection}
+              className="w-full py-2 bg-amber-500 hover:bg-amber-600 rounded text-white font-bold text-sm"
+            >
+              Guardar Configuración
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
@@ -121,6 +317,9 @@ const SeleccionUsuario: React.FC = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
+        {/* Configuración de conexión */}
+        <ConnectionConfig />
+
         {/* Indicador de conexión */}
         <ConnectionIndicator />
 
