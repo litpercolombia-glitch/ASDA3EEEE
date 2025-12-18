@@ -6,7 +6,44 @@ import QuickCounter from './components/QuickCounter';
 import ProgressBar from './components/ProgressBar';
 import MiniMode from './components/MiniMode';
 import SuperMiniMode from './components/SuperMiniMode';
-import { LogOut, ArrowLeft, FileText, AlertTriangle, User, Download } from 'lucide-react';
+import { LogOut, ArrowLeft, FileText, AlertTriangle, User, Download, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+
+// ============================================
+// Componente: Indicador de Conexión
+// ============================================
+const ConnectionIndicator: React.FC = () => {
+  const { isOnline, syncStatus, lastSync, sincronizarUsuarios } = useTrackerStore();
+
+  const handleRefresh = async () => {
+    await sincronizarUsuarios();
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-2 py-2 px-3 bg-dark-700 rounded-lg mb-3">
+      {isOnline ? (
+        <>
+          <Wifi className="w-4 h-4 text-emerald-400" />
+          <span className="text-xs text-emerald-400">Conectado al servidor</span>
+        </>
+      ) : (
+        <>
+          <WifiOff className="w-4 h-4 text-slate-400" />
+          <span className="text-xs text-slate-400">Modo offline</span>
+        </>
+      )}
+      {syncStatus === 'syncing' && (
+        <RefreshCw className="w-3 h-3 text-amber-400 animate-spin" />
+      )}
+      <button
+        onClick={handleRefresh}
+        className="ml-auto p-1 hover:bg-dark-600 rounded transition-colors"
+        title="Sincronizar"
+      >
+        <RefreshCw className={`w-3 h-3 text-slate-400 hover:text-white ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
+      </button>
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   const { modo, pantalla, cargarDatos, tick, estadoTimer } = useTrackerStore();
@@ -84,6 +121,9 @@ const SeleccionUsuario: React.FC = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
+        {/* Indicador de conexión */}
+        <ConnectionIndicator />
+
         <h2 className="text-lg font-bold text-white text-center mb-4">
           ¿Quién eres?
         </h2>

@@ -58,6 +58,11 @@ export interface TrackerState {
   usuarios: Usuario[];
   usuarioActual: Usuario | null;
 
+  // Conexión al backend
+  isOnline: boolean;
+  syncStatus: 'idle' | 'syncing' | 'success' | 'error';
+  lastSync: string | null;
+
   // Proceso
   procesoActual: TipoProceso | null;
 
@@ -242,11 +247,27 @@ const playAlarmSound = () => {
 // STORE
 // ============================================
 
+// Los 9 usuarios reales de LITPER (fallback si el API no está disponible)
+const LITPER_USUARIOS: Usuario[] = [
+  { id: 'cat1', nombre: 'CATALINA', avatar: '😊', color: '#F59E0B', metaDiaria: 50, activo: true },
+  { id: 'ang1', nombre: 'ANGIE', avatar: '🌟', color: '#EC4899', metaDiaria: 50, activo: true },
+  { id: 'car1', nombre: 'CAROLINA', avatar: '💜', color: '#8B5CF6', metaDiaria: 50, activo: true },
+  { id: 'ale1', nombre: 'ALEJANDRA', avatar: '🌸', color: '#F472B6', metaDiaria: 50, activo: true },
+  { id: 'eva1', nombre: 'EVAN', avatar: '🚀', color: '#3B82F6', metaDiaria: 50, activo: true },
+  { id: 'jim1', nombre: 'JIMMY', avatar: '⚡', color: '#10B981', metaDiaria: 50, activo: true },
+  { id: 'fel1', nombre: 'FELIPE', avatar: '🔥', color: '#EF4444', metaDiaria: 50, activo: true },
+  { id: 'nor1', nombre: 'NORMA', avatar: '🌺', color: '#06B6D4', metaDiaria: 50, activo: true },
+  { id: 'kar1', nombre: 'KAREN', avatar: '💫', color: '#A855F7', metaDiaria: 50, activo: true },
+];
+
 export const useTrackerStore = create<TrackerState>((set, get) => ({
   // Estado inicial
   pantalla: 'seleccion-usuario',
   usuarios: [],
   usuarioActual: null,
+  isOnline: false,
+  syncStatus: 'idle',
+  lastSync: null,
   procesoActual: null,
 
   tiempoTotal: 25 * 60,
@@ -433,7 +454,7 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
 
       // Enviar a API
       try {
-        await apiRequest('/rondas/guias', {
+        const result = await apiRequest('/rondas/guias', {
           method: 'POST',
           body: JSON.stringify({
             usuario_id: nuevaRonda.usuarioId,
@@ -453,9 +474,13 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
             revisado: state.valoresGuias.revisado,
           }),
         });
-        console.log('✅ Ronda guías guardada en API');
+        if (result) {
+          console.log('✅ Ronda guías sincronizada con backend');
+          set({ isOnline: true, syncStatus: 'success', lastSync: new Date().toISOString() });
+        }
       } catch (e) {
         console.warn('No se pudo guardar en API, guardando localmente');
+        set({ isOnline: false, syncStatus: 'error' });
       }
     } else {
       nuevaRonda = {
@@ -466,7 +491,7 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
 
       // Enviar a API
       try {
-        await apiRequest('/rondas/novedades', {
+        const result = await apiRequest('/rondas/novedades', {
           method: 'POST',
           body: JSON.stringify({
             usuario_id: nuevaRonda.usuarioId,
@@ -485,9 +510,13 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
             litper: state.valoresNovedades.litper,
           }),
         });
-        console.log('✅ Ronda novedades guardada en API');
+        if (result) {
+          console.log('✅ Ronda novedades sincronizada con backend');
+          set({ isOnline: true, syncStatus: 'success', lastSync: new Date().toISOString() });
+        }
       } catch (e) {
         console.warn('No se pudo guardar en API, guardando localmente');
+        set({ isOnline: false, syncStatus: 'error' });
       }
     }
 
@@ -547,6 +576,9 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
   // === PERSISTENCIA ===
   sincronizarUsuarios: async () => {
     let usuariosEncontrados: Usuario[] = [];
+    let conectadoAPI = false;
+
+    set({ syncStatus: 'syncing' });
 
     try {
       // 1. PRIMERO: Intentar desde API Backend (sincronización en la nube)
@@ -560,6 +592,7 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
           metaDiaria: u.meta_diaria || 50,
           activo: u.activo !== false,
         }));
+        conectadoAPI = true;
         console.log('✅ Usuarios sincronizados desde API:', usuariosEncontrados.length);
       }
 
@@ -582,27 +615,29 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
         }
       }
 
-      // 4. Si no hay usuarios, crear algunos de ejemplo
+      // 4. Si no hay usuarios, usar los 9 usuarios reales de LITPER
       if (usuariosEncontrados.length === 0) {
-        usuariosEncontrados = [
-          { id: 'user1', nombre: 'Usuario 1', avatar: '😊', color: '#8B5CF6', metaDiaria: 50, activo: true },
-          { id: 'user2', nombre: 'Usuario 2', avatar: '🚀', color: '#10B981', metaDiaria: 60, activo: true },
-          { id: 'user3', nombre: 'Usuario 3', avatar: '⭐', color: '#F59E0B', metaDiaria: 40, activo: true },
-        ];
-        // Guardar los usuarios de ejemplo en electron-store
+        usuariosEncontrados = [...LITPER_USUARIOS];
+        console.log('📋 Usando usuarios LITPER por defecto:', usuariosEncontrados.length);
+        // Guardar en electron-store
         if (window.electronAPI) {
           await window.electronAPI.setStore('usuarios', usuariosEncontrados);
         }
       }
 
-      set({ usuarios: usuariosEncontrados });
+      set({
+        usuarios: usuariosEncontrados,
+        isOnline: conectadoAPI,
+        syncStatus: conectadoAPI ? 'success' : 'idle',
+        lastSync: conectadoAPI ? new Date().toISOString() : null,
+      });
     } catch (e) {
       console.error('Error sincronizando usuarios:', e);
-      // Usuarios por defecto en caso de error
+      // Usuarios LITPER por defecto en caso de error
       set({
-        usuarios: [
-          { id: 'default1', nombre: 'Usuario 1', avatar: '😊', color: '#8B5CF6', metaDiaria: 50, activo: true },
-        ],
+        usuarios: [...LITPER_USUARIOS],
+        isOnline: false,
+        syncStatus: 'error',
       });
     }
   },
@@ -613,11 +648,12 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
 
     const fechaHoy = hoy();
     let rondasCargadas: Ronda[] = [];
+    let rondasDesdeAPI = false;
 
     // 1. PRIMERO: Intentar cargar desde API
     try {
       const apiRondas = await apiRequest(`/rondas?fecha=${fechaHoy}`);
-      if (apiRondas && Array.isArray(apiRondas) && apiRondas.length > 0) {
+      if (apiRondas && Array.isArray(apiRondas)) {
         rondasCargadas = apiRondas.map((r: any) => ({
           id: r.id,
           usuarioId: r.usuario_id,
@@ -648,10 +684,13 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
             litper: r.litper || 0,
           } : {}),
         }));
+        rondasDesdeAPI = true;
         console.log('✅ Rondas cargadas desde API:', rondasCargadas.length);
+        set({ isOnline: true, lastSync: new Date().toISOString() });
       }
     } catch (e) {
       console.warn('No se pudieron cargar rondas desde API');
+      set({ isOnline: false });
     }
 
     // 2. Si no hay rondas de API, intentar desde almacenamiento local
