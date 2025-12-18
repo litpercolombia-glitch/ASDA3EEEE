@@ -134,6 +134,9 @@ export interface TrackerState {
   cargarDatos: () => Promise<void>;
   guardarDatos: () => Promise<void>;
   sincronizarUsuarios: () => Promise<void>;
+
+  // === EXPORTAR ===
+  exportarExcel: () => Promise<void>;
 }
 
 // ============================================
@@ -732,5 +735,102 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
         ultimaSync: new Date().toISOString(),
       }));
     } catch (e) {}
+  },
+
+  // === EXPORTAR EXCEL ===
+  exportarExcel: async () => {
+    const state = get();
+    const fechaHoy = hoy();
+
+    // Crear datos CSV
+    const headersGuias = [
+      'Fecha', 'Usuario', 'Ronda', 'Hora Inicio', 'Hora Fin', 'Tiempo (min)',
+      'Iniciales', 'Realizadas', 'Canceladas', 'Agendadas', 'Dificiles', 'Pendientes', 'Revisadas'
+    ];
+
+    const headersNovedades = [
+      'Fecha', 'Usuario', 'Ronda', 'Hora Inicio', 'Hora Fin', 'Tiempo (min)',
+      'Revisadas', 'Solucionadas', 'Devolucion', 'Cliente', 'Transportadora', 'LITPER'
+    ];
+
+    // Filtrar rondas por tipo
+    const rondasGuias = state.rondasHoy.filter((r): r is RondaGuias => r.tipo === 'guias');
+    const rondasNovedades = state.rondasHoy.filter((r): r is RondaNovedades => r.tipo === 'novedades');
+
+    // Crear contenido CSV para guías
+    let csvGuias = headersGuias.join(',') + '\n';
+    rondasGuias.forEach(r => {
+      csvGuias += [
+        r.fecha,
+        r.usuarioNombre,
+        r.numero,
+        r.horaInicio,
+        r.horaFin,
+        r.tiempoUsado,
+        r.pedidosIniciales,
+        r.realizado,
+        r.cancelado,
+        r.agendado,
+        r.dificiles,
+        r.pendientes,
+        r.revisado,
+      ].join(',') + '\n';
+    });
+
+    // Crear contenido CSV para novedades
+    let csvNovedades = headersNovedades.join(',') + '\n';
+    rondasNovedades.forEach(r => {
+      csvNovedades += [
+        r.fecha,
+        r.usuarioNombre,
+        r.numero,
+        r.horaInicio,
+        r.horaFin,
+        r.tiempoUsado,
+        r.revisadas,
+        r.solucionadas,
+        r.devolucion,
+        r.cliente,
+        r.transportadora,
+        r.litper,
+      ].join(',') + '\n';
+    });
+
+    // Combinar todo en un solo CSV con secciones
+    const csvCompleto = `LITPER TRACKER - REPORTE ${fechaHoy}
+Usuario: ${state.usuarioActual?.nombre || 'Todos'}
+
+=== GUIAS ===
+${csvGuias}
+=== NOVEDADES ===
+${csvNovedades}
+=== RESUMEN ===
+Total Guías Realizadas: ${state.totalHoyGuias}
+Total Novedades Solucionadas: ${state.totalHoyNovedades}
+Total Rondas: ${state.rondasHoy.length}
+`;
+
+    // Si estamos en Electron, usar el API para guardar archivo
+    if (window.electronAPI && window.electronAPI.exportCSV) {
+      try {
+        await window.electronAPI.exportCSV(csvCompleto, `LITPER_Rondas_${fechaHoy}.csv`);
+        playSuccessSound();
+        console.log('✅ Excel exportado exitosamente');
+      } catch (e) {
+        console.error('Error exportando:', e);
+      }
+    } else {
+      // Fallback para navegador
+      const blob = new Blob([csvCompleto], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `LITPER_Rondas_${fechaHoy}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      playSuccessSound();
+    }
   },
 }));
