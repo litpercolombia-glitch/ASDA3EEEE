@@ -30,6 +30,7 @@ interface Config {
 
 // ===== CONSTANTES =====
 const STORAGE = { RONDAS: 'lp_rondas', CONFIG: 'lp_config', USUARIOS: 'lp_users', WIDGET: 'lp_widget' };
+const API_URL = 'http://localhost:8000/api/tracker';
 
 const NIVELES = [
   { min: 0, max: 100, nombre: 'Novato', color: 'from-gray-400 to-gray-500' },
@@ -48,10 +49,17 @@ const TIPS = [
   "🎉 Cada ronda completada es una victoria",
 ];
 
+// Los 9 usuarios reales de LITPER (sincronizados con backend)
 const DEFAULT_USERS: Usuario[] = [
-  { id: '1', nombre: 'EVAN', xp: 680, nivel: 3, racha: 5, medallas: [], guiasTotales: 245, mejorTiempo: 1.2, combosMaximos: 3 },
-  { id: '2', nombre: 'MARIA', xp: 850, nivel: 3, racha: 8, medallas: [], guiasTotales: 312, mejorTiempo: 1.0, combosMaximos: 5 },
-  { id: '3', nombre: 'CARLOS', xp: 520, nivel: 3, racha: 3, medallas: [], guiasTotales: 189, mejorTiempo: 1.5, combosMaximos: 2 },
+  { id: 'cat1', nombre: 'CATALINA', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0 },
+  { id: 'ang1', nombre: 'ANGIE', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0 },
+  { id: 'car1', nombre: 'CAROLINA', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0 },
+  { id: 'ale1', nombre: 'ALEJANDRA', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0 },
+  { id: 'eva1', nombre: 'EVAN', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0 },
+  { id: 'jim1', nombre: 'JIMMY', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0 },
+  { id: 'fel1', nombre: 'FELIPE', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0 },
+  { id: 'nor1', nombre: 'NORMA', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0 },
+  { id: 'kar1', nombre: 'KAREN', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0 },
 ];
 
 const DEFAULT_CONFIG: Config = {
@@ -74,6 +82,85 @@ const getNivel = (xp: number) => {
 const calcXP = (r: number, t: number, c: number, combo: number) => {
   let xp = r * 10 + (t < 2 ? r * 5 : t < 3 ? r * 2 : 0) - c * 3 + 50 + (c === 0 ? 25 : 0);
   return Math.max(0, Math.floor(xp * (1 + (combo - 1) * 0.1)));
+};
+
+// ===== API HELPERS =====
+const fetchUsuariosFromAPI = async (): Promise<Usuario[]> => {
+  try {
+    const response = await fetch(`${API_URL}/usuarios`);
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Usuarios cargados desde backend:', data.length);
+      return data.map((u: any) => ({
+        id: u.id,
+        nombre: u.nombre,
+        xp: 0,
+        nivel: 1,
+        racha: 0,
+        medallas: [],
+        guiasTotales: 0,
+        mejorTiempo: 0,
+        combosMaximos: 0,
+      }));
+    }
+  } catch (error) {
+    console.warn('⚠️ No se pudieron cargar usuarios desde backend:', error);
+  }
+  return [];
+};
+
+const syncRondaToAPI = async (ronda: Ronda, usuario: Usuario) => {
+  try {
+    await fetch(`${API_URL}/rondas/guias`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        usuario_id: ronda.usuarioId,
+        usuario_nombre: usuario.nombre,
+        numero: ronda.numero,
+        fecha: ronda.fecha,
+        hora_inicio: new Date().toTimeString().slice(0, 5),
+        hora_fin: new Date().toTimeString().slice(0, 5),
+        tiempo_usado: Math.round(ronda.tiempoTotal / 60),
+        realizado: ronda.realizado,
+        cancelado: ronda.cancelado,
+        agendado: ronda.agendado,
+        dificiles: ronda.dificiles,
+        pendientes: ronda.pendientes,
+      }),
+    });
+    console.log('✅ Ronda sincronizada con backend');
+  } catch (error) {
+    console.warn('⚠️ No se pudo sincronizar ronda con backend:', error);
+  }
+};
+
+const fetchRondasFromAPI = async (fecha?: string): Promise<Ronda[]> => {
+  try {
+    const fechaParam = fecha || new Date().toISOString().split('T')[0];
+    const response = await fetch(`${API_URL}/rondas?fecha=${fechaParam}&tipo=guias`);
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Rondas cargadas desde backend:', data.length);
+      return data.map((r: any) => ({
+        id: r.id,
+        numero: r.numero || 1,
+        usuarioId: r.usuario_id,
+        fecha: r.fecha,
+        tiempoTotal: (r.tiempo_usado || 0) * 60,
+        realizado: r.realizado || 0,
+        cancelado: r.cancelado || 0,
+        agendado: r.agendado || 0,
+        dificiles: r.dificiles || 0,
+        pendientes: r.pendientes || 0,
+        xpGanado: 0,
+        comboMaximo: 1,
+      }));
+    }
+  } catch (error) {
+    console.warn('⚠️ No se pudieron cargar rondas desde backend:', error);
+  }
+  return [];
 };
 
 // ===== SONIDO =====
@@ -273,7 +360,58 @@ export const ProcesosLitperTab: React.FC<{selectedCountry?: string}> = () => {
   const [showMsg, setShowMsg] = useState('');
   const [vistaAdmin, setVistaAdmin] = useState<'hoy' | 'ranking' | 'equipo' | 'config'>('hoy');
 
-  // Persistencia
+  // Estado de conexión
+  const [isOnline, setIsOnline] = useState(true);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle');
+
+  // Cargar usuarios desde backend al inicio
+  useEffect(() => {
+    const loadFromBackend = async () => {
+      setSyncStatus('syncing');
+      try {
+        // Cargar usuarios del backend
+        const backendUsers = await fetchUsuariosFromAPI();
+        if (backendUsers.length > 0) {
+          // Merge con datos locales (XP, nivel, etc)
+          const localUsers = load<Usuario[]>(STORAGE.USUARIOS, DEFAULT_USERS);
+          const mergedUsers = backendUsers.map(bu => {
+            const local = localUsers.find(lu => lu.id === bu.id);
+            return local ? { ...bu, xp: local.xp, nivel: local.nivel, racha: local.racha, guiasTotales: local.guiasTotales, medallas: local.medallas, mejorTiempo: local.mejorTiempo, combosMaximos: local.combosMaximos } : bu;
+          });
+          setUsuarios(mergedUsers);
+          setIsOnline(true);
+        }
+
+        // Cargar rondas del día desde backend
+        const backendRondas = await fetchRondasFromAPI();
+        if (backendRondas.length > 0) {
+          const localRondas = load<Ronda[]>(STORAGE.RONDAS, []);
+          const allRondas = [...localRondas.filter(lr => !backendRondas.some(br => br.id === lr.id)), ...backendRondas];
+          setRondas(allRondas);
+        }
+
+        setSyncStatus('idle');
+      } catch (error) {
+        console.warn('Error cargando desde backend:', error);
+        setIsOnline(false);
+        setSyncStatus('error');
+      }
+    };
+
+    loadFromBackend();
+
+    // Listener de conexión
+    const handleOnline = () => { setIsOnline(true); loadFromBackend(); };
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Persistencia local (backup)
   useEffect(() => { save(STORAGE.USUARIOS, usuarios); }, [usuarios]);
   useEffect(() => { save(STORAGE.RONDAS, rondas); }, [rondas]);
   useEffect(() => { save(STORAGE.CONFIG, config); }, [config]);
@@ -304,7 +442,7 @@ export const ProcesosLitperTab: React.FC<{selectedCountry?: string}> = () => {
   const tiempoProm = useMemo(() => { const total = contadores.r + contadores.c + contadores.a; return total > 0 && tiempo > 0 ? (tiempo / 60 / total) : 0; }, [contadores, tiempo]);
 
   // Funciones
-  const finalizarRonda = () => {
+  const finalizarRonda = async () => {
     if (!usuario) return;
     const xp = calcXP(contadores.r, tiempoProm, contadores.c, combo);
     const nuevaRonda: Ronda = {
@@ -319,7 +457,12 @@ export const ProcesosLitperTab: React.FC<{selectedCountry?: string}> = () => {
     setUsuarios(prev => prev.map(u => u.id === usuario.id ? updated : u));
     setUsuario(updated);
 
-    setShowMsg(`🎉 +${xp} XP!`);
+    // Sincronizar con backend
+    if (isOnline) {
+      syncRondaToAPI(nuevaRonda, usuario);
+    }
+
+    setShowMsg(`🎉 +${xp} XP!${isOnline ? ' (Sincronizado)' : ' (Guardado local)'}`);
     setTimeout(() => setShowMsg(''), 3000);
     if (config.sonido) playBeep(600, 0.2);
 
@@ -400,6 +543,11 @@ export const ProcesosLitperTab: React.FC<{selectedCountry?: string}> = () => {
       <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         {msgFloat}
         <div className="text-center">
+          {/* Indicador de conexión */}
+          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs mb-4 ${isOnline ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+            <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`}></div>
+            {syncStatus === 'syncing' ? 'Sincronizando...' : isOnline ? 'Conectado al Backend' : 'Modo Offline'}
+          </div>
           <div className="w-20 h-20 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl animate-pulse">
             <Gamepad2 className="w-10 h-10 text-white" />
           </div>
