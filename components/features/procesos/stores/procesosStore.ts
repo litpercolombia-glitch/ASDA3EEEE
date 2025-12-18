@@ -21,6 +21,49 @@ import {
 } from '../types';
 
 // ============================================
+// API SYNC - Sincronización con el backend
+// ============================================
+
+const API_URL = 'http://localhost:8000/api/tracker';
+
+const syncUsuarioToAPI = async (usuario: Usuario & { id: string }) => {
+  try {
+    await fetch(`${API_URL}/usuarios`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: usuario.id,
+        nombre: usuario.nombre,
+        avatar: usuario.avatar,
+        color: usuario.color,
+        meta_diaria: usuario.metaDiaria || 50,
+        activo: usuario.activo !== false,
+      }),
+    });
+    console.log('✅ Usuario sincronizado con backend:', usuario.nombre);
+  } catch (error) {
+    console.warn('⚠️ No se pudo sincronizar usuario con backend:', error);
+  }
+};
+
+const deleteUsuarioFromAPI = async (id: string) => {
+  try {
+    await fetch(`${API_URL}/usuarios/${id}`, { method: 'DELETE' });
+  } catch (error) {
+    console.warn('⚠️ No se pudo eliminar usuario del backend:', error);
+  }
+};
+
+// Sincronizar TODOS los usuarios existentes al backend
+const syncAllUsersToAPI = async (usuarios: Usuario[]) => {
+  console.log('🔄 Sincronizando todos los usuarios al backend...');
+  for (const usuario of usuarios) {
+    await syncUsuarioToAPI(usuario as Usuario & { id: string });
+  }
+  console.log('✅ Sincronización completa:', usuarios.length, 'usuarios');
+};
+
+// ============================================
 // TIPOS DEL STORE
 // ============================================
 
@@ -56,6 +99,7 @@ interface ProcesosState {
   eliminarUsuario: (id: string) => void;
   actualizarUsuario: (id: string, datos: Partial<Usuario>) => void;
   seleccionarUsuario: (id: string) => void;
+  sincronizarConBackend: () => Promise<void>;
 
   // === ACCIONES CRONÓMETRO ===
   iniciarCronometro: () => void;
@@ -169,6 +213,9 @@ export const useProcesosStore = create<ProcesosState>()(
           usuarios: [...state.usuarios, nuevoUsuario],
           perfiles: [...state.perfiles, nuevoPerfil],
         }));
+
+        // Sincronizar con el backend (para el Tracker desktop)
+        syncUsuarioToAPI(nuevoUsuario as Usuario & { id: string });
       },
 
       eliminarUsuario: (id) => {
@@ -180,6 +227,9 @@ export const useProcesosStore = create<ProcesosState>()(
           notas: state.notas.filter((n) => n.usuarioId !== id),
           usuarioActual: state.usuarioActual?.id === id ? null : state.usuarioActual,
         }));
+
+        // Sincronizar eliminación con el backend
+        deleteUsuarioFromAPI(id);
       },
 
       actualizarUsuario: (id, datos) => {
@@ -197,6 +247,11 @@ export const useProcesosStore = create<ProcesosState>()(
       seleccionarUsuario: (id) => {
         const usuario = get().usuarios.find((u) => u.id === id);
         set({ usuarioActual: usuario || null });
+      },
+
+      sincronizarConBackend: async () => {
+        const usuarios = get().usuarios;
+        await syncAllUsersToAPI(usuarios);
       },
 
       // === ACCIONES CRONÓMETRO ===
@@ -454,6 +509,13 @@ export const useProcesosStore = create<ProcesosState>()(
     {
       name: 'litper-procesos-store',
       storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        // Sincronizar usuarios al backend cuando se carga la app
+        if (state && state.usuarios.length > 0) {
+          console.log('🔄 Auto-sincronizando usuarios con el backend...');
+          syncAllUsersToAPI(state.usuarios);
+        }
+      },
     }
   )
 );
