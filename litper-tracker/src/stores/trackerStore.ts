@@ -242,10 +242,23 @@ const playAlarmSound = () => {
 // STORE
 // ============================================
 
+// 9 USUARIOS LITPER - DEFINIDOS GLOBALMENTE PARA CARGA INMEDIATA
+const USUARIOS_LITPER: Usuario[] = [
+  { id: 'cat1', nombre: 'CATALINA', avatar: '👑', color: '#8B5CF6', metaDiaria: 60, activo: true },
+  { id: 'ang1', nombre: 'ANGIE', avatar: '🌟', color: '#EC4899', metaDiaria: 60, activo: true },
+  { id: 'car1', nombre: 'CAROLINA', avatar: '💜', color: '#6366F1', metaDiaria: 60, activo: true },
+  { id: 'ale1', nombre: 'ALEJANDRA', avatar: '🔥', color: '#F59E0B', metaDiaria: 60, activo: true },
+  { id: 'eva1', nombre: 'EVAN', avatar: '🚀', color: '#10B981', metaDiaria: 60, activo: true },
+  { id: 'jim1', nombre: 'JIMMY', avatar: '⚡', color: '#3B82F6', metaDiaria: 60, activo: true },
+  { id: 'fel1', nombre: 'FELIPE', avatar: '🎯', color: '#14B8A6', metaDiaria: 60, activo: true },
+  { id: 'nor1', nombre: 'NORMA', avatar: '💎', color: '#A855F7', metaDiaria: 60, activo: true },
+  { id: 'kar1', nombre: 'KAREN', avatar: '✨', color: '#F43F5E', metaDiaria: 60, activo: true },
+];
+
 export const useTrackerStore = create<TrackerState>((set, get) => ({
-  // Estado inicial
+  // Estado inicial - USUARIOS LITPER CARGADOS INMEDIATAMENTE
   pantalla: 'seleccion-usuario',
-  usuarios: [],
+  usuarios: USUARIOS_LITPER,  // ← CARGA INMEDIATA de los 9 usuarios
   usuarioActual: null,
   procesoActual: null,
 
@@ -546,19 +559,7 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
 
   // === PERSISTENCIA ===
   sincronizarUsuarios: async () => {
-    // USUARIOS LITPER - SIEMPRE CARGAR ESTOS 9 USUARIOS
-    const USUARIOS_LITPER: Usuario[] = [
-      { id: 'cat1', nombre: 'CATALINA', avatar: '👑', color: '#8B5CF6', metaDiaria: 60, activo: true },
-      { id: 'ang1', nombre: 'ANGIE', avatar: '🌟', color: '#EC4899', metaDiaria: 60, activo: true },
-      { id: 'car1', nombre: 'CAROLINA', avatar: '💜', color: '#6366F1', metaDiaria: 60, activo: true },
-      { id: 'ale1', nombre: 'ALEJANDRA', avatar: '🔥', color: '#F59E0B', metaDiaria: 60, activo: true },
-      { id: 'eva1', nombre: 'EVAN', avatar: '🚀', color: '#10B981', metaDiaria: 60, activo: true },
-      { id: 'jim1', nombre: 'JIMMY', avatar: '⚡', color: '#3B82F6', metaDiaria: 60, activo: true },
-      { id: 'fel1', nombre: 'FELIPE', avatar: '🎯', color: '#14B8A6', metaDiaria: 60, activo: true },
-      { id: 'nor1', nombre: 'NORMA', avatar: '💎', color: '#A855F7', metaDiaria: 60, activo: true },
-      { id: 'kar1', nombre: 'KAREN', avatar: '✨', color: '#F43F5E', metaDiaria: 60, activo: true },
-    ];
-
+    // Usa USUARIOS_LITPER definido globalmente al inicio del archivo
     try {
       // Intentar cargar desde API para obtener datos actualizados
       const apiUsuarios = await apiRequest('/usuarios');
