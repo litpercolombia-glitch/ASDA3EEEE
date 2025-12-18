@@ -25,6 +25,9 @@ import {
   Trophy,
   PieChart,
   Settings,
+  Download,
+  Upload,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useProcesosStore } from '../stores/procesosStore';
 import { AlertaIA, ReporteUsuario, COLORES_DISPONIBLES } from '../types';
@@ -32,6 +35,8 @@ import TrackerPopup from './TrackerPopup';
 import RankingLive from './RankingLive';
 import ChartsDashboard from './ChartsDashboard';
 import SettingsPanel from './SettingsPanel';
+import ExportManager from './ExportManager';
+import ExcelImporter from './ExcelImporter';
 
 type TabType = 'usuarios' | 'ranking' | 'estadisticas';
 
@@ -54,6 +59,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('usuarios');
   const [showSettings, setShowSettings] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [trackerUsuario, setTrackerUsuario] = useState<{
     id: string;
     nombre: string;
@@ -191,16 +198,37 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* Header with Settings */}
+      {/* Header with Actions */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-white">Dashboard</h2>
-        <button
-          onClick={() => setShowSettings(true)}
-          className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-          title="Configuración"
-        >
-          <Settings className="w-5 h-5 text-slate-400 hover:text-white" />
-        </button>
+        <h2 className="text-xl font-bold text-white">Dashboard Admin</h2>
+        <div className="flex items-center gap-2">
+          {/* Import */}
+          <button
+            onClick={() => setShowImport(true)}
+            className="px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors flex items-center gap-2"
+            title="Importar Excel"
+          >
+            <Upload className="w-4 h-4" />
+            <span className="text-sm hidden sm:inline">Importar</span>
+          </button>
+          {/* Export */}
+          <button
+            onClick={() => setShowExport(true)}
+            className="px-3 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg transition-colors flex items-center gap-2"
+            title="Exportar Excel"
+          >
+            <Download className="w-4 h-4" />
+            <span className="text-sm hidden sm:inline">Exportar</span>
+          </button>
+          {/* Settings */}
+          <button
+            onClick={() => setShowSettings(true)}
+            className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+            title="Configuración"
+          >
+            <Settings className="w-5 h-5 text-slate-400 hover:text-white" />
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -521,6 +549,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
       <SettingsPanel
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
+      />
+
+      {/* Export Manager */}
+      <ExportManager
+        isOpen={showExport}
+        onClose={() => setShowExport(false)}
+      />
+
+      {/* Excel Importer */}
+      <ExcelImporter
+        isOpen={showImport}
+        onClose={() => setShowImport(false)}
       />
     </div>
   );

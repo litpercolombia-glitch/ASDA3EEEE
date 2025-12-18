@@ -75,8 +75,8 @@ const TrackerPopup: React.FC<TrackerPopupProps> = ({
 }) => {
   // Estados
   const [proceso, setProceso] = useState<TipoProceso | null>(null);
-  const [tiempoTotal, setTiempoTotal] = useState(25 * 60); // 25 minutos
-  const [tiempoRestante, setTiempoRestante] = useState(25 * 60);
+  const [tiempoTotal, setTiempoTotal] = useState(30 * 60); // 30 minutos por defecto
+  const [tiempoRestante, setTiempoRestante] = useState(30 * 60);
   const [estadoTimer, setEstadoTimer] = useState<'idle' | 'running' | 'paused' | 'finished'>('idle');
   const [rondaNumero, setRondaNumero] = useState(1);
   const [horaInicio, setHoraInicio] = useState('');
@@ -481,7 +481,7 @@ const TrackerPopup: React.FC<TrackerPopupProps> = ({
 
           {/* Time selector */}
           <div className="flex justify-center gap-2 mb-4">
-            {[15, 20, 25, 30, 40].map((mins) => (
+            {[30, 45, 60].map((mins) => (
               <button
                 key={mins}
                 onClick={() => {
@@ -490,16 +490,28 @@ const TrackerPopup: React.FC<TrackerPopupProps> = ({
                     setTiempoRestante(mins * 60);
                   }
                 }}
-                className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   tiempoTotal === mins * 60
-                    ? 'bg-slate-600 text-white'
+                    ? 'bg-emerald-500 text-white'
                     : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'
                 }`}
                 disabled={estadoTimer !== 'idle'}
               >
-                {mins}m
+                {mins} min
               </button>
             ))}
+            {/* Botón +5 min */}
+            <button
+              onClick={() => {
+                setTiempoTotal((prev) => prev + 5 * 60);
+                setTiempoRestante((prev) => prev + 5 * 60);
+              }}
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+              title="Agregar 5 minutos"
+            >
+              <Plus className="w-4 h-4" />
+              5 min
+            </button>
           </div>
 
           {/* Timer controls */}
