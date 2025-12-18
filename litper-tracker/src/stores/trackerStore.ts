@@ -600,36 +600,43 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
     try {
       const apiRondas = await apiRequest(`/rondas?fecha=${fechaHoy}`);
       if (apiRondas && Array.isArray(apiRondas) && apiRondas.length > 0) {
-        rondasCargadas = apiRondas.map((r: any) => ({
-          id: r.id,
-          usuarioId: r.usuario_id,
-          usuarioNombre: r.usuario_nombre,
-          numero: r.numero,
-          fecha: r.fecha,
-          horaInicio: r.hora_inicio,
-          horaFin: r.hora_fin,
-          tiempoUsado: r.tiempo_usado,
-          tipo: r.tipo,
-          // Campos de guías
-          ...(r.tipo === 'guias' ? {
-            pedidosIniciales: r.pedidos_iniciales || 0,
-            realizado: r.realizado || 0,
-            cancelado: r.cancelado || 0,
-            agendado: r.agendado || 0,
-            dificiles: r.dificiles || 0,
-            pendientes: r.pendientes || 0,
-            revisado: r.revisado || 0,
-          } : {}),
-          // Campos de novedades
-          ...(r.tipo === 'novedades' ? {
-            revisadas: r.revisadas || 0,
-            solucionadas: r.solucionadas || 0,
-            devolucion: r.devolucion || 0,
-            cliente: r.cliente || 0,
-            transportadora: r.transportadora || 0,
-            litper: r.litper || 0,
-          } : {}),
-        }));
+        rondasCargadas = apiRondas.map((r: any): Ronda => {
+          const base = {
+            id: r.id,
+            usuarioId: r.usuario_id,
+            usuarioNombre: r.usuario_nombre,
+            numero: r.numero,
+            fecha: r.fecha,
+            horaInicio: r.hora_inicio,
+            horaFin: r.hora_fin,
+            tiempoUsado: r.tiempo_usado,
+          };
+
+          if (r.tipo === 'guias') {
+            return {
+              ...base,
+              tipo: 'guias' as const,
+              pedidosIniciales: r.pedidos_iniciales || 0,
+              realizado: r.realizado || 0,
+              cancelado: r.cancelado || 0,
+              agendado: r.agendado || 0,
+              dificiles: r.dificiles || 0,
+              pendientes: r.pendientes || 0,
+              revisado: r.revisado || 0,
+            };
+          } else {
+            return {
+              ...base,
+              tipo: 'novedades' as const,
+              revisadas: r.revisadas || 0,
+              solucionadas: r.solucionadas || 0,
+              devolucion: r.devolucion || 0,
+              cliente: r.cliente || 0,
+              transportadora: r.transportadora || 0,
+              litper: r.litper || 0,
+            };
+          }
+        });
         console.log('✅ Rondas cargadas desde API:', rondasCargadas.length);
       }
     } catch (e) {

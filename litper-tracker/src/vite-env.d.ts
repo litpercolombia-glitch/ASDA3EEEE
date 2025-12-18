@@ -9,5 +9,6 @@ interface Window {
     toggleAlwaysOnTop: () => Promise<boolean>;
     setOpacity: (opacity: number) => Promise<void>;
     setSize: (width: number, height: number) => Promise<void>;
+    exportCSV?: (content: string, filename: string) => Promise<void>;
   };
 }
