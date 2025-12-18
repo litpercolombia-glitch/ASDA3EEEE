@@ -9,3 +9,7 @@ export { default as FloatingNotes } from './FloatingNotes';
 export { default as GamificationPanel } from './GamificationPanel';
 export { default as AdminDashboard } from './AdminDashboard';
 export { default as RoundForm } from './RoundForm';
+export { default as TrackerPopup } from './TrackerPopup';
+export { default as RankingLive } from './RankingLive';
+export { default as ChartsDashboard } from './ChartsDashboard';
+export { default as SettingsPanel } from './SettingsPanel';

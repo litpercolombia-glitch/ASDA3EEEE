@@ -22,10 +22,18 @@ import {
   ChevronDown,
   ChevronUp,
   Play,
+  Trophy,
+  PieChart,
+  Settings,
 } from 'lucide-react';
 import { useProcesosStore } from '../stores/procesosStore';
 import { AlertaIA, ReporteUsuario, COLORES_DISPONIBLES } from '../types';
 import TrackerPopup from './TrackerPopup';
+import RankingLive from './RankingLive';
+import ChartsDashboard from './ChartsDashboard';
+import SettingsPanel from './SettingsPanel';
+
+type TabType = 'usuarios' | 'ranking' | 'estadisticas';
 
 interface AdminDashboardProps {
   className?: string;
@@ -44,6 +52,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
 
   const [showAllAlerts, setShowAllAlerts] = useState(false);
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>('usuarios');
+  const [showSettings, setShowSettings] = useState(false);
   const [trackerUsuario, setTrackerUsuario] = useState<{
     id: string;
     nombre: string;
@@ -181,6 +191,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
 
   return (
     <div className={`space-y-6 ${className}`}>
+      {/* Header with Settings */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-white">Dashboard</h2>
+        <button
+          onClick={() => setShowSettings(true)}
+          className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+          title="Configuración"
+        >
+          <Settings className="w-5 h-5 text-slate-400 hover:text-white" />
+        </button>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-xl p-4 border border-blue-500/30">
@@ -208,6 +230,49 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
         </div>
       </div>
 
+      {/* Navigation Tabs */}
+      <div className="flex gap-2 bg-slate-800 rounded-xl p-2">
+        <button
+          onClick={() => setActiveTab('usuarios')}
+          className={`flex-1 py-2.5 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+            activeTab === 'usuarios'
+              ? 'bg-blue-500 text-white'
+              : 'text-slate-400 hover:bg-slate-700 hover:text-white'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          Usuarios
+        </button>
+        <button
+          onClick={() => setActiveTab('ranking')}
+          className={`flex-1 py-2.5 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+            activeTab === 'ranking'
+              ? 'bg-yellow-500 text-white'
+              : 'text-slate-400 hover:bg-slate-700 hover:text-white'
+          }`}
+        >
+          <Trophy className="w-4 h-4" />
+          Ranking
+        </button>
+        <button
+          onClick={() => setActiveTab('estadisticas')}
+          className={`flex-1 py-2.5 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+            activeTab === 'estadisticas'
+              ? 'bg-emerald-500 text-white'
+              : 'text-slate-400 hover:bg-slate-700 hover:text-white'
+          }`}
+        >
+          <PieChart className="w-4 h-4" />
+          Estadísticas
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'ranking' && <RankingLive />}
+      {activeTab === 'estadisticas' && <ChartsDashboard />}
+
+      {activeTab === 'usuarios' && (
+        <>
       {/* AI Recommendations */}
       {recomendacionesIA.length > 0 && (
         <div className="bg-slate-800 rounded-xl p-4">
@@ -438,6 +503,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
           </div>
         )}
       </div>
+        </>
+      )}
 
       {/* Tracker Popup */}
       {trackerUsuario && (
@@ -449,6 +516,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
           onClose={() => setTrackerUsuario(null)}
         />
       )}
+
+      {/* Settings Panel */}
+      <SettingsPanel
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
     </div>
   );
 };
