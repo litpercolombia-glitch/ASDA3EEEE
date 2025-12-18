@@ -63,6 +63,31 @@ const syncAllUsersToAPI = async (usuarios: Usuario[]) => {
   console.log('✅ Sincronización completa:', usuarios.length, 'usuarios');
 };
 
+// Cargar usuarios DESDE el backend
+const fetchUsersFromAPI = async (): Promise<Usuario[]> => {
+  try {
+    const response = await fetch(`${API_URL}/usuarios`);
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Usuarios cargados desde backend:', data.length);
+      return data.map((u: any) => ({
+        id: u.id,
+        nombre: u.nombre,
+        avatar: u.avatar || '😊',
+        color: u.color || 'purple',
+        sonido: 'bell',
+        metaDiaria: u.meta_diaria || 50,
+        rol: 'usuario' as const,
+        activo: u.activo !== false,
+        createdAt: new Date(),
+      }));
+    }
+  } catch (error) {
+    console.warn('⚠️ No se pudieron cargar usuarios desde backend:', error);
+  }
+  return [];
+};
+
 // ============================================
 // TIPOS DEL STORE
 // ============================================
@@ -100,6 +125,7 @@ interface ProcesosState {
   actualizarUsuario: (id: string, datos: Partial<Usuario>) => void;
   seleccionarUsuario: (id: string) => void;
   sincronizarConBackend: () => Promise<void>;
+  cargarUsuariosDesdeBackend: () => Promise<void>;
 
   // === ACCIONES CRONÓMETRO ===
   iniciarCronometro: () => void;
@@ -252,6 +278,39 @@ export const useProcesosStore = create<ProcesosState>()(
       sincronizarConBackend: async () => {
         const usuarios = get().usuarios;
         await syncAllUsersToAPI(usuarios);
+      },
+
+      cargarUsuariosDesdeBackend: async () => {
+        const usuariosBackend = await fetchUsersFromAPI();
+        if (usuariosBackend.length > 0) {
+          // Merge: agregar usuarios del backend que no existan localmente
+          const usuariosLocales = get().usuarios;
+          const idsLocales = new Set(usuariosLocales.map(u => u.id));
+
+          const nuevosUsuarios = usuariosBackend.filter(u => !idsLocales.has(u.id));
+
+          if (nuevosUsuarios.length > 0) {
+            // Crear perfiles de gamificación para los nuevos usuarios
+            const nuevosPerfiles = nuevosUsuarios.map(u => ({
+              usuarioId: u.id,
+              xp: 0,
+              nivel: 1,
+              rachaActual: 0,
+              mejorRacha: 0,
+              guiasTotales: 0,
+              logroIds: [] as string[],
+              avatarDesbloqueados: ['😊'],
+              coloresDesbloqueados: [COLORES_DISPONIBLES[0].id],
+              sonidosDesbloqueados: ['bell'],
+            }));
+
+            set((state) => ({
+              usuarios: [...state.usuarios, ...nuevosUsuarios],
+              perfiles: [...state.perfiles, ...nuevosPerfiles],
+            }));
+            console.log('✅ Usuarios agregados desde backend:', nuevosUsuarios.length);
+          }
+        }
       },
 
       // === ACCIONES CRONÓMETRO ===
@@ -510,11 +569,43 @@ export const useProcesosStore = create<ProcesosState>()(
       name: 'litper-procesos-store',
       storage: createJSONStorage(() => localStorage),
       onRehydrateStorage: () => (state) => {
-        // Sincronizar usuarios al backend cuando se carga la app
+        // 1. Sincronizar usuarios locales al backend
         if (state && state.usuarios.length > 0) {
-          console.log('🔄 Auto-sincronizando usuarios con el backend...');
+          console.log('🔄 Auto-sincronizando usuarios locales con el backend...');
           syncAllUsersToAPI(state.usuarios);
         }
+
+        // 2. Cargar usuarios desde el backend (después de un pequeño delay para asegurar el store esté listo)
+        setTimeout(async () => {
+          console.log('🔄 Cargando usuarios desde el backend...');
+          const usuariosBackend = await fetchUsersFromAPI();
+          if (usuariosBackend.length > 0) {
+            const store = useProcesosStore.getState();
+            const idsLocales = new Set(store.usuarios.map(u => u.id));
+            const nuevosUsuarios = usuariosBackend.filter(u => !idsLocales.has(u.id));
+
+            if (nuevosUsuarios.length > 0) {
+              const nuevosPerfiles = nuevosUsuarios.map(u => ({
+                usuarioId: u.id,
+                xp: 0,
+                nivel: 1,
+                rachaActual: 0,
+                mejorRacha: 0,
+                guiasTotales: 0,
+                logroIds: [] as string[],
+                avatarDesbloqueados: ['😊'],
+                coloresDesbloqueados: [COLORES_DISPONIBLES[0].id],
+                sonidosDesbloqueados: ['bell'],
+              }));
+
+              useProcesosStore.setState({
+                usuarios: [...store.usuarios, ...nuevosUsuarios],
+                perfiles: [...store.perfiles, ...nuevosPerfiles],
+              });
+              console.log('✅ Usuarios del backend agregados:', nuevosUsuarios.map(u => u.nombre).join(', '));
+            }
+          }
+        }, 500);
       },
     }
   )
