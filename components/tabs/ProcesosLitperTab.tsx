@@ -47,8 +47,38 @@ interface DesafioDiario {
 }
 
 // ===== CONSTANTES =====
-const STORAGE = { RONDAS: 'lp_rondas', CONFIG: 'lp_config', USUARIOS: 'lp_users', WIDGET: 'lp_widget', LOGROS: 'lp_logros' };
-const API_URL = 'https://litper-tracker-api.onrender.com/api/tracker';
+const STORAGE = { RONDAS: 'lp_rondas', CONFIG: 'lp_config', USUARIOS: 'lp_users', WIDGET: 'lp_widget', LOGROS: 'lp_logros', API_URL: 'lp_api_url' };
+const DEFAULT_API_URL = 'https://litper-tracker-api.onrender.com/api/tracker';
+
+// Helper para obtener API URL guardada
+const getStoredApiUrl = (): string => {
+  try {
+    return localStorage.getItem(STORAGE.API_URL) || DEFAULT_API_URL;
+  } catch {
+    return DEFAULT_API_URL;
+  }
+};
+
+// Helper para hacer peticiones al API
+const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
+  const apiUrl = getStoredApiUrl();
+  try {
+    const response = await fetch(`${apiUrl}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.warn('API request failed:', error);
+    return null;
+  }
+};
 
 const NIVELES = [
   { min: 0, max: 100, nombre: 'Novato', color: 'from-slate-400 to-slate-500', badge: '🌱' },
@@ -625,6 +655,45 @@ export const ProcesosLitperTab: React.FC<{selectedCountry?: string}> = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('idle');
   const [lastSync, setLastSync] = useState<Date | null>(null);
+
+  // Estado de API URL (configurable)
+  const [apiUrl, setApiUrlState] = useState<string>(() => getStoredApiUrl());
+  const [apiUrlInput, setApiUrlInput] = useState<string>(() => getStoredApiUrl());
+  const [apiSaved, setApiSaved] = useState(false);
+
+  // Función para guardar API URL
+  const saveApiUrl = () => {
+    const cleanUrl = apiUrlInput.trim();
+    if (cleanUrl) {
+      localStorage.setItem(STORAGE.API_URL, cleanUrl);
+      setApiUrlState(cleanUrl);
+      setApiSaved(true);
+      setTimeout(() => setApiSaved(false), 2000);
+      // Recargar datos con la nueva URL
+      loadFromAPI();
+    }
+  };
+
+  // Función para cargar desde API
+  const loadFromAPI = async () => {
+    setSyncStatus('syncing');
+    try {
+      const backendRondas = await apiRequest('/rondas');
+      if (backendRondas && Array.isArray(backendRondas)) {
+        console.log('✅ Datos cargados desde API:', backendRondas.length);
+        setIsOnline(true);
+        setSyncStatus('success');
+        setLastSync(new Date());
+      } else {
+        setIsOnline(false);
+        setSyncStatus('error');
+      }
+    } catch (e) {
+      console.error('Error cargando desde API:', e);
+      setIsOnline(false);
+      setSyncStatus('error');
+    }
+  };
 
   // Cargar datos desde API al inicio
   useEffect(() => {
@@ -1492,12 +1561,58 @@ export const ProcesosLitperTab: React.FC<{selectedCountry?: string}> = () => {
                 ))}
               </div>
 
-              <div className="pt-4 border-t border-white/10">
-                <div className="text-xs text-white/40 space-y-1">
-                  <p>API: {API_URL}</p>
-                  <p>Estado: {isOnline ? '🟢 Conectado' : '🔴 Desconectado'}</p>
-                  {lastSync && <p>Última sync: {lastSync.toLocaleTimeString()}</p>}
+              {/* API URL Configuration */}
+              <div className="pt-4 border-t border-white/10 space-y-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2 flex items-center gap-2">
+                    <Database className="w-4 h-4" />
+                    URL del API (se guarda permanentemente)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={apiUrlInput}
+                      onChange={(e) => setApiUrlInput(e.target.value)}
+                      placeholder="https://tu-api.com/api/tracker"
+                      className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                    />
+                    <button
+                      onClick={saveApiUrl}
+                      className={`px-4 py-3 rounded-xl font-medium transition-all ${
+                        apiSaved
+                          ? 'bg-green-500 text-white'
+                          : 'bg-cyan-500 hover:bg-cyan-400 text-white'
+                      }`}
+                    >
+                      {apiSaved ? '✓' : 'Guardar'}
+                    </button>
+                  </div>
                 </div>
+
+                <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
+                  <div className="flex items-center gap-2">
+                    {isOnline ? <Wifi className="w-4 h-4 text-green-400" /> : <WifiOff className="w-4 h-4 text-red-400" />}
+                    <span className="text-sm text-white/70">Estado de conexión</span>
+                  </div>
+                  <span className={`text-sm font-medium ${isOnline ? 'text-green-400' : 'text-red-400'}`}>
+                    {isOnline ? 'Conectado' : 'Desconectado'}
+                  </span>
+                </div>
+
+                <button
+                  onClick={loadFromAPI}
+                  disabled={syncStatus === 'syncing'}
+                  className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
+                  {syncStatus === 'syncing' ? 'Sincronizando...' : 'Sincronizar con API'}
+                </button>
+
+                {lastSync && (
+                  <p className="text-xs text-white/40 text-center">
+                    Última sincronización: {lastSync.toLocaleTimeString()}
+                  </p>
+                )}
               </div>
             </div>
           )}

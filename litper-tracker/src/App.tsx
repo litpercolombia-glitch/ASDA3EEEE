@@ -6,7 +6,8 @@ import QuickCounter from './components/QuickCounter';
 import ProgressBar from './components/ProgressBar';
 import MiniMode from './components/MiniMode';
 import SuperMiniMode from './components/SuperMiniMode';
-import { LogOut, ArrowLeft, FileText, AlertTriangle, User, Download } from 'lucide-react';
+import ConfigPanel from './components/ConfigPanel';
+import { LogOut, ArrowLeft, FileText, AlertTriangle, User, Download, Settings, RefreshCw } from 'lucide-react';
 
 const App: React.FC = () => {
   const { modo, pantalla, cargarDatos, tick, estadoTimer } = useTrackerStore();
@@ -28,32 +29,52 @@ const App: React.FC = () => {
   }, [estadoTimer, tick]);
 
   // Renderizar segun modo
-  if (modo === 'super-mini') {
-    return <SuperMiniMode />;
+  if (modo === 'micro') {
+    return (
+      <>
+        <SuperMiniMode />
+        <ConfigPanel />
+      </>
+    );
   }
 
   if (modo === 'mini') {
-    return <MiniMode />;
+    return (
+      <>
+        <MiniMode />
+        <ConfigPanel />
+      </>
+    );
   }
 
-  // Modo normal - verificar pantalla
-  switch (pantalla) {
-    case 'seleccion-usuario':
-      return <SeleccionUsuario />;
-    case 'seleccion-proceso':
-      return <SeleccionProceso />;
-    case 'trabajo':
-      return <PantallaTrabajo />;
-    default:
-      return <SeleccionUsuario />;
-  }
+  // Modo normal o compacto - verificar pantalla
+  const renderPantalla = () => {
+    switch (pantalla) {
+      case 'seleccion-usuario':
+        return <SeleccionUsuario />;
+      case 'seleccion-proceso':
+        return <SeleccionProceso />;
+      case 'trabajo':
+        return <PantallaTrabajo />;
+      default:
+        return <SeleccionUsuario />;
+    }
+  };
+
+  return (
+    <>
+      {renderPantalla()}
+      <ConfigPanel />
+    </>
+  );
 };
 
 // ============================================
 // PANTALLA: Selección de Usuario
 // ============================================
 const SeleccionUsuario: React.FC = () => {
-  const { usuarios, seleccionarUsuario, sincronizarUsuarios } = useTrackerStore();
+  const { usuarios, seleccionarUsuario, sincronizarUsuarios, toggleConfig, apiUrl } = useTrackerStore();
+  const [sincronizando, setSincronizando] = React.useState(false);
 
   useEffect(() => {
     // Sincronizar usuarios al cargar
@@ -67,20 +88,62 @@ const SeleccionUsuario: React.FC = () => {
     window.electronAPI?.close();
   };
 
+  const handleSync = async () => {
+    setSincronizando(true);
+    await sincronizarUsuarios();
+    setSincronizando(false);
+  };
+
+  // Verificar conexión con API
+  const apiConectada = apiUrl && apiUrl !== '';
+
   return (
     <div className="h-full bg-dark-800 rounded-xl overflow-hidden flex flex-col border border-dark-600">
-      {/* Title bar simple */}
+      {/* Title bar con configuración */}
       <div className="drag-region bg-dark-900 px-3 py-2 flex items-center justify-between border-b border-dark-600">
         <div className="flex items-center gap-2">
           <span className="text-amber-400 font-bold text-sm">LITPER</span>
           <span className="text-slate-500 text-xs">Tracker</span>
         </div>
-        <button
-          onClick={handleClose}
-          className="no-drag p-1.5 hover:bg-red-500/20 rounded transition-colors text-slate-400 hover:text-red-400"
-        >
-          <span className="text-lg">×</span>
-        </button>
+        <div className="flex items-center gap-1 no-drag">
+          {/* Botón sincronizar */}
+          <button
+            onClick={handleSync}
+            disabled={sincronizando}
+            className={`p-1.5 rounded transition-colors ${
+              sincronizando ? 'text-amber-400 animate-spin' : 'text-slate-400 hover:text-white hover:bg-dark-700'
+            }`}
+            title="Sincronizar usuarios"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+          {/* Botón configuración */}
+          <button
+            onClick={toggleConfig}
+            className="p-1.5 hover:bg-dark-700 rounded transition-colors text-slate-400 hover:text-purple-400"
+            title="Configuración"
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </button>
+          {/* Cerrar */}
+          <button
+            onClick={handleClose}
+            className="p-1.5 hover:bg-red-500/20 rounded transition-colors text-slate-400 hover:text-red-400"
+          >
+            <span className="text-lg leading-none">×</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Indicador de conexión */}
+      <div className="px-4 py-2 bg-dark-900/50 border-b border-dark-700 flex items-center justify-between text-xs">
+        <div className="flex items-center gap-2">
+          <Settings className="w-3 h-3 text-slate-500" />
+          <span className="text-slate-500">Conexión</span>
+        </div>
+        <span className={apiConectada ? 'text-emerald-400' : 'text-slate-500'}>
+          {apiConectada ? 'API conectada' : 'Sin conexión'}
+        </span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">

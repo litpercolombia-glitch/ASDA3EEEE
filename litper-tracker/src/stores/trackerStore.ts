@@ -50,9 +50,11 @@ export interface RondaNovedades extends RondaBase {
 
 export type Ronda = RondaGuias | RondaNovedades;
 
+export type ModoVentana = 'normal' | 'compacto' | 'mini' | 'micro';
+
 export interface TrackerState {
   // Pantalla actual
-  pantalla: 'seleccion-usuario' | 'seleccion-proceso' | 'trabajo';
+  pantalla: 'seleccion-usuario' | 'seleccion-proceso' | 'trabajo' | 'configuracion';
 
   // Usuario
   usuarios: Usuario[];
@@ -97,8 +99,12 @@ export interface TrackerState {
   totalHoyNovedades: number;
 
   // UI
-  modo: 'normal' | 'mini' | 'super-mini';
+  modo: ModoVentana;
   alwaysOnTop: boolean;
+
+  // Configuración
+  apiUrl: string;
+  mostrarConfig: boolean;
 
   // === NAVEGACIÓN ===
   seleccionarUsuario: (usuario: Usuario) => void;
@@ -127,8 +133,13 @@ export interface TrackerState {
   guardarRonda: () => Promise<void>;
 
   // === UI ===
-  setModo: (modo: 'normal' | 'mini' | 'super-mini') => void;
+  setModo: (modo: ModoVentana) => void;
   toggleAlwaysOnTop: () => void;
+  toggleConfig: () => void;
+
+  // === CONFIGURACIÓN ===
+  setApiUrl: (url: string) => Promise<void>;
+  cargarConfig: () => Promise<void>;
 
   // === PERSISTENCIA ===
   cargarDatos: () => Promise<void>;
@@ -170,13 +181,22 @@ const valoresNovedadesIniciales = {
 const SYNC_KEY = 'litper-tracker-sync';
 const PROCESOS_KEY = 'litper-procesos-store'; // Debe coincidir con el store de la app web
 
-// URL del API Backend - PRODUCCIÓN
-const API_URL = import.meta.env.VITE_API_URL || 'https://litper-tracker-api.onrender.com/api/tracker';
+// URL del API Backend - PRODUCCIÓN (se puede cambiar desde configuración)
+const DEFAULT_API_URL = 'https://litper-tracker-api.onrender.com/api/tracker';
+let currentApiUrl = DEFAULT_API_URL;
+
+// Tamaños de ventana disponibles
+const WINDOW_SIZES: Record<ModoVentana, { width: number; height: number }> = {
+  normal: { width: 360, height: 580 },
+  compacto: { width: 320, height: 420 },
+  mini: { width: 280, height: 200 },
+  micro: { width: 180, height: 80 },
+};
 
 // Helper para hacer peticiones al API
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   try {
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const response = await fetch(`${currentApiUrl}${endpoint}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -278,6 +298,10 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
 
   modo: 'normal',
   alwaysOnTop: true,
+
+  // Configuración
+  apiUrl: DEFAULT_API_URL,
+  mostrarConfig: false,
 
   // === NAVEGACIÓN ===
   seleccionarUsuario: (usuario) => {
@@ -534,17 +558,12 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
   setModo: (modo) => {
     set({ modo });
     if (window.electronAPI) {
-      switch (modo) {
-        case 'super-mini':
-          window.electronAPI.setSize(180, 60);
-          break;
-        case 'mini':
-          window.electronAPI.setSize(320, 180);
-          break;
-        case 'normal':
-          window.electronAPI.setSize(360, 580);
-          break;
-      }
+      const size = WINDOW_SIZES[modo];
+      window.electronAPI.setSize(size.width, size.height);
+    }
+    // Guardar preferencia
+    if (window.electronAPI) {
+      window.electronAPI.setStore('modo', modo);
     }
   },
 
@@ -554,6 +573,47 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
       set({ alwaysOnTop: newValue });
     } else {
       set((state) => ({ alwaysOnTop: !state.alwaysOnTop }));
+    }
+  },
+
+  toggleConfig: () => {
+    set((state) => ({ mostrarConfig: !state.mostrarConfig }));
+  },
+
+  // === CONFIGURACIÓN ===
+  setApiUrl: async (url) => {
+    const cleanUrl = url.trim();
+    if (cleanUrl) {
+      currentApiUrl = cleanUrl;
+      set({ apiUrl: cleanUrl });
+      // Guardar permanentemente en electron-store
+      if (window.electronAPI) {
+        await window.electronAPI.setStore('apiUrl', cleanUrl);
+        console.log('✅ API URL guardada:', cleanUrl);
+      }
+    }
+  },
+
+  cargarConfig: async () => {
+    if (window.electronAPI) {
+      try {
+        // Cargar API URL guardada
+        const savedApiUrl = await window.electronAPI.getStore('apiUrl');
+        if (savedApiUrl) {
+          currentApiUrl = savedApiUrl;
+          set({ apiUrl: savedApiUrl });
+          console.log('📡 API URL cargada:', savedApiUrl);
+        }
+        // Cargar modo de ventana guardado
+        const savedModo = await window.electronAPI.getStore('modo');
+        if (savedModo && WINDOW_SIZES[savedModo as ModoVentana]) {
+          set({ modo: savedModo as ModoVentana });
+          const size = WINDOW_SIZES[savedModo as ModoVentana];
+          window.electronAPI.setSize(size.width, size.height);
+        }
+      } catch (e) {
+        console.error('Error cargando configuración:', e);
+      }
     }
   },
 
@@ -591,6 +651,9 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
   },
 
   cargarDatos: async () => {
+    // Cargar configuración guardada (API URL, modo ventana)
+    await get().cargarConfig();
+
     // Sincronizar usuarios
     await get().sincronizarUsuarios();
 
