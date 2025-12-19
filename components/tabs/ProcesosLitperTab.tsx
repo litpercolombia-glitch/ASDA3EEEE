@@ -322,6 +322,25 @@ export const ProcesosLitperTab: React.FC = () => {
     save(STORAGE.LOGROS, logros);
   }, [logros]);
 
+  // Cargar datos desde API al montar el componente
+  useEffect(() => {
+    if (config.apiUrl) {
+      sincronizarAPI();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sincronizar cada 30 segundos cuando está en modo usuario activo
+  useEffect(() => {
+    if (viewMode === 'usuario' && config.apiUrl) {
+      const interval = setInterval(() => {
+        cargarRondasAPI();
+      }, 30000); // Cada 30 segundos
+      return () => clearInterval(interval);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode, config.apiUrl]);
+
   // Timer
   useEffect(() => {
     if (corriendo && tiempo > 0) {
@@ -472,13 +491,72 @@ export const ProcesosLitperTab: React.FC = () => {
     );
   };
 
+  // Cargar rondas desde API
+  const cargarRondasAPI = async () => {
+    if (!config.apiUrl) return;
+
+    setSyncing(true);
+    try {
+      // Cargar todas las rondas
+      const response = await fetch(`${config.apiUrl}/rondas`);
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          // Combinar con las locales (evitar duplicados por ID)
+          setRondas(prev => {
+            const localIds = new Set(prev.map(r => r.id));
+            const nuevas = data.filter((r: Ronda) => !localIds.has(r.id));
+            const apiIds = new Set(data.map((r: Ronda) => r.id));
+            const soloLocales = prev.filter(r => !apiIds.has(r.id));
+            return [...data, ...soloLocales];
+          });
+        }
+        setIsOnline(true);
+      }
+    } catch (e) {
+      console.error('Error cargando rondas:', e);
+      setIsOnline(false);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // Cargar usuarios desde API
+  const cargarUsuariosAPI = async () => {
+    if (!config.apiUrl) return;
+
+    try {
+      const response = await fetch(`${config.apiUrl}/usuarios`);
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          // Actualizar XP y stats de usuarios desde API
+          setUsuarios(prev => prev.map(u => {
+            const apiUser = data.find((au: Usuario) => au.id === u.id || au.nombre === u.nombre);
+            if (apiUser) {
+              return {
+                ...u,
+                xp: apiUser.xp ?? u.xp,
+                guiasTotales: apiUser.guiasTotales ?? u.guiasTotales,
+                racha: apiUser.racha ?? u.racha,
+                combosMaximos: apiUser.combosMaximos ?? u.combosMaximos,
+                medallas: apiUser.medallas ?? u.medallas,
+              };
+            }
+            return u;
+          }));
+        }
+      }
+    } catch (e) {
+      console.error('Error cargando usuarios:', e);
+    }
+  };
+
   const sincronizarAPI = async () => {
     setSyncing(true);
     try {
-      const response = await fetch(`${config.apiUrl}/rondas?fecha=${getHoy()}`);
-      if (response.ok) {
-        setIsOnline(true);
-      }
+      await Promise.all([cargarRondasAPI(), cargarUsuariosAPI()]);
+      setIsOnline(true);
     } catch {
       setIsOnline(false);
     } finally {
@@ -547,14 +625,22 @@ export const ProcesosLitperTab: React.FC = () => {
             </button>
           </div>
 
-          {/* Estado de conexión */}
-          <div className="mt-6 text-center">
+          {/* Estado de conexión y sincronización */}
+          <div className="mt-6 flex justify-center items-center gap-4">
             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm ${
               isOnline ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
             }`}>
               {isOnline ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
               {isOnline ? 'Conectado' : 'Sin conexión'}
             </div>
+            <button
+              onClick={sincronizarAPI}
+              disabled={syncing}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm bg-purple-100 text-purple-700 hover:bg-purple-200 transition-all ${syncing ? 'opacity-70' : ''}`}
+            >
+              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Sincronizando...' : 'Sincronizar API'}
+            </button>
           </div>
         </div>
       </div>
@@ -591,11 +677,22 @@ export const ProcesosLitperTab: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {syncing && (
+                <RefreshCw className="w-4 h-4 text-purple-500 animate-spin" />
+              )}
               {config.modoTurbo && (
                 <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold animate-pulse">
                   ⚡ TURBO
                 </span>
               )}
+              <button
+                onClick={sincronizarAPI}
+                disabled={syncing}
+                className={`p-2 hover:bg-slate-200 dark:hover:bg-navy-700 rounded-lg ${syncing ? 'opacity-50' : ''}`}
+                title="Sincronizar con API"
+              >
+                <RefreshCw className={`w-5 h-5 ${syncing ? 'animate-spin text-purple-500' : ''}`} />
+              </button>
               <button
                 onClick={() => setConfig((c) => ({ ...c, sonido: !c.sonido }))}
                 className="p-2 hover:bg-slate-200 dark:hover:bg-navy-700 rounded-lg"
