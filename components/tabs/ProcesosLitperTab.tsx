@@ -12,6 +12,7 @@ import {
   Calendar, RefreshCw, Wifi, WifiOff, Shield, Gift, Rocket, Coffee, Check
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { trackerProvider } from '../../services/integrations/providers/TrackerProvider';
 
 // ==================== TIPOS ====================
 interface Usuario {
@@ -449,21 +450,12 @@ export const ProcesosLitperTab: React.FC = () => {
     // Verificar logros
     verificarLogros(usuarioActual.guiasTotales + realizado, usuarioActual.xp + xpGanado, comboMaximo);
 
-    // Enviar a API
+    // Enviar a API con autenticación
     if (config.apiUrl) {
-      try {
-        setSyncing(true);
-        await fetch(`${config.apiUrl}/rondas/guias`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(nuevaRonda),
-        });
-        setIsOnline(true);
-      } catch {
-        setIsOnline(false);
-      } finally {
-        setSyncing(false);
-      }
+      setSyncing(true);
+      const enviado = await enviarRondaAPI(nuevaRonda);
+      setIsOnline(enviado);
+      setSyncing(false);
     }
 
     if (config.sonido) playBeep(1000, 0.2);
@@ -491,28 +483,73 @@ export const ProcesosLitperTab: React.FC = () => {
     );
   };
 
+  // Obtener headers con autenticación
+  const getApiHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+
+    // Obtener API key de integraciones guardadas
+    try {
+      const integrations = localStorage.getItem('litper_integrations');
+      if (integrations) {
+        const parsed = JSON.parse(integrations);
+        const tracker = parsed.find((i: { id: string; apiKey?: string }) => i.id === 'tracker');
+        if (tracker?.apiKey) {
+          headers['Authorization'] = `Bearer ${tracker.apiKey}`;
+          headers['X-API-Key'] = tracker.apiKey;
+        }
+      }
+    } catch (e) {
+      console.error('Error obteniendo API key:', e);
+    }
+
+    return headers;
+  };
+
   // Cargar rondas desde API
   const cargarRondasAPI = async () => {
     if (!config.apiUrl) return;
 
     setSyncing(true);
     try {
-      // Cargar todas las rondas
-      const response = await fetch(`${config.apiUrl}/rondas`);
-      if (response.ok) {
-        const data = await response.json();
-        if (Array.isArray(data) && data.length > 0) {
-          // Combinar con las locales (evitar duplicados por ID)
-          setRondas(prev => {
-            const localIds = new Set(prev.map(r => r.id));
-            const nuevas = data.filter((r: Ronda) => !localIds.has(r.id));
-            const apiIds = new Set(data.map((r: Ronda) => r.id));
-            const soloLocales = prev.filter(r => !apiIds.has(r.id));
-            return [...data, ...soloLocales];
+      // Intentar varios endpoints posibles
+      const endpoints = ['/rondas', '/procesos/rondas', '/rounds', ''];
+
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(`${config.apiUrl}${endpoint}`, {
+            method: 'GET',
+            headers: getApiHeaders(),
           });
+
+          if (response.ok) {
+            const data = await response.json();
+            // Manejar diferentes estructuras de respuesta
+            const rondasData = data.rondas || data.rounds || data.data || (Array.isArray(data) ? data : []);
+
+            if (Array.isArray(rondasData) && rondasData.length > 0) {
+              // Combinar con las locales (evitar duplicados por ID)
+              setRondas(prev => {
+                const localIds = new Set(prev.map(r => r.id));
+                const apiIds = new Set(rondasData.map((r: Ronda) => r.id));
+                const soloLocales = prev.filter(r => !apiIds.has(r.id));
+                return [...rondasData, ...soloLocales];
+              });
+              console.log(`[Procesos] ✅ ${rondasData.length} rondas cargadas desde API`);
+            }
+            setIsOnline(true);
+            return;
+          }
+        } catch {
+          continue;
         }
-        setIsOnline(true);
       }
+
+      // Si ningún endpoint funcionó, verificar conexión básica
+      const connected = await trackerProvider.testConnection();
+      setIsOnline(connected);
     } catch (e) {
       console.error('Error cargando rondas:', e);
       setIsOnline(false);
@@ -526,29 +563,75 @@ export const ProcesosLitperTab: React.FC = () => {
     if (!config.apiUrl) return;
 
     try {
-      const response = await fetch(`${config.apiUrl}/usuarios`);
-      if (response.ok) {
-        const data = await response.json();
-        if (Array.isArray(data) && data.length > 0) {
-          // Actualizar XP y stats de usuarios desde API
-          setUsuarios(prev => prev.map(u => {
-            const apiUser = data.find((au: Usuario) => au.id === u.id || au.nombre === u.nombre);
-            if (apiUser) {
-              return {
-                ...u,
-                xp: apiUser.xp ?? u.xp,
-                guiasTotales: apiUser.guiasTotales ?? u.guiasTotales,
-                racha: apiUser.racha ?? u.racha,
-                combosMaximos: apiUser.combosMaximos ?? u.combosMaximos,
-                medallas: apiUser.medallas ?? u.medallas,
-              };
+      const endpoints = ['/usuarios', '/procesos/usuarios', '/users', ''];
+
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(`${config.apiUrl}${endpoint}`, {
+            method: 'GET',
+            headers: getApiHeaders(),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const usersData = data.usuarios || data.users || data.data || (Array.isArray(data) ? data : []);
+
+            if (Array.isArray(usersData) && usersData.length > 0) {
+              // Actualizar XP y stats de usuarios desde API
+              setUsuarios(prev => prev.map(u => {
+                const apiUser = usersData.find((au: Usuario) => au.id === u.id || au.nombre === u.nombre);
+                if (apiUser) {
+                  return {
+                    ...u,
+                    xp: apiUser.xp ?? u.xp,
+                    guiasTotales: apiUser.guiasTotales ?? u.guiasTotales,
+                    racha: apiUser.racha ?? u.racha,
+                    combosMaximos: apiUser.combosMaximos ?? u.combosMaximos,
+                    medallas: apiUser.medallas ?? u.medallas,
+                  };
+                }
+                return u;
+              }));
+              console.log(`[Procesos] ✅ ${usersData.length} usuarios actualizados desde API`);
             }
-            return u;
-          }));
+            return;
+          }
+        } catch {
+          continue;
         }
       }
     } catch (e) {
       console.error('Error cargando usuarios:', e);
+    }
+  };
+
+  // Enviar ronda a API
+  const enviarRondaAPI = async (ronda: Ronda): Promise<boolean> => {
+    if (!config.apiUrl) return false;
+
+    try {
+      const endpoints = ['/rondas', '/procesos/rondas', '/rounds'];
+
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(`${config.apiUrl}${endpoint}`, {
+            method: 'POST',
+            headers: getApiHeaders(),
+            body: JSON.stringify(ronda),
+          });
+
+          if (response.ok) {
+            console.log(`[Procesos] ✅ Ronda enviada a API`);
+            return true;
+          }
+        } catch {
+          continue;
+        }
+      }
+      return false;
+    } catch (e) {
+      console.error('Error enviando ronda:', e);
+      return false;
     }
   };
 
