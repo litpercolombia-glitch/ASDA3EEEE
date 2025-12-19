@@ -655,6 +655,77 @@ export const ProcesosLitperTab: React.FC = () => {
     XLSX.writeFile(wb, `litper_procesos_${getHoy()}.xlsx`);
   };
 
+  // Exportar datos como JSON (para sincronizar con app escritorio)
+  const exportarJSON = () => {
+    const data = {
+      rondas,
+      usuarios,
+      logros,
+      config,
+      exportedAt: new Date().toISOString(),
+      version: '3.0',
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `litper_procesos_backup_${getHoy()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Importar datos desde JSON (desde app escritorio)
+  const importarJSON = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string);
+
+        // Importar rondas (combinar con existentes)
+        if (data.rondas && Array.isArray(data.rondas)) {
+          setRondas(prev => {
+            const existingIds = new Set(prev.map(r => r.id));
+            const nuevas = data.rondas.filter((r: Ronda) => !existingIds.has(r.id));
+            console.log(`[Procesos] ✅ ${nuevas.length} rondas importadas`);
+            return [...prev, ...nuevas];
+          });
+        }
+
+        // Importar usuarios (actualizar XP si es mayor)
+        if (data.usuarios && Array.isArray(data.usuarios)) {
+          setUsuarios(prev => prev.map(u => {
+            const imported = data.usuarios.find((iu: Usuario) => iu.nombre === u.nombre);
+            if (imported && imported.xp > u.xp) {
+              return { ...u, ...imported };
+            }
+            return u;
+          }));
+        }
+
+        // Importar logros
+        if (data.logros && Array.isArray(data.logros)) {
+          setLogros(prev => prev.map(l => {
+            const imported = data.logros.find((il: Logro) => il.id === l.id);
+            if (imported?.desbloqueado && !l.desbloqueado) {
+              return { ...l, desbloqueado: true, fechaDesbloqueo: imported.fechaDesbloqueo };
+            }
+            return l;
+          }));
+        }
+
+        alert('✅ Datos importados correctamente');
+      } catch (err) {
+        console.error('Error importando:', err);
+        alert('❌ Error al importar el archivo');
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = ''; // Reset input
+  };
+
   // ==================== CÁLCULOS ====================
   const rondasHoy = useMemo(() => rondas.filter((r) => r.fecha === getHoy()), [rondas]);
   const guiasHoy = useMemo(() => rondasHoy.reduce((sum, r) => sum + r.realizado, 0), [rondasHoy]);
@@ -1294,6 +1365,46 @@ export const ProcesosLitperTab: React.FC = () => {
                     {isOnline ? 'Conectado' : 'Sin conexión'}
                   </div>
                 </div>
+              </div>
+
+              {/* Sincronización Manual */}
+              <div className="mt-6 pt-6 border-t border-slate-200 dark:border-navy-700">
+                <h4 className="font-medium text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4" />
+                  Sincronización Manual (App Escritorio)
+                </h4>
+                <p className="text-sm text-slate-500 mb-4">
+                  Exporta tus datos para cargarlos en la app de escritorio, o importa datos desde ella.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={exportarJSON}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-all"
+                  >
+                    <Download className="w-4 h-4" />
+                    Exportar JSON
+                  </button>
+                  <label className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg cursor-pointer transition-all">
+                    <Package className="w-4 h-4" />
+                    Importar JSON
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={importarJSON}
+                      className="hidden"
+                    />
+                  </label>
+                  <button
+                    onClick={exportarExcel}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all"
+                  >
+                    <Download className="w-4 h-4" />
+                    Exportar Excel (Hoy)
+                  </button>
+                </div>
+                <p className="text-xs text-slate-400 mt-3">
+                  Total de rondas guardadas: {rondas.length} | Última: {rondas.length > 0 ? rondas[rondas.length - 1].fecha : 'N/A'}
+                </p>
               </div>
             </div>
           )}
