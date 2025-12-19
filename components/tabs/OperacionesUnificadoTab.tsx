@@ -24,8 +24,6 @@ import {
   ListOrdered,
   Map,
   GitBranch,
-  FolderOpen,
-  Layers,
   X,
 } from 'lucide-react';
 import { Shipment } from '../../types';
@@ -36,17 +34,15 @@ import { InteligenciaLogisticaTab } from './InteligenciaLogisticaTab';
 import SemaforoTabNew from './SemaforoTabNew';
 import { SmartPrioritizationPanel } from '../intelligence';
 
-// Nuevos componentes integrados
-import { CargaPage } from '../CargaPage';
+// Nuevos componentes integrados (Timeline, Mapa, Cerebro)
 import { ShipmentTimeline } from '../brain/ShipmentTimeline';
 import { JourneyMap } from '../brain/JourneyMap';
 import TrackingMap from '../maps/TrackingMap';
-import { useCentralBrain, TrackingData } from '../../services/brain';
 
 // =====================================
 // TIPOS
 // =====================================
-type SubView = 'carga' | 'cargas' | 'tabla' | 'timeline' | 'mapa' | 'prioridad' | 'inteligencia' | 'semaforo' | 'cerebro';
+type SubView = 'carga' | 'tabla' | 'timeline' | 'mapa' | 'prioridad' | 'inteligencia' | 'semaforo' | 'cerebro';
 
 interface OperacionesUnificadoTabProps {
   shipments: Shipment[];
@@ -60,17 +56,10 @@ interface OperacionesUnificadoTabProps {
 const subNavItems: { id: SubView; label: string; icon: React.ElementType; description: string; color: string }[] = [
   {
     id: 'carga',
-    label: 'Carga de Datos',
+    label: '📦 Cargar Guías',
     icon: Upload,
-    description: 'Importar guías',
+    description: 'Importar y gestionar',
     color: 'cyan'
-  },
-  {
-    id: 'cargas',
-    label: '📦 Cargas',
-    icon: FolderOpen,
-    description: 'Gestión de cargas',
-    color: 'emerald'
   },
   {
     id: 'tabla',
@@ -304,13 +293,6 @@ export const OperacionesUnificadoTab: React.FC<OperacionesUnificadoTabProps> = (
         {/* ====================================== */}
         {/* NUEVOS TABS INTEGRADOS */}
         {/* ====================================== */}
-
-        {/* Tab: Gestión de Cargas */}
-        {activeView === 'cargas' && (
-          <div className="animate-fade-in">
-            <CargaPage />
-          </div>
-        )}
 
         {/* Tab: Timeline Visual */}
         {activeView === 'timeline' && (
