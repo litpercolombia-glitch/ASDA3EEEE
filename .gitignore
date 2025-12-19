@@ -16,6 +16,14 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+.env.production
+.env.development
+
+# Database files
+*.sql
+*.dump
+*.backup
+*.db-journal
 
 # Editor directories and files
 .vscode/*
