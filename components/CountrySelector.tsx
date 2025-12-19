@@ -158,14 +158,14 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
             </div>
           </div>
 
-          {/* Country Cards - Diseño mejorado con banderas */}
+          {/* Country Cards - Diseño Profesional Enterprise */}
           {!showCarriers && (
-            <div className="grid md:grid-cols-3 gap-8 mb-16">
+            <div className="grid md:grid-cols-3 gap-6 mb-16">
               {countries.map((config) => (
                 <button
                   key={config.code}
                   onClick={() => handleCountryClick(config.code)}
-                  className={`relative group overflow-hidden rounded-3xl border-2 transition-all duration-500 transform hover:scale-[1.03] ${
+                  className={`relative group overflow-hidden rounded-3xl border-2 transition-all duration-500 transform hover:scale-[1.02] ${
                     selectedCountry === config.code
                       ? 'bg-gradient-to-br from-accent-500/20 to-accent-600/10 border-accent-500 shadow-2xl shadow-accent-500/30'
                       : 'bg-white/[0.03] border-white/10 hover:border-accent-500/50 hover:bg-white/[0.06] hover:shadow-2xl hover:shadow-accent-500/10'
@@ -175,67 +175,51 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
                   <div className="absolute inset-0 bg-gradient-to-br from-accent-500/0 via-transparent to-corporate-500/0 group-hover:from-accent-500/10 group-hover:to-corporate-500/10 transition-all duration-500" />
 
                   {/* Content */}
-                  <div className="relative z-10 p-8">
+                  <div className="relative z-10 p-8 text-center">
                     {/* Bandera grande con efecto */}
-                    <div className="relative inline-block mb-6">
-                      <div className="text-8xl filter drop-shadow-2xl transform group-hover:scale-110 transition-transform duration-500">
+                    <div className="relative inline-block mb-4">
+                      <div className="text-[100px] leading-none filter drop-shadow-2xl transform group-hover:scale-110 transition-transform duration-500">
                         {COUNTRY_FLAGS[config.code]}
                       </div>
                       {/* Glow behind flag */}
-                      <div className="absolute inset-0 text-8xl blur-2xl opacity-40 group-hover:opacity-60 transition-opacity">
+                      <div className="absolute inset-0 text-[100px] leading-none blur-2xl opacity-30 group-hover:opacity-50 transition-opacity">
                         {COUNTRY_FLAGS[config.code]}
                       </div>
-                      {/* Decorative elements */}
-                      <div className="absolute -top-2 -right-2 w-4 h-4 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full opacity-0 group-hover:opacity-100 animate-ping transition-opacity" />
-                      <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-accent-400 rounded-full opacity-0 group-hover:opacity-100 animate-pulse transition-opacity delay-150" />
                     </div>
 
-                    {/* Country Name */}
-                    <h3 className="text-3xl font-black text-white mb-4 group-hover:text-accent-400 transition-colors">
+                    {/* Country Name - Grande y Profesional */}
+                    <h3 className="text-4xl font-black text-white mb-2 group-hover:text-accent-400 transition-colors tracking-tight">
                       {config.name}
                     </h3>
 
-                    {/* Info Pills */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5 group-hover:border-accent-500/20 transition-colors">
-                        <div className="p-2 bg-gradient-to-br from-accent-500/20 to-accent-600/10 rounded-lg">
-                          <Truck className="w-5 h-5 text-accent-400" />
+                    {/* Subtítulo elegante */}
+                    <p className="text-slate-400 text-sm mb-6 font-medium">
+                      {config.currency} | {config.phonePrefix}
+                    </p>
+
+                    {/* Transportadoras - Destacado */}
+                    <div className="bg-gradient-to-r from-accent-500/10 to-corporate-500/10 rounded-2xl p-4 border border-white/10 group-hover:border-accent-500/30 transition-colors">
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="p-2.5 bg-accent-500/20 rounded-xl">
+                          <Truck className="w-6 h-6 text-accent-400" />
                         </div>
                         <div className="text-left">
-                          <div className="text-white font-bold">{config.carriers.length}</div>
-                          <div className="text-xs text-slate-500">Transportadoras</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5 group-hover:border-emerald-500/20 transition-colors">
-                        <div className="p-2 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-lg">
-                          <MapPin className="w-5 h-5 text-emerald-400" />
-                        </div>
-                        <div className="text-left">
-                          <div className="text-white font-bold">{config.phonePrefix}</div>
-                          <div className="text-xs text-slate-500">Prefijo telefónico</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5 group-hover:border-purple-500/20 transition-colors">
-                        <div className="p-2 bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-lg">
-                          <Package className="w-5 h-5 text-purple-400" />
-                        </div>
-                        <div className="text-left">
-                          <div className="text-white font-bold">{config.currency}</div>
-                          <div className="text-xs text-slate-500">Moneda local</div>
+                          <div className="text-3xl font-black text-white">{config.carriers.length}</div>
+                          <div className="text-sm text-slate-400 font-medium">Transportadoras</div>
                         </div>
                       </div>
                     </div>
 
-                    {/* CTA Button */}
-                    <div className="mt-6 py-3 px-4 bg-gradient-to-r from-accent-500/20 to-accent-600/10 rounded-xl border border-accent-500/20 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-accent-400 font-bold">Seleccionar país</span>
-                      <ArrowRight className="w-5 h-5 text-accent-400" />
+                    {/* CTA Button - Siempre visible */}
+                    <div className="mt-6 py-3 px-6 bg-gradient-to-r from-accent-500 to-accent-600 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-accent-500/30 group-hover:shadow-accent-500/50 transition-all">
+                      <span className="text-white font-bold">Seleccionar</span>
+                      <ArrowRight className="w-5 h-5 text-white group-hover:translate-x-1 transition-transform" />
                     </div>
                   </div>
 
                   {/* Selected indicator */}
                   {selectedCountry === config.code && (
-                    <div className="absolute top-4 right-4 w-12 h-12 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl flex items-center justify-center shadow-lg shadow-accent-500/30">
+                    <div className="absolute top-4 right-4 w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30 animate-pulse">
                       <Check className="w-7 h-7 text-white" />
                     </div>
                   )}
