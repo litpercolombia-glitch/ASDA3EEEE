@@ -20,6 +20,8 @@ interface Usuario {
   nombre: string;
   rol: string;
   departamento: string;
+  avatar: string; // RPG/Fantasy avatar emoji
+  clase: string; // RPG class name
   xp: number;
   nivel: number;
   racha: number;
@@ -109,17 +111,17 @@ const NIVELES = [
   { nivel: 10, nombre: 'ÉLITE MUNDIAL', min: 20000, max: 999999, badge: '💎', color: 'from-yellow-400 to-yellow-500' },
 ];
 
-// 9 Empleados LITPER
+// 9 Empleados LITPER con avatares RPG/Fantasy
 const DEFAULT_USERS: Usuario[] = [
-  { id: '1', nombre: 'CATALINA', rol: 'Líder', departamento: 'Operaciones', xp: 3500, nivel: 6, racha: 12, medallas: ['primera_guia', 'centurion'], guiasTotales: 1250, mejorTiempo: 0.8, combosMaximos: 15 },
-  { id: '2', nombre: 'ANGIE', rol: 'Senior', departamento: 'Logística', xp: 2800, nivel: 5, racha: 8, medallas: ['primera_guia', 'centurion'], guiasTotales: 980, mejorTiempo: 1.0, combosMaximos: 12 },
-  { id: '3', nombre: 'CAROLINA', rol: 'Senior', departamento: 'Logística', xp: 2600, nivel: 5, racha: 6, medallas: ['primera_guia', 'centurion'], guiasTotales: 890, mejorTiempo: 1.1, combosMaximos: 10 },
-  { id: '4', nombre: 'ALEJANDRA', rol: 'Analista', departamento: 'Operaciones', xp: 1800, nivel: 5, racha: 4, medallas: ['primera_guia'], guiasTotales: 620, mejorTiempo: 1.3, combosMaximos: 8 },
-  { id: '5', nombre: 'EVAN', rol: 'Especialista', departamento: 'Logística', xp: 1500, nivel: 5, racha: 5, medallas: ['primera_guia'], guiasTotales: 520, mejorTiempo: 1.2, combosMaximos: 7 },
-  { id: '6', nombre: 'JIMMY', rol: 'Coordinador', departamento: 'Operaciones', xp: 2200, nivel: 5, racha: 7, medallas: ['primera_guia', 'centurion'], guiasTotales: 780, mejorTiempo: 1.0, combosMaximos: 11 },
-  { id: '7', nombre: 'FELIPE', rol: 'Analista', departamento: 'Logística', xp: 1200, nivel: 4, racha: 3, medallas: ['primera_guia'], guiasTotales: 420, mejorTiempo: 1.4, combosMaximos: 6 },
-  { id: '8', nombre: 'NORMA', rol: 'Senior', departamento: 'Operaciones', xp: 2400, nivel: 5, racha: 9, medallas: ['primera_guia', 'centurion'], guiasTotales: 850, mejorTiempo: 0.9, combosMaximos: 13 },
-  { id: '9', nombre: 'KAREN', rol: 'Especialista', departamento: 'Logística', xp: 1600, nivel: 5, racha: 5, medallas: ['primera_guia'], guiasTotales: 550, mejorTiempo: 1.2, combosMaximos: 8 },
+  { id: '1', nombre: 'CATALINA', rol: 'Líder', departamento: 'Operaciones', avatar: '⚔️', clase: 'Paladín', xp: 3500, nivel: 6, racha: 12, medallas: ['primera_guia', 'centurion'], guiasTotales: 1250, mejorTiempo: 0.8, combosMaximos: 15 },
+  { id: '2', nombre: 'ANGIE', rol: 'Senior', departamento: 'Logística', avatar: '🏹', clase: 'Arquera', xp: 2800, nivel: 5, racha: 8, medallas: ['primera_guia', 'centurion'], guiasTotales: 980, mejorTiempo: 1.0, combosMaximos: 12 },
+  { id: '3', nombre: 'CAROLINA', rol: 'Senior', departamento: 'Logística', avatar: '🔮', clase: 'Maga', xp: 2600, nivel: 5, racha: 6, medallas: ['primera_guia', 'centurion'], guiasTotales: 890, mejorTiempo: 1.1, combosMaximos: 10 },
+  { id: '4', nombre: 'ALEJANDRA', rol: 'Analista', departamento: 'Operaciones', avatar: '🛡️', clase: 'Escudera', xp: 1800, nivel: 5, racha: 4, medallas: ['primera_guia'], guiasTotales: 620, mejorTiempo: 1.3, combosMaximos: 8 },
+  { id: '5', nombre: 'EVAN', rol: 'Especialista', departamento: 'Logística', avatar: '⚡', clase: 'Mago Rayo', xp: 1500, nivel: 5, racha: 5, medallas: ['primera_guia'], guiasTotales: 520, mejorTiempo: 1.2, combosMaximos: 7 },
+  { id: '6', nombre: 'JIMMY', rol: 'Coordinador', departamento: 'Operaciones', avatar: '🗡️', clase: 'Espadachín', xp: 2200, nivel: 5, racha: 7, medallas: ['primera_guia', 'centurion'], guiasTotales: 780, mejorTiempo: 1.0, combosMaximos: 11 },
+  { id: '7', nombre: 'FELIPE', rol: 'Analista', departamento: 'Logística', avatar: '🧪', clase: 'Alquimista', xp: 1200, nivel: 4, racha: 3, medallas: ['primera_guia'], guiasTotales: 420, mejorTiempo: 1.4, combosMaximos: 6 },
+  { id: '8', nombre: 'NORMA', rol: 'Senior', departamento: 'Operaciones', avatar: '📿', clase: 'Sacerdotisa', xp: 2400, nivel: 5, racha: 9, medallas: ['primera_guia', 'centurion'], guiasTotales: 850, mejorTiempo: 0.9, combosMaximos: 13 },
+  { id: '9', nombre: 'KAREN', rol: 'Especialista', departamento: 'Logística', avatar: '🎭', clase: 'Pícara', xp: 1600, nivel: 5, racha: 5, medallas: ['primera_guia'], guiasTotales: 550, mejorTiempo: 1.2, combosMaximos: 8 },
 ];
 
 // 8 Logros
@@ -235,7 +237,7 @@ const MiniCounter: React.FC<{
   </div>
 );
 
-// Tarjeta de Usuario
+// Tarjeta de Usuario con Avatar RPG
 const UserCard: React.FC<{
   usuario: Usuario;
   onClick: () => void;
@@ -245,32 +247,36 @@ const UserCard: React.FC<{
   return (
     <button
       onClick={onClick}
-      className={`w-full p-4 rounded-2xl border-2 transition-all hover:scale-[1.02] ${
+      className={`w-full p-4 rounded-2xl border-2 transition-all hover:scale-[1.02] group ${
         selected
           ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30'
           : 'border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-800 hover:border-purple-300'
       }`}
     >
       <div className="flex items-center gap-4">
-        <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${nivelInfo.color} flex items-center justify-center text-2xl shadow-lg`}>
-          {nivelInfo.badge}
+        {/* Avatar RPG grande */}
+        <div className={`relative w-16 h-16 rounded-2xl bg-gradient-to-br ${nivelInfo.color} flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform`}>
+          <span className="text-3xl">{usuario.avatar || '🎮'}</span>
+          {/* Badge de nivel pequeño */}
+          <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white dark:bg-navy-900 rounded-full flex items-center justify-center text-xs shadow border-2 border-purple-500">
+            {nivelInfo.nivel}
+          </div>
         </div>
         <div className="flex-1 text-left">
-          <h3 className="font-bold text-slate-800 dark:text-white">{usuario.nombre}</h3>
-          <p className="text-xs text-slate-500">{usuario.rol} - {usuario.departamento}</p>
-          <div className="flex items-center gap-3 mt-1">
-            <span className="text-xs text-purple-600 font-medium">{nivelInfo.nombre}</span>
-            <span className="text-xs text-slate-400">|</span>
-            <span className="text-xs text-amber-600">{usuario.xp} XP</span>
+          <h3 className="font-bold text-slate-800 dark:text-white text-lg">{usuario.nombre}</h3>
+          <p className="text-sm text-purple-600 font-medium">{usuario.clase || 'Aventurero'}</p>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <span className="text-xs px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">{nivelInfo.nombre}</span>
+            <span className="text-xs text-amber-600 font-bold">{usuario.xp} XP</span>
             {usuario.racha > 0 && (
-              <>
-                <span className="text-xs text-slate-400">|</span>
-                <span className="text-xs text-orange-500">🔥 {usuario.racha}</span>
-              </>
+              <span className="text-xs text-orange-500">🔥 {usuario.racha}</span>
             )}
           </div>
         </div>
-        <ChevronRight className="w-5 h-5 text-slate-400" />
+        <div className="flex flex-col items-center gap-1">
+          <Package className="w-5 h-5 text-purple-500 group-hover:text-purple-600" />
+          <span className="text-xs text-slate-500">Importar</span>
+        </div>
       </div>
     </button>
   );
@@ -318,6 +324,10 @@ export const ProcesosLitperTab: React.FC = () => {
     logrosDesbloqueados: string[];
     usuariosActualizados: string[];
   } | null>(null);
+
+  // Estado para modal de importación de usuario
+  const [showUserImportModal, setShowUserImportModal] = useState(false);
+  const [selectedUserForImport, setSelectedUserForImport] = useState<Usuario | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -378,10 +388,18 @@ export const ProcesosLitperTab: React.FC = () => {
   }, [corriendo, tiempo, config]);
 
   // ==================== FUNCIONES ====================
+  // Al hacer clic en un usuario, mostrar modal de importación
   const seleccionarUsuario = (usuario: Usuario) => {
+    setSelectedUserForImport(usuario);
+    setShowUserImportModal(true);
+  };
+
+  // Entrar al modo ronda del usuario (solo desde admin)
+  const entrarModoUsuario = (usuario: Usuario) => {
     setUsuarioActual(usuario);
     setViewMode('usuario');
     resetRonda();
+    setShowUserImportModal(false);
   };
 
   const resetRonda = () => {
@@ -819,8 +837,8 @@ export const ProcesosLitperTab: React.FC = () => {
     event.target.value = ''; // Reset input
   };
 
-  // Importar datos desde Excel (formato LITPER TRACKER)
-  const importarExcel = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Importar datos desde Excel (formato LITPER TRACKER) - filtra por usuario si está seleccionado
+  const importarExcel = (event: React.ChangeEvent<HTMLInputElement>, filtrarPorUsuario?: Usuario) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -879,6 +897,11 @@ export const ProcesosLitperTab: React.FC = () => {
             const agendadas = parseInt(String(row[9])) || 0;
             const dificiles = parseInt(String(row[10])) || 0;
             const pendientes = parseInt(String(row[11])) || 0;
+
+            // Si hay filtro por usuario, solo importar rondas de ese usuario
+            if (filtrarPorUsuario && usuarioNombre !== filtrarPorUsuario.nombre.toUpperCase()) {
+              continue;
+            }
 
             // Buscar usuario
             const usuario = usuarios.find(u => u.nombre.toUpperCase() === usuarioNombre);
@@ -947,6 +970,10 @@ export const ProcesosLitperTab: React.FC = () => {
             return u;
           }));
         }
+
+        // Cerrar modal de usuario si está abierto
+        setShowUserImportModal(false);
+        setSelectedUserForImport(null);
 
         // Mostrar resumen
         setImportSummary({
@@ -1145,6 +1172,74 @@ export const ProcesosLitperTab: React.FC = () => {
                   className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold hover:from-purple-700 hover:to-indigo-700 transition-all"
                 >
                   ¡Genial! Continuar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Modal de Importación de Usuario */}
+          {showUserImportModal && selectedUserForImport && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
+                {/* Header con Avatar */}
+                <div className="text-center mb-6">
+                  <div className={`w-24 h-24 mx-auto rounded-3xl bg-gradient-to-br ${getNivelInfo(selectedUserForImport.xp).color} flex items-center justify-center shadow-2xl mb-4`}>
+                    <span className="text-5xl">{selectedUserForImport.avatar || '🎮'}</span>
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-800 dark:text-white">{selectedUserForImport.nombre}</h3>
+                  <p className="text-lg text-purple-600 font-medium">{selectedUserForImport.clase || 'Aventurero'}</p>
+                  <div className="flex items-center justify-center gap-3 mt-2">
+                    <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-sm font-medium">
+                      Nivel {getNivelInfo(selectedUserForImport.xp).nivel}
+                    </span>
+                    <span className="text-amber-600 font-bold">{selectedUserForImport.xp} XP</span>
+                    {selectedUserForImport.racha > 0 && (
+                      <span className="text-orange-500">🔥 {selectedUserForImport.racha}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Stats del usuario */}
+                <div className="grid grid-cols-3 gap-3 mb-6">
+                  <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 text-center">
+                    <p className="text-2xl font-bold text-emerald-600">{selectedUserForImport.guiasTotales}</p>
+                    <p className="text-xs text-emerald-600/70">Guías</p>
+                  </div>
+                  <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 text-center">
+                    <p className="text-2xl font-bold text-amber-600">{selectedUserForImport.combosMaximos}</p>
+                    <p className="text-xs text-amber-600/70">Combo Máx</p>
+                  </div>
+                  <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-3 text-center">
+                    <p className="text-2xl font-bold text-purple-600">{rondas.filter(r => r.usuarioId === selectedUserForImport.id).length}</p>
+                    <p className="text-xs text-purple-600/70">Rondas</p>
+                  </div>
+                </div>
+
+                {/* Botón de Importar Excel */}
+                <label className="flex items-center justify-center gap-3 w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl font-bold cursor-pointer transition-all shadow-lg shadow-amber-500/30 mb-4">
+                  <Package className="w-6 h-6" />
+                  <span>📊 Importar Excel de {selectedUserForImport.nombre}</span>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={(e) => importarExcel(e, selectedUserForImport)}
+                    className="hidden"
+                  />
+                </label>
+
+                <p className="text-xs text-slate-500 text-center mb-4">
+                  Solo se importarán las rondas de {selectedUserForImport.nombre} del archivo Excel
+                </p>
+
+                {/* Botón Cerrar */}
+                <button
+                  onClick={() => {
+                    setShowUserImportModal(false);
+                    setSelectedUserForImport(null);
+                  }}
+                  className="w-full py-3 bg-slate-200 dark:bg-navy-700 rounded-xl font-medium hover:bg-slate-300 dark:hover:bg-navy-600 transition-all"
+                >
+                  Cancelar
                 </button>
               </div>
             </div>
