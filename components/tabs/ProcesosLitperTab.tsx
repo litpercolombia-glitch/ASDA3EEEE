@@ -819,6 +819,153 @@ export const ProcesosLitperTab: React.FC = () => {
     event.target.value = ''; // Reset input
   };
 
+  // Importar datos desde Excel (formato LITPER TRACKER)
+  const importarExcel = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows: string[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        let rondasImportadas = 0;
+        let xpTotal = 0;
+        const usuariosActualizados: string[] = [];
+        const nuevasRondas: Ronda[] = [];
+
+        // Buscar la sección de GUIAS
+        let enSeccionGuias = false;
+        let headerIndex = -1;
+
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || row.length === 0) continue;
+
+          const firstCell = String(row[0] || '').trim();
+
+          // Detectar inicio de sección GUIAS
+          if (firstCell.includes('GUIAS') || firstCell === '=== GUIAS ===') {
+            enSeccionGuias = true;
+            continue;
+          }
+
+          // Detectar fin de sección GUIAS
+          if (firstCell.includes('NOVEDADES') || firstCell.includes('RESUMEN')) {
+            enSeccionGuias = false;
+            continue;
+          }
+
+          // Detectar header
+          if (enSeccionGuias && firstCell === 'Fecha') {
+            headerIndex = i;
+            continue;
+          }
+
+          // Procesar filas de datos de GUIAS
+          if (enSeccionGuias && headerIndex >= 0 && row[0] && String(row[0]).match(/^\d{4}-\d{2}-\d{2}$/)) {
+            const fecha = String(row[0]);
+            const usuarioNombre = String(row[1] || '').toUpperCase();
+            const numeroRonda = parseInt(String(row[2])) || 1;
+            const horaInicio = String(row[3] || '');
+            const horaFin = String(row[4] || '');
+            const tiempoMin = parseInt(String(row[5])) || 0;
+            const iniciales = parseInt(String(row[6])) || 0;
+            const realizadas = parseInt(String(row[7])) || 0;
+            const canceladas = parseInt(String(row[8])) || 0;
+            const agendadas = parseInt(String(row[9])) || 0;
+            const dificiles = parseInt(String(row[10])) || 0;
+            const pendientes = parseInt(String(row[11])) || 0;
+
+            // Buscar usuario
+            const usuario = usuarios.find(u => u.nombre.toUpperCase() === usuarioNombre);
+            if (!usuario) continue;
+
+            // Crear ID único basado en fecha, usuario y ronda
+            const rondaId = `${fecha}_${usuarioNombre}_${numeroRonda}_${Date.now()}`;
+
+            // Verificar si ya existe
+            const existe = rondas.some(r =>
+              r.fecha === fecha &&
+              r.usuarioNombre === usuarioNombre &&
+              r.numero === numeroRonda
+            );
+            if (existe) continue;
+
+            // Calcular XP
+            const comboMax = Math.min(realizadas, 5); // Estimado
+            const xpGanado = calcXP(realizadas, canceladas, comboMax, false);
+
+            const nuevaRonda: Ronda = {
+              id: rondaId,
+              numero: numeroRonda,
+              usuarioId: usuario.id,
+              usuarioNombre: usuario.nombre,
+              fecha,
+              hora: horaFin || horaInicio || new Date().toLocaleTimeString(),
+              tiempoTotal: tiempoMin * 60,
+              realizado: realizadas,
+              cancelado: canceladas,
+              agendado: agendadas,
+              dificiles,
+              pendientes,
+              xpGanado,
+              comboMaximo: comboMax,
+              tipo: 'guias',
+            };
+
+            nuevasRondas.push(nuevaRonda);
+            xpTotal += xpGanado;
+            rondasImportadas++;
+
+            // Actualizar usuario
+            if (!usuariosActualizados.includes(usuarioNombre)) {
+              usuariosActualizados.push(usuarioNombre);
+            }
+          }
+        }
+
+        // Guardar nuevas rondas
+        if (nuevasRondas.length > 0) {
+          setRondas(prev => [...prev, ...nuevasRondas]);
+
+          // Actualizar XP de usuarios
+          setUsuarios(prev => prev.map(u => {
+            const rondasUsuario = nuevasRondas.filter(r => r.usuarioId === u.id);
+            if (rondasUsuario.length > 0) {
+              const xpUsuario = rondasUsuario.reduce((sum, r) => sum + r.xpGanado, 0);
+              const guiasUsuario = rondasUsuario.reduce((sum, r) => sum + r.realizado, 0);
+              return {
+                ...u,
+                xp: u.xp + xpUsuario,
+                guiasTotales: u.guiasTotales + guiasUsuario,
+              };
+            }
+            return u;
+          }));
+        }
+
+        // Mostrar resumen
+        setImportSummary({
+          show: true,
+          rondasImportadas,
+          xpTotal,
+          logrosDesbloqueados: [],
+          usuariosActualizados: usuariosActualizados.map(u => `${u}: datos importados`),
+        });
+
+      } catch (err) {
+        console.error('Error importando Excel:', err);
+        alert('❌ Error al importar el archivo Excel. Verifica el formato.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    event.target.value = '';
+  };
+
   // Función para entrar al modo admin
   const handleAdminAccess = () => {
     if (adminPassword === ADMIN_PASSWORD) {
@@ -1615,6 +1762,18 @@ export const ProcesosLitperTab: React.FC = () => {
                       type="file"
                       accept=".json"
                       onChange={importarJSON}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                <div className="flex flex-wrap gap-3 mt-3">
+                  <label className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg cursor-pointer transition-all">
+                    <Package className="w-4 h-4" />
+                    📊 Importar Excel (LITPER TRACKER)
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls"
+                      onChange={importarExcel}
                       className="hidden"
                     />
                   </label>
