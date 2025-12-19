@@ -1,10 +1,9 @@
 // components/floating/SmartAssistant.tsx
-// Asistente Flotante Inteligente - Portal al Cerebro Central
-// Con modo expandido/fijado y redimensionable
+// Asistente Flotante Inteligente - Centro de Control Unificado
+// Con Chatea AI, Litper AI, Operaciones, Skills, Alertas y Configuración
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Bot,
   X,
   MessageCircle,
   Zap,
@@ -22,28 +21,37 @@ import {
   PanelRightOpen,
   PanelRightClose,
   RefreshCw,
+  Truck,
 } from 'lucide-react';
-import { UniversalChat } from '../chat/UniversalChat';
+import { ChateaAITab } from '../chat/ChateaAITab';
+import { LitperAITab } from '../chat/LitperAITab';
+import { OperationsTab } from '../chat/OperationsTab';
 import { SkillsHub } from '../skills/SkillsHub';
 import { IntegrationsPanel } from '../admin/IntegrationsPanel';
 import { skillsEngine } from '../../services/skills/SkillsEngine';
 import { integrationManager } from '../../services/integrations/IntegrationManager';
 import { Shipment } from '../../types';
 
-type TabType = 'chat' | 'skills' | 'alerts' | 'config';
+type TabType = 'chatea' | 'litper' | 'operations' | 'skills' | 'alerts' | 'config';
 type ViewMode = 'floating' | 'docked' | 'fullscreen';
 
 interface SmartAssistantProps {
   shipments?: Shipment[];
+  onNavigateToTab?: (tab: string) => void;
+  onExportData?: () => void;
 }
 
 const MIN_WIDTH = 400;
 const MAX_WIDTH = 900;
 const DEFAULT_DOCKED_WIDTH = 550;
 
-export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }) => {
+export const SmartAssistant: React.FC<SmartAssistantProps> = ({
+  shipments = [],
+  onNavigateToTab,
+  onExportData,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>('chat');
+  const [activeTab, setActiveTab] = useState<TabType>('litper');
   const [alertCount, setAlertCount] = useState(0);
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('floating');
@@ -100,17 +108,19 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
   }, [isResizing]);
 
   const quickActions = [
-    { icon: <TrendingUp className="w-4 h-4" />, label: 'Ventas hoy', color: 'emerald', action: () => { setActiveTab('chat'); setIsOpen(true); } },
-    { icon: <Package className="w-4 h-4" />, label: 'Pendientes', color: 'blue', action: () => { setActiveTab('chat'); setIsOpen(true); } },
+    { icon: <Brain className="w-4 h-4" />, label: 'Litper AI', color: 'purple', action: () => { setActiveTab('litper'); setIsOpen(true); } },
+    { icon: <MessageCircle className="w-4 h-4" />, label: 'Chatea', color: 'emerald', action: () => { setActiveTab('chatea'); setIsOpen(true); } },
+    { icon: <Package className="w-4 h-4" />, label: 'Guías', color: 'blue', action: () => { setActiveTab('operations'); setIsOpen(true); } },
     { icon: <AlertTriangle className="w-4 h-4" />, label: 'Alertas', color: 'amber', badge: alertCount, action: () => { setActiveTab('alerts'); setIsOpen(true); } },
-    { icon: <Zap className="w-4 h-4" />, label: 'Skills', color: 'purple', badge: skillsEngine.getActiveSkills().length, action: () => { setActiveTab('skills'); setIsOpen(true); } },
   ];
 
   const tabs = [
-    { id: 'chat' as TabType, icon: <MessageCircle className="w-4 h-4" />, label: 'Chat' },
-    { id: 'skills' as TabType, icon: <Zap className="w-4 h-4" />, label: 'Skills' },
-    { id: 'alerts' as TabType, icon: <Bell className="w-4 h-4" />, label: 'Alertas', badge: alertCount },
-    { id: 'config' as TabType, icon: <Settings className="w-4 h-4" />, label: 'Config' },
+    { id: 'litper' as TabType, icon: <Brain className="w-4 h-4" />, label: 'Litper AI', color: 'purple' },
+    { id: 'chatea' as TabType, icon: <MessageCircle className="w-4 h-4" />, label: 'Chatea', color: 'emerald' },
+    { id: 'operations' as TabType, icon: <Package className="w-4 h-4" />, label: 'Guías', color: 'blue' },
+    { id: 'skills' as TabType, icon: <Zap className="w-4 h-4" />, label: 'Skills', color: 'yellow' },
+    { id: 'alerts' as TabType, icon: <Bell className="w-4 h-4" />, label: 'Alertas', badge: alertCount, color: 'red' },
+    { id: 'config' as TabType, icon: <Settings className="w-4 h-4" />, label: 'Config', color: 'slate' },
   ];
 
   const handleClose = () => {
@@ -150,7 +160,7 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
           </div>
           <div>
             <h3 className="font-bold text-white">Litper Pro AI</h3>
-            <p className="text-xs text-white/70">Centro de Control Inteligente</p>
+            <p className="text-xs text-white/70">Centro de Control Unificado</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -189,19 +199,19 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 dark:border-navy-700 shrink-0 bg-white dark:bg-navy-900">
+      <div className="flex border-b border-slate-200 dark:border-navy-700 shrink-0 bg-white dark:bg-navy-900 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors whitespace-nowrap ${
               activeTab === tab.id
                 ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50 dark:bg-purple-900/20'
                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:hover:bg-navy-800'
             }`}
           >
             {tab.icon}
-            <span className="hidden sm:inline">{tab.label}</span>
+            <span className={viewMode === 'floating' ? 'hidden sm:inline' : ''}>{tab.label}</span>
             {tab.badge !== undefined && tab.badge > 0 && (
               <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full">
                 {tab.badge}
@@ -213,9 +223,26 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
 
       {/* Content */}
       <div className="flex-1 overflow-hidden bg-white dark:bg-navy-900">
-        {activeTab === 'chat' && (
+        {activeTab === 'litper' && (
           <div className="h-full">
-            <UniversalChat compact={viewMode === 'floating'} onClose={handleClose} />
+            <LitperAITab shipments={shipments} compact={viewMode === 'floating'} />
+          </div>
+        )}
+
+        {activeTab === 'chatea' && (
+          <div className="h-full">
+            <ChateaAITab compact={viewMode === 'floating'} />
+          </div>
+        )}
+
+        {activeTab === 'operations' && (
+          <div className="h-full">
+            <OperationsTab
+              shipments={shipments}
+              onNavigateToTab={onNavigateToTab}
+              onExportData={onExportData}
+              compact={viewMode === 'floating'}
+            />
           </div>
         )}
 
@@ -375,7 +402,7 @@ const AlertsPanel: React.FC<{ shipments: Shipment[] }> = ({ shipments }) => {
     {
       type: 'critical',
       icon: <AlertTriangle className="w-5 h-5 text-red-500" />,
-      title: 'Guias con novedad',
+      title: 'Guías con novedad',
       count: issueShipments.length,
       color: 'red',
       items: issueShipments.slice(0, 5),
@@ -390,8 +417,8 @@ const AlertsPanel: React.FC<{ shipments: Shipment[] }> = ({ shipments }) => {
     },
     {
       type: 'info',
-      icon: <TrendingUp className="w-5 h-5 text-blue-500" />,
-      title: 'En transito',
+      icon: <Truck className="w-5 h-5 text-blue-500" />,
+      title: 'En tránsito',
       count: transitShipments.length,
       color: 'blue',
       items: transitShipments.slice(0, 5),
@@ -431,7 +458,7 @@ const AlertsPanel: React.FC<{ shipments: Shipment[] }> = ({ shipments }) => {
                   alert.color === 'red' ? 'text-red-600' :
                   alert.color === 'amber' ? 'text-amber-600' : 'text-blue-600'
                 }`}>
-                  {alert.count} guias
+                  {alert.count} guías
                 </p>
               </div>
             </div>
@@ -440,7 +467,7 @@ const AlertsPanel: React.FC<{ shipments: Shipment[] }> = ({ shipments }) => {
             </button>
           </div>
 
-          {/* Lista de guias */}
+          {/* Lista de guías */}
           {alert.items.length > 0 && (
             <div className="mt-3 space-y-1">
               {alert.items.map((item, idx) => (
@@ -465,7 +492,7 @@ const AlertsPanel: React.FC<{ shipments: Shipment[] }> = ({ shipments }) => {
         <div className="text-center py-8 text-slate-500">
           <Bell className="w-12 h-12 mx-auto mb-3 text-slate-300" />
           <p>No hay alertas activas</p>
-          <p className="text-sm">Todo esta bajo control!</p>
+          <p className="text-sm">Todo está bajo control!</p>
         </div>
       )}
     </div>

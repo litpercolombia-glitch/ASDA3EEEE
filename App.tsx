@@ -35,7 +35,7 @@ import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
 import { OperacionesUnificadoTab } from './components/tabs/OperacionesUnificadoTab';
 import { InteligenciaIAUnificadoTab } from './components/tabs/InteligenciaIAUnificadoTab';
 import { AnalisisUnificadoTab } from './components/tabs/AnalisisUnificadoTab';
-import { ProBubbleV2, ProBubbleV3 } from './components/ProAssistant';
+// ProBubbleV3 eliminado - unificado en SmartAssistant
 import { SmartAssistant } from './components/floating/SmartAssistant';
 import { AuthWrapper, UserProfilePanel } from './components/auth';
 import { EnhancedGuideTable } from './components/tables';
@@ -1038,15 +1038,12 @@ const App: React.FC = () => {
         </div>
       </footer>
 
-      {/* Floating AI Assistant PRO Button - V3 Mejorado */}
-      <ProBubbleV3
+      {/* Smart Assistant - Centro de Control Unificado con IA */}
+      <SmartAssistant
         shipments={shipments}
         onNavigateToTab={(tab) => setCurrentTab(tab as MainTabNew)}
         onExportData={handleDownloadExcel}
       />
-
-      {/* Smart Assistant - Centro de Control con IA y Skills */}
-      <SmartAssistant shipments={shipments} />
     </div>
   );
 };
