@@ -1,9 +1,11 @@
 import React from 'react';
-import { Minus, X, Pin, Minimize2, Maximize2 } from 'lucide-react';
-import { useTrackerStore } from '../stores/trackerStore';
+import { Minus, X, Pin, Minimize2, Maximize2, Settings } from 'lucide-react';
+import { useTrackerStore, ModoVentana } from '../stores/trackerStore';
+
+const MODOS_CICLO: ModoVentana[] = ['normal', 'compacto', 'mini', 'micro'];
 
 const TitleBar: React.FC = () => {
-  const { modo, setModo, alwaysOnTop, toggleAlwaysOnTop } = useTrackerStore();
+  const { modo, setModo, alwaysOnTop, toggleAlwaysOnTop, toggleConfig } = useTrackerStore();
 
   const handleMinimize = () => {
     window.electronAPI?.minimize();
@@ -14,9 +16,9 @@ const TitleBar: React.FC = () => {
   };
 
   const cycleMode = () => {
-    if (modo === 'normal') setModo('mini');
-    else if (modo === 'mini') setModo('super-mini');
-    else setModo('normal');
+    const idx = MODOS_CICLO.indexOf(modo);
+    const nextIdx = (idx + 1) % MODOS_CICLO.length;
+    setModo(MODOS_CICLO[nextIdx]);
   };
 
   return (
@@ -27,13 +29,22 @@ const TitleBar: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-1 no-drag">
+        {/* Configuración */}
+        <button
+          onClick={toggleConfig}
+          className="p-1.5 hover:bg-dark-700 rounded transition-colors text-slate-400 hover:text-purple-400"
+          title="Configuración"
+        >
+          <Settings className="w-3.5 h-3.5" />
+        </button>
+
         {/* Toggle modo */}
         <button
           onClick={cycleMode}
           className="p-1.5 hover:bg-dark-700 rounded transition-colors text-slate-400 hover:text-white"
-          title="Cambiar tamaño"
+          title={`Tamaño: ${modo}`}
         >
-          {modo === 'normal' ? (
+          {modo === 'normal' || modo === 'compacto' ? (
             <Minimize2 className="w-3.5 h-3.5" />
           ) : (
             <Maximize2 className="w-3.5 h-3.5" />
