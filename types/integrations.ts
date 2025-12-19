@@ -29,7 +29,7 @@ export interface AIProviderStatus {
 
 // ==================== CONEXIONES DE DATOS ====================
 
-export type DataConnectionType = 'chatea' | 'dropi' | 'carriers' | 'supabase';
+export type DataConnectionType = 'chatea' | 'dropi' | 'carriers' | 'supabase' | 'tracker';
 
 export interface DataConnectionConfig {
   id: DataConnectionType;
@@ -370,6 +370,17 @@ export const DEFAULT_DATA_CONNECTIONS: DataConnectionConfig[] = [
     syncInterval: 1,
     icon: '🚚',
     color: 'blue',
+  },
+  {
+    id: 'tracker',
+    name: 'Litper Tracker Desktop',
+    description: 'Sincronización con app de escritorio',
+    baseUrl: 'https://litper-tracker-api.onrender.com/api/tracker',
+    enabled: false,
+    isConnected: false,
+    syncInterval: 1,
+    icon: '🖥️',
+    color: 'purple',
   },
 ];
 
