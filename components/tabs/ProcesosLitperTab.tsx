@@ -304,6 +304,21 @@ export const ProcesosLitperTab: React.FC = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [syncing, setSyncing] = useState(false);
 
+  // Estados de autenticación admin
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminError, setAdminError] = useState('');
+  const ADMIN_PASSWORD = 'LITPERTUPAPA';
+
+  // Estado para modal de resumen de importación
+  const [importSummary, setImportSummary] = useState<{
+    show: boolean;
+    rondasImportadas: number;
+    xpTotal: number;
+    logrosDesbloqueados: string[];
+    usuariosActualizados: string[];
+  } | null>(null);
+
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // ==================== EFECTOS ====================
@@ -657,14 +672,75 @@ export const ProcesosLitperTab: React.FC = () => {
 
   // Exportar datos como JSON (para sincronizar con app escritorio)
   const exportarJSON = () => {
+    // Calcular estadísticas
+    const totalGuias = rondas.reduce((sum, r) => sum + r.realizado, 0);
+    const totalCanceladas = rondas.reduce((sum, r) => sum + r.cancelado, 0);
+    const totalXP = rondas.reduce((sum, r) => sum + r.xpGanado, 0);
+    const mejorCombo = Math.max(...rondas.map(r => r.comboMaximo), 0);
+    const diasUnicos = [...new Set(rondas.map(r => r.fecha))].length;
+
+    // Agrupar rondas por fecha para estadísticas diarias
+    const rondasPorFecha: Record<string, Ronda[]> = {};
+    rondas.forEach(r => {
+      if (!rondasPorFecha[r.fecha]) rondasPorFecha[r.fecha] = [];
+      rondasPorFecha[r.fecha].push(r);
+    });
+
+    const estadisticasDiarias = Object.entries(rondasPorFecha).map(([fecha, rondasDia]) => ({
+      fecha,
+      rondas: rondasDia.length,
+      guiasRealizadas: rondasDia.reduce((s, r) => s + r.realizado, 0),
+      canceladas: rondasDia.reduce((s, r) => s + r.cancelado, 0),
+      xpGanado: rondasDia.reduce((s, r) => s + r.xpGanado, 0),
+      mejorCombo: Math.max(...rondasDia.map(r => r.comboMaximo)),
+    })).sort((a, b) => b.fecha.localeCompare(a.fecha));
+
     const data = {
+      // Metadata
+      version: '3.0',
+      exportedAt: new Date().toISOString(),
+      source: typeof window !== 'undefined' && (window as any).electronAPI ? 'electron' : 'web',
+
+      // Datos principales
       rondas,
       usuarios,
       logros,
-      config,
-      exportedAt: new Date().toISOString(),
-      version: '3.0',
+      config: {
+        ...config,
+        apiUrl: undefined, // No exportar URL de API
+      },
+
+      // Estadísticas globales (para gráficas)
+      estadisticas: {
+        totalRondas: rondas.length,
+        totalGuias,
+        totalCanceladas,
+        totalXP,
+        mejorCombo,
+        diasActivos: diasUnicos,
+        promedioGuiasPorDia: diasUnicos > 0 ? Math.round(totalGuias / diasUnicos) : 0,
+        promedioXPPorDia: diasUnicos > 0 ? Math.round(totalXP / diasUnicos) : 0,
+        eficienciaGlobal: totalGuias + totalCanceladas > 0
+          ? Math.round((totalGuias / (totalGuias + totalCanceladas)) * 100)
+          : 100,
+      },
+
+      // Estadísticas por día (para gráficas de línea)
+      estadisticasDiarias,
+
+      // Ranking de usuarios
+      ranking: [...usuarios]
+        .sort((a, b) => b.xp - a.xp)
+        .map((u, i) => ({
+          posicion: i + 1,
+          nombre: u.nombre,
+          xp: u.xp,
+          nivel: getNivelInfo(u.xp).nivel,
+          guiasTotales: u.guiasTotales,
+          racha: u.racha,
+        })),
     };
+
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -684,12 +760,19 @@ export const ProcesosLitperTab: React.FC = () => {
       try {
         const data = JSON.parse(e.target?.result as string);
 
+        let rondasImportadas = 0;
+        let xpTotal = 0;
+        const logrosDesbloqueados: string[] = [];
+        const usuariosActualizados: string[] = [];
+
         // Importar rondas (combinar con existentes)
         if (data.rondas && Array.isArray(data.rondas)) {
           setRondas(prev => {
             const existingIds = new Set(prev.map(r => r.id));
             const nuevas = data.rondas.filter((r: Ronda) => !existingIds.has(r.id));
-            console.log(`[Procesos] ✅ ${nuevas.length} rondas importadas`);
+            rondasImportadas = nuevas.length;
+            xpTotal = nuevas.reduce((sum: number, r: Ronda) => sum + (r.xpGanado || 0), 0);
+            console.log(`[Procesos] ✅ ${nuevas.length} rondas importadas, ${xpTotal} XP`);
             return [...prev, ...nuevas];
           });
         }
@@ -699,6 +782,7 @@ export const ProcesosLitperTab: React.FC = () => {
           setUsuarios(prev => prev.map(u => {
             const imported = data.usuarios.find((iu: Usuario) => iu.nombre === u.nombre);
             if (imported && imported.xp > u.xp) {
+              usuariosActualizados.push(`${u.nombre}: +${imported.xp - u.xp} XP`);
               return { ...u, ...imported };
             }
             return u;
@@ -710,20 +794,41 @@ export const ProcesosLitperTab: React.FC = () => {
           setLogros(prev => prev.map(l => {
             const imported = data.logros.find((il: Logro) => il.id === l.id);
             if (imported?.desbloqueado && !l.desbloqueado) {
+              logrosDesbloqueados.push(l.nombre);
               return { ...l, desbloqueado: true, fechaDesbloqueo: imported.fechaDesbloqueo };
             }
             return l;
           }));
         }
 
-        alert('✅ Datos importados correctamente');
+        // Mostrar resumen visual
+        setImportSummary({
+          show: true,
+          rondasImportadas,
+          xpTotal,
+          logrosDesbloqueados,
+          usuariosActualizados,
+        });
+
       } catch (err) {
         console.error('Error importando:', err);
-        alert('❌ Error al importar el archivo');
+        alert('❌ Error al importar el archivo. Verifica que sea un JSON válido.');
       }
     };
     reader.readAsText(file);
     event.target.value = ''; // Reset input
+  };
+
+  // Función para entrar al modo admin
+  const handleAdminAccess = () => {
+    if (adminPassword === ADMIN_PASSWORD) {
+      setViewMode('admin');
+      setShowAdminLogin(false);
+      setAdminPassword('');
+      setAdminError('');
+    } else {
+      setAdminError('Contraseña incorrecta');
+    }
   };
 
   // ==================== CÁLCULOS ====================
@@ -771,13 +876,132 @@ export const ProcesosLitperTab: React.FC = () => {
           {/* Botón Admin */}
           <div className="text-center">
             <button
-              onClick={() => setViewMode('admin')}
+              onClick={() => setShowAdminLogin(true)}
               className="inline-flex items-center gap-2 px-6 py-3 bg-slate-800 dark:bg-slate-700 text-white rounded-xl hover:bg-slate-700 dark:hover:bg-slate-600 transition-all"
             >
               <Shield className="w-5 h-5" />
               Panel Administrativo
             </button>
           </div>
+
+          {/* Modal Login Admin */}
+          {showAdminLogin && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Shield className="w-8 h-8 text-purple-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-white">Panel Admin</h3>
+                  <p className="text-sm text-slate-500 mt-1">Ingresa la contraseña de administrador</p>
+                </div>
+                <div className="space-y-4">
+                  <input
+                    type="password"
+                    value={adminPassword}
+                    onChange={(e) => {
+                      setAdminPassword(e.target.value);
+                      setAdminError('');
+                    }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAdminAccess()}
+                    placeholder="Contraseña..."
+                    className="w-full px-4 py-3 border border-slate-300 dark:border-navy-600 rounded-xl bg-white dark:bg-navy-900 text-center text-lg tracking-widest"
+                    autoFocus
+                  />
+                  {adminError && (
+                    <p className="text-red-500 text-sm text-center">{adminError}</p>
+                  )}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setShowAdminLogin(false);
+                        setAdminPassword('');
+                        setAdminError('');
+                      }}
+                      className="flex-1 px-4 py-3 bg-slate-200 dark:bg-navy-700 rounded-xl hover:bg-slate-300 dark:hover:bg-navy-600"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleAdminAccess}
+                      className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700"
+                    >
+                      Entrar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal Resumen Importación */}
+          {importSummary?.show && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
+                <div className="text-center mb-6">
+                  <div className="w-20 h-20 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+                    <Trophy className="w-10 h-10 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-800 dark:text-white">¡Importación Exitosa!</h3>
+                </div>
+
+                <div className="space-y-4 mb-6">
+                  {/* Rondas importadas */}
+                  <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 text-center">
+                    <p className="text-4xl font-bold text-purple-600">{importSummary.rondasImportadas}</p>
+                    <p className="text-sm text-purple-600/70">Rondas importadas</p>
+                  </div>
+
+                  {/* XP ganado */}
+                  {importSummary.xpTotal > 0 && (
+                    <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 text-center">
+                      <p className="text-4xl font-bold text-amber-600">+{importSummary.xpTotal}</p>
+                      <p className="text-sm text-amber-600/70">XP Total ganado</p>
+                    </div>
+                  )}
+
+                  {/* Logros desbloqueados */}
+                  {importSummary.logrosDesbloqueados.length > 0 && (
+                    <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4">
+                      <p className="text-sm font-medium text-emerald-700 mb-2 flex items-center gap-2">
+                        <Award className="w-4 h-4" />
+                        Logros Desbloqueados:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {importSummary.logrosDesbloqueados.map((logro, i) => (
+                          <span key={i} className="px-3 py-1 bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-full text-sm font-medium">
+                            🏆 {logro}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Usuarios actualizados */}
+                  {importSummary.usuariosActualizados.length > 0 && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4">
+                      <p className="text-sm font-medium text-blue-700 mb-2 flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        Usuarios actualizados:
+                      </p>
+                      <div className="space-y-1">
+                        {importSummary.usuariosActualizados.map((user, i) => (
+                          <p key={i} className="text-sm text-blue-600">{user}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => setImportSummary(null)}
+                  className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold hover:from-purple-700 hover:to-indigo-700 transition-all"
+                >
+                  ¡Genial! Continuar
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Estado de conexión y sincronización */}
           <div className="mt-6 flex justify-center items-center gap-4">
