@@ -36,6 +36,7 @@ import { OperacionesUnificadoTab } from './components/tabs/OperacionesUnificadoT
 import { InteligenciaIAUnificadoTab } from './components/tabs/InteligenciaIAUnificadoTab';
 import { AnalisisUnificadoTab } from './components/tabs/AnalisisUnificadoTab';
 import { ProBubbleV2, ProBubbleV3 } from './components/ProAssistant';
+import { SmartAssistant } from './components/floating/SmartAssistant';
 import { AuthWrapper, UserProfilePanel } from './components/auth';
 import { EnhancedGuideTable } from './components/tables';
 import { AdminPanelPro } from './components/Admin/AdminPanelPro';
@@ -1043,6 +1044,9 @@ const App: React.FC = () => {
         onNavigateToTab={(tab) => setCurrentTab(tab as MainTabNew)}
         onExportData={handleDownloadExcel}
       />
+
+      {/* Smart Assistant - Centro de Control con IA y Skills */}
+      <SmartAssistant shipments={shipments} />
     </div>
   );
 };
