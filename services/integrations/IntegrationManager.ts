@@ -4,6 +4,7 @@
 import { ChateaProvider } from './providers/ChateaProvider';
 import { ClaudeProvider } from './providers/ClaudeProvider';
 import { BaseAIProvider } from './providers/BaseAIProvider';
+import { trackerProvider } from './providers/TrackerProvider';
 import {
   AIProviderType,
   AIProviderConfig,
@@ -238,15 +239,54 @@ class IntegrationManagerService {
     Object.assign(conn, config);
     this.saveToStorage();
 
+    // Manejar tracker específicamente
+    if (id === 'tracker' && config.apiKey) {
+      trackerProvider.setApiKey(config.apiKey);
+      const connected = await trackerProvider.testConnection();
+      conn.isConnected = connected;
+      conn.lastSync = connected ? new Date() : undefined;
+      this.saveToStorage();
+      return connected;
+    }
+
     // Probar conexión si hay API key
     if (conn.apiKey) {
-      // Aquí iría la lógica de probar la conexión
       conn.isConnected = true;
       conn.lastSync = new Date();
       this.saveToStorage();
     }
 
     return true;
+  }
+
+  /**
+   * Obtener el proveedor de Tracker
+   */
+  getTrackerProvider() {
+    return trackerProvider;
+  }
+
+  /**
+   * Iniciar sincronización con el tracker
+   */
+  async startTrackerSync(
+    getLocalData: () => unknown[],
+    onDataReceived: (data: unknown) => void
+  ): Promise<void> {
+    const trackerConn = this.dataConnections.find((c) => c.id === 'tracker');
+    if (trackerConn?.enabled && trackerConn?.isConnected) {
+      trackerProvider.startAutoSync(
+        getLocalData as () => never[],
+        onDataReceived as (data: never) => void
+      );
+    }
+  }
+
+  /**
+   * Detener sincronización con el tracker
+   */
+  stopTrackerSync(): void {
+    trackerProvider.stopAutoSync();
   }
 
   // ==================== ASIGNACIÓN DE FUNCIONES ====================

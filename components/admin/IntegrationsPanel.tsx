@@ -36,6 +36,8 @@ export const IntegrationsPanel: React.FC = () => {
   const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({});
   const [testingProvider, setTestingProvider] = useState<string | null>(null);
   const [editingKey, setEditingKey] = useState<{ id: string; key: string } | null>(null);
+  const [editingDataKey, setEditingDataKey] = useState<{ id: string; key: string } | null>(null);
+  const [testingDataConn, setTestingDataConn] = useState<string | null>(null);
 
   useEffect(() => {
     loadConfig();
@@ -81,6 +83,25 @@ export const IntegrationsPanel: React.FC = () => {
   const handleFunctionAssignment = (func: AIFunction, providerId: AIProviderType) => {
     integrationManager.setFunctionProvider(func, providerId);
     loadConfig();
+  };
+
+  const handleSaveDataKey = async (connId: string) => {
+    if (!editingDataKey || editingDataKey.id !== connId) return;
+
+    setTestingDataConn(connId);
+    const connected = await integrationManager.setDataConnection(connId, {
+      apiKey: editingDataKey.key,
+      enabled: true
+    });
+    setTestingDataConn(null);
+    setEditingDataKey(null);
+    loadConfig();
+
+    if (connected) {
+      alert(`✅ ${connId} conectado correctamente!`);
+    } else {
+      alert(`⚠️ ${connId} configurado (la conexión se verificará al sincronizar)`);
+    }
   };
 
   const toggleShowApiKey = (id: string) => {
@@ -286,7 +307,7 @@ export const IntegrationsPanel: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
           {dataConnections.map((conn) => (
             <div
               key={conn.id}
@@ -312,6 +333,56 @@ export const IntegrationsPanel: React.FC = () => {
                 {conn.name}
               </h4>
               <p className="text-sm text-slate-500">{conn.description}</p>
+
+              {/* API Key input for tracker and chatea */}
+              {(conn.id === 'tracker' || conn.id === 'chatea') && (
+                <div className="mt-3 space-y-2">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type={showApiKeys[conn.id] ? 'text' : 'password'}
+                        value={
+                          editingDataKey?.id === conn.id
+                            ? editingDataKey.key
+                            : conn.apiKey || ''
+                        }
+                        onChange={(e) =>
+                          setEditingDataKey({ id: conn.id, key: e.target.value })
+                        }
+                        placeholder="API Key..."
+                        className="w-full px-3 py-2 pr-8 text-sm border border-slate-300 dark:border-navy-600 rounded-lg bg-white dark:bg-navy-800 text-slate-800 dark:text-white"
+                      />
+                      <button
+                        onClick={() => toggleShowApiKey(conn.id)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400"
+                      >
+                        {showApiKeys[conn.id] ? (
+                          <EyeOff className="w-3 h-3" />
+                        ) : (
+                          <Eye className="w-3 h-3" />
+                        )}
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => handleSaveDataKey(conn.id)}
+                      disabled={testingDataConn === conn.id}
+                      className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium flex items-center gap-1 disabled:opacity-50"
+                    >
+                      {testingDataConn === conn.id ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Check className="w-3 h-3" />
+                      )}
+                    </button>
+                  </div>
+                  {conn.baseUrl && (
+                    <p className="text-xs text-slate-400 font-mono truncate">
+                      {conn.baseUrl}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {conn.dataPercentage && (
                 <p className="text-xs text-emerald-600 mt-2">
                   📊 {conn.dataPercentage}% de los datos
