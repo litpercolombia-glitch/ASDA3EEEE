@@ -21,6 +21,7 @@ import { SkillsHub } from '../skills/SkillsHub';
 import { IntegrationsPanel } from '../admin/IntegrationsPanel';
 import { skillsEngine } from '../../services/skills/SkillsEngine';
 import { integrationManager } from '../../services/integrations/IntegrationManager';
+import { Shipment } from '../../types';
 
 type TabType = 'chat' | 'skills' | 'alerts' | 'config';
 

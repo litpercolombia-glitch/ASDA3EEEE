@@ -38,6 +38,7 @@ import { AnalisisUnificadoTab } from './components/tabs/AnalisisUnificadoTab';
 // Procesos 2.0 - Nuevo módulo con gamificación
 import { ProcesosTab } from './components/features/procesos';
 import { ProBubbleV2, ProBubbleV3 } from './components/ProAssistant';
+import { SmartAssistant } from './components/floating/SmartAssistant';
 import { AuthWrapper, UserProfilePanel } from './components/auth';
 import { EnhancedGuideTable } from './components/tables';
 import { AdminPanelPro } from './components/Admin/AdminPanelPro';
@@ -1048,6 +1049,9 @@ const App: React.FC = () => {
         onNavigateToTab={(tab) => setCurrentTab(tab as MainTabNew)}
         onExportData={handleDownloadExcel}
       />
+
+      {/* Smart Assistant - Centro de Control con IA y Skills */}
+      <SmartAssistant shipments={shipments} />
     </div>
   );
 };
