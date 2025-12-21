@@ -1043,15 +1043,12 @@ const App: React.FC = () => {
         </div>
       </footer>
 
-      {/* Floating AI Assistant PRO Button - V3 Mejorado */}
-      <ProBubbleV3
+      {/* Smart Assistant - Centro de Control Unificado con IA */}
+      <SmartAssistant
         shipments={shipments}
         onNavigateToTab={(tab) => setCurrentTab(tab as MainTabNew)}
         onExportData={handleDownloadExcel}
       />
-
-      {/* Smart Assistant - Centro de Control con IA y Skills */}
-      <SmartAssistant shipments={shipments} />
     </div>
   );
 };
