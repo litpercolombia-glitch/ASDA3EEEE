@@ -18,6 +18,9 @@ export type MainTabNew =
   | 'procesos-2'
   | 'admin'
   | 'negocio'
+  // Enterprise tabs
+  | 'admin-enterprise'
+  | 'finanzas'
   // Legacy tabs (para compatibilidad)
   | 'seguimiento'
   | 'demanda'
