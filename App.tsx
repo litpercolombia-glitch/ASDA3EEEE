@@ -40,6 +40,8 @@ import { ProcesosTab } from './components/features/procesos';
 import { ProBubbleV2, ProBubbleV3 } from './components/ProAssistant';
 import { SmartAssistant } from './components/floating/SmartAssistant';
 import { AuthWrapper, UserProfilePanel } from './components/auth';
+// Enterprise Components - Permisos, Finanzas, AI Chat
+import { AdminEnterprisePanel, FinanceDashboard, AIBusinessChatButton } from './components/enterprise';
 import { EnhancedGuideTable } from './components/tables';
 import { AdminPanelPro } from './components/Admin/AdminPanelPro';
 import CountrySelector from './components/CountrySelector';
@@ -432,6 +434,9 @@ const App: React.FC = () => {
     'procesos-2': 0,
     'ciudad-agentes': 0,
     'aprendizaje-ia': 0,
+    // Enterprise tabs
+    'admin-enterprise': 0,
+    'finanzas': 0,
   };
 
   const handleProcessInput = () => {
@@ -674,14 +679,15 @@ const App: React.FC = () => {
               </button>
 
               {[
-                // Navegación simplificada: 6 tabs principales
+                // Navegación simplificada con Enterprise
                 { id: 'negocio', icon: Users, label: '💼 Negocio', isNew: true },
+                { id: 'finanzas', icon: DollarSign, label: '💰 Finanzas', isNew: true },
                 { id: 'operaciones', icon: Package, label: '📦 Operaciones', isNew: false },
                 { id: 'inteligencia-ia', icon: Brain, label: '🧠 Inteligencia IA', isNew: false },
                 { id: 'analisis', icon: BarChart3, label: '📊 Análisis', isNew: false },
                 { id: 'procesos-litper', icon: Layers, label: '🏢 Procesos' },
                 { id: 'procesos-2', icon: Sparkles, label: '✨ Procesos 2.0', isNew: true },
-                { id: 'admin', icon: Shield, label: '⚙️ Config' },
+                { id: 'admin-enterprise', icon: Shield, label: '👑 Admin', isNew: true },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -935,6 +941,12 @@ const App: React.FC = () => {
           {currentTab === 'admin' && <AdminPanelPro />}
 
           {/* ====================================== */}
+          {/* ENTERPRISE TABS - Finanzas, Admin Enterprise */}
+          {/* ====================================== */}
+          {currentTab === 'finanzas' && <FinanceDashboard />}
+          {currentTab === 'admin-enterprise' && <AdminEnterprisePanel />}
+
+          {/* ====================================== */}
           {/* LEGACY TABS (Para compatibilidad) */}
           {/* ====================================== */}
           {currentTab === 'seguimiento' && (
@@ -1049,6 +1061,9 @@ const App: React.FC = () => {
         onNavigateToTab={(tab) => setCurrentTab(tab as MainTabNew)}
         onExportData={handleDownloadExcel}
       />
+
+      {/* AI Business Chat - Asistente Enterprise con BI */}
+      <AIBusinessChatButton />
     </div>
   );
 };
