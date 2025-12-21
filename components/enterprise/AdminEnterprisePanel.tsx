@@ -5,9 +5,11 @@ import React, { useState, useEffect } from 'react';
 import {
   Users, Shield, Key, Eye, EyeOff, Plus, Edit3, Trash2, Check, X,
   Crown, Settings, Database, FileText, Download, Upload, RefreshCw,
-  Lock, Unlock, UserPlus, AlertTriangle, Activity, Clock, Search
+  Lock, Unlock, UserPlus, AlertTriangle, Activity, Clock, Search,
+  DollarSign
 } from 'lucide-react';
 import { permissionService } from '../../services/permissionService';
+import { FinanceDashboard } from './FinanceDashboard';
 import {
   UsuarioEnterprise,
   RolEnterprise,
@@ -18,7 +20,7 @@ import {
 
 // ==================== TIPOS ====================
 
-type TabAdmin = 'usuarios' | 'roles' | 'auditoria' | 'config';
+type TabAdmin = 'usuarios' | 'roles' | 'finanzas' | 'auditoria' | 'config';
 
 interface UsuarioFormData {
   username: string;
@@ -58,6 +60,7 @@ export const AdminEnterprisePanel: React.FC = () => {
   const tabs = [
     { id: 'usuarios' as TabAdmin, label: 'Usuarios', icon: Users, count: usuarios.length },
     { id: 'roles' as TabAdmin, label: 'Roles', icon: Shield, count: roles.length },
+    { id: 'finanzas' as TabAdmin, label: '💰 Finanzas', icon: DollarSign },
     { id: 'auditoria' as TabAdmin, label: 'Auditoría', icon: Activity, count: auditLogs.length },
     { id: 'config' as TabAdmin, label: 'Configuración', icon: Settings },
   ];
@@ -111,6 +114,7 @@ export const AdminEnterprisePanel: React.FC = () => {
         />
       )}
       {activeTab === 'roles' && <RolesTab roles={roles} usuarios={usuarios} onRefresh={loadData} />}
+      {activeTab === 'finanzas' && <FinanceDashboard />}
       {activeTab === 'auditoria' && <AuditoriaTab logs={auditLogs} usuarios={usuarios} />}
       {activeTab === 'config' && <ConfigTab onRefresh={loadData} />}
     </div>

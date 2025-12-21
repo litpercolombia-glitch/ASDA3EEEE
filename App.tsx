@@ -40,8 +40,8 @@ import { ProcesosTab } from './components/features/procesos';
 import { ProBubbleV2, ProBubbleV3 } from './components/ProAssistant';
 import { SmartAssistant } from './components/floating/SmartAssistant';
 import { AuthWrapper, UserProfilePanel } from './components/auth';
-// Enterprise Components - Permisos, Finanzas, AI Chat
-import { AdminEnterprisePanel, FinanceDashboard, AIBusinessChatButton } from './components/enterprise';
+// Enterprise Components - Admin Panel (incluye Finanzas), AI Chat
+import { AdminEnterprisePanel, AIBusinessChatButton } from './components/enterprise';
 import { EnhancedGuideTable } from './components/tables';
 import { AdminPanelPro } from './components/Admin/AdminPanelPro';
 import CountrySelector from './components/CountrySelector';
@@ -681,7 +681,6 @@ const App: React.FC = () => {
               {[
                 // Navegación simplificada con Enterprise
                 { id: 'negocio', icon: Users, label: '💼 Negocio', isNew: true },
-                { id: 'finanzas', icon: DollarSign, label: '💰 Finanzas', isNew: true },
                 { id: 'operaciones', icon: Package, label: '📦 Operaciones', isNew: false },
                 { id: 'inteligencia-ia', icon: Brain, label: '🧠 Inteligencia IA', isNew: false },
                 { id: 'analisis', icon: BarChart3, label: '📊 Análisis', isNew: false },
@@ -941,9 +940,8 @@ const App: React.FC = () => {
           {currentTab === 'admin' && <AdminPanelPro />}
 
           {/* ====================================== */}
-          {/* ENTERPRISE TABS - Finanzas, Admin Enterprise */}
+          {/* ENTERPRISE TABS - Admin Enterprise (incluye Finanzas) */}
           {/* ====================================== */}
-          {currentTab === 'finanzas' && <FinanceDashboard />}
           {currentTab === 'admin-enterprise' && <AdminEnterprisePanel />}
 
           {/* ====================================== */}
