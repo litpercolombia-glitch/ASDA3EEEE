@@ -35,7 +35,9 @@ import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
 import { OperacionesUnificadoTab } from './components/tabs/OperacionesUnificadoTab';
 import { InteligenciaIAUnificadoTab } from './components/tabs/InteligenciaIAUnificadoTab';
 import { AnalisisUnificadoTab } from './components/tabs/AnalisisUnificadoTab';
-// ProBubbleV3 eliminado - unificado en SmartAssistant
+// Procesos 2.0 - Nuevo módulo con gamificación
+import { ProcesosTab } from './components/features/procesos';
+import { ProBubbleV2, ProBubbleV3 } from './components/ProAssistant';
 import { SmartAssistant } from './components/floating/SmartAssistant';
 import { AuthWrapper, UserProfilePanel } from './components/auth';
 import { EnhancedGuideTable } from './components/tables';
@@ -427,6 +429,7 @@ const App: React.FC = () => {
     asistente: 0,
     ml: 0,
     'procesos-litper': 0,
+    'procesos-2': 0,
     'ciudad-agentes': 0,
     'aprendizaje-ia': 0,
   };
@@ -677,6 +680,7 @@ const App: React.FC = () => {
                 { id: 'inteligencia-ia', icon: Brain, label: '🧠 Inteligencia IA', isNew: false },
                 { id: 'analisis', icon: BarChart3, label: '📊 Análisis', isNew: false },
                 { id: 'procesos-litper', icon: Layers, label: '🏢 Procesos' },
+                { id: 'procesos-2', icon: Sparkles, label: '✨ Procesos 2.0', isNew: true },
                 { id: 'admin', icon: Shield, label: '⚙️ Config' },
               ].map((item) => (
                 <button
@@ -927,6 +931,7 @@ const App: React.FC = () => {
             />
           )}
           {currentTab === 'procesos-litper' && <ProcesosLitperTab selectedCountry={selectedCountry} />}
+          {currentTab === 'procesos-2' && <ProcesosTab />}
           {currentTab === 'admin' && <AdminPanelPro />}
 
           {/* ====================================== */}
