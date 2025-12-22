@@ -35,7 +35,8 @@ import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
 import { OperacionesUnificadoTab } from './components/tabs/OperacionesUnificadoTab';
 import { InteligenciaIAUnificadoTab } from './components/tabs/InteligenciaIAUnificadoTab';
 import { AnalisisUnificadoTab } from './components/tabs/AnalisisUnificadoTab';
-import { ProBubbleV2, ProBubbleV3 } from './components/ProAssistant';
+import { ProBubbleV4 } from './components/ProAssistant';
+import UniversalSearch from './components/search/UniversalSearch';
 import { AuthWrapper, UserProfilePanel } from './components/auth';
 import { EnhancedGuideTable } from './components/tables';
 import { AdminPanelPro } from './components/Admin/AdminPanelPro';
@@ -351,6 +352,7 @@ const App: React.FC = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [showUniversalSearch, setShowUniversalSearch] = useState(false);
 
   // Excel parser hook
   const {
@@ -393,6 +395,18 @@ const App: React.FC = () => {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+
+  // Keyboard shortcut: Ctrl+K para búsqueda universal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowUniversalSearch(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     saveShipments(shipments);
@@ -670,13 +684,11 @@ const App: React.FC = () => {
               </button>
 
               {[
-                // Navegación simplificada: 6 tabs principales
-                { id: 'negocio', icon: Users, label: '💼 Negocio', isNew: true },
+                // Navegación simplificada: 5 tabs principales
                 { id: 'operaciones', icon: Package, label: '📦 Operaciones', isNew: false },
-                { id: 'inteligencia-ia', icon: Brain, label: '🧠 Inteligencia IA', isNew: false },
-                { id: 'analisis', icon: BarChart3, label: '📊 Análisis', isNew: false },
-                { id: 'procesos-litper', icon: Layers, label: '🏢 Procesos' },
-                { id: 'admin', icon: Shield, label: '⚙️ Config' },
+                { id: 'inteligencia-ia', icon: Brain, label: '🧠 Inteligencia', isNew: false },
+                { id: 'negocio', icon: Users, label: '💼 Negocio', isNew: false },
+                { id: 'admin', icon: Shield, label: '⚙️ Config', isNew: false },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -919,13 +931,6 @@ const App: React.FC = () => {
               selectedCountry={selectedCountry}
             />
           )}
-          {currentTab === 'analisis' && (
-            <AnalisisUnificadoTab
-              shipments={shipments}
-              selectedCountry={selectedCountry}
-            />
-          )}
-          {currentTab === 'procesos-litper' && <ProcesosLitperTab selectedCountry={selectedCountry} />}
           {currentTab === 'admin' && <AdminPanelPro />}
 
           {/* ====================================== */}
@@ -1037,8 +1042,16 @@ const App: React.FC = () => {
         </div>
       </footer>
 
-      {/* Floating AI Assistant PRO Button - V3 Mejorado */}
-      <ProBubbleV3
+      {/* Búsqueda Universal (Ctrl+K) */}
+      <UniversalSearch
+        shipments={shipments}
+        isOpen={showUniversalSearch}
+        onClose={() => setShowUniversalSearch(false)}
+        onNavigate={(tab) => setCurrentTab(tab as MainTabNew | 'home')}
+      />
+
+      {/* Floating AI Assistant PRO Button - V4 con Chat IA y Modos */}
+      <ProBubbleV4
         shipments={shipments}
         onNavigateToTab={(tab) => setCurrentTab(tab as MainTabNew)}
         onExportData={handleDownloadExcel}
