@@ -54,3 +54,7 @@ backend/uploads/*
 !backend/uploads/.gitkeep
 backend/ml_models/saved/*
 !backend/ml_models/saved/.gitkeep
+
+# Backend environment (contains API keys)
+backend/.env.backend
+backend/.env
