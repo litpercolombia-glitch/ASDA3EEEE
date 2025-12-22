@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react';
-import { useTrackerStore, Usuario, TipoProceso } from './stores/trackerStore';
+import { useTrackerStore, Usuario } from './stores/trackerStore';
 import TitleBar from './components/TitleBar';
 import Timer from './components/Timer';
 import QuickCounter from './components/QuickCounter';
 import ProgressBar from './components/ProgressBar';
 import MiniMode from './components/MiniMode';
 import SuperMiniMode from './components/SuperMiniMode';
-import { LogOut, ArrowLeft, FileText, AlertTriangle, User } from 'lucide-react';
+import { LogOut, ArrowLeft, FileText, AlertTriangle, User, Download } from 'lucide-react';
 
 const App: React.FC = () => {
   const { modo, pantalla, cargarDatos, tick, estadoTimer } = useTrackerStore();
@@ -192,6 +192,15 @@ const SeleccionProceso: React.FC = () => {
         <h2 className="text-lg font-bold text-white text-center mb-4">
           ¿Qué vas a trabajar?
         </h2>
+
+        {/* Botón exportar datos */}
+        <button
+          onClick={() => useTrackerStore.getState().exportarExcel()}
+          className="w-full mb-4 p-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-all flex items-center justify-center gap-2 text-slate-300 hover:text-white"
+        >
+          <Download className="w-4 h-4" />
+          <span className="text-sm">Exportar mis datos (Excel)</span>
+        </button>
 
         <div className="space-y-3">
           {/* Botón GUÍAS */}
