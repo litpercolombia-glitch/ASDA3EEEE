@@ -72,6 +72,24 @@ import { SimpleUserSelector } from '../SimpleUserSelector';
 import { SimpleUser, getOCrearUsuarioDefault } from '../../services/simpleUserService';
 import { ChevronLeft, ChevronRight as ChevronRightIcon, Users } from 'lucide-react';
 
+// ============================================
+// COMPONENTES EXTRAÍDOS - DISPONIBLES PARA MIGRACIÓN
+// Los siguientes componentes están disponibles en SeguimientoComponents.tsx
+// para una migración gradual que reducirá este archivo de 2,227 líneas:
+//
+// - GuiaProcesada (tipo)
+// - AnomaliaDetectada (tipo)
+// - getStatusColor, getStatusIcon (helpers)
+// - getSeasonInfo, isNearHoliday, detectarAnomalias (helpers)
+// - StatusBadge (componente)
+// - AnalysisPanel (componente)
+// - DynamicStatusButtons (componente)
+// - SummaryCards (componente)
+// - GuiaTableRow (componente)
+//
+// import { StatusBadge, AnalysisPanel, ... } from './SeguimientoComponents';
+// ============================================
+
 interface SeguimientoTabProps {
   shipments: Shipment[];
   onRefresh?: () => void;
