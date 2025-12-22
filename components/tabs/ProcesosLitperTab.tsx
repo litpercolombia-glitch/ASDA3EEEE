@@ -12,6 +12,7 @@ import {
   Calendar, RefreshCw, Wifi, WifiOff, Shield, Gift, Rocket, Coffee, Check
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import UserAnalysisPanel from '../features/procesos/components/UserAnalysisPanel';
 
 // ==================== TIPOS ====================
 interface Usuario {
@@ -79,7 +80,7 @@ interface Config {
   apiUrl: string;
 }
 
-type ViewMode = 'selector' | 'usuario' | 'admin';
+type ViewMode = 'selector' | 'usuario' | 'admin' | 'analisis';
 type AdminTab = 'dashboard' | 'ranking' | 'equipo' | 'logros' | 'config';
 
 // ==================== CONSTANTES ====================
@@ -238,12 +239,12 @@ const MiniCounter: React.FC<{
 const UserCard: React.FC<{
   usuario: Usuario;
   onClick: () => void;
+  onAnalyze?: () => void;
   selected?: boolean;
-}> = ({ usuario, onClick, selected }) => {
+}> = ({ usuario, onClick, onAnalyze, selected }) => {
   const nivelInfo = getNivelInfo(usuario.xp);
   return (
-    <button
-      onClick={onClick}
+    <div
       className={`w-full p-4 rounded-2xl border-2 transition-all hover:scale-[1.02] ${
         selected
           ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30'
@@ -251,27 +252,42 @@ const UserCard: React.FC<{
       }`}
     >
       <div className="flex items-center gap-4">
-        <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${nivelInfo.color} flex items-center justify-center text-2xl shadow-lg`}>
-          {nivelInfo.badge}
-        </div>
-        <div className="flex-1 text-left">
-          <h3 className="font-bold text-slate-800 dark:text-white">{usuario.nombre}</h3>
-          <p className="text-xs text-slate-500">{usuario.rol} - {usuario.departamento}</p>
-          <div className="flex items-center gap-3 mt-1">
-            <span className="text-xs text-purple-600 font-medium">{nivelInfo.nombre}</span>
-            <span className="text-xs text-slate-400">|</span>
-            <span className="text-xs text-amber-600">{usuario.xp} XP</span>
-            {usuario.racha > 0 && (
-              <>
-                <span className="text-xs text-slate-400">|</span>
-                <span className="text-xs text-orange-500">🔥 {usuario.racha}</span>
-              </>
-            )}
+        <button onClick={onClick} className="flex items-center gap-4 flex-1 text-left">
+          <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${nivelInfo.color} flex items-center justify-center text-2xl shadow-lg`}>
+            {nivelInfo.badge}
           </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-slate-800 dark:text-white">{usuario.nombre}</h3>
+            <p className="text-xs text-slate-500">{usuario.rol} - {usuario.departamento}</p>
+            <div className="flex items-center gap-3 mt-1">
+              <span className="text-xs text-purple-600 font-medium">{nivelInfo.nombre}</span>
+              <span className="text-xs text-slate-400">|</span>
+              <span className="text-xs text-amber-600">{usuario.xp} XP</span>
+              {usuario.racha > 0 && (
+                <>
+                  <span className="text-xs text-slate-400">|</span>
+                  <span className="text-xs text-orange-500">🔥 {usuario.racha}</span>
+                </>
+              )}
+            </div>
+          </div>
+        </button>
+        <div className="flex flex-col gap-2">
+          {onAnalyze && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onAnalyze(); }}
+              className="p-2 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-600 transition-all"
+              title="Importar y Analizar Datos"
+            >
+              <BarChart3 className="w-5 h-5" />
+            </button>
+          )}
+          <button onClick={onClick} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all">
+            <ChevronRight className="w-5 h-5" />
+          </button>
         </div>
-        <ChevronRight className="w-5 h-5 text-slate-400" />
       </div>
-    </button>
+    </div>
   );
 };
 
@@ -303,7 +319,16 @@ export const ProcesosLitperTab: React.FC = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [syncing, setSyncing] = useState(false);
 
+  // Estado para análisis de usuario
+  const [usuarioAnalisis, setUsuarioAnalisis] = useState<Usuario | null>(null);
+
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handler para abrir panel de análisis
+  const abrirAnalisis = (usuario: Usuario) => {
+    setUsuarioAnalisis(usuario);
+    setViewMode('analisis');
+  };
 
   // ==================== EFECTOS ====================
   useEffect(() => {
@@ -532,6 +557,7 @@ export const ProcesosLitperTab: React.FC = () => {
                 key={usuario.id}
                 usuario={usuario}
                 onClick={() => seleccionarUsuario(usuario)}
+                onAnalyze={() => abrirAnalisis(usuario)}
               />
             ))}
           </div>
@@ -724,6 +750,23 @@ export const ProcesosLitperTab: React.FC = () => {
               <p className="text-xs text-slate-500">XP hoy</p>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ==================== RENDER: ANÁLISIS DE USUARIO ====================
+  if (viewMode === 'analisis' && usuarioAnalisis) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-navy-900 dark:to-blue-900/20 p-4">
+        <div className="max-w-6xl mx-auto">
+          <UserAnalysisPanel
+            usuario={usuarioAnalisis}
+            onBack={() => {
+              setUsuarioAnalisis(null);
+              setViewMode('selector');
+            }}
+          />
         </div>
       </div>
     );
