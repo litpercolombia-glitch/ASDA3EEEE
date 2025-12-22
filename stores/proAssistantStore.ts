@@ -68,10 +68,39 @@ export interface ProRecommendation {
   data?: any;
 }
 
+// Modelos de IA disponibles
+export type AIModel = 'claude' | 'gemini' | 'openai';
+export type ChatMode = 'litper' | 'chateapro';
+
+export interface AIModelConfig {
+  model: AIModel;
+  temperature: number;
+  maxTokens: number;
+  systemPrompt: string;
+}
+
+export interface ChateaProConfig {
+  webhookUrl: string;
+  apiKey: string;
+  enabled: boolean;
+  autoSync: boolean;
+}
+
 export interface ProConfig {
   assistantName: string;
   voice: 'sofia' | 'carlos' | 'lucia';
   language: 'es-CO' | 'es-CL' | 'es-EC';
+  // Configuración de IA
+  aiModel: AIModel;
+  aiSettings: {
+    claude: AIModelConfig;
+    gemini: AIModelConfig;
+    openai: AIModelConfig;
+  };
+  // Modo de chat activo
+  chatMode: ChatMode;
+  // Configuración de Chatea Pro
+  chateaPro: ChateaProConfig;
   notifications: {
     criticalAlerts: boolean;
     unresolvedNovelties: boolean;
@@ -108,8 +137,8 @@ interface ProAssistantState {
   clearNotifications: () => void;
   isProcessing: boolean;
   setIsProcessing: (processing: boolean) => void;
-  activeTab: 'chat' | 'knowledge' | 'tasks' | 'config';
-  setActiveTab: (tab: 'chat' | 'knowledge' | 'tasks' | 'config') => void;
+  activeTab: 'chat' | 'metrics' | 'knowledge' | 'tasks' | 'config';
+  setActiveTab: (tab: 'chat' | 'metrics' | 'knowledge' | 'tasks' | 'config') => void;
 
   // Chat State
   messages: ProMessage[];
@@ -146,6 +175,24 @@ interface ProAssistantState {
   updateConfig: (updates: Partial<ProConfig>) => void;
   updateNotificationSettings: (updates: Partial<ProConfig['notifications']>) => void;
   updatePermissions: (updates: Partial<ProConfig['permissions']>) => void;
+
+  // AI Model Selection
+  setAIModel: (model: AIModel) => void;
+  updateAISettings: (model: AIModel, settings: Partial<AIModelConfig>) => void;
+
+  // Chat Mode
+  setChatMode: (mode: ChatMode) => void;
+
+  // Chatea Pro
+  updateChateaProConfig: (config: Partial<ChateaProConfig>) => void;
+
+  // Mensajes por modo de chat
+  litperMessages: ProMessage[];
+  chateaProMessages: ProMessage[];
+  addLitperMessage: (message: Omit<ProMessage, 'id' | 'timestamp'>) => void;
+  addChateaProMessage: (message: Omit<ProMessage, 'id' | 'timestamp'>) => void;
+  clearLitperMessages: () => void;
+  clearChateaProMessages: () => void;
 
   // Context
   shipmentsContext: any[];
@@ -336,6 +383,35 @@ Puedo ayudarte con:
         assistantName: 'Litper PRO',
         voice: 'sofia',
         language: 'es-CO',
+        // Configuración de IA
+        aiModel: 'claude' as AIModel,
+        aiSettings: {
+          claude: {
+            model: 'claude' as AIModel,
+            temperature: 0.7,
+            maxTokens: 4096,
+            systemPrompt: 'Eres un experto en logística de última milla en Colombia. Ayudas con guías, envíos, novedades y análisis.',
+          },
+          gemini: {
+            model: 'gemini' as AIModel,
+            temperature: 0.8,
+            maxTokens: 4096,
+            systemPrompt: 'Eres un asistente de logística con capacidades de visión e imágenes.',
+          },
+          openai: {
+            model: 'openai' as AIModel,
+            temperature: 0.7,
+            maxTokens: 4096,
+            systemPrompt: 'Eres un asistente de logística profesional para el mercado colombiano.',
+          },
+        },
+        chatMode: 'litper' as ChatMode,
+        chateaPro: {
+          webhookUrl: '',
+          apiKey: '',
+          enabled: false,
+          autoSync: false,
+        },
         notifications: {
           criticalAlerts: true,
           unresolvedNovelties: true,
@@ -377,6 +453,126 @@ Puedo ayudarte con:
           },
         })),
 
+      // ========== AI Model Selection ==========
+      setAIModel: (model) =>
+        set((state) => ({
+          config: { ...state.config, aiModel: model },
+        })),
+
+      updateAISettings: (model, settings) =>
+        set((state) => ({
+          config: {
+            ...state.config,
+            aiSettings: {
+              ...state.config.aiSettings,
+              [model]: { ...state.config.aiSettings[model], ...settings },
+            },
+          },
+        })),
+
+      // ========== Chat Mode ==========
+      setChatMode: (mode) =>
+        set((state) => ({
+          config: { ...state.config, chatMode: mode },
+        })),
+
+      // ========== Chatea Pro Config ==========
+      updateChateaProConfig: (updates) =>
+        set((state) => ({
+          config: {
+            ...state.config,
+            chateaPro: { ...state.config.chateaPro, ...updates },
+          },
+        })),
+
+      // ========== Mensajes Litper (App Data) ==========
+      litperMessages: [
+        {
+          id: 'litper-welcome',
+          role: 'assistant' as const,
+          content: `Hola! Soy tu asistente de **Litper Data**.
+
+Tengo acceso a toda la información de la app:
+- **Guías** - Estados, novedades, seguimiento
+- **Cargas** - Historial de cargas e importaciones
+- **Estadísticas** - Métricas y reportes
+- **Análisis** - Predicciones y patrones
+
+¿Qué información necesitas?`,
+          timestamp: new Date(),
+          suggestions: ['Ver guías con novedad', 'Reporte del día', 'Análisis por transportadora'],
+        },
+      ],
+
+      addLitperMessage: (message) =>
+        set((state) => ({
+          litperMessages: [
+            ...state.litperMessages,
+            {
+              ...message,
+              id: generateId(),
+              timestamp: new Date(),
+            },
+          ],
+        })),
+
+      clearLitperMessages: () =>
+        set({
+          litperMessages: [
+            {
+              id: 'litper-welcome',
+              role: 'assistant' as const,
+              content: `Hola! Soy tu asistente de **Litper Data**. ¿Qué información necesitas?`,
+              timestamp: new Date(),
+              suggestions: ['Ver guías con novedad', 'Reporte del día', 'Análisis por transportadora'],
+            },
+          ],
+        }),
+
+      // ========== Mensajes Chatea Pro (Webhooks/API) ==========
+      chateaProMessages: [
+        {
+          id: 'chateapro-welcome',
+          role: 'assistant' as const,
+          content: `Hola! Soy tu asistente de **Chatea Pro**.
+
+Puedo ayudarte con:
+- **Webhooks** - Configurar y probar endpoints
+- **API** - Gestionar integraciones
+- **Automatizaciones** - Flujos automáticos
+- **Mensajería** - WhatsApp, SMS, notificaciones
+
+Configura tu API Key en la pestaña de Config para empezar.`,
+          timestamp: new Date(),
+          suggestions: ['Configurar webhook', 'Ver estado API', 'Probar conexión'],
+        },
+      ],
+
+      addChateaProMessage: (message) =>
+        set((state) => ({
+          chateaProMessages: [
+            ...state.chateaProMessages,
+            {
+              ...message,
+              id: generateId(),
+              timestamp: new Date(),
+            },
+          ],
+        })),
+
+      clearChateaProMessages: () =>
+        set({
+          chateaProMessages: [
+            {
+              id: 'chateapro-welcome',
+              role: 'assistant' as const,
+              content: `Hola! Soy tu asistente de **Chatea Pro**. ¿Qué necesitas configurar?`,
+              timestamp: new Date(),
+              suggestions: ['Configurar webhook', 'Ver estado API', 'Probar conexión'],
+            },
+          ],
+        }),
+
       // ========== Context ==========
       shipmentsContext: [],
       setShipmentsContext: (shipments) => set({ shipmentsContext: shipments }),
@@ -413,9 +609,11 @@ Puedo ayudarte con:
       },
     }),
     {
-      name: 'litper-pro-assistant-v2',
+      name: 'litper-pro-assistant-v3',
       partialize: (state) => ({
         messages: state.messages.slice(-100),
+        litperMessages: state.litperMessages.slice(-100),
+        chateaProMessages: state.chateaProMessages.slice(-100),
         knowledge: state.knowledge,
         tasks: state.tasks.filter((t) => t.status !== 'completed').slice(0, 50),
         config: state.config,
