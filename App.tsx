@@ -35,6 +35,8 @@ import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
 import { OperacionesUnificadoTab } from './components/tabs/OperacionesUnificadoTab';
 import { InteligenciaIAUnificadoTab } from './components/tabs/InteligenciaIAUnificadoTab';
 import { AnalisisUnificadoTab } from './components/tabs/AnalisisUnificadoTab';
+// Cerebro IA - Dashboard con Chatea Pro, Webhooks y Analytics
+import { AIBrainDashboard } from './components/brain/AIBrainDashboard';
 // ProBubbleV3 eliminado - unificado en SmartAssistant
 import { SmartAssistant } from './components/floating/SmartAssistant';
 import { AuthWrapper, UserProfilePanel } from './components/auth';
@@ -429,6 +431,7 @@ const App: React.FC = () => {
     'procesos-litper': 0,
     'ciudad-agentes': 0,
     'aprendizaje-ia': 0,
+    'cerebro-ia': 0,
   };
 
   const handleProcessInput = () => {
@@ -671,10 +674,11 @@ const App: React.FC = () => {
               </button>
 
               {[
-                // Navegación simplificada: 6 tabs principales
+                // Navegación simplificada: 7 tabs principales
                 { id: 'negocio', icon: Users, label: '💼 Negocio', isNew: true },
                 { id: 'operaciones', icon: Package, label: '📦 Operaciones', isNew: false },
                 { id: 'inteligencia-ia', icon: Brain, label: '🧠 Inteligencia IA', isNew: false },
+                { id: 'cerebro-ia', icon: Sparkles, label: '🤖 Cerebro IA', isNew: true },
                 { id: 'analisis', icon: BarChart3, label: '📊 Análisis', isNew: false },
                 { id: 'procesos-litper', icon: Layers, label: '🏢 Procesos' },
                 { id: 'admin', icon: Shield, label: '⚙️ Config' },
@@ -926,6 +930,7 @@ const App: React.FC = () => {
               selectedCountry={selectedCountry}
             />
           )}
+          {currentTab === 'cerebro-ia' && <AIBrainDashboard />}
           {currentTab === 'procesos-litper' && <ProcesosLitperTab selectedCountry={selectedCountry} />}
           {currentTab === 'admin' && <AdminPanelPro />}
 
