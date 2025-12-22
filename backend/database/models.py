@@ -546,3 +546,227 @@ CONFIGURACIONES_DEFAULT = [
         'categoria': 'general'
     },
 ]
+
+
+# ==================== TRACKING ORDENES ====================
+
+class SesionTrackingTransportadora(Base):
+    """
+    Registro de sesiones de carga de archivos de tracking de transportadoras.
+    Cada vez que se sube un Excel, se crea una sesión para cruzar datos históricos.
+    """
+    __tablename__ = 'sesiones_tracking_transportadora'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    nombre_sesion = Column(String(200), nullable=False)
+    fecha_sesion = Column(DateTime, default=datetime.utcnow, index=True)
+    nombre_archivo = Column(String(255), nullable=True)
+
+    # Estadísticas de la carga
+    total_ordenes = Column(Integer, default=0)
+    ordenes_nuevas = Column(Integer, default=0)
+    ordenes_actualizadas = Column(Integer, default=0)
+    ordenes_entregadas = Column(Integer, default=0)
+    ordenes_devolucion = Column(Integer, default=0)
+    ordenes_con_novedad = Column(Integer, default=0)
+    ordenes_en_proceso = Column(Integer, default=0)
+
+    # Análisis IA
+    resumen_ia = Column(Text, nullable=True)
+    alertas_generadas = Column(JSON, nullable=True)
+    recomendaciones = Column(JSON, nullable=True)
+
+    # Metadata
+    fecha_creacion = Column(DateTime, default=datetime.utcnow)
+
+    # Relación con órdenes
+    ordenes = relationship("TrackingOrden", back_populates="sesion")
+
+    def __repr__(self):
+        return f"<SesionTrackingTransportadora(id={self.id}, nombre={self.nombre_sesion}, total={self.total_ordenes})>"
+
+
+class TrackingOrden(Base):
+    """
+    Tabla principal de órdenes de tracking de transportadoras.
+    Almacena los 13 campos requeridos + campos adicionales para análisis.
+    """
+    __tablename__ = 'tracking_ordenes'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # 13 CAMPOS PRINCIPALES DEL EXCEL
+    hora = Column(String(20), nullable=True)
+    fecha = Column(DateTime, nullable=True)
+    nombre_cliente = Column(String(255), nullable=True)
+    telefono = Column(String(50), nullable=True, index=True)
+    numero_guia = Column(String(100), nullable=False, index=True)
+    estatus = Column(String(100), nullable=True, index=True)
+    ciudad_destino = Column(String(100), nullable=True, index=True)
+    transportadora = Column(String(100), nullable=True, index=True)
+    novedad = Column(Text, nullable=True)
+    ultimo_movimiento = Column(Text, nullable=True)
+    fecha_ultimo_movimiento = Column(DateTime, nullable=True)
+    hora_ultimo_movimiento = Column(String(20), nullable=True)
+    fecha_generacion_guia = Column(DateTime, nullable=True)
+
+    # CAMPOS CALCULADOS PARA ANÁLISIS
+    dias_en_transito = Column(Integer, default=0)
+    dias_sin_movimiento = Column(Integer, default=0)
+    tiene_novedad = Column(Boolean, default=False)
+    es_critica = Column(Boolean, default=False)  # Más de 5 días sin movimiento
+    estado_anterior = Column(String(100), nullable=True)  # Para detectar cambios
+    veces_con_novedad = Column(Integer, default=0)  # Novedades acumuladas históricamente
+
+    # NIVEL DE RIESGO (calculado por IA)
+    nivel_riesgo = Column(String(20), nullable=True)  # BAJO, MEDIO, ALTO, CRITICO
+    probabilidad_entrega = Column(Float, nullable=True)
+    probabilidad_devolucion = Column(Float, nullable=True)
+
+    # METADATA
+    sesion_id = Column(Integer, ForeignKey('sesiones_tracking_transportadora.id'), nullable=True)
+    fecha_primera_carga = Column(DateTime, default=datetime.utcnow)
+    fecha_ultima_actualizacion = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    total_actualizaciones = Column(Integer, default=1)
+
+    # Relación con sesión
+    sesion = relationship("SesionTrackingTransportadora", back_populates="ordenes")
+
+    # Relación con historial
+    historial = relationship("HistorialTrackingOrden", back_populates="orden", order_by="desc(HistorialTrackingOrden.fecha_registro)")
+
+    # Índices compuestos
+    __table_args__ = (
+        Index('idx_tracking_guia_transportadora', 'numero_guia', 'transportadora'),
+        Index('idx_tracking_estatus_ciudad', 'estatus', 'ciudad_destino'),
+        Index('idx_tracking_fecha_estatus', 'fecha', 'estatus'),
+        Index('idx_tracking_critica', 'es_critica', 'dias_sin_movimiento'),
+    )
+
+    def __repr__(self):
+        return f"<TrackingOrden(guia={self.numero_guia}, estatus={self.estatus}, ciudad={self.ciudad_destino})>"
+
+    def to_dict(self):
+        """Convierte el modelo a diccionario para la API"""
+        return {
+            'id': self.id,
+            'hora': self.hora,
+            'fecha': self.fecha.isoformat() if self.fecha else None,
+            'nombreCliente': self.nombre_cliente,
+            'telefono': self.telefono,
+            'numeroGuia': self.numero_guia,
+            'estatus': self.estatus,
+            'ciudadDestino': self.ciudad_destino,
+            'transportadora': self.transportadora,
+            'novedad': self.novedad,
+            'ultimoMovimiento': self.ultimo_movimiento,
+            'fechaUltimoMovimiento': self.fecha_ultimo_movimiento.isoformat() if self.fecha_ultimo_movimiento else None,
+            'horaUltimoMovimiento': self.hora_ultimo_movimiento,
+            'fechaGeneracionGuia': self.fecha_generacion_guia.isoformat() if self.fecha_generacion_guia else None,
+            'diasEnTransito': self.dias_en_transito,
+            'diasSinMovimiento': self.dias_sin_movimiento,
+            'tieneNovedad': self.tiene_novedad,
+            'esCritica': self.es_critica,
+            'nivelRiesgo': self.nivel_riesgo,
+            'probabilidadEntrega': self.probabilidad_entrega,
+            'vecesConNovedad': self.veces_con_novedad,
+            'totalActualizaciones': self.total_actualizaciones,
+        }
+
+
+class HistorialTrackingOrden(Base):
+    """
+    Historial de cambios de cada orden.
+    Cada vez que se carga un Excel y la guía ya existe, se registra el estado anterior.
+    Esto permite ver la evolución completa de cada guía en el tiempo.
+    """
+    __tablename__ = 'historial_tracking_ordenes'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # Referencia a la orden
+    orden_id = Column(Integer, ForeignKey('tracking_ordenes.id'), nullable=False)
+    numero_guia = Column(String(100), nullable=False, index=True)
+
+    # Estado en ese momento
+    estatus = Column(String(100), nullable=True)
+    novedad = Column(Text, nullable=True)
+    ultimo_movimiento = Column(Text, nullable=True)
+    fecha_movimiento = Column(DateTime, nullable=True)
+
+    # Cambios detectados
+    cambio_estatus = Column(Boolean, default=False)
+    estatus_anterior = Column(String(100), nullable=True)
+    nueva_novedad = Column(Boolean, default=False)
+
+    # Metadata
+    sesion_id = Column(Integer, ForeignKey('sesiones_tracking_transportadora.id'), nullable=True)
+    fecha_registro = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # Relación con orden
+    orden = relationship("TrackingOrden", back_populates="historial")
+
+    __table_args__ = (
+        Index('idx_historial_guia_fecha', 'numero_guia', 'fecha_registro'),
+    )
+
+    def __repr__(self):
+        return f"<HistorialTrackingOrden(guia={self.numero_guia}, estatus={self.estatus}, fecha={self.fecha_registro})>"
+
+
+class AlertaTracking(Base):
+    """
+    Alertas inteligentes generadas por el análisis de tracking.
+    Se generan automáticamente cuando se detectan situaciones críticas.
+    """
+    __tablename__ = 'alertas_tracking'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # Tipo y severidad
+    tipo = Column(String(50), nullable=False)  # ESTANCADA, NOVEDAD_RECURRENTE, DEVOLUCION_PROBABLE, DEMORA_TRANSPORTADORA
+    severidad = Column(String(20), nullable=False)  # INFO, WARNING, URGENT, CRITICAL
+
+    # Contenido
+    titulo = Column(String(200), nullable=False)
+    descripcion = Column(Text, nullable=True)
+
+    # Guías afectadas (JSON array de números de guía)
+    guias_afectadas = Column(JSON, nullable=True)
+    cantidad_afectadas = Column(Integer, default=0)
+
+    # Contexto
+    transportadora = Column(String(100), nullable=True)
+    ciudad = Column(String(100), nullable=True)
+
+    # Recomendación de IA
+    accion_recomendada = Column(Text, nullable=True)
+
+    # Estado
+    esta_activa = Column(Boolean, default=True)
+    fue_resuelta = Column(Boolean, default=False)
+    fecha_resolucion = Column(DateTime, nullable=True)
+    comentario_resolucion = Column(Text, nullable=True)
+
+    # Metadata
+    sesion_id = Column(Integer, ForeignKey('sesiones_tracking_transportadora.id'), nullable=True)
+    fecha_creacion = Column(DateTime, default=datetime.utcnow, index=True)
+
+    def __repr__(self):
+        return f"<AlertaTracking(tipo={self.tipo}, severidad={self.severidad}, titulo={self.titulo})>"
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'tipo': self.tipo,
+            'severidad': self.severidad,
+            'titulo': self.titulo,
+            'descripcion': self.descripcion,
+            'guiasAfectadas': self.guias_afectadas or [],
+            'cantidadAfectadas': self.cantidad_afectadas,
+            'transportadora': self.transportadora,
+            'ciudad': self.ciudad,
+            'accionRecomendada': self.accion_recomendada,
+            'estaActiva': self.esta_activa,
+            'fechaCreacion': self.fecha_creacion.isoformat() if self.fecha_creacion else None,
+        }

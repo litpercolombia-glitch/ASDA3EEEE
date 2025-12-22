@@ -24,6 +24,7 @@ export { AprendizajeIATab } from './AprendizajeIATab';
 export { InteligenciaLogisticaTab } from './InteligenciaLogisticaTab';
 export { CiudadAgentesTab } from './CiudadAgentesTab';
 export { DistritosIATab } from './DistritosIATab';
+export { TrackingOrdenesTab } from './TrackingOrdenesTab';
 
 // Funcionalidades
 export { default as DemandTab } from './DemandTab';

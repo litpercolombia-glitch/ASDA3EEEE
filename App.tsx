@@ -30,6 +30,7 @@ import {
 } from './components/tabs';
 import { CiudadAgentesTab } from './components/tabs/CiudadAgentesTab';
 import { InteligenciaLogisticaTab } from './components/tabs/InteligenciaLogisticaTab';
+import { TrackingOrdenesTab } from './components/tabs/TrackingOrdenesTab';
 import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
 // Nuevos tabs unificados
 import { OperacionesUnificadoTab } from './components/tabs/OperacionesUnificadoTab';
@@ -950,6 +951,7 @@ const App: React.FC = () => {
           {currentTab === 'ml' && <MLSystemTab />}
           {currentTab === 'ciudad-agentes' && <CiudadAgentesTab selectedCountry={selectedCountry} />}
           {currentTab === 'inteligencia-logistica' && <InteligenciaLogisticaTab />}
+          {currentTab === 'tracking-ordenes' && <TrackingOrdenesTab />}
         </div>
       </main>
 

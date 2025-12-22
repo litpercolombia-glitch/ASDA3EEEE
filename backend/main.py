@@ -145,6 +145,15 @@ except ImportError as e:
     AI_PROXY_AVAILABLE = False
     logger.warning(f"Sistema de AI Proxy no disponible: {e}")
 
+# Sistema de Tracking de Órdenes de Transportadoras
+try:
+    from routes.tracking_ordenes_routes import router as tracking_ordenes_router
+    TRACKING_ORDENES_AVAILABLE = True
+    logger.info("📦 Sistema de Tracking de Órdenes cargado")
+except ImportError as e:
+    TRACKING_ORDENES_AVAILABLE = False
+    logger.warning(f"Sistema de Tracking Órdenes no disponible: {e}")
+
 
 # ==================== CONFIGURACIÓN ====================
 
@@ -302,6 +311,11 @@ if BRAIN_SYSTEM_AVAILABLE:
 if AI_PROXY_AVAILABLE:
     app.include_router(ai_proxy_router)
     logger.success("🔐 Rutas del AI Proxy registradas en /api/ai")
+
+# Incluir router de Tracking de Órdenes
+if TRACKING_ORDENES_AVAILABLE:
+    app.include_router(tracking_ordenes_router, prefix="/api")
+    logger.success("📦 Rutas de Tracking Órdenes registradas en /api/tracking-ordenes")
 
 
 # ==================== ENDPOINTS DE SISTEMA ====================

@@ -30,7 +30,8 @@ export type MainTabNew =
   | 'mcp-connections'
   | 'conexiones'
   | 'reporte'
-  | 'aprendizaje-ia';
+  | 'aprendizaje-ia'
+  | 'tracking-ordenes';
 
 // ============================================
 // GUIA RETRASADA (DELAYED SHIPMENT)
