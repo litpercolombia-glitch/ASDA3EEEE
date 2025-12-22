@@ -1,17 +1,31 @@
 /**
  * Application configuration constants
+ *
+ * SEGURIDAD: Las API keys de IA (Claude, Gemini, OpenAI) DEBEN estar
+ * configuradas SOLO en el backend (.env.backend), NO en el frontend.
+ * Usar secureAIService.ts para todas las llamadas de IA.
  */
 
+// Backend Configuration - SEGURO
+export const BACKEND_CONFIG = {
+  URL: import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000',
+  AI_PROXY_PATH: '/api/ai',
+  BRAIN_PATH: '/api/brain',
+} as const;
+
 // API Configuration
+// DEPRECATED: Las API keys no deben usarse en el frontend
+// Use secureAIService.ts en su lugar que llama al backend proxy
 export const API_CONFIG = {
-  // Claude API (Primary - Anthropic)
+  // @deprecated - Usar BACKEND_CONFIG.URL + AI_PROXY_PATH
+  // Las API keys se mantienen solo por compatibilidad temporal
   CLAUDE_API_KEY: import.meta.env.VITE_CLAUDE_API_KEY || '',
   CLAUDE_MODELS: {
     DEFAULT: 'claude-sonnet-4-20250514', // Latest Claude Sonnet
     VISION: 'claude-sonnet-4-20250514', // Supports vision
     HAIKU: 'claude-3-5-haiku-20241022', // Fast responses
   },
-  // Gemini API (Legacy - keeping for backward compatibility)
+  // @deprecated - Usar BACKEND_CONFIG.URL + AI_PROXY_PATH
   GEMINI_API_KEY: import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '',
   GEMINI_MODELS: {
     VISION: 'gemini-3-pro-preview',

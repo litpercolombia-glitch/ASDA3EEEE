@@ -41,6 +41,34 @@ export { AnalisisUnificadoTab } from './AnalisisUnificadoTab';
 export { CentroNegocioTab } from './CentroNegocioTab';
 
 // ============================================
+// LAZY LOADING - USAR PARA MEJOR PERFORMANCE
+// ============================================
+
+export {
+  LazyTab,
+  LazyTabRenderer,
+  TabLoadingFallback,
+  prefetchTab,
+  prefetchTabs,
+  prefetchAdjacentTabs,
+  // Lazy component exports
+  LazySeguimientoTab,
+  LazySemaforoTab,
+  LazyPrediccionesTab,
+  LazyDemandTab,
+  LazyMLSystemTab,
+  LazyCentroNegocioTab,
+  LazyProcesosLitperTab,
+  LazyGamificationTab,
+  LazyInteligenciaLogisticaTab,
+  LazyAsistenteIAUnificado,
+  LazyCiudadAgentesTab,
+  LazyOperacionesUnificadoTab,
+  LazyInteligenciaIAUnificadoTab,
+  LazyAnalisisUnificadoTab,
+} from './LazyTabs';
+
+// ============================================
 // DEPRECADOS - NO USAR
 // ============================================
 
