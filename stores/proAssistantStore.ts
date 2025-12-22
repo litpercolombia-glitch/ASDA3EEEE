@@ -137,8 +137,8 @@ interface ProAssistantState {
   clearNotifications: () => void;
   isProcessing: boolean;
   setIsProcessing: (processing: boolean) => void;
-  activeTab: 'chat' | 'knowledge' | 'tasks' | 'config';
-  setActiveTab: (tab: 'chat' | 'knowledge' | 'tasks' | 'config') => void;
+  activeTab: 'chat' | 'metrics' | 'knowledge' | 'tasks' | 'config';
+  setActiveTab: (tab: 'chat' | 'metrics' | 'knowledge' | 'tasks' | 'config') => void;
 
   // Chat State
   messages: ProMessage[];

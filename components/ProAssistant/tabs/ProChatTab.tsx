@@ -18,7 +18,8 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useProAssistantStore, ProMessage, AIModel, ChatMode } from '../../../stores/proAssistantStore';
-import { askAssistant, analyzeDelayPatterns } from '../../../services/claudeService';
+import { unifiedAI } from '../../../services/unifiedAIService';
+import { guideHistoryService } from '../../../services/guideHistoryService';
 
 // ============================================
 // ICONOS DE MODELOS DE IA
@@ -378,30 +379,28 @@ const ProChatTab: React.FC = () => {
     inputRef.current?.focus();
   }, [config.chatMode]);
 
-  // Llamar a la IA real
+  // Llamar a la IA usando el servicio unificado con contexto del cerebro
   const callAI = async (question: string): Promise<string> => {
-    const model = config.aiModel;
-
-    // Preparar contexto de guias
-    const contextSummary = shipmentsContext.length > 0
-      ? `DATOS DE GUÍAS (${shipmentsContext.length} guías cargadas):\n` +
-        shipmentsContext.slice(0, 30).map(s =>
-          `- Guía: ${s.id || s.guia}, Estado: ${s.status || s.estado}, Transportadora: ${s.carrier || s.transportadora}, Novedad: ${s.novelty || 'Sin novedad'}`
-        ).join('\n')
-      : 'No hay guías cargadas actualmente.';
+    // Configurar el proveedor según la selección del usuario
+    unifiedAI.setProvider(config.aiModel);
 
     try {
-      // Por ahora usamos Claude como principal
-      // En el futuro se puede agregar lógica para cada modelo
-      if (model === 'claude') {
-        return await askAssistant(question, contextSummary);
-      } else if (model === 'gemini') {
-        // Usar Claude con nota de que es Gemini (pendiente integración directa)
-        return await askAssistant(`[Modo Gemini] ${question}`, contextSummary);
-      } else {
-        // OpenAI - usar Claude con nota
-        return await askAssistant(`[Modo GPT] ${question}`, contextSummary);
+      // Usar el servicio unificado que incluye:
+      // - Contexto del cerebro (CentralBrain)
+      // - Historial de guías (GuideHistoryService)
+      // - Memoria semántica (MemoryManager)
+      // - Fallback automático entre modelos
+      const response = await unifiedAI.chat(question, shipmentsContext, {
+        provider: config.aiModel,
+        temperature: config.aiSettings[config.aiModel].temperature,
+      });
+
+      // Si hubo fallback, notificar al usuario
+      if (response.fallbackUsed) {
+        console.log(`🔄 Se usó fallback: ${response.provider}`);
       }
+
+      return response.text;
     } catch (error: any) {
       throw new Error(error.message || 'Error al procesar con IA');
     }
