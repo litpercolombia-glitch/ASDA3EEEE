@@ -32,6 +32,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { mlApi, type ChatResponse } from '@/lib/api-config';
+import { safeMarkdown } from '@/utils/sanitize';
 
 // Tipos para los mensajes
 interface Mensaje {
@@ -554,18 +555,18 @@ function MensajeItem({ mensaje, onSugerenciaClick, onCopiar, isCopied }: Mensaje
               : 'bg-white border border-gray-100 rounded-2xl rounded-tl-none shadow-sm'
           } px-5 py-4`}
         >
-          {/* Texto del mensaje con formato markdown básico */}
+          {/* Texto del mensaje con formato markdown básico - SANITIZADO contra XSS */}
           <div
             className={`text-sm whitespace-pre-wrap leading-relaxed ${esUsuario ? '' : 'text-gray-800'}`}
           >
             {mensaje.texto.split('\n').map((linea, i) => {
-              // Detectar encabezados con **
-              if (linea.includes('**')) {
+              // Usar safeMarkdown para sanitizar y formatear de forma segura
+              if (linea.includes('**') || linea.includes('*') || linea.includes('`')) {
                 return (
                   <p
                     key={i}
                     dangerouslySetInnerHTML={{
-                      __html: linea.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>'),
+                      __html: safeMarkdown(linea),
                     }}
                   />
                 );
