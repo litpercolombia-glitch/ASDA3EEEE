@@ -38,6 +38,8 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { Shipment } from '../../types';
+import { unifiedAI } from '../../services/unifiedAIService';
+import { useProAssistantStore, AIModel } from '../../stores/proAssistantStore';
 
 // ============================================
 // TIPOS Y CONFIGURACIÓN
@@ -190,6 +192,13 @@ const QUICK_COMMANDS = [
 // COMPONENTE PRINCIPAL
 // ============================================
 
+// Configuración de modelos de IA
+const AI_MODELS: { id: AIModel; name: string; icon: string; color: string }[] = [
+  { id: 'claude', name: 'Claude', icon: '🟣', color: 'purple' },
+  { id: 'gemini', name: 'Gemini', icon: '🔵', color: 'blue' },
+  { id: 'openai', name: 'OpenAI', icon: '🟢', color: 'green' },
+];
+
 const UnifiedChatIA: React.FC<UnifiedChatIAProps> = ({
   shipments = [],
   isOpen,
@@ -197,6 +206,9 @@ const UnifiedChatIA: React.FC<UnifiedChatIAProps> = ({
   onNavigateToTab,
   initialMode = 'chat',
 }) => {
+  // Store
+  const { config, setAIModel } = useProAssistantStore();
+
   // Estados
   const [currentMode, setCurrentMode] = useState<ChatMode>(initialMode);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -205,11 +217,13 @@ const UnifiedChatIA: React.FC<UnifiedChatIAProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [showCommands, setShowCommands] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showModelSelector, setShowModelSelector] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const currentModeConfig = CHAT_MODES.find(m => m.id === currentMode) || CHAT_MODES[0];
+  const currentAIModel = AI_MODELS.find(m => m.id === config.aiModel) || AI_MODELS[0];
 
   // ============================================
   // MÉTRICAS
@@ -267,93 +281,106 @@ const UnifiedChatIA: React.FC<UnifiedChatIAProps> = ({
     setInputValue('');
     setIsLoading(true);
 
-    // Simular respuesta del asistente (aquí conectarías con tu backend de IA)
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
     let response = '';
     let metadata: ChatMessage['metadata'] = {};
 
-    // Procesar comandos
-    if (text.startsWith('/')) {
-      const [command, ...args] = text.slice(1).split(' ');
-      switch (command.toLowerCase()) {
-        case 'buscar':
-          const searchTerm = args.join(' ');
-          const found = shipments.filter(s =>
-            s.id?.includes(searchTerm) ||
-            s.trackingNumber?.includes(searchTerm)
-          );
-          if (found.length > 0) {
-            response = `Encontré ${found.length} guía(s) que coinciden con "${searchTerm}":\n\n`;
-            found.slice(0, 5).forEach(s => {
-              response += `• **${s.trackingNumber || s.id}** - ${s.status} (${s.carrier})\n`;
+    try {
+      // Procesar comandos rápidos localmente
+      if (text.startsWith('/')) {
+        const [command, ...args] = text.slice(1).split(' ');
+        switch (command.toLowerCase()) {
+          case 'buscar':
+            const searchTerm = args.join(' ');
+            const found = shipments.filter(s =>
+              s.id?.includes(searchTerm) ||
+              s.trackingNumber?.includes(searchTerm)
+            );
+            if (found.length > 0) {
+              response = `Encontré ${found.length} guía(s) que coinciden con "${searchTerm}":\n\n`;
+              found.slice(0, 5).forEach(s => {
+                response += `• **${s.trackingNumber || s.id}** - ${s.status} (${s.carrier})\n`;
+              });
+              metadata.shipments = found.map(s => s.id);
+            } else {
+              response = `No encontré guías que coincidan con "${searchTerm}"`;
+            }
+            break;
+
+          case 'estado':
+            response = `📊 **Estado General de Envíos**\n\n`;
+            response += `• Total: **${metrics.total}** guías\n`;
+            response += `• Entregadas: **${metrics.delivered}** (${metrics.deliveryRate}%)\n`;
+            response += `• En tránsito: **${metrics.inTransit}**\n`;
+            response += `• Novedades: **${metrics.issues}**\n`;
+            response += `• Críticas: **${metrics.critical}**\n\n`;
+            response += metrics.critical > 0
+              ? `⚠️ Tienes ${metrics.critical} guías críticas que requieren atención.`
+              : `✅ No hay guías críticas en este momento.`;
+            break;
+
+          case 'criticas':
+            const criticalShipments = shipments.filter(s => {
+              if (s.status === 'delivered') return false;
+              const days = s.detailedInfo?.daysInTransit || 0;
+              return days >= 5 || s.status === 'issue';
             });
-            metadata.shipments = found.map(s => s.id);
-          } else {
-            response = `No encontré guías que coincidan con "${searchTerm}"`;
-          }
-          break;
+            if (criticalShipments.length > 0) {
+              response = `🚨 **${criticalShipments.length} Guías Críticas**\n\n`;
+              criticalShipments.slice(0, 10).forEach((s, i) => {
+                response += `${i + 1}. **${s.trackingNumber || s.id}** - ${s.carrier}\n`;
+                response += `   Estado: ${s.status} | Días: ${s.detailedInfo?.daysInTransit || '?'}\n\n`;
+              });
+              metadata.shipments = criticalShipments.map(s => s.id);
+            } else {
+              response = `✅ No hay guías críticas en este momento. ¡Excelente!`;
+            }
+            break;
 
-        case 'estado':
-          response = `📊 **Estado General de Envíos**\n\n`;
-          response += `• Total: **${metrics.total}** guías\n`;
-          response += `• Entregadas: **${metrics.delivered}** (${metrics.deliveryRate}%)\n`;
-          response += `• En tránsito: **${metrics.inTransit}**\n`;
-          response += `• Novedades: **${metrics.issues}**\n`;
-          response += `• Críticas: **${metrics.critical}**\n\n`;
-          response += metrics.critical > 0
-            ? `⚠️ Tienes ${metrics.critical} guías críticas que requieren atención.`
-            : `✅ No hay guías críticas en este momento.`;
-          break;
-
-        case 'criticas':
-          const criticalShipments = shipments.filter(s => {
-            if (s.status === 'delivered') return false;
-            const days = s.detailedInfo?.daysInTransit || 0;
-            return days >= 5 || s.status === 'issue';
-          });
-          if (criticalShipments.length > 0) {
-            response = `🚨 **${criticalShipments.length} Guías Críticas**\n\n`;
-            criticalShipments.slice(0, 10).forEach((s, i) => {
-              response += `${i + 1}. **${s.trackingNumber || s.id}** - ${s.carrier}\n`;
-              response += `   Estado: ${s.status} | Días: ${s.detailedInfo?.daysInTransit || '?'}\n\n`;
+          case 'ayuda':
+            response = `📖 **Comandos Disponibles**\n\n`;
+            QUICK_COMMANDS.forEach(cmd => {
+              response += `• \`${cmd.command}\` - ${cmd.description}\n`;
             });
-            metadata.shipments = criticalShipments.map(s => s.id);
-          } else {
-            response = `✅ No hay guías críticas en este momento. ¡Excelente!`;
-          }
-          break;
+            response += `\n💡 También puedes escribir preguntas en lenguaje natural.`;
+            break;
 
-        case 'ayuda':
-          response = `📖 **Comandos Disponibles**\n\n`;
-          QUICK_COMMANDS.forEach(cmd => {
-            response += `• \`${cmd.command}\` - ${cmd.description}\n`;
-          });
-          response += `\n💡 También puedes escribir preguntas en lenguaje natural.`;
-          break;
+          default:
+            response = `Comando no reconocido. Usa \`/ayuda\` para ver los comandos disponibles.`;
+        }
+      } else {
+        // ===== LLAMADA A IA REAL =====
+        // Configurar el proveedor según el modelo seleccionado
+        unifiedAI.setProvider(config.aiModel);
 
-        default:
-          response = `Comando no reconocido. Usa \`/ayuda\` para ver los comandos disponibles.`;
+        // Construir prompt enriquecido según el modo
+        const modeContext = {
+          chat: 'Responde de forma amigable y útil.',
+          analysis: 'Analiza los datos y proporciona insights detallados.',
+          prediction: 'Genera predicciones basadas en los patrones de datos.',
+          automation: 'Sugiere automatizaciones y acciones para ejecutar.',
+          report: 'Genera un reporte estructurado y profesional.',
+        };
+
+        const enrichedPrompt = `[Modo: ${currentMode}] ${modeContext[currentMode]}\n\nPregunta del usuario: ${text}`;
+
+        // Llamar al servicio de IA unificado
+        const aiResponse = await unifiedAI.chat(enrichedPrompt, shipments, {
+          provider: config.aiModel,
+          temperature: config.aiSettings[config.aiModel].temperature,
+        });
+
+        if (aiResponse.error) {
+          response = `⚠️ Error al conectar con ${config.aiModel}: ${aiResponse.error}\n\nIntentando respuesta local...`;
+          // Fallback a respuesta local
+          response += '\n\n' + generateLocalResponse(text, currentMode, metrics, shipments);
+        } else {
+          response = aiResponse.text;
+        }
       }
-    } else {
-      // Respuesta basada en el modo actual
-      switch (currentMode) {
-        case 'chat':
-          response = generateChatResponse(text, metrics);
-          break;
-        case 'analysis':
-          response = generateAnalysisResponse(text, shipments, metrics);
-          break;
-        case 'prediction':
-          response = generatePredictionResponse(text, shipments, metrics);
-          break;
-        case 'automation':
-          response = generateAutomationResponse(text, shipments);
-          break;
-        case 'report':
-          response = generateReportResponse(text, shipments, metrics);
-          break;
-      }
+    } catch (error) {
+      console.error('Error processing message:', error);
+      // Fallback a respuestas locales si hay error
+      response = generateLocalResponse(text, currentMode, metrics, shipments);
     }
 
     const assistantMessage: ChatMessage = {
@@ -366,7 +393,25 @@ const UnifiedChatIA: React.FC<UnifiedChatIAProps> = ({
     };
     setMessages(prev => [...prev, assistantMessage]);
     setIsLoading(false);
-  }, [currentMode, shipments, metrics]);
+  }, [currentMode, shipments, metrics, config.aiModel, config.aiSettings]);
+
+  // Función de respuesta local como fallback
+  const generateLocalResponse = (text: string, mode: ChatMode, metrics: any, shipments: Shipment[]): string => {
+    switch (mode) {
+      case 'chat':
+        return generateChatResponse(text, metrics);
+      case 'analysis':
+        return generateAnalysisResponse(text, shipments, metrics);
+      case 'prediction':
+        return generatePredictionResponse(text, shipments, metrics);
+      case 'automation':
+        return generateAutomationResponse(text, shipments);
+      case 'report':
+        return generateReportResponse(text, shipments, metrics);
+      default:
+        return generateChatResponse(text, metrics);
+    }
+  };
 
   // ============================================
   // GENERADORES DE RESPUESTA POR MODO
@@ -546,6 +591,49 @@ const UnifiedChatIA: React.FC<UnifiedChatIAProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-1">
+              {/* Selector de Modelo IA */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowModelSelector(!showModelSelector)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors ${
+                    showModelSelector ? 'bg-slate-700' : 'hover:bg-slate-800'
+                  }`}
+                  title="Seleccionar modelo IA"
+                >
+                  <span className="text-sm">{currentAIModel.icon}</span>
+                  <span className="text-xs text-slate-300">{currentAIModel.name}</span>
+                  <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showModelSelector ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showModelSelector && (
+                  <div className="absolute right-0 top-full mt-1 w-40 bg-slate-800 rounded-xl border border-slate-700 shadow-xl z-50 overflow-hidden">
+                    <div className="p-2 border-b border-slate-700">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider">Modelo IA</p>
+                    </div>
+                    {AI_MODELS.map((model) => (
+                      <button
+                        key={model.id}
+                        onClick={() => {
+                          setAIModel(model.id);
+                          setShowModelSelector(false);
+                        }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 text-left transition-colors ${
+                          config.aiModel === model.id
+                            ? `bg-${model.color}-500/20 text-${model.color}-400`
+                            : 'text-slate-300 hover:bg-slate-700'
+                        }`}
+                      >
+                        <span className="text-base">{model.icon}</span>
+                        <span className="text-sm">{model.name}</span>
+                        {config.aiModel === model.id && (
+                          <CheckCircle className="w-4 h-4 ml-auto text-emerald-400" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <button
                 onClick={() => setShowHistory(!showHistory)}
                 className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
