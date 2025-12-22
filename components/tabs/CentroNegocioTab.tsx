@@ -20,6 +20,9 @@ import {
   Headphones,
   Mail,
   BarChart3,
+  DollarSign,
+  FileText,
+  PieChart,
 } from 'lucide-react';
 
 // Importar los dashboards
@@ -28,8 +31,10 @@ import { OrdersDashboard } from '../Admin/OrdersCenter';
 import { SupportDashboard } from '../Admin/SupportCenter';
 import { MarketingDashboard } from '../Admin/MarketingCenter';
 import { NotificationsDashboard } from '../Admin/NotificationsCenter';
+import { FinanceDashboard } from '../Admin/FinanceCenter';
+import { ReportsDashboard } from '../Admin/ReportsCenter';
 
-type BusinessModule = 'inicio' | 'crm' | 'pedidos' | 'soporte' | 'marketing' | 'notificaciones';
+type BusinessModule = 'inicio' | 'crm' | 'pedidos' | 'soporte' | 'marketing' | 'notificaciones' | 'finanzas' | 'reportes';
 
 export const CentroNegocioTab: React.FC = () => {
   const [activeModule, setActiveModule] = useState<BusinessModule>('inicio');
@@ -85,6 +90,26 @@ export const CentroNegocioTab: React.FC = () => {
       bgColor: 'bg-amber-500',
       stats: { label: 'Activas', value: '0' },
       features: ['Reglas personalizadas', 'Múltiples canales', 'Horarios silenciosos'],
+    },
+    {
+      id: 'finanzas' as BusinessModule,
+      icon: DollarSign,
+      label: 'Finanzas',
+      description: 'Control de ingresos, gastos y P&L',
+      color: 'from-emerald-500 to-green-600',
+      bgColor: 'bg-emerald-500',
+      stats: { label: 'Balance', value: '$0' },
+      features: ['Ingresos y gastos', 'Reportes P&L', 'Historial financiero'],
+    },
+    {
+      id: 'reportes' as BusinessModule,
+      icon: PieChart,
+      label: 'Reportes',
+      description: 'Análisis y reportes del negocio',
+      color: 'from-blue-500 to-indigo-600',
+      bgColor: 'bg-blue-500',
+      stats: { label: 'Generados', value: '0' },
+      features: ['Reportes automáticos', 'Dashboard analytics', 'Exportación'],
     },
   ];
 
@@ -170,13 +195,12 @@ export const CentroNegocioTab: React.FC = () => {
         </div>
 
         {/* Resumen del día */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { label: 'Pedidos Hoy', value: '0', icon: Package, color: 'text-teal-600', bg: 'bg-teal-50 dark:bg-teal-900/20' },
             { label: 'Tickets Abiertos', value: '0', icon: Headphones, color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20' },
-            { label: 'Clientes Nuevos', value: '0', icon: Users, color: 'text-rose-600', bg: 'bg-rose-50 dark:bg-rose-900/20' },
-            { label: 'Mensajes Enviados', value: '0', icon: Mail, color: 'text-violet-600', bg: 'bg-violet-50 dark:bg-violet-900/20' },
-            { label: 'Alertas Activas', value: '0', icon: Bell, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20' },
+            { label: 'Clientes Activos', value: '0', icon: Users, color: 'text-rose-600', bg: 'bg-rose-50 dark:bg-rose-900/20' },
+            { label: 'Balance Hoy', value: '$0', icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
           ].map((stat, idx) => (
             <div key={idx} className={`${stat.bg} rounded-2xl p-5 border border-slate-100 dark:border-navy-700`}>
               <div className="flex items-center justify-between mb-2">
@@ -231,6 +255,8 @@ export const CentroNegocioTab: React.FC = () => {
         {activeModule === 'soporte' && <SupportDashboard />}
         {activeModule === 'marketing' && <MarketingDashboard />}
         {activeModule === 'notificaciones' && <NotificationsDashboard />}
+        {activeModule === 'finanzas' && <FinanceDashboard />}
+        {activeModule === 'reportes' && <ReportsDashboard />}
       </div>
     </div>
   );
