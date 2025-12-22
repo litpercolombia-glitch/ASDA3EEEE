@@ -93,6 +93,881 @@ Transformar Litper Pro de una plataforma de logística inteligente a un **sistem
 
 ---
 
+## 🤖 INTEGRACIÓN CLAUDE API - MOTOR CENTRAL DEL CEREBRO
+
+### Configuración Base de Claude
+
+```python
+# backend/brain/claude/client.py
+"""
+Cliente unificado de Claude API para todo el cerebro autónomo.
+Usa claude-sonnet-4-20250514 como modelo principal.
+"""
+
+import anthropic
+from typing import List, Dict, Any, Optional
+from dataclasses import dataclass
+from enum import Enum
+import json
+import asyncio
+
+class ClaudeModel(Enum):
+    """Modelos disponibles de Claude"""
+    SONNET = "claude-sonnet-4-20250514"      # Principal - Razonamiento
+    HAIKU = "claude-3-5-haiku-20241022"       # Rápido - Tareas simples
+    OPUS = "claude-opus-4-20250514"           # Máximo - Decisiones críticas
+
+@dataclass
+class ClaudeConfig:
+    """Configuración del cliente Claude"""
+    api_key: str
+    default_model: ClaudeModel = ClaudeModel.SONNET
+    max_tokens: int = 4096
+    temperature: float = 0.7
+    timeout: int = 60
+
+class ClaudeBrainClient:
+    """
+    Cliente central de Claude para el cerebro autónomo.
+    Maneja todas las interacciones con la API de Anthropic.
+    """
+
+    def __init__(self, config: ClaudeConfig):
+        self.config = config
+        self.client = anthropic.Anthropic(api_key=config.api_key)
+        self.async_client = anthropic.AsyncAnthropic(api_key=config.api_key)
+
+        # System prompts por rol
+        self.system_prompts = {
+            'brain': self._get_brain_system_prompt(),
+            'decision': self._get_decision_system_prompt(),
+            'learning': self._get_learning_system_prompt(),
+            'agent': self._get_agent_system_prompt(),
+            'analysis': self._get_analysis_system_prompt()
+        }
+
+    def _get_brain_system_prompt(self) -> str:
+        return """Eres el CEREBRO CENTRAL de Litper Pro, un sistema de logística autónomo para Colombia.
+
+Tu rol es:
+1. PROCESAR eventos de logística en tiempo real
+2. TOMAR DECISIONES autónomas sobre envíos, retrasos y novedades
+3. APRENDER de cada interacción para mejorar continuamente
+4. COORDINAR múltiples agentes especializados
+5. OPTIMIZAR entregas y satisfacción del cliente
+
+Contexto de negocio:
+- Transportadoras: Coordinadora, Servientrega, TCC, Envía, Inter Rapidísimo
+- Ciudades principales: Bogotá, Medellín, Cali, Barranquilla, Cartagena
+- Métricas clave: Tiempo de entrega, tasa de novedades, satisfacción cliente
+
+Responde SIEMPRE en español colombiano profesional.
+Tus decisiones deben ser CONCRETAS y ACCIONABLES.
+Incluye SIEMPRE el nivel de confianza de tu decisión (0-100%)."""
+
+    def _get_decision_system_prompt(self) -> str:
+        return """Eres el MOTOR DE DECISIONES de Litper Pro.
+
+Tu trabajo es analizar situaciones y tomar decisiones óptimas.
+
+Para cada decisión debes:
+1. Analizar el contexto completo
+2. Evaluar opciones disponibles
+3. Calcular probabilidades de éxito
+4. Recomendar la mejor acción
+5. Explicar tu razonamiento
+
+Formato de respuesta OBLIGATORIO (JSON):
+{
+    "decision": "acción a tomar",
+    "confidence": 0-100,
+    "reasoning": "explicación",
+    "alternatives": ["opción2", "opción3"],
+    "risks": ["riesgo1", "riesgo2"],
+    "expected_outcome": "resultado esperado"
+}"""
+
+    def _get_learning_system_prompt(self) -> str:
+        return """Eres el SISTEMA DE APRENDIZAJE de Litper Pro.
+
+Tu rol es:
+1. Analizar resultados de acciones pasadas
+2. Identificar patrones de éxito y fracaso
+3. Generar insights para mejorar el sistema
+4. Proponer ajustes a estrategias
+
+Formato de respuesta (JSON):
+{
+    "patterns_found": [...],
+    "lessons_learned": [...],
+    "recommended_changes": [...],
+    "confidence": 0-100
+}"""
+
+    def _get_agent_system_prompt(self) -> str:
+        return """Eres un AGENTE ESPECIALIZADO de Litper Pro.
+
+Ejecutas tareas específicas de forma autónoma.
+Reportas resultados y solicitas ayuda cuando es necesario.
+
+Formato de respuesta (JSON):
+{
+    "action_taken": "descripción",
+    "result": "éxito/fallo/parcial",
+    "details": {...},
+    "needs_escalation": true/false
+}"""
+
+    def _get_analysis_system_prompt(self) -> str:
+        return """Eres el ANALISTA DE DATOS de Litper Pro.
+
+Analizas información logística para extraer insights.
+Generas reportes y predicciones basadas en datos.
+
+Responde con análisis estructurados y visualizables."""
+
+    async def think(self,
+                    context: str,
+                    role: str = 'brain',
+                    model: ClaudeModel = None,
+                    tools: List[Dict] = None) -> Dict[str, Any]:
+        """
+        Método principal de pensamiento del cerebro.
+        Usa Claude para razonar sobre un contexto.
+        """
+        model = model or self.config.default_model
+        system_prompt = self.system_prompts.get(role, self.system_prompts['brain'])
+
+        messages = [{"role": "user", "content": context}]
+
+        try:
+            if tools:
+                # Usar tool_use para acciones estructuradas
+                response = await self.async_client.messages.create(
+                    model=model.value,
+                    max_tokens=self.config.max_tokens,
+                    system=system_prompt,
+                    messages=messages,
+                    tools=tools
+                )
+            else:
+                response = await self.async_client.messages.create(
+                    model=model.value,
+                    max_tokens=self.config.max_tokens,
+                    system=system_prompt,
+                    messages=messages
+                )
+
+            return self._parse_response(response)
+
+        except anthropic.APIError as e:
+            return {"error": str(e), "success": False}
+
+    async def decide(self,
+                     situation: str,
+                     options: List[str] = None,
+                     constraints: Dict = None) -> Dict[str, Any]:
+        """
+        Toma una decisión autónoma sobre una situación.
+        """
+        context = f"""
+SITUACIÓN: {situation}
+
+{"OPCIONES DISPONIBLES: " + json.dumps(options, ensure_ascii=False) if options else ""}
+{"RESTRICCIONES: " + json.dumps(constraints, ensure_ascii=False) if constraints else ""}
+
+Analiza y decide la mejor acción a tomar.
+"""
+        return await self.think(context, role='decision', model=ClaudeModel.SONNET)
+
+    async def learn(self,
+                    action: str,
+                    outcome: str,
+                    context: Dict = None) -> Dict[str, Any]:
+        """
+        Aprende de una acción y su resultado.
+        """
+        learning_context = f"""
+ACCIÓN TOMADA: {action}
+RESULTADO: {outcome}
+CONTEXTO: {json.dumps(context, ensure_ascii=False) if context else 'N/A'}
+
+Analiza qué funcionó, qué no, y qué se puede mejorar.
+"""
+        return await self.think(learning_context, role='learning', model=ClaudeModel.HAIKU)
+
+    async def analyze_image(self,
+                            image_base64: str,
+                            analysis_prompt: str) -> Dict[str, Any]:
+        """
+        Analiza una imagen con Claude Vision.
+        Útil para evidencias de entrega, daños, etc.
+        """
+        try:
+            response = await self.async_client.messages.create(
+                model=ClaudeModel.SONNET.value,
+                max_tokens=1024,
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/jpeg",
+                                "data": image_base64
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": analysis_prompt
+                        }
+                    ]
+                }]
+            )
+            return self._parse_response(response)
+        except Exception as e:
+            return {"error": str(e), "success": False}
+
+    async def batch_process(self,
+                            items: List[Dict],
+                            processor_prompt: str,
+                            concurrency: int = 5) -> List[Dict]:
+        """
+        Procesa múltiples items en paralelo con Claude.
+        """
+        semaphore = asyncio.Semaphore(concurrency)
+
+        async def process_one(item: Dict) -> Dict:
+            async with semaphore:
+                context = f"{processor_prompt}\n\nITEM: {json.dumps(item, ensure_ascii=False)}"
+                result = await self.think(context, role='agent', model=ClaudeModel.HAIKU)
+                return {"input": item, "output": result}
+
+        results = await asyncio.gather(*[process_one(item) for item in items])
+        return results
+
+    def _parse_response(self, response) -> Dict[str, Any]:
+        """Parsea la respuesta de Claude."""
+        content = response.content[0]
+
+        if content.type == 'text':
+            text = content.text
+            # Intentar parsear como JSON
+            try:
+                # Buscar JSON en la respuesta
+                if '{' in text and '}' in text:
+                    start = text.index('{')
+                    end = text.rindex('}') + 1
+                    return json.loads(text[start:end])
+            except:
+                pass
+            return {"response": text, "success": True}
+
+        elif content.type == 'tool_use':
+            return {
+                "tool": content.name,
+                "input": content.input,
+                "success": True
+            }
+
+        return {"response": str(content), "success": True}
+```
+
+### Tools de Claude para Acciones Autónomas
+
+```python
+# backend/brain/claude/tools.py
+"""
+Definición de herramientas que Claude puede usar para ejecutar acciones.
+"""
+
+BRAIN_TOOLS = [
+    {
+        "name": "send_whatsapp",
+        "description": "Envía un mensaje de WhatsApp al cliente",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "phone": {"type": "string", "description": "Número de teléfono"},
+                "message": {"type": "string", "description": "Mensaje a enviar"},
+                "template": {"type": "string", "description": "Plantilla a usar (opcional)"}
+            },
+            "required": ["phone", "message"]
+        }
+    },
+    {
+        "name": "update_shipment_status",
+        "description": "Actualiza el estado de un envío en la base de datos",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "guide_number": {"type": "string"},
+                "new_status": {"type": "string"},
+                "notes": {"type": "string"}
+            },
+            "required": ["guide_number", "new_status"]
+        }
+    },
+    {
+        "name": "create_alert",
+        "description": "Crea una alerta en el sistema",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "type": {"type": "string", "enum": ["delay", "issue", "critical", "info"]},
+                "title": {"type": "string"},
+                "description": {"type": "string"},
+                "priority": {"type": "integer", "minimum": 1, "maximum": 5}
+            },
+            "required": ["type", "title"]
+        }
+    },
+    {
+        "name": "schedule_action",
+        "description": "Programa una acción para ejecutar en el futuro",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "action_type": {"type": "string"},
+                "execute_at": {"type": "string", "description": "ISO datetime"},
+                "parameters": {"type": "object"}
+            },
+            "required": ["action_type", "execute_at"]
+        }
+    },
+    {
+        "name": "query_database",
+        "description": "Consulta información de la base de datos",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query_type": {"type": "string", "enum": ["shipments", "customers", "carriers", "metrics"]},
+                "filters": {"type": "object"},
+                "limit": {"type": "integer", "default": 10}
+            },
+            "required": ["query_type"]
+        }
+    },
+    {
+        "name": "trigger_ml_prediction",
+        "description": "Ejecuta predicción con modelos ML",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "model": {"type": "string", "enum": ["delay", "issue", "churn", "demand"]},
+                "input_data": {"type": "object"}
+            },
+            "required": ["model", "input_data"]
+        }
+    },
+    {
+        "name": "escalate_to_human",
+        "description": "Escala un caso a un operador humano",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "reason": {"type": "string"},
+                "priority": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+                "context": {"type": "object"}
+            },
+            "required": ["reason", "priority"]
+        }
+    },
+    {
+        "name": "generate_report",
+        "description": "Genera un reporte automático",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "report_type": {"type": "string"},
+                "date_range": {"type": "object"},
+                "filters": {"type": "object"},
+                "format": {"type": "string", "enum": ["pdf", "excel", "json"]}
+            },
+            "required": ["report_type"]
+        }
+    }
+]
+
+# Tools para agentes especializados
+LOGISTICS_AGENT_TOOLS = [
+    {
+        "name": "optimize_route",
+        "description": "Optimiza la ruta de entrega",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "origin": {"type": "string"},
+                "destinations": {"type": "array", "items": {"type": "string"}},
+                "constraints": {"type": "object"}
+            },
+            "required": ["origin", "destinations"]
+        }
+    },
+    {
+        "name": "select_carrier",
+        "description": "Selecciona la mejor transportadora para un envío",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "destination_city": {"type": "string"},
+                "weight_kg": {"type": "number"},
+                "priority": {"type": "string"},
+                "budget": {"type": "number"}
+            },
+            "required": ["destination_city"]
+        }
+    },
+    {
+        "name": "predict_delivery_time",
+        "description": "Predice el tiempo de entrega",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "carrier": {"type": "string"},
+                "origin": {"type": "string"},
+                "destination": {"type": "string"}
+            },
+            "required": ["carrier", "destination"]
+        }
+    }
+]
+
+CUSTOMER_AGENT_TOOLS = [
+    {
+        "name": "get_customer_profile",
+        "description": "Obtiene el perfil completo del cliente",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "customer_id": {"type": "string"},
+                "include_history": {"type": "boolean", "default": True}
+            },
+            "required": ["customer_id"]
+        }
+    },
+    {
+        "name": "calculate_ltv",
+        "description": "Calcula el Lifetime Value del cliente",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "customer_id": {"type": "string"}
+            },
+            "required": ["customer_id"]
+        }
+    },
+    {
+        "name": "personalize_message",
+        "description": "Personaliza un mensaje para el cliente",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "customer_id": {"type": "string"},
+                "message_template": {"type": "string"},
+                "context": {"type": "object"}
+            },
+            "required": ["customer_id", "message_template"]
+        }
+    }
+]
+```
+
+### Cerebro Autónomo Potenciado por Claude
+
+```python
+# backend/brain/core/claude_brain_engine.py
+"""
+Motor del cerebro autónomo usando Claude como núcleo de razonamiento.
+"""
+
+from ..claude.client import ClaudeBrainClient, ClaudeConfig, ClaudeModel
+from ..claude.tools import BRAIN_TOOLS, LOGISTICS_AGENT_TOOLS, CUSTOMER_AGENT_TOOLS
+from typing import Dict, Any, List
+import asyncio
+import json
+from datetime import datetime
+
+class ClaudeAutonomousBrain:
+    """
+    Cerebro autónomo que usa Claude para TODAS las decisiones.
+    """
+
+    def __init__(self, api_key: str):
+        self.config = ClaudeConfig(api_key=api_key)
+        self.claude = ClaudeBrainClient(self.config)
+        self.memory = BrainMemory()
+        self.action_executor = ActionExecutor()
+        self.learning_buffer = []
+
+    async def process_event(self, event: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Procesa un evento y genera acciones autónomas usando Claude.
+        """
+        # 1. Enriquecer evento con contexto
+        context = await self._build_context(event)
+
+        # 2. Claude piensa y decide
+        decision = await self.claude.think(
+            context=f"""
+EVENTO RECIBIDO:
+{json.dumps(event, ensure_ascii=False, indent=2)}
+
+CONTEXTO HISTÓRICO:
+{json.dumps(context, ensure_ascii=False, indent=2)}
+
+¿Qué acciones debo tomar? Usa las herramientas disponibles si es necesario.
+""",
+            role='brain',
+            model=ClaudeModel.SONNET,
+            tools=BRAIN_TOOLS
+        )
+
+        # 3. Ejecutar acciones decididas por Claude
+        actions_results = []
+        if 'tool' in decision:
+            result = await self.action_executor.execute(
+                tool_name=decision['tool'],
+                params=decision['input']
+            )
+            actions_results.append(result)
+
+        # 4. Guardar para aprendizaje
+        self.learning_buffer.append({
+            'event': event,
+            'decision': decision,
+            'results': actions_results,
+            'timestamp': datetime.now().isoformat()
+        })
+
+        # 5. Trigger aprendizaje si hay suficientes ejemplos
+        if len(self.learning_buffer) >= 10:
+            asyncio.create_task(self._learn_from_buffer())
+
+        return {
+            'event_id': event.get('id'),
+            'decision': decision,
+            'actions_taken': actions_results,
+            'processed_at': datetime.now().isoformat()
+        }
+
+    async def _build_context(self, event: Dict) -> Dict:
+        """Construye contexto relevante para el evento."""
+        # Buscar eventos similares pasados
+        similar_events = await self.memory.find_similar(event, limit=5)
+
+        # Obtener métricas actuales
+        current_metrics = await self._get_current_metrics()
+
+        # Obtener estado de agentes
+        agents_status = await self._get_agents_status()
+
+        return {
+            'similar_past_events': similar_events,
+            'current_metrics': current_metrics,
+            'agents_status': agents_status,
+            'timestamp': datetime.now().isoformat()
+        }
+
+    async def _learn_from_buffer(self):
+        """Aprende de las experiencias acumuladas."""
+        if not self.learning_buffer:
+            return
+
+        # Claude analiza el batch de experiencias
+        learning_result = await self.claude.think(
+            context=f"""
+Analiza estas {len(self.learning_buffer)} experiencias recientes:
+
+{json.dumps(self.learning_buffer, ensure_ascii=False, indent=2)}
+
+Identifica:
+1. Patrones de éxito y fracaso
+2. Correlaciones entre eventos y resultados
+3. Recomendaciones para mejorar decisiones futuras
+4. Anomalías o casos inusuales
+""",
+            role='learning',
+            model=ClaudeModel.SONNET
+        )
+
+        # Guardar aprendizajes
+        await self.memory.store_learning(learning_result)
+
+        # Limpiar buffer
+        self.learning_buffer = []
+
+        return learning_result
+
+    async def ask_claude(self,
+                         question: str,
+                         context: Dict = None) -> str:
+        """
+        Interfaz directa para preguntar a Claude.
+        Usado por la UI y APIs.
+        """
+        full_context = f"""
+PREGUNTA DEL USUARIO: {question}
+
+{"CONTEXTO ADICIONAL: " + json.dumps(context, ensure_ascii=False) if context else ""}
+
+Responde de forma clara, concisa y profesional en español.
+"""
+        response = await self.claude.think(full_context, role='brain')
+        return response.get('response', str(response))
+
+    async def autonomous_loop(self):
+        """
+        Loop principal del cerebro - procesa eventos continuamente.
+        """
+        print("🧠 Cerebro Claude Autónomo iniciado...")
+
+        while True:
+            try:
+                # 1. Obtener eventos pendientes
+                events = await self._get_pending_events()
+
+                # 2. Procesar cada evento
+                for event in events:
+                    await self.process_event(event)
+
+                # 3. Auto-mejora periódica
+                if await self._should_self_improve():
+                    await self._self_improve()
+
+                # 4. Esperar antes de siguiente ciclo
+                await asyncio.sleep(1)  # 1 segundo entre ciclos
+
+            except Exception as e:
+                print(f"❌ Error en cerebro: {e}")
+                await asyncio.sleep(5)  # Esperar más en caso de error
+
+    async def _self_improve(self):
+        """El cerebro se auto-mejora usando Claude."""
+        improvement = await self.claude.think(
+            context="""
+Analiza tu propio rendimiento reciente:
+1. ¿Qué decisiones fueron acertadas?
+2. ¿Qué decisiones fueron erróneas?
+3. ¿Qué patrones nuevos has identificado?
+4. ¿Qué ajustes recomiendas para mejorar?
+
+Genera un plan de auto-mejora concreto.
+""",
+            role='learning',
+            model=ClaudeModel.OPUS  # Usar modelo más potente para auto-reflexión
+        )
+
+        # Aplicar mejoras
+        await self._apply_improvements(improvement)
+
+        return improvement
+```
+
+### Integración Frontend con Claude
+
+```typescript
+// services/claudeBrainService.ts
+/**
+ * Servicio para interactuar con el Cerebro Claude desde el frontend
+ */
+
+import Anthropic from '@anthropic-ai/sdk';
+import { API_CONFIG } from '../config/constants';
+
+interface BrainResponse {
+  decision: string;
+  confidence: number;
+  reasoning: string;
+  actions: string[];
+}
+
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+class ClaudeBrainService {
+  private client: Anthropic;
+  private conversationHistory: ChatMessage[] = [];
+
+  constructor() {
+    this.client = new Anthropic({
+      apiKey: API_CONFIG.CLAUDE_API_KEY,
+      dangerouslyAllowBrowser: true
+    });
+  }
+
+  /**
+   * Consulta al cerebro autónomo
+   */
+  async askBrain(question: string, context?: Record<string, any>): Promise<BrainResponse> {
+    const systemPrompt = `Eres el Cerebro Autónomo de Litper Pro.
+Tienes acceso a toda la información logística de Colombia.
+Responde en JSON con: decision, confidence (0-100), reasoning, actions[]`;
+
+    const response = await this.client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2048,
+      system: systemPrompt,
+      messages: [
+        ...this.conversationHistory,
+        {
+          role: 'user',
+          content: context
+            ? `Contexto: ${JSON.stringify(context)}\n\nPregunta: ${question}`
+            : question
+        }
+      ]
+    });
+
+    const text = response.content[0].type === 'text'
+      ? response.content[0].text
+      : '';
+
+    // Guardar en historial
+    this.conversationHistory.push(
+      { role: 'user', content: question },
+      { role: 'assistant', content: text }
+    );
+
+    // Parsear respuesta
+    try {
+      return JSON.parse(text);
+    } catch {
+      return {
+        decision: text,
+        confidence: 80,
+        reasoning: 'Respuesta directa',
+        actions: []
+      };
+    }
+  }
+
+  /**
+   * Streaming de respuestas para UI en tiempo real
+   */
+  async *streamResponse(question: string): AsyncGenerator<string> {
+    const stream = await this.client.messages.stream({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2048,
+      messages: [{ role: 'user', content: question }]
+    });
+
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' &&
+          event.delta.type === 'text_delta') {
+        yield event.delta.text;
+      }
+    }
+  }
+
+  /**
+   * Analiza un envío con el cerebro
+   */
+  async analyzeShipment(shipmentData: any): Promise<BrainResponse> {
+    return this.askBrain(
+      '¿Cuál es el estado y riesgo de este envío? ¿Qué acciones recomiendas?',
+      { shipment: shipmentData }
+    );
+  }
+
+  /**
+   * Predice problemas potenciales
+   */
+  async predictIssues(shipments: any[]): Promise<any[]> {
+    const response = await this.client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4096,
+      system: `Eres un experto en logística colombiana.
+Analiza estos envíos y predice cuáles tendrán problemas.
+Responde en JSON: [{guia, riesgo: 0-100, problemas_potenciales: [], recomendaciones: []}]`,
+      messages: [{
+        role: 'user',
+        content: JSON.stringify(shipments)
+      }]
+    });
+
+    const text = response.content[0].type === 'text'
+      ? response.content[0].text
+      : '[]';
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Genera mensaje personalizado para cliente
+   */
+  async generateCustomerMessage(
+    customerName: string,
+    situation: string,
+    tone: 'formal' | 'friendly' | 'urgent' = 'friendly'
+  ): Promise<string> {
+    const response = await this.client.messages.create({
+      model: 'claude-3-5-haiku-20241022', // Haiku para rapidez
+      max_tokens: 500,
+      messages: [{
+        role: 'user',
+        content: `Genera un mensaje de WhatsApp para ${customerName}.
+Situación: ${situation}
+Tono: ${tone}
+Idioma: Español colombiano
+Máximo 3 párrafos cortos.`
+      }]
+    });
+
+    return response.content[0].type === 'text'
+      ? response.content[0].text
+      : '';
+  }
+
+  /**
+   * Limpia el historial de conversación
+   */
+  clearHistory(): void {
+    this.conversationHistory = [];
+  }
+}
+
+export const claudeBrain = new ClaudeBrainService();
+export default claudeBrain;
+```
+
+### Variables de Entorno Requeridas
+
+```env
+# .env.backend - Configuración Claude API
+
+# API Key de Anthropic (REQUERIDO)
+ANTHROPIC_API_KEY=sk-ant-api03-xxxxx
+
+# Modelos por defecto
+CLAUDE_DEFAULT_MODEL=claude-sonnet-4-20250514
+CLAUDE_FAST_MODEL=claude-3-5-haiku-20241022
+CLAUDE_POWERFUL_MODEL=claude-opus-4-20250514
+
+# Configuración del cerebro
+BRAIN_MAX_TOKENS=4096
+BRAIN_TEMPERATURE=0.7
+BRAIN_TIMEOUT_SECONDS=60
+
+# Límites de uso
+CLAUDE_REQUESTS_PER_MINUTE=50
+CLAUDE_TOKENS_PER_DAY=1000000
+
+# Feature flags
+ENABLE_AUTONOMOUS_DECISIONS=true
+ENABLE_SELF_IMPROVEMENT=true
+ENABLE_LEARNING_BUFFER=true
+```
+
+---
+
 ## 📋 PLAN DE IMPLEMENTACIÓN: 8 FASES
 
 ---
