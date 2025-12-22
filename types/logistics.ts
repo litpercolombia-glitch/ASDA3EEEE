@@ -17,6 +17,7 @@ export type MainTabNew =
   | 'procesos-litper'
   | 'admin'
   | 'negocio'
+  | 'cerebro-ia'  // Dashboard Cerebro IA con Chatea Pro, Webhooks y Analytics
   // Legacy tabs (para compatibilidad)
   | 'seguimiento'
   | 'demanda'
