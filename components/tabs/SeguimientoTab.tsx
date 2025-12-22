@@ -68,6 +68,9 @@ import {
   sincronizarHojas,
   HojaCarga,
 } from '../../services/globalStorageService';
+import { SimpleUserSelector } from '../SimpleUserSelector';
+import { SimpleUser, getOCrearUsuarioDefault } from '../../services/simpleUserService';
+import { ChevronLeft, ChevronRight as ChevronRightIcon, Users } from 'lucide-react';
 
 interface SeguimientoTabProps {
   shipments: Shipment[];
@@ -648,7 +651,8 @@ const GuiaTableRow: React.FC<{
   guia: GuiaProcesada;
   onExpand: () => void;
   isExpanded: boolean;
-}> = ({ guia, onExpand, isExpanded }) => {
+  rowNumber?: number;
+}> = ({ guia, onExpand, isExpanded, rowNumber }) => {
   const [copiedGuia, setCopiedGuia] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
 
@@ -710,6 +714,12 @@ const GuiaTableRow: React.FC<{
         <div className="flex flex-col gap-1.5">
           {/* Número de Guía */}
           <div className="flex items-center gap-2">
+            {/* Número de fila */}
+            {rowNumber && (
+              <span className="w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-navy-800 rounded-full text-xs font-bold text-slate-500 dark:text-slate-400">
+                {rowNumber}
+              </span>
+            )}
             <span className="font-mono font-bold text-blue-600 dark:text-blue-400 text-sm hover:underline">
               {guia.guia.id}
             </span>
@@ -1197,6 +1207,53 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
   const [guardandoHoja, setGuardandoHoja] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
 
+  // Estados para USUARIO
+  const [usuarioActual, setUsuarioActual] = useState<SimpleUser | null>(null);
+
+  // Estados para PAGINACIÓN
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [tamanioPagina, setTamanioPagina] = useState<50 | 100>(50);
+
+  // Estados para AUTO-GUARDADO
+  const [ultimoAutoGuardado, setUltimoAutoGuardado] = useState<Date | null>(null);
+  const [autoGuardadoActivo, setAutoGuardadoActivo] = useState(true);
+
+  // Estados para NÚMERO DE CARGA del día
+  const [numeroCargaHoy, setNumeroCargaHoy] = useState(1);
+
+  // Inicializar usuario al montar
+  useEffect(() => {
+    const user = getOCrearUsuarioDefault();
+    setUsuarioActual(user);
+
+    // Calcular número de carga del día
+    const hoy = new Date().toISOString().split('T')[0];
+    const cargasHoyKey = `litper_cargas_${hoy}`;
+    const cargasHoy = parseInt(localStorage.getItem(cargasHoyKey) || '0', 10);
+    setNumeroCargaHoy(cargasHoy + 1);
+  }, []);
+
+  // Auto-guardado cada 30 segundos
+  useEffect(() => {
+    if (!autoGuardadoActivo || shipments.length === 0) return;
+
+    const intervalo = setInterval(async () => {
+      try {
+        await guardarNuevaHoja(shipments);
+        setUltimoAutoGuardado(new Date());
+      } catch (e) {
+        console.error('Error en auto-guardado:', e);
+      }
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(intervalo);
+  }, [shipments, autoGuardadoActivo]);
+
+  // Resetear página al cambiar filtros
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchQuery, filterStatus, filterTransportadora]);
+
   // Cargar hojas desde almacenamiento global al iniciar
   useEffect(() => {
     cargarHojasGlobales();
@@ -1413,6 +1470,14 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
     });
   }, [guiasProcesadas, searchQuery, filterStatus, filterTransportadora]);
 
+  // Calcular paginación
+  const totalPaginas = Math.ceil(guiasFiltradas.length / tamanioPagina);
+  const guiasPaginadas = useMemo(() => {
+    const inicio = (paginaActual - 1) * tamanioPagina;
+    const fin = inicio + tamanioPagina;
+    return guiasFiltradas.slice(inicio, fin);
+  }, [guiasFiltradas, paginaActual, tamanioPagina]);
+
   // Obtener transportadoras únicas
   const carriers = useMemo(() => {
     const unique = new Set(shipments.map((s) => s.carrier));
@@ -1554,6 +1619,45 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* ========================================== */}
+      {/* BARRA DE INFORMACIÓN DE CARGA */}
+      {/* ========================================== */}
+      <div className="bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl p-4 text-white">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          {/* Info de carga */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Package className="w-6 h-6" />
+              <div>
+                <p className="font-bold text-lg">
+                  {new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })} - Carga #{numeroCargaHoy}
+                </p>
+                <p className="text-white/80 text-sm">
+                  {shipments.length} guías • {guiasProcesadas.filter((g) => g.tieneTracking).length} con tracking
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Usuario y auto-guardado */}
+          <div className="flex items-center gap-4">
+            {/* Indicador de auto-guardado */}
+            {ultimoAutoGuardado && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 rounded-lg text-sm">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                <span>Guardado: {ultimoAutoGuardado.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+            )}
+
+            {/* Selector de Usuario */}
+            <SimpleUserSelector
+              compact
+              onUserChange={(user) => setUsuarioActual(user)}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Header con ayuda contextual */}
       <div className="flex items-center justify-between">
         <div>
@@ -1570,11 +1674,35 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
             </HelpTooltip>
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
-            {shipments.length} guías totales •{' '}
-            {guiasProcesadas.filter((g) => g.tieneTracking).length} con tracking
+            Operador: <span className="font-bold">{usuarioActual?.nombre || 'Cargando...'}</span>
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Paginación rápida */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-navy-800 rounded-lg p-1">
+            <button
+              onClick={() => setTamanioPagina(50)}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                tamanioPagina === 50
+                  ? 'bg-white dark:bg-navy-700 text-cyan-600 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              50
+            </button>
+            <button
+              onClick={() => setTamanioPagina(100)}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                tamanioPagina === 100
+                  ? 'bg-white dark:bg-navy-700 text-cyan-600 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              100
+            </button>
+            <span className="px-2 text-xs text-slate-400">por pág</span>
+          </div>
+
           {/* Botón Tablero de Alertas */}
           <button
             onClick={() => setShowAlertDashboard(!showAlertDashboard)}
@@ -1982,12 +2110,13 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
               </tr>
             </thead>
             <tbody>
-              {guiasFiltradas.map((g) => (
+              {guiasPaginadas.map((g, index) => (
                 <React.Fragment key={g.guia.id}>
                   <GuiaTableRow
                     guia={g}
                     onExpand={() => setExpandedGuia(expandedGuia === g.guia.id ? null : g.guia.id)}
                     isExpanded={expandedGuia === g.guia.id}
+                    rowNumber={(paginaActual - 1) * tamanioPagina + index + 1}
                   />
                   {expandedGuia === g.guia.id && (
                     <GuiaExpandedDetails guia={g} onCollapse={() => setExpandedGuia(null)} />
@@ -1997,6 +2126,72 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
             </tbody>
           </table>
         </div>
+
+        {/* Controles de paginación */}
+        {guiasFiltradas.length > 0 && totalPaginas > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-navy-950 border-t border-slate-200 dark:border-navy-700">
+            <div className="text-sm text-slate-500 dark:text-slate-400">
+              Mostrando <span className="font-bold text-slate-700 dark:text-white">{(paginaActual - 1) * tamanioPagina + 1}</span> - <span className="font-bold text-slate-700 dark:text-white">{Math.min(paginaActual * tamanioPagina, guiasFiltradas.length)}</span> de <span className="font-bold text-slate-700 dark:text-white">{guiasFiltradas.length}</span> guías
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPaginaActual(1)}
+                disabled={paginaActual === 1}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-navy-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Primera
+              </button>
+              <button
+                onClick={() => setPaginaActual(p => Math.max(1, p - 1))}
+                disabled={paginaActual === 1}
+                className="p-2 rounded-lg bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-navy-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPaginas) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPaginas <= 5) {
+                    pageNum = i + 1;
+                  } else if (paginaActual <= 3) {
+                    pageNum = i + 1;
+                  } else if (paginaActual >= totalPaginas - 2) {
+                    pageNum = totalPaginas - 4 + i;
+                  } else {
+                    pageNum = paginaActual - 2 + i;
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setPaginaActual(pageNum)}
+                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                        paginaActual === pageNum
+                          ? 'bg-cyan-500 text-white'
+                          : 'bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-navy-700'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => setPaginaActual(p => Math.min(totalPaginas, p + 1))}
+                disabled={paginaActual === totalPaginas}
+                className="p-2 rounded-lg bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-navy-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRightIcon className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setPaginaActual(totalPaginas)}
+                disabled={paginaActual === totalPaginas}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-navy-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Última
+              </button>
+            </div>
+          </div>
+        )}
 
         {guiasFiltradas.length === 0 && (
           <div className="p-8 text-center">
