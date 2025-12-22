@@ -1,50 +1,80 @@
 """
 Brain Routes - Endpoints para interactuar con el cerebro autónomo
+Soporta: Gemini (gratis), Claude (premium), ChatGPT (backup)
 """
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 from datetime import datetime
 import os
 import asyncio
 
-# Importar el cerebro
-from brain import ClaudeAutonomousBrain
-from brain.claude.client import ClaudeBrainClient, ClaudeConfig, ClaudeModel
+# Cargar variables de entorno
+from dotenv import load_dotenv
+load_dotenv('.env.backend')
+
+# Importar clientes de IA
+from brain.claude.gemini_client import GeminiBrainClient, GeminiConfig
+
+# Intentar importar Claude (opcional)
+try:
+    from brain.claude.client import ClaudeBrainClient, ClaudeConfig, ClaudeModel
+    CLAUDE_AVAILABLE = True
+except ImportError:
+    CLAUDE_AVAILABLE = False
 
 router = APIRouter(prefix="/api/brain", tags=["Brain - Cerebro Autónomo"])
 
-# Instancia global del cerebro (se inicializa lazy)
-_brain_instance: Optional[ClaudeAutonomousBrain] = None
-_brain_client: Optional[ClaudeBrainClient] = None
+# Instancia global del cliente (se inicializa lazy)
+_brain_client = None
+_current_provider = None
 
 
-def get_brain() -> ClaudeAutonomousBrain:
-    """Obtiene o crea la instancia del cerebro."""
-    global _brain_instance
-    if _brain_instance is None:
+def get_ai_provider() -> str:
+    """Determina qué proveedor de IA usar."""
+    default = os.getenv("DEFAULT_AI_PROVIDER", "gemini")
+
+    # Verificar disponibilidad
+    if default == "claude" and os.getenv("ANTHROPIC_API_KEY"):
+        return "claude"
+    elif default == "gemini" and os.getenv("GOOGLE_API_KEY"):
+        return "gemini"
+    elif os.getenv("GOOGLE_API_KEY"):
+        return "gemini"  # Fallback a Gemini (gratis)
+    elif os.getenv("ANTHROPIC_API_KEY"):
+        return "claude"
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail="No hay API key configurada. Configura GOOGLE_API_KEY o ANTHROPIC_API_KEY en .env.backend"
+        )
+
+
+def get_brain_client():
+    """Obtiene o crea el cliente de IA apropiado."""
+    global _brain_client, _current_provider
+
+    provider = get_ai_provider()
+
+    # Si ya tenemos el cliente correcto, retornarlo
+    if _brain_client is not None and _current_provider == provider:
+        return _brain_client
+
+    # Crear nuevo cliente
+    if provider == "gemini":
+        _brain_client = GeminiBrainClient(GeminiConfig())
+        _current_provider = "gemini"
+    elif provider == "claude" and CLAUDE_AVAILABLE:
         api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not api_key:
-            raise HTTPException(
-                status_code=500,
-                detail="ANTHROPIC_API_KEY no configurada"
-            )
-        _brain_instance = ClaudeAutonomousBrain(api_key=api_key)
-    return _brain_instance
-
-
-def get_brain_client() -> ClaudeBrainClient:
-    """Obtiene o crea el cliente de Claude."""
-    global _brain_client
-    if _brain_client is None:
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not api_key:
-            raise HTTPException(
-                status_code=500,
-                detail="ANTHROPIC_API_KEY no configurada"
-            )
         _brain_client = ClaudeBrainClient(ClaudeConfig(api_key=api_key))
+        _current_provider = "claude"
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Proveedor {provider} no disponible"
+        )
+
     return _brain_client
 
 
