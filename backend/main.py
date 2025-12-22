@@ -109,23 +109,14 @@ except ImportError as e:
     WEBSOCKET_SYSTEM_AVAILABLE = False
     logger.warning(f"Sistema de WebSocket no disponible: {e}")
 
-# Sistema de Push Notifications
+# Sistema de Tracker (sincronización desktop-web)
 try:
-    from routes.push_routes import router as push_router
-    PUSH_SYSTEM_AVAILABLE = True
-    logger.info("🔔 Sistema de Push Notifications cargado")
+    from routes.tracker_routes import router as tracker_router
+    TRACKER_SYSTEM_AVAILABLE = True
+    logger.info("📊 Sistema de Tracker cargado")
 except ImportError as e:
-    PUSH_SYSTEM_AVAILABLE = False
-    logger.warning(f"Sistema de Push no disponible: {e}")
-
-# Sistema de Webhooks
-try:
-    from routes.webhook_routes import router as webhook_router
-    WEBHOOK_SYSTEM_AVAILABLE = True
-    logger.info("🪝 Sistema de Webhooks cargado")
-except ImportError as e:
-    WEBHOOK_SYSTEM_AVAILABLE = False
-    logger.warning(f"Sistema de Webhooks no disponible: {e}")
+    TRACKER_SYSTEM_AVAILABLE = False
+    logger.warning(f"Sistema de Tracker no disponible: {e}")
 
 
 # ==================== CONFIGURACIÓN ====================
@@ -265,15 +256,10 @@ if WEBSOCKET_SYSTEM_AVAILABLE:
     app.include_router(websocket_router)
     logger.success("🔌 WebSocket registrado en /ws")
 
-# Incluir router de Push Notifications
-if PUSH_SYSTEM_AVAILABLE:
-    app.include_router(push_router)
-    logger.success("🔔 Rutas de Push registradas en /api/push")
-
-# Incluir router de Webhooks
-if WEBHOOK_SYSTEM_AVAILABLE:
-    app.include_router(webhook_router)
-    logger.success("🪝 Rutas de Webhooks registradas en /api/webhooks")
+# Incluir router de Tracker
+if TRACKER_SYSTEM_AVAILABLE:
+    app.include_router(tracker_router, prefix="/api")
+    logger.success("📊 Rutas de Tracker registradas en /api/tracker")
 
 
 # ==================== ENDPOINTS DE SISTEMA ====================

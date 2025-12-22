@@ -124,7 +124,7 @@ export interface TrackerState {
   setValorNovedades: (campo: keyof TrackerState['valoresNovedades'], valor: number) => void;
 
   // === RONDA ===
-  guardarRonda: () => void;
+  guardarRonda: () => Promise<void>;
 
   // === UI ===
   setModo: (modo: 'normal' | 'mini' | 'super-mini') => void;
@@ -134,6 +134,9 @@ export interface TrackerState {
   cargarDatos: () => Promise<void>;
   guardarDatos: () => Promise<void>;
   sincronizarUsuarios: () => Promise<void>;
+
+  // === EXPORTAR ===
+  exportarExcel: () => Promise<void>;
 }
 
 // ============================================
@@ -163,9 +166,32 @@ const valoresNovedadesIniciales = {
   litper: 0,
 };
 
-// Key para sincronización con Procesos 2.0
+// Key para sincronización con Procesos 2.0 (app web)
 const SYNC_KEY = 'litper-tracker-sync';
-const PROCESOS_KEY = 'litper-procesos-v2';
+const PROCESOS_KEY = 'litper-procesos-store'; // Debe coincidir con el store de la app web
+
+// URL del API Backend (cambiar en producción)
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/tracker';
+
+// Helper para hacer peticiones al API
+const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
+  try {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.warn('API no disponible, usando almacenamiento local:', error);
+    return null;
+  }
+};
 
 // Función para reproducir sonido de éxito
 const playSuccessSound = () => {
@@ -380,7 +406,7 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
   },
 
   // === GUARDAR RONDA ===
-  guardarRonda: () => {
+  guardarRonda: async () => {
     const state = get();
     if (!state.usuarioActual || !state.procesoActual) return;
 
@@ -404,12 +430,65 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
         tipo: 'guias',
         ...state.valoresGuias,
       } as RondaGuias;
+
+      // Enviar a API
+      try {
+        await apiRequest('/rondas/guias', {
+          method: 'POST',
+          body: JSON.stringify({
+            usuario_id: nuevaRonda.usuarioId,
+            usuario_nombre: nuevaRonda.usuarioNombre,
+            numero: nuevaRonda.numero,
+            fecha: nuevaRonda.fecha,
+            hora_inicio: nuevaRonda.horaInicio,
+            hora_fin: nuevaRonda.horaFin,
+            tiempo_usado: nuevaRonda.tiempoUsado,
+            tipo: 'guias',
+            pedidos_iniciales: state.valoresGuias.pedidosIniciales,
+            realizado: state.valoresGuias.realizado,
+            cancelado: state.valoresGuias.cancelado,
+            agendado: state.valoresGuias.agendado,
+            dificiles: state.valoresGuias.dificiles,
+            pendientes: state.valoresGuias.pendientes,
+            revisado: state.valoresGuias.revisado,
+          }),
+        });
+        console.log('✅ Ronda guías guardada en API');
+      } catch (e) {
+        console.warn('No se pudo guardar en API, guardando localmente');
+      }
     } else {
       nuevaRonda = {
         ...baseRonda,
         tipo: 'novedades',
         ...state.valoresNovedades,
       } as RondaNovedades;
+
+      // Enviar a API
+      try {
+        await apiRequest('/rondas/novedades', {
+          method: 'POST',
+          body: JSON.stringify({
+            usuario_id: nuevaRonda.usuarioId,
+            usuario_nombre: nuevaRonda.usuarioNombre,
+            numero: nuevaRonda.numero,
+            fecha: nuevaRonda.fecha,
+            hora_inicio: nuevaRonda.horaInicio,
+            hora_fin: nuevaRonda.horaFin,
+            tiempo_usado: nuevaRonda.tiempoUsado,
+            tipo: 'novedades',
+            revisadas: state.valoresNovedades.revisadas,
+            solucionadas: state.valoresNovedades.solucionadas,
+            devolucion: state.valoresNovedades.devolucion,
+            cliente: state.valoresNovedades.cliente,
+            transportadora: state.valoresNovedades.transportadora,
+            litper: state.valoresNovedades.litper,
+          }),
+        });
+        console.log('✅ Ronda novedades guardada en API');
+      } catch (e) {
+        console.warn('No se pudo guardar en API, guardando localmente');
+      }
     }
 
     const nuevasRondas = [...state.rondasHoy, nuevaRonda];
@@ -470,16 +549,32 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
     let usuariosEncontrados: Usuario[] = [];
 
     try {
-      // 1. Intentar desde localStorage (web/desarrollo)
-      const procesosData = localStorage.getItem(PROCESOS_KEY);
-      if (procesosData) {
-        const parsed = JSON.parse(procesosData);
-        if (parsed.state?.usuarios) {
-          usuariosEncontrados = parsed.state.usuarios.filter((u: Usuario) => u.activo);
+      // 1. PRIMERO: Intentar desde API Backend (sincronización en la nube)
+      const apiUsuarios = await apiRequest('/usuarios');
+      if (apiUsuarios && Array.isArray(apiUsuarios) && apiUsuarios.length > 0) {
+        usuariosEncontrados = apiUsuarios.map((u: any) => ({
+          id: u.id,
+          nombre: u.nombre,
+          avatar: u.avatar || '😊',
+          color: u.color || '#8B5CF6',
+          metaDiaria: u.meta_diaria || 50,
+          activo: u.activo !== false,
+        }));
+        console.log('✅ Usuarios sincronizados desde API:', usuariosEncontrados.length);
+      }
+
+      // 2. Fallback: Intentar desde localStorage (web/desarrollo)
+      if (usuariosEncontrados.length === 0) {
+        const procesosData = localStorage.getItem(PROCESOS_KEY);
+        if (procesosData) {
+          const parsed = JSON.parse(procesosData);
+          if (parsed.state?.usuarios) {
+            usuariosEncontrados = parsed.state.usuarios.filter((u: Usuario) => u.activo);
+          }
         }
       }
 
-      // 2. Intentar desde electron-store si está disponible
+      // 3. Fallback: Intentar desde electron-store si está disponible
       if (window.electronAPI && usuariosEncontrados.length === 0) {
         const usuariosGuardados = await window.electronAPI.getStore('usuarios');
         if (usuariosGuardados && Array.isArray(usuariosGuardados)) {
@@ -487,7 +582,7 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
         }
       }
 
-      // 3. Si no hay usuarios, crear algunos de ejemplo
+      // 4. Si no hay usuarios, crear algunos de ejemplo
       if (usuariosEncontrados.length === 0) {
         usuariosEncontrados = [
           { id: 'user1', nombre: 'Usuario 1', avatar: '😊', color: '#8B5CF6', metaDiaria: 50, activo: true },
@@ -517,58 +612,96 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
     await get().sincronizarUsuarios();
 
     const fechaHoy = hoy();
+    let rondasCargadas: Ronda[] = [];
 
-    if (window.electronAPI) {
-      try {
-        const fechaGuardada = await window.electronAPI.getStore('fecha');
-
-        if (fechaGuardada !== fechaHoy) {
-          set({ rondasHoy: [], totalHoyGuias: 0, totalHoyNovedades: 0, rondaNumero: 1 });
-          await window.electronAPI.setStore('fecha', fechaHoy);
-        } else {
-          const rondas = await window.electronAPI.getStore('rondasHoy');
-          if (rondas && Array.isArray(rondas)) {
-            const totalGuias = rondas
-              .filter((r: Ronda) => r.tipo === 'guias')
-              .reduce((acc: number, r: RondaGuias) => acc + (r.realizado || 0), 0);
-            const totalNovedades = rondas
-              .filter((r: Ronda) => r.tipo === 'novedades')
-              .reduce((acc: number, r: RondaNovedades) => acc + (r.solucionadas || 0), 0);
-            set({
-              rondasHoy: rondas,
-              totalHoyGuias: totalGuias,
-              totalHoyNovedades: totalNovedades,
-            });
-          }
-        }
-
-        const tiempoTotal = await window.electronAPI.getStore('tiempoTotal');
-        if (tiempoTotal) set({ tiempoTotal, tiempoRestante: tiempoTotal });
-      } catch (e) {
-        console.error('Error cargando datos:', e);
+    // 1. PRIMERO: Intentar cargar desde API
+    try {
+      const apiRondas = await apiRequest(`/rondas?fecha=${fechaHoy}`);
+      if (apiRondas && Array.isArray(apiRondas) && apiRondas.length > 0) {
+        rondasCargadas = apiRondas.map((r: any) => ({
+          id: r.id,
+          usuarioId: r.usuario_id,
+          usuarioNombre: r.usuario_nombre,
+          numero: r.numero,
+          fecha: r.fecha,
+          horaInicio: r.hora_inicio,
+          horaFin: r.hora_fin,
+          tiempoUsado: r.tiempo_usado,
+          tipo: r.tipo,
+          // Campos de guías
+          ...(r.tipo === 'guias' ? {
+            pedidosIniciales: r.pedidos_iniciales || 0,
+            realizado: r.realizado || 0,
+            cancelado: r.cancelado || 0,
+            agendado: r.agendado || 0,
+            dificiles: r.dificiles || 0,
+            pendientes: r.pendientes || 0,
+            revisado: r.revisado || 0,
+          } : {}),
+          // Campos de novedades
+          ...(r.tipo === 'novedades' ? {
+            revisadas: r.revisadas || 0,
+            solucionadas: r.solucionadas || 0,
+            devolucion: r.devolucion || 0,
+            cliente: r.cliente || 0,
+            transportadora: r.transportadora || 0,
+            litper: r.litper || 0,
+          } : {}),
+        }));
+        console.log('✅ Rondas cargadas desde API:', rondasCargadas.length);
       }
-    } else {
-      // Modo navegador (desarrollo)
-      try {
-        const saved = localStorage.getItem('litper-tracker-data');
-        if (saved) {
-          const data = JSON.parse(saved);
-          if (data.fecha === fechaHoy && data.rondasHoy) {
-            const totalGuias = data.rondasHoy
-              .filter((r: Ronda) => r.tipo === 'guias')
-              .reduce((acc: number, r: RondaGuias) => acc + (r.realizado || 0), 0);
-            const totalNovedades = data.rondasHoy
-              .filter((r: Ronda) => r.tipo === 'novedades')
-              .reduce((acc: number, r: RondaNovedades) => acc + (r.solucionadas || 0), 0);
-            set({
-              rondasHoy: data.rondasHoy,
-              totalHoyGuias: totalGuias,
-              totalHoyNovedades: totalNovedades,
-            });
-          }
-        }
-      } catch (e) {}
+    } catch (e) {
+      console.warn('No se pudieron cargar rondas desde API');
     }
+
+    // 2. Si no hay rondas de API, intentar desde almacenamiento local
+    if (rondasCargadas.length === 0) {
+      if (window.electronAPI) {
+        try {
+          const fechaGuardada = await window.electronAPI.getStore('fecha');
+
+          if (fechaGuardada !== fechaHoy) {
+            set({ rondasHoy: [], totalHoyGuias: 0, totalHoyNovedades: 0, rondaNumero: 1 });
+            await window.electronAPI.setStore('fecha', fechaHoy);
+          } else {
+            const rondas = await window.electronAPI.getStore('rondasHoy');
+            if (rondas && Array.isArray(rondas)) {
+              rondasCargadas = rondas;
+            }
+          }
+
+          const tiempoTotal = await window.electronAPI.getStore('tiempoTotal');
+          if (tiempoTotal) set({ tiempoTotal, tiempoRestante: tiempoTotal });
+        } catch (e) {
+          console.error('Error cargando datos:', e);
+        }
+      } else {
+        // Modo navegador (desarrollo)
+        try {
+          const saved = localStorage.getItem('litper-tracker-data');
+          if (saved) {
+            const data = JSON.parse(saved);
+            if (data.fecha === fechaHoy && data.rondasHoy) {
+              rondasCargadas = data.rondasHoy;
+            }
+          }
+        } catch (e) {}
+      }
+    }
+
+    // Calcular totales
+    const totalGuias = rondasCargadas
+      .filter((r): r is RondaGuias => r.tipo === 'guias')
+      .reduce((acc, r) => acc + (r.realizado || 0), 0);
+    const totalNovedades = rondasCargadas
+      .filter((r): r is RondaNovedades => r.tipo === 'novedades')
+      .reduce((acc, r) => acc + (r.solucionadas || 0), 0);
+
+    set({
+      rondasHoy: rondasCargadas,
+      totalHoyGuias: totalGuias,
+      totalHoyNovedades: totalNovedades,
+    });
   },
 
   guardarDatos: async () => {
@@ -602,5 +735,102 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
         ultimaSync: new Date().toISOString(),
       }));
     } catch (e) {}
+  },
+
+  // === EXPORTAR EXCEL ===
+  exportarExcel: async () => {
+    const state = get();
+    const fechaHoy = hoy();
+
+    // Crear datos CSV
+    const headersGuias = [
+      'Fecha', 'Usuario', 'Ronda', 'Hora Inicio', 'Hora Fin', 'Tiempo (min)',
+      'Iniciales', 'Realizadas', 'Canceladas', 'Agendadas', 'Dificiles', 'Pendientes', 'Revisadas'
+    ];
+
+    const headersNovedades = [
+      'Fecha', 'Usuario', 'Ronda', 'Hora Inicio', 'Hora Fin', 'Tiempo (min)',
+      'Revisadas', 'Solucionadas', 'Devolucion', 'Cliente', 'Transportadora', 'LITPER'
+    ];
+
+    // Filtrar rondas por tipo
+    const rondasGuias = state.rondasHoy.filter((r): r is RondaGuias => r.tipo === 'guias');
+    const rondasNovedades = state.rondasHoy.filter((r): r is RondaNovedades => r.tipo === 'novedades');
+
+    // Crear contenido CSV para guías
+    let csvGuias = headersGuias.join(',') + '\n';
+    rondasGuias.forEach(r => {
+      csvGuias += [
+        r.fecha,
+        r.usuarioNombre,
+        r.numero,
+        r.horaInicio,
+        r.horaFin,
+        r.tiempoUsado,
+        r.pedidosIniciales,
+        r.realizado,
+        r.cancelado,
+        r.agendado,
+        r.dificiles,
+        r.pendientes,
+        r.revisado,
+      ].join(',') + '\n';
+    });
+
+    // Crear contenido CSV para novedades
+    let csvNovedades = headersNovedades.join(',') + '\n';
+    rondasNovedades.forEach(r => {
+      csvNovedades += [
+        r.fecha,
+        r.usuarioNombre,
+        r.numero,
+        r.horaInicio,
+        r.horaFin,
+        r.tiempoUsado,
+        r.revisadas,
+        r.solucionadas,
+        r.devolucion,
+        r.cliente,
+        r.transportadora,
+        r.litper,
+      ].join(',') + '\n';
+    });
+
+    // Combinar todo en un solo CSV con secciones
+    const csvCompleto = `LITPER TRACKER - REPORTE ${fechaHoy}
+Usuario: ${state.usuarioActual?.nombre || 'Todos'}
+
+=== GUIAS ===
+${csvGuias}
+=== NOVEDADES ===
+${csvNovedades}
+=== RESUMEN ===
+Total Guías Realizadas: ${state.totalHoyGuias}
+Total Novedades Solucionadas: ${state.totalHoyNovedades}
+Total Rondas: ${state.rondasHoy.length}
+`;
+
+    // Si estamos en Electron, usar el API para guardar archivo
+    if (window.electronAPI && window.electronAPI.exportCSV) {
+      try {
+        await window.electronAPI.exportCSV(csvCompleto, `LITPER_Rondas_${fechaHoy}.csv`);
+        playSuccessSound();
+        console.log('✅ Excel exportado exitosamente');
+      } catch (e) {
+        console.error('Error exportando:', e);
+      }
+    } else {
+      // Fallback para navegador
+      const blob = new Blob([csvCompleto], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `LITPER_Rondas_${fechaHoy}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      playSuccessSound();
+    }
   },
 }));

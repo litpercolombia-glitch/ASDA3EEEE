@@ -1,537 +1,574 @@
 /**
- * 🏢 LITPER PROCESOS - Sistema de Control de Procesos Logísticos
- *
- * Módulo completo para registro de guías y novedades con:
- * - Cronómetro inteligente con alertas
- * - Formularios de generación de guías por rondas
- * - Registro de novedades
- * - Dashboard administrativo
- * - Gamificación y mensajes motivacionales
+ * 🎮 LITPER PROCESOS - GAMING EDITION v2.0
+ * Optimizado y compacto con Fase 1 completa
  */
-
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  Users,
-  Crown,
-  Package,
-  AlertTriangle,
-  Clock,
-  Play,
-  Pause,
-  RotateCcw,
-  Plus,
-  Minus,
-  Save,
-  CheckCircle2,
-  XCircle,
-  Calendar,
-  MessageSquare,
-  Eye,
-  TrendingUp,
-  TrendingDown,
-  BarChart3,
-  PieChart,
-  Award,
-  Target,
-  Zap,
-  Star,
-  Trophy,
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  Settings,
-  Bell,
-  Volume2,
-  VolumeX,
-  User,
-  Truck,
-  Building2,
-  RefreshCw,
-  FileSpreadsheet,
-  ArrowUpRight,
-  ArrowDownRight,
+  Crown, Package, AlertTriangle, Clock, Play, Pause, RotateCcw, Plus, Minus, Save,
+  CheckCircle2, XCircle, Star, Trophy, ChevronLeft, ChevronRight, Download, Settings,
+  User, Flame, Medal, Gamepad2, X, Pin, PinOff, Lightbulb, Sparkles, Timer, Target,
+  BarChart3, Zap, UserPlus, Trash2, Edit3, Volume2, VolumeX
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-// =====================================
-// TIPOS E INTERFACES
-// =====================================
-interface ProcesosLitperTabProps {
-  selectedCountry?: string;
-}
-
+// ===== TIPOS =====
 interface Usuario {
-  id: string;
-  nombre: string;
-  avatar?: string;
+  id: string; nombre: string; xp: number; nivel: number; racha: number;
+  medallas: string[]; guiasTotales: number; mejorTiempo: number; combosMaximos: number;
 }
 
-interface RondaGuias {
-  id: string;
-  numero: number;
-  usuarioId: string;
-  fecha: string;
-  horaInicio: string;
-  horaFin?: string;
-  tiempoTotal: number; // en segundos
-  pedidosIniciales: number;
-  realizado: number;
-  cancelado: number;
-  agendado: number;
-  dificiles: number;
-  pendientes: number;
-  revisado: number;
-  tiempoPromedio: number; // minutos por pedido
+interface Ronda {
+  id: string; numero: number; usuarioId: string; fecha: string;
+  tiempoTotal: number; realizado: number; cancelado: number; agendado: number;
+  dificiles: number; pendientes: number; xpGanado: number; comboMaximo: number;
 }
 
-interface RegistroNovedades {
-  id: string;
-  usuarioId: string;
-  fecha: string;
-  hora: string;
-  solucionadas: number;
-  revisadas: number;
-  devolucion: number;
-  cliente: number;
-  transportadora: number;
-  litper: number;
+interface Config {
+  tiempoRonda: number; alertaTemprana: number; alertaCritica: number;
+  metaDiaria: number; sonido: boolean; countdown: boolean;
 }
 
-interface ConfiguracionCronometro {
-  tiempoPorRonda: number; // minutos
-  tiempoPromedioGuia: number; // minutos
-  alertaTemprana: number; // segundos
-  alertaCritica: number; // segundos
-  sonidoActivo: boolean;
-  notificacionesActivas: boolean;
-  mensajesMotivacionales: boolean;
-}
+// ===== CONSTANTES =====
+const STORAGE = { RONDAS: 'lp_rondas', CONFIG: 'lp_config', USUARIOS: 'lp_users', WIDGET: 'lp_widget' };
+const API_URL = 'http://localhost:8000/api/tracker';
 
-// =====================================
-// CONSTANTES
-// =====================================
-const STORAGE_KEY_RONDAS = 'litper_procesos_rondas';
-const STORAGE_KEY_NOVEDADES = 'litper_procesos_novedades';
-const STORAGE_KEY_CONFIG = 'litper_procesos_config';
-const STORAGE_KEY_USUARIOS = 'litper_procesos_usuarios';
-
-const USUARIOS_DEFAULT: Usuario[] = [
-  { id: '1', nombre: 'EVAN' },
-  { id: '2', nombre: 'MARIA' },
-  { id: '3', nombre: 'CARLOS' },
-  { id: '4', nombre: 'ANA' },
-  { id: '5', nombre: 'PEDRO' },
+const NIVELES = [
+  { min: 0, max: 100, nombre: 'Novato', color: 'from-gray-400 to-gray-500' },
+  { min: 100, max: 500, nombre: 'Aprendiz', color: 'from-green-400 to-green-500' },
+  { min: 500, max: 2000, nombre: 'Experto', color: 'from-blue-400 to-blue-500' },
+  { min: 2000, max: 5000, nombre: 'Maestro', color: 'from-purple-400 to-purple-500' },
+  { min: 5000, max: 15000, nombre: 'Leyenda', color: 'from-amber-400 to-amber-500' },
+  { min: 15000, max: 999999, nombre: 'ELITE', color: 'from-yellow-400 to-red-500' },
 ];
 
-const CONFIG_DEFAULT: ConfiguracionCronometro = {
-  tiempoPorRonda: 25,
-  tiempoPromedioGuia: 3,
-  alertaTemprana: 150, // 2:30 min
-  alertaCritica: 240, // 4:00 min
-  sonidoActivo: true,
-  notificacionesActivas: true,
-  mensajesMotivacionales: true,
-};
-
-const MENSAJES_MOTIVACIONALES = [
-  "💪 ¡Tú puedes! Solo un poco más rápido y rompes tu récord.",
-  "🚀 ¡Vamos equipo Litper! Cada guía nos acerca al objetivo.",
-  "⭐ ¡Eres crack! Recuerda: eficiencia + calidad = éxito.",
-  "🎯 ¡Enfócate! Estás a punto de terminar esta guía.",
-  "🏆 ¡Campeón/a! El equipo Litper cuenta contigo.",
-  "💡 Tip: Si es muy compleja, márcala como 'Difícil' y continúa.",
-  "🌟 ¡Excelente trabajo! Mantén ese ritmo ganador.",
-  "⚡ ¡Velocidad Litper activada! Tú lo logras.",
+const TIPS = [
+  "💡 Técnica Pomodoro: 25 min trabajo, 5 min descanso",
+  "⏱️ Si toma menos de 2 min, hazlo ya",
+  "🎯 Una guía a la vez = mejor tiempo",
+  "💧 Bebe agua cada hora",
+  "🎉 Cada ronda completada es una victoria",
 ];
 
-// =====================================
-// HELPERS
-// =====================================
-const formatTime = (seconds: number): string => {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+// Los 9 usuarios reales de LITPER (sincronizados con backend)
+const DEFAULT_USERS: Usuario[] = [
+  { id: 'cat1', nombre: 'CATALINA', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0 },
+  { id: 'ang1', nombre: 'ANGIE', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0 },
+  { id: 'car1', nombre: 'CAROLINA', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0 },
+  { id: 'ale1', nombre: 'ALEJANDRA', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0 },
+  { id: 'eva1', nombre: 'EVAN', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0 },
+  { id: 'jim1', nombre: 'JIMMY', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0 },
+  { id: 'fel1', nombre: 'FELIPE', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0 },
+  { id: 'nor1', nombre: 'NORMA', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0 },
+  { id: 'kar1', nombre: 'KAREN', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0 },
+];
+
+const DEFAULT_CONFIG: Config = {
+  tiempoRonda: 300, alertaTemprana: 60, alertaCritica: 30,
+  metaDiaria: 60, sonido: true, countdown: true
 };
 
-const loadFromStorage = <T,>(key: string, defaultValue: T): T => {
+// ===== HELPERS =====
+const load = <T,>(key: string, def: T): T => {
+  try { const d = localStorage.getItem(key); return d ? JSON.parse(d) : def; } catch { return def; }
+};
+const save = <T,>(key: string, data: T) => localStorage.setItem(key, JSON.stringify(data));
+const fmt = (s: number) => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
+const getNivel = (xp: number) => {
+  const n = NIVELES.findIndex(l => xp >= l.min && xp < l.max);
+  const nivel = NIVELES[n] || NIVELES[0];
+  const prog = ((xp - nivel.min) / (nivel.max - nivel.min)) * 100;
+  return { ...nivel, nivel: n + 1, progreso: Math.min(prog, 100) };
+};
+const calcXP = (r: number, t: number, c: number, combo: number) => {
+  let xp = r * 10 + (t < 2 ? r * 5 : t < 3 ? r * 2 : 0) - c * 3 + 50 + (c === 0 ? 25 : 0);
+  return Math.max(0, Math.floor(xp * (1 + (combo - 1) * 0.1)));
+};
+
+// ===== API HELPERS =====
+const fetchUsuariosFromAPI = async (): Promise<Usuario[]> => {
   try {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : defaultValue;
-  } catch {
-    return defaultValue;
+    const response = await fetch(`${API_URL}/usuarios`);
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Usuarios cargados desde backend:', data.length);
+      return data.map((u: any) => ({
+        id: u.id,
+        nombre: u.nombre,
+        xp: 0,
+        nivel: 1,
+        racha: 0,
+        medallas: [],
+        guiasTotales: 0,
+        mejorTiempo: 0,
+        combosMaximos: 0,
+      }));
+    }
+  } catch (error) {
+    console.warn('⚠️ No se pudieron cargar usuarios desde backend:', error);
+  }
+  return [];
+};
+
+const syncRondaToAPI = async (ronda: Ronda, usuario: Usuario) => {
+  try {
+    await fetch(`${API_URL}/rondas/guias`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        usuario_id: ronda.usuarioId,
+        usuario_nombre: usuario.nombre,
+        numero: ronda.numero,
+        fecha: ronda.fecha,
+        hora_inicio: new Date().toTimeString().slice(0, 5),
+        hora_fin: new Date().toTimeString().slice(0, 5),
+        tiempo_usado: Math.round(ronda.tiempoTotal / 60),
+        realizado: ronda.realizado,
+        cancelado: ronda.cancelado,
+        agendado: ronda.agendado,
+        dificiles: ronda.dificiles,
+        pendientes: ronda.pendientes,
+      }),
+    });
+    console.log('✅ Ronda sincronizada con backend');
+  } catch (error) {
+    console.warn('⚠️ No se pudo sincronizar ronda con backend:', error);
   }
 };
 
-const saveToStorage = <T,>(key: string, data: T): void => {
+const fetchRondasFromAPI = async (fecha?: string): Promise<Ronda[]> => {
   try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch (e) {
-    console.error('Error saving to storage:', e);
+    const fechaParam = fecha || new Date().toISOString().split('T')[0];
+    const response = await fetch(`${API_URL}/rondas?fecha=${fechaParam}&tipo=guias`);
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Rondas cargadas desde backend:', data.length);
+      return data.map((r: any) => ({
+        id: r.id,
+        numero: r.numero || 1,
+        usuarioId: r.usuario_id,
+        fecha: r.fecha,
+        tiempoTotal: (r.tiempo_usado || 0) * 60,
+        realizado: r.realizado || 0,
+        cancelado: r.cancelado || 0,
+        agendado: r.agendado || 0,
+        dificiles: r.dificiles || 0,
+        pendientes: r.pendientes || 0,
+        xpGanado: 0,
+        comboMaximo: 1,
+      }));
+    }
+  } catch (error) {
+    console.warn('⚠️ No se pudieron cargar rondas desde backend:', error);
   }
+  return [];
 };
 
-// =====================================
-// COMPONENTE: CONTADOR
-// =====================================
-const Counter: React.FC<{
-  label: string;
-  value: number;
-  onChange: (value: number) => void;
-  icon: React.ReactNode;
-  color: string;
-  min?: number;
-}> = ({ label, value, onChange, icon, color, min = 0 }) => (
-  <div className={`flex items-center justify-between p-3 rounded-xl ${color} transition-all`}>
-    <div className="flex items-center gap-2">
-      {icon}
-      <span className="font-medium text-sm">{label}</span>
-    </div>
-    <div className="flex items-center gap-2">
-      <button
-        onClick={() => onChange(Math.max(min, value - 1))}
-        className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
-      >
-        <Minus className="w-4 h-4" />
-      </button>
-      <span className="w-10 text-center font-bold text-lg">{value}</span>
-      <button
-        onClick={() => onChange(value + 1)}
-        className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
-      >
-        <Plus className="w-4 h-4" />
-      </button>
+// ===== SONIDO =====
+const playBeep = (freq: number, dur: number) => {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value = freq; osc.type = 'sine';
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + dur);
+    osc.start(); osc.stop(ctx.currentTime + dur);
+  } catch {}
+};
+
+// ===== COMPONENTE: CONTADOR MINI =====
+const MiniCounter: React.FC<{icon: string; value: number; onChange: (v: number) => void; color: string}> =
+  ({icon, value, onChange, color}) => (
+  <div className={`${color} rounded-lg p-1.5 text-center`}>
+    <div className="text-xs">{icon}</div>
+    <div className="flex items-center justify-center gap-1">
+      <button onClick={() => onChange(Math.max(0, value - 1))} className="w-5 h-5 rounded bg-black/20 hover:bg-black/40 text-white text-xs">-</button>
+      <span className="w-6 text-white font-bold text-sm">{value}</span>
+      <button onClick={() => onChange(value + 1)} className="w-5 h-5 rounded bg-black/20 hover:bg-black/40 text-white text-xs">+</button>
     </div>
   </div>
 );
 
-// =====================================
-// COMPONENTE: CRONÓMETRO CIRCULAR
-// =====================================
-const CircularTimer: React.FC<{
-  seconds: number;
-  maxSeconds: number;
-  alertaTemprana: number;
-  alertaCritica: number;
-  isRunning: boolean;
-}> = ({ seconds, maxSeconds, alertaTemprana, alertaCritica, isRunning }) => {
-  const progress = Math.min((seconds / maxSeconds) * 100, 100);
-  const circumference = 2 * Math.PI * 45;
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
+// ===== COMPONENTE: WIDGET FLOTANTE =====
+const FloatingWidget: React.FC<{
+  usuario: Usuario; tiempo: number; maxTiempo: number; activo: boolean; countdown: boolean;
+  contadores: {r: number; c: number; a: number; d: number; p: number};
+  setContadores: (c: any) => void; combo: number; meta: number; guiasHoy: number;
+  onToggle: () => void; onSave: () => void; onClose: () => void;
+  pinned: boolean; onPin: () => void; pos: {x: number; y: number}; setPos: (p: any) => void;
+  alertaT: number; alertaC: number; sonido: boolean;
+}> = ({usuario, tiempo, maxTiempo, activo, countdown, contadores, setContadores, combo, meta, guiasHoy,
+       onToggle, onSave, onClose, pinned, onPin, pos, setPos, alertaT, alertaC, sonido}) => {
+  const [drag, setDrag] = useState(false);
+  const [offset, setOffset] = useState({x: 0, y: 0});
 
-  let color = 'text-emerald-500';
-  let bgColor = 'stroke-emerald-500';
-  if (seconds >= alertaCritica) {
-    color = 'text-red-500';
-    bgColor = 'stroke-red-500';
-  } else if (seconds >= alertaTemprana) {
-    color = 'text-amber-500';
-    bgColor = 'stroke-amber-500';
-  }
+  const displayTime = countdown ? Math.max(0, maxTiempo - tiempo) : tiempo;
+  const isWarning = countdown ? displayTime <= alertaT && displayTime > alertaC : tiempo >= (maxTiempo - alertaT);
+  const isCritical = countdown ? displayTime <= alertaC : tiempo >= (maxTiempo - alertaC);
+
+  const color = isCritical ? 'text-red-400' : isWarning ? 'text-amber-400' : 'text-emerald-400';
+  const bg = isCritical ? 'bg-red-500/20' : isWarning ? 'bg-amber-500/20' : 'bg-emerald-500/20';
+
+  useEffect(() => {
+    const move = (e: MouseEvent) => drag && setPos({x: e.clientX - offset.x, y: e.clientY - offset.y});
+    const up = () => setDrag(false);
+    if (drag) { document.addEventListener('mousemove', move); document.addEventListener('mouseup', up); }
+    return () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+  }, [drag, offset]);
+
+  const nivelInfo = getNivel(usuario.xp);
+  const progMeta = Math.min((guiasHoy / meta) * 100, 100);
 
   return (
-    <div className="relative w-32 h-32">
-      <svg className="w-full h-full transform -rotate-90">
-        <circle
-          cx="64"
-          cy="64"
-          r="45"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="8"
-          className="text-slate-200 dark:text-navy-700"
+    <div
+      className={`fixed z-50 bg-slate-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700/50 w-72 ${drag ? 'cursor-grabbing' : 'cursor-grab'} ${pinned ? 'ring-2 ring-cyan-500' : ''}`}
+      style={{left: pos.x, top: pos.y}}
+      onMouseDown={(e) => { if (!(e.target as HTMLElement).closest('.ctrl')) { setDrag(true); setOffset({x: e.clientX - pos.x, y: e.clientY - pos.y}); }}}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-t-2xl">
+        <div className="flex items-center gap-2">
+          <Gamepad2 className="w-4 h-4 text-white" />
+          <span className="font-bold text-white text-sm">LITPER</span>
+          {combo > 1 && <span className="bg-orange-500 text-white text-xs px-1.5 rounded-full animate-pulse">x{combo}</span>}
+        </div>
+        <div className="flex items-center gap-1 ctrl">
+          <button onClick={onPin} className="p-1 hover:bg-white/20 rounded">{pinned ? <PinOff className="w-3 h-3 text-white"/> : <Pin className="w-3 h-3 text-white"/>}</button>
+          <button onClick={onClose} className="p-1 hover:bg-white/20 rounded"><X className="w-3 h-3 text-white"/></button>
+        </div>
+      </div>
+
+      <div className="p-3">
+        {/* Timer */}
+        <div className={`${bg} rounded-xl p-3 text-center mb-3`}>
+          <div className={`text-4xl font-mono font-bold ${color}`}>{fmt(displayTime)}</div>
+          <div className={`text-xs ${color} flex items-center justify-center gap-1`}>
+            {isCritical ? '🔴' : isWarning ? '🟡' : '🟢'} {activo ? 'EN RONDA' : countdown ? 'COUNTDOWN' : 'PAUSADO'}
+          </div>
+        </div>
+
+        {/* Contadores con +/- */}
+        <div className="grid grid-cols-5 gap-1 mb-3 ctrl">
+          <MiniCounter icon="✅" value={contadores.r} onChange={(v) => setContadores({...contadores, r: v})} color="bg-emerald-500/30" />
+          <MiniCounter icon="❌" value={contadores.c} onChange={(v) => setContadores({...contadores, c: v})} color="bg-red-500/30" />
+          <MiniCounter icon="📅" value={contadores.a} onChange={(v) => setContadores({...contadores, a: v})} color="bg-blue-500/30" />
+          <MiniCounter icon="⚠️" value={contadores.d} onChange={(v) => setContadores({...contadores, d: v})} color="bg-amber-500/30" />
+          <MiniCounter icon="⏳" value={contadores.p} onChange={(v) => setContadores({...contadores, p: v})} color="bg-purple-500/30" />
+        </div>
+
+        {/* Controles */}
+        <div className="flex gap-2 mb-3 ctrl">
+          <button onClick={onToggle} className={`flex-1 py-2 rounded-lg font-bold text-sm flex items-center justify-center gap-1 ${activo ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-500 hover:bg-emerald-600'} text-white`}>
+            {activo ? <Pause className="w-4 h-4"/> : <Play className="w-4 h-4"/>}
+          </button>
+          <button onClick={onSave} className="flex-1 py-2 rounded-lg font-bold text-sm bg-cyan-500 hover:bg-cyan-600 text-white flex items-center justify-center gap-1">
+            <Save className="w-4 h-4"/>
+          </button>
+        </div>
+
+        {/* Stats */}
+        <div className="flex items-center justify-between text-xs text-slate-400">
+          <span className="flex items-center gap-1"><Flame className="w-3 h-3 text-orange-400"/>{usuario.racha}d</span>
+          <span className="flex items-center gap-1"><Star className="w-3 h-3 text-yellow-400"/>{usuario.xp} XP</span>
+          <span>Lvl {nivelInfo.nivel}</span>
+        </div>
+
+        {/* Meta */}
+        <div className="mt-2">
+          <div className="flex justify-between text-xs text-slate-500 mb-1">
+            <span>Meta: {guiasHoy}/{meta}</span><span>{Math.round(progMeta)}%</span>
+          </div>
+          <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{width: `${progMeta}%`}}/>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ===== COMPONENTE: MODAL USUARIO =====
+const UserModal: React.FC<{
+  user?: Usuario; onSave: (u: Usuario) => void; onClose: () => void; onDelete?: () => void;
+}> = ({user, onSave, onClose, onDelete}) => {
+  const [nombre, setNombre] = useState(user?.nombre || '');
+  const isEdit = !!user;
+
+  const handleSave = () => {
+    if (!nombre.trim()) return;
+    onSave({
+      id: user?.id || `u-${Date.now()}`,
+      nombre: nombre.toUpperCase(),
+      xp: user?.xp || 0,
+      nivel: user?.nivel || 1,
+      racha: user?.racha || 0,
+      medallas: user?.medallas || [],
+      guiasTotales: user?.guiasTotales || 0,
+      mejorTiempo: user?.mejorTiempo || 0,
+      combosMaximos: user?.combosMaximos || 0,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+      <div className="bg-slate-800 rounded-2xl p-6 w-80 border border-slate-700">
+        <h3 className="text-xl font-bold text-white mb-4">{isEdit ? '✏️ Editar' : '➕ Nuevo'} Usuario</h3>
+        <input
+          type="text"
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+          placeholder="Nombre del usuario"
+          className="w-full px-4 py-3 rounded-xl bg-slate-700 border border-slate-600 text-white mb-4 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+          autoFocus
         />
-        <circle
-          cx="64"
-          cy="64"
-          r="45"
-          fill="none"
-          strokeWidth="8"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          className={`${bgColor} transition-all duration-300`}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={`text-2xl font-bold ${color}`}>{formatTime(seconds)}</span>
-        {isRunning && (
-          <span className="text-xs text-slate-500 animate-pulse">En curso</span>
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white font-medium">Cancelar</button>
+          <button onClick={handleSave} className="flex-1 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-600 text-white font-bold">Guardar</button>
+        </div>
+        {isEdit && onDelete && (
+          <button onClick={onDelete} className="w-full mt-3 py-2 rounded-lg bg-red-500/20 hover:bg-red-500/40 text-red-400 font-medium flex items-center justify-center gap-2">
+            <Trash2 className="w-4 h-4"/> Eliminar Usuario
+          </button>
         )}
       </div>
     </div>
   );
 };
 
-// =====================================
-// COMPONENTE PRINCIPAL: PROCESOS LITPER TAB
-// =====================================
-export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCountry }) => {
-  // Estados principales
+// ===== COMPONENTE PRINCIPAL =====
+export const ProcesosLitperTab: React.FC<{selectedCountry?: string}> = () => {
+  // Estados
   const [modo, setModo] = useState<'selector' | 'usuario' | 'admin'>('selector');
-  const [usuarioActual, setUsuarioActual] = useState<Usuario | null>(null);
-  const [tipoRegistro, setTipoRegistro] = useState<'guias' | 'novedades' | null>(null);
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [usuarios, setUsuarios] = useState<Usuario[]>(() => load(STORAGE.USUARIOS, DEFAULT_USERS));
+  const [rondas, setRondas] = useState<Ronda[]>(() => load(STORAGE.RONDAS, []));
+  const [config, setConfig] = useState<Config>(() => load(STORAGE.CONFIG, DEFAULT_CONFIG));
 
-  // Estados de datos
-  const [rondas, setRondas] = useState<RondaGuias[]>([]);
-  const [novedades, setNovedades] = useState<RegistroNovedades[]>([]);
-  const [config, setConfig] = useState<ConfiguracionCronometro>(CONFIG_DEFAULT);
-  const [usuarios] = useState<Usuario[]>(USUARIOS_DEFAULT);
+  const [tiempo, setTiempo] = useState(0);
+  const [activo, setActivo] = useState(false);
+  const [rondaNum, setRondaNum] = useState(1);
+  const [combo, setCombo] = useState(1);
+  const [contadores, setContadores] = useState({r: 0, c: 0, a: 0, d: 0, p: 0});
 
-  // Estados del cronómetro
-  const [tiempoActual, setTiempoActual] = useState(0);
-  const [cronometroActivo, setCronometroActivo] = useState(false);
-  const [rondaActual, setRondaActual] = useState(1);
+  const [showWidget, setShowWidget] = useState(false);
+  const [widgetPin, setWidgetPin] = useState(false);
+  const [widgetPos, setWidgetPos] = useState(() => load(STORAGE.WIDGET, {x: 20, y: 100}));
 
-  // Estados del formulario de guías
-  const [pedidosIniciales, setPedidosIniciales] = useState(0);
-  const [realizado, setRealizado] = useState(0);
-  const [cancelado, setCancelado] = useState(0);
-  const [agendado, setAgendado] = useState(0);
-  const [dificiles, setDificiles] = useState(0);
-  const [pendientes, setPendientes] = useState(0);
-  const [revisado, setRevisado] = useState(0);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [editUser, setEditUser] = useState<Usuario | undefined>();
+  const [showMsg, setShowMsg] = useState('');
+  const [vistaAdmin, setVistaAdmin] = useState<'hoy' | 'ranking' | 'equipo' | 'config'>('hoy');
 
-  // Estados del formulario de novedades
-  const [solucionadas, setSolucionadas] = useState(0);
-  const [revisadas, setRevisadas] = useState(0);
-  const [devolucion, setDevolucion] = useState(0);
-  const [clienteNov, setClienteNov] = useState(0);
-  const [transportadoraNov, setTransportadoraNov] = useState(0);
-  const [litperNov, setLitperNov] = useState(0);
+  // Estado de conexión
+  const [isOnline, setIsOnline] = useState(true);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle');
 
-  // Estados de UI
-  const [showMensaje, setShowMensaje] = useState(false);
-  const [mensajeActual, setMensajeActual] = useState('');
-  const [vistaAdmin, setVistaAdmin] = useState<'hoy' | 'semana' | 'mes' | 'equipo' | 'config'>('hoy');
-
-  // Cargar datos al montar
+  // Cargar usuarios desde backend al inicio
   useEffect(() => {
-    setRondas(loadFromStorage(STORAGE_KEY_RONDAS, []));
-    setNovedades(loadFromStorage(STORAGE_KEY_NOVEDADES, []));
-    setConfig(loadFromStorage(STORAGE_KEY_CONFIG, CONFIG_DEFAULT));
+    const loadFromBackend = async () => {
+      setSyncStatus('syncing');
+      try {
+        // Cargar usuarios del backend
+        const backendUsers = await fetchUsuariosFromAPI();
+        if (backendUsers.length > 0) {
+          // Merge con datos locales (XP, nivel, etc)
+          const localUsers = load<Usuario[]>(STORAGE.USUARIOS, DEFAULT_USERS);
+          const mergedUsers = backendUsers.map(bu => {
+            const local = localUsers.find(lu => lu.id === bu.id);
+            return local ? { ...bu, xp: local.xp, nivel: local.nivel, racha: local.racha, guiasTotales: local.guiasTotales, medallas: local.medallas, mejorTiempo: local.mejorTiempo, combosMaximos: local.combosMaximos } : bu;
+          });
+          setUsuarios(mergedUsers);
+          setIsOnline(true);
+        }
+
+        // Cargar rondas del día desde backend
+        const backendRondas = await fetchRondasFromAPI();
+        if (backendRondas.length > 0) {
+          const localRondas = load<Ronda[]>(STORAGE.RONDAS, []);
+          const allRondas = [...localRondas.filter(lr => !backendRondas.some(br => br.id === lr.id)), ...backendRondas];
+          setRondas(allRondas);
+        }
+
+        setSyncStatus('idle');
+      } catch (error) {
+        console.warn('Error cargando desde backend:', error);
+        setIsOnline(false);
+        setSyncStatus('error');
+      }
+    };
+
+    loadFromBackend();
+
+    // Listener de conexión
+    const handleOnline = () => { setIsOnline(true); loadFromBackend(); };
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
-  // Guardar datos cuando cambian
-  useEffect(() => {
-    saveToStorage(STORAGE_KEY_RONDAS, rondas);
-  }, [rondas]);
+  // Persistencia local (backup)
+  useEffect(() => { save(STORAGE.USUARIOS, usuarios); }, [usuarios]);
+  useEffect(() => { save(STORAGE.RONDAS, rondas); }, [rondas]);
+  useEffect(() => { save(STORAGE.CONFIG, config); }, [config]);
+  useEffect(() => { save(STORAGE.WIDGET, widgetPos); }, [widgetPos]);
 
+  // Timer
   useEffect(() => {
-    saveToStorage(STORAGE_KEY_NOVEDADES, novedades);
-  }, [novedades]);
-
-  useEffect(() => {
-    saveToStorage(STORAGE_KEY_CONFIG, config);
-  }, [config]);
-
-  // Cronómetro
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (cronometroActivo) {
-      interval = setInterval(() => {
-        setTiempoActual((prev) => {
-          const newTime = prev + 1;
-          // Mostrar mensaje motivacional si excede tiempo
-          if (config.mensajesMotivacionales && newTime === config.alertaCritica) {
-            const mensaje = MENSAJES_MOTIVACIONALES[Math.floor(Math.random() * MENSAJES_MOTIVACIONALES.length)];
-            setMensajeActual(mensaje);
-            setShowMensaje(true);
-            setTimeout(() => setShowMensaje(false), 5000);
-          }
-          return newTime;
-        });
-      }, 1000);
-    }
+    if (!activo) return;
+    const interval = setInterval(() => {
+      setTiempo(t => {
+        const newT = t + 1;
+        const remaining = config.tiempoRonda - newT;
+        // Alertas de sonido
+        if (config.sonido && config.countdown) {
+          if (remaining === config.alertaTemprana) playBeep(800, 0.2);
+          if (remaining === config.alertaCritica) playBeep(1000, 0.3);
+          if (remaining === 0) { playBeep(1200, 0.5); playBeep(1200, 0.5); }
+        }
+        return newT;
+      });
+    }, 1000);
     return () => clearInterval(interval);
-  }, [cronometroActivo, config.mensajesMotivacionales, config.alertaCritica]);
+  }, [activo, config]);
 
-  // Calcular tiempo promedio
-  const tiempoPromedio = useMemo(() => {
-    const totalProcesados = realizado + cancelado + agendado;
-    if (totalProcesados === 0 || tiempoActual === 0) return 0;
-    return (tiempoActual / 60 / totalProcesados).toFixed(2);
-  }, [realizado, cancelado, agendado, tiempoActual]);
+  // Cálculos
+  const hoy = new Date().toLocaleDateString('es-CO');
+  const guiasHoy = useMemo(() => usuario ? rondas.filter(r => r.usuarioId === usuario.id && r.fecha === hoy).reduce((a, r) => a + r.realizado, 0) : 0, [rondas, usuario, hoy]);
+  const tiempoProm = useMemo(() => { const total = contadores.r + contadores.c + contadores.a; return total > 0 && tiempo > 0 ? (tiempo / 60 / total) : 0; }, [contadores, tiempo]);
 
-  // Finalizar ronda
-  const finalizarRonda = () => {
-    if (!usuarioActual) return;
-
-    const nuevaRonda: RondaGuias = {
-      id: `ronda-${Date.now()}`,
-      numero: rondaActual,
-      usuarioId: usuarioActual.id,
-      fecha: new Date().toLocaleDateString('es-CO'),
-      horaInicio: new Date(Date.now() - tiempoActual * 1000).toLocaleTimeString('es-CO'),
-      horaFin: new Date().toLocaleTimeString('es-CO'),
-      tiempoTotal: tiempoActual,
-      pedidosIniciales,
-      realizado,
-      cancelado,
-      agendado,
-      dificiles,
-      pendientes,
-      revisado,
-      tiempoPromedio: parseFloat(tiempoPromedio as string) || 0,
+  // Funciones
+  const finalizarRonda = async () => {
+    if (!usuario) return;
+    const xp = calcXP(contadores.r, tiempoProm, contadores.c, combo);
+    const nuevaRonda: Ronda = {
+      id: `r-${Date.now()}`, numero: rondaNum, usuarioId: usuario.id, fecha: hoy,
+      tiempoTotal: tiempo, realizado: contadores.r, cancelado: contadores.c, agendado: contadores.a,
+      dificiles: contadores.d, pendientes: contadores.p, xpGanado: xp, comboMaximo: combo,
     };
+    setRondas(prev => [...prev, nuevaRonda]);
 
-    setRondas((prev) => [...prev, nuevaRonda]);
+    const nuevoXP = usuario.xp + xp;
+    const updated = {...usuario, xp: nuevoXP, guiasTotales: usuario.guiasTotales + contadores.r};
+    setUsuarios(prev => prev.map(u => u.id === usuario.id ? updated : u));
+    setUsuario(updated);
 
-    // Resetear para nueva ronda
-    setRondaActual((prev) => prev + 1);
-    setTiempoActual(0);
-    setCronometroActivo(false);
-    setPedidosIniciales(0);
-    setRealizado(0);
-    setCancelado(0);
-    setAgendado(0);
-    setDificiles(0);
-    setPendientes(0);
-    setRevisado(0);
+    // Sincronizar con backend
+    if (isOnline) {
+      syncRondaToAPI(nuevaRonda, usuario);
+    }
+
+    setShowMsg(`🎉 +${xp} XP!${isOnline ? ' (Sincronizado)' : ' (Guardado local)'}`);
+    setTimeout(() => setShowMsg(''), 3000);
+    if (config.sonido) playBeep(600, 0.2);
+
+    setRondaNum(n => n + 1);
+    setTiempo(0);
+    setActivo(false);
+    setContadores({r: 0, c: 0, a: 0, d: 0, p: 0});
+    setCombo(1);
   };
 
-  // Guardar novedades
-  const guardarNovedades = () => {
-    if (!usuarioActual) return;
-
-    const nuevoRegistro: RegistroNovedades = {
-      id: `nov-${Date.now()}`,
-      usuarioId: usuarioActual.id,
-      fecha: new Date().toLocaleDateString('es-CO'),
-      hora: new Date().toLocaleTimeString('es-CO'),
-      solucionadas,
-      revisadas,
-      devolucion,
-      cliente: clienteNov,
-      transportadora: transportadoraNov,
-      litper: litperNov,
-    };
-
-    setNovedades((prev) => [...prev, nuevoRegistro]);
-
-    // Resetear
-    setSolucionadas(0);
-    setRevisadas(0);
-    setDevolucion(0);
-    setClienteNov(0);
-    setTransportadoraNov(0);
-    setLitperNov(0);
+  const saveUser = (u: Usuario) => {
+    setUsuarios(prev => {
+      const exists = prev.find(x => x.id === u.id);
+      return exists ? prev.map(x => x.id === u.id ? u : x) : [...prev, u];
+    });
+    setShowUserModal(false);
+    setEditUser(undefined);
   };
 
-  // Estadísticas del día
-  const estadisticasHoy = useMemo(() => {
-    const hoy = new Date().toLocaleDateString('es-CO');
-    const rondasHoy = rondas.filter((r) => r.fecha === hoy);
-    const novedadesHoy = novedades.filter((n) => n.fecha === hoy);
+  const deleteUser = (id: string) => {
+    if (confirm('¿Eliminar este usuario?')) {
+      setUsuarios(prev => prev.filter(u => u.id !== id));
+      setShowUserModal(false);
+      setEditUser(undefined);
+    }
+  };
 
+  const stats = useMemo(() => {
+    const rondasHoy = rondas.filter(r => r.fecha === hoy);
     return {
-      totalRondas: rondasHoy.length,
-      totalPedidos: rondasHoy.reduce((acc, r) => acc + r.pedidosIniciales, 0),
-      totalRealizado: rondasHoy.reduce((acc, r) => acc + r.realizado, 0),
-      totalCancelado: rondasHoy.reduce((acc, r) => acc + r.cancelado, 0),
-      totalAgendado: rondasHoy.reduce((acc, r) => acc + r.agendado, 0),
-      totalDificiles: rondasHoy.reduce((acc, r) => acc + r.dificiles, 0),
-      promedioGeneral: rondasHoy.length > 0
-        ? (rondasHoy.reduce((acc, r) => acc + r.tiempoPromedio, 0) / rondasHoy.length).toFixed(2)
-        : '0',
-      novedadesSolucionadas: novedadesHoy.reduce((acc, n) => acc + n.solucionadas, 0),
-      novedadesTotal: novedadesHoy.reduce((acc, n) => acc + n.solucionadas + n.revisadas + n.devolucion, 0),
+      rondas: rondasHoy.length,
+      realizado: rondasHoy.reduce((a, r) => a + r.realizado, 0),
+      cancelado: rondasHoy.reduce((a, r) => a + r.cancelado, 0),
+      prom: rondasHoy.length > 0 ? (rondasHoy.reduce((a, r) => a + r.tiempoTotal, 0) / rondasHoy.length / 60).toFixed(1) : '0',
+      xp: rondasHoy.reduce((a, r) => a + r.xpGanado, 0),
     };
-  }, [rondas, novedades]);
+  }, [rondas, hoy]);
 
-  // Exportar a Excel
-  const exportarExcel = () => {
+  const exportExcel = () => {
     const wb = XLSX.utils.book_new();
-
-    // Hoja de rondas
-    const rondasData = [
-      ['REGISTRO DE RONDAS - LITPER PROCESOS'],
-      [''],
-      ['Fecha', 'Usuario', 'Ronda', 'Hora Inicio', 'Hora Fin', 'Tiempo Total', 'Pedidos', 'Realizado', 'Cancelado', 'Agendado', 'Difíciles', 'T. Promedio'],
-      ...rondas.map((r) => [
-        r.fecha,
-        usuarios.find((u) => u.id === r.usuarioId)?.nombre || 'N/A',
-        r.numero,
-        r.horaInicio,
-        r.horaFin || 'En curso',
-        formatTime(r.tiempoTotal),
-        r.pedidosIniciales,
-        r.realizado,
-        r.cancelado,
-        r.agendado,
-        r.dificiles,
-        r.tiempoPromedio.toFixed(2) + ' min',
-      ]),
+    const data = [['Fecha', 'Usuario', 'Realizado', 'Cancelado', 'Tiempo', 'XP'],
+      ...rondas.map(r => [r.fecha, usuarios.find(u => u.id === r.usuarioId)?.nombre, r.realizado, r.cancelado, fmt(r.tiempoTotal), r.xpGanado])
     ];
-    const wsRondas = XLSX.utils.aoa_to_sheet(rondasData);
-    XLSX.utils.book_append_sheet(wb, wsRondas, 'Rondas');
-
-    // Hoja de novedades
-    const novedadesData = [
-      ['REGISTRO DE NOVEDADES - LITPER PROCESOS'],
-      [''],
-      ['Fecha', 'Hora', 'Usuario', 'Solucionadas', 'Revisadas', 'Devolución', 'Cliente', 'Transportadora', 'Litper'],
-      ...novedades.map((n) => [
-        n.fecha,
-        n.hora,
-        usuarios.find((u) => u.id === n.usuarioId)?.nombre || 'N/A',
-        n.solucionadas,
-        n.revisadas,
-        n.devolucion,
-        n.cliente,
-        n.transportadora,
-        n.litper,
-      ]),
-    ];
-    const wsNovedades = XLSX.utils.aoa_to_sheet(novedadesData);
-    XLSX.utils.book_append_sheet(wb, wsNovedades, 'Novedades');
-
-    XLSX.writeFile(wb, `Procesos_Litper_${new Date().toLocaleDateString('es-CO')}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), 'Rondas');
+    XLSX.writeFile(wb, `Litper_${hoy}.xlsx`);
   };
 
-  // =====================================
-  // RENDER: SELECTOR DE MODO
-  // =====================================
+  // ===== RENDERS =====
+  const msgFloat = showMsg && (
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl shadow-lg animate-bounce">
+      {showMsg}
+    </div>
+  );
+
+  const widget = showWidget && usuario && (
+    <FloatingWidget
+      usuario={usuario} tiempo={tiempo} maxTiempo={config.tiempoRonda} activo={activo}
+      countdown={config.countdown} contadores={contadores} setContadores={setContadores}
+      combo={combo} meta={config.metaDiaria} guiasHoy={guiasHoy}
+      onToggle={() => setActivo(!activo)} onSave={finalizarRonda} onClose={() => setShowWidget(false)}
+      pinned={widgetPin} onPin={() => setWidgetPin(!widgetPin)} pos={widgetPos} setPos={setWidgetPos}
+      alertaT={config.alertaTemprana} alertaC={config.alertaCritica} sonido={config.sonido}
+    />
+  );
+
+  const userModal = showUserModal && (
+    <UserModal
+      user={editUser}
+      onSave={saveUser}
+      onClose={() => { setShowUserModal(false); setEditUser(undefined); }}
+      onDelete={editUser ? () => deleteUser(editUser.id) : undefined}
+    />
+  );
+
+  // SELECTOR
   if (modo === 'selector') {
     return (
-      <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-navy-950 dark:to-navy-900">
+      <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        {msgFloat}
         <div className="text-center">
-          <div className="w-20 h-20 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl">
-            <Zap className="w-10 h-10 text-white" />
+          {/* Indicador de conexión */}
+          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs mb-4 ${isOnline ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+            <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`}></div>
+            {syncStatus === 'syncing' ? 'Sincronizando...' : isOnline ? 'Conectado al Backend' : 'Modo Offline'}
           </div>
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-2">
-            LITPER PROCESOS
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mb-8">
-            Sistema de control de procesos logísticos
+          <div className="w-20 h-20 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl animate-pulse">
+            <Gamepad2 className="w-10 h-10 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-white mb-1">LITPER PROCESOS</h1>
+          <p className="text-cyan-400 text-sm mb-6 flex items-center justify-center gap-2">
+            <Sparkles className="w-4 h-4" />GAMING EDITION v2.0<Sparkles className="w-4 h-4" />
           </p>
-
-          <h2 className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-6">
-            SELECCIONA TU MODO
-          </h2>
-
-          <div className="flex gap-6 justify-center">
-            {/* Modo Usuario */}
-            <button
-              onClick={() => setModo('usuario')}
-              className="group bg-white dark:bg-navy-900 rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all border-2 border-transparent hover:border-cyan-500 w-48"
-            >
-              <div className="w-16 h-16 bg-cyan-100 dark:bg-cyan-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                <User className="w-8 h-8 text-cyan-600 dark:text-cyan-400" />
+          <div className="flex gap-4 justify-center">
+            <button onClick={() => setModo('usuario')} className="group bg-slate-800/80 rounded-2xl p-6 shadow-xl hover:shadow-cyan-500/20 border border-slate-700 hover:border-cyan-500 w-40">
+              <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                <User className="w-8 h-8 text-white" />
               </div>
-              <h3 className="font-bold text-slate-800 dark:text-white mb-1">USUARIO</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">LOGÍSTICO</p>
+              <h3 className="font-bold text-white">USUARIO</h3>
+              <p className="text-xs text-slate-400">Logístico</p>
             </button>
-
-            {/* Modo Admin */}
-            <button
-              onClick={() => setModo('admin')}
-              className="group bg-white dark:bg-navy-900 rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all border-2 border-transparent hover:border-amber-500 w-48"
-            >
-              <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                <Crown className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+            <button onClick={() => setModo('admin')} className="group bg-slate-800/80 rounded-2xl p-6 shadow-xl hover:shadow-amber-500/20 border border-slate-700 hover:border-amber-500 w-40">
+              <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                <Crown className="w-8 h-8 text-white" />
               </div>
-              <h3 className="font-bold text-slate-800 dark:text-white mb-1">ADMIN</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">GERENCIA</p>
+              <h3 className="font-bold text-white">ADMIN</h3>
+              <p className="text-xs text-slate-400">Gerencia</p>
             </button>
           </div>
         </div>
@@ -539,376 +576,153 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
     );
   }
 
-  // =====================================
-  // RENDER: MODO USUARIO - SELECCIÓN DE USUARIO
-  // =====================================
-  if (modo === 'usuario' && !usuarioActual) {
+  // SELECCIÓN USUARIO
+  if (modo === 'usuario' && !usuario) {
     return (
-      <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-navy-950 dark:to-navy-900">
-        <div className="bg-white dark:bg-navy-900 rounded-2xl p-8 shadow-xl max-w-md w-full mx-4">
-          <button
-            onClick={() => setModo('selector')}
-            className="flex items-center gap-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 mb-6"
-          >
-            <ChevronLeft className="w-5 h-5" />
-            Volver
-          </button>
-
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-cyan-100 dark:bg-cyan-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">👋</span>
-            </div>
-            <h2 className="text-xl font-bold text-slate-800 dark:text-white">
-              ¡Hola! ¿Quién eres?
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Selecciona tu nombre para continuar
-            </p>
+      <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        {userModal}
+        <div className="bg-slate-800/80 rounded-2xl p-6 shadow-xl max-w-md w-full mx-4 border border-slate-700">
+          <div className="flex items-center justify-between mb-4">
+            <button onClick={() => setModo('selector')} className="flex items-center gap-2 text-slate-400 hover:text-white">
+              <ChevronLeft className="w-5 h-5" />Volver
+            </button>
+            <button onClick={() => { setEditUser(undefined); setShowUserModal(true); }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-600 text-white text-sm">
+              <UserPlus className="w-4 h-4" />Nuevo
+            </button>
           </div>
-
+          <div className="text-center mb-4">
+            <span className="text-3xl">👋</span>
+            <h2 className="text-xl font-bold text-white">¿Quién eres?</h2>
+          </div>
           <div className="space-y-2">
-            {usuarios.map((usuario) => (
-              <button
-                key={usuario.id}
-                onClick={() => setUsuarioActual(usuario)}
-                className="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-navy-700 hover:border-cyan-500 dark:hover:border-cyan-500 transition-all flex items-center gap-3 group"
-              >
-                <div className="w-10 h-10 bg-slate-100 dark:bg-navy-800 rounded-full flex items-center justify-center group-hover:bg-cyan-100 dark:group-hover:bg-cyan-900/30 transition-colors">
-                  <User className="w-5 h-5 text-slate-500 group-hover:text-cyan-600" />
+            {usuarios.map(u => {
+              const niv = getNivel(u.xp);
+              return (
+                <div key={u.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-600 hover:border-cyan-500 bg-slate-700/50 hover:bg-slate-700 transition-all group">
+                  <button onClick={() => { setUsuario(u); setShowWidget(true); }} className="flex-1 flex items-center gap-3 text-left">
+                    <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${niv.color} flex items-center justify-center text-white font-bold text-lg`}>
+                      {u.nombre.charAt(0)}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white">{u.nombre}</span>
+                        <span className="text-xs bg-slate-600 text-slate-300 px-1.5 py-0.5 rounded">Lvl {niv.nivel}</span>
+                      </div>
+                      <div className="text-xs text-slate-400 flex gap-2">
+                        <span><Star className="w-3 h-3 inline text-yellow-400"/> {u.xp} XP</span>
+                        <span><Flame className="w-3 h-3 inline text-orange-400"/> {u.racha}d</span>
+                      </div>
+                    </div>
+                  </button>
+                  <button onClick={() => { setEditUser(u); setShowUserModal(true); }} className="p-2 hover:bg-slate-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Edit3 className="w-4 h-4 text-slate-400" />
+                  </button>
                 </div>
-                <span className="font-bold text-slate-700 dark:text-slate-300 group-hover:text-cyan-600 dark:group-hover:text-cyan-400">
-                  {usuario.nombre}
-                </span>
-              </button>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
     );
   }
 
-  // =====================================
-  // RENDER: MODO USUARIO - SELECCIÓN DE TIPO DE REGISTRO
-  // =====================================
-  if (modo === 'usuario' && usuarioActual && !tipoRegistro) {
+  // MODO USUARIO - TRABAJANDO
+  if (modo === 'usuario' && usuario) {
+    const niv = getNivel(usuario.xp);
+    const progMeta = Math.min((guiasHoy / config.metaDiaria) * 100, 100);
+    const displayTime = config.countdown ? Math.max(0, config.tiempoRonda - tiempo) : tiempo;
+    const isWarn = config.countdown ? displayTime <= config.alertaTemprana : tiempo >= (config.tiempoRonda - config.alertaTemprana);
+    const isCrit = config.countdown ? displayTime <= config.alertaCritica : tiempo >= (config.tiempoRonda - config.alertaCritica);
+    const color = isCrit ? 'text-red-400' : isWarn ? 'text-amber-400' : 'text-emerald-400';
+
     return (
-      <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-navy-950 dark:to-navy-900">
-        <div className="bg-white dark:bg-navy-900 rounded-2xl p-8 shadow-xl max-w-md w-full mx-4">
-          <button
-            onClick={() => setUsuarioActual(null)}
-            className="flex items-center gap-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 mb-6"
-          >
-            <ChevronLeft className="w-5 h-5" />
-            Cambiar usuario
-          </button>
-
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <h2 className="text-xl font-bold text-slate-800 dark:text-white">
-              ¡Hola, {usuarioActual.nombre}!
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              ¿Qué vas a registrar?
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => setTipoRegistro('guias')}
-              className="group bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-all"
-            >
-              <Package className="w-10 h-10 mx-auto mb-3 group-hover:scale-110 transition-transform" />
-              <h3 className="font-bold">Generación</h3>
-              <p className="text-sm opacity-80">Guías</p>
+      <div className="h-full overflow-auto bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
+        {msgFloat}{widget}
+        <div className="max-w-3xl mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <button onClick={() => setUsuario(null)} className="flex items-center gap-2 text-slate-400 hover:text-white">
+              <ChevronLeft className="w-5 h-5" />Cambiar
             </button>
-
-            <button
-              onClick={() => setTipoRegistro('novedades')}
-              className="group bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-all"
-            >
-              <AlertTriangle className="w-10 h-10 mx-auto mb-3 group-hover:scale-110 transition-transform" />
-              <h3 className="font-bold">Novedades</h3>
-              <p className="text-sm opacity-80">Gestión</p>
+            <button onClick={() => setShowWidget(!showWidget)} className={`p-2 rounded-lg ${showWidget ? 'bg-cyan-500 text-white' : 'bg-slate-700 text-slate-400'}`}>
+              <Gamepad2 className="w-5 h-5" />
             </button>
           </div>
-        </div>
-      </div>
-    );
-  }
 
-  // =====================================
-  // RENDER: FORMULARIO GENERACIÓN DE GUÍAS
-  // =====================================
-  if (modo === 'usuario' && tipoRegistro === 'guias') {
-    return (
-      <div className="h-full overflow-auto bg-gradient-to-br from-slate-50 to-slate-100 dark:from-navy-950 dark:to-navy-900 p-4">
-        {/* Mensaje motivacional */}
-        {showMensaje && (
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl shadow-lg animate-bounce">
-            {mensajeActual}
-          </div>
-        )}
-
-        <div className="max-w-lg mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <button
-              onClick={() => setTipoRegistro(null)}
-              className="flex items-center gap-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-            >
-              <ChevronLeft className="w-5 h-5" />
-              Volver
-            </button>
-            <div className="text-right">
-              <p className="text-sm text-slate-500">{usuarioActual?.nombre}</p>
-              <p className="text-xs text-slate-400">{new Date().toLocaleDateString('es-CO')}</p>
-            </div>
-          </div>
-
-          {/* Card principal */}
-          <div className="bg-white dark:bg-navy-900 rounded-2xl shadow-xl overflow-hidden">
-            {/* Header con ronda y cronómetro */}
-            <div className="bg-gradient-to-r from-blue-500 to-cyan-500 p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold">🎯 RONDA {rondaActual}</h2>
-                  <p className="text-sm opacity-80">Generación de Guías</p>
-                </div>
-                <CircularTimer
-                  seconds={tiempoActual}
-                  maxSeconds={config.tiempoPorRonda * 60}
-                  alertaTemprana={config.alertaTemprana}
-                  alertaCritica={config.alertaCritica}
-                  isRunning={cronometroActivo}
-                />
-              </div>
-
-              {/* Controles del cronómetro */}
-              <div className="flex items-center justify-center gap-3 mt-4">
-                <button
-                  onClick={() => setCronometroActivo(!cronometroActivo)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all ${
-                    cronometroActivo
-                      ? 'bg-white/20 hover:bg-white/30'
-                      : 'bg-white text-blue-600 hover:bg-blue-50'
-                  }`}
-                >
-                  {cronometroActivo ? (
-                    <>
-                      <Pause className="w-5 h-5" />
-                      Pausar
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-5 h-5" />
-                      Iniciar
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() => {
-                    setTiempoActual(0);
-                    setCronometroActivo(false);
-                  }}
-                  className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
-                >
-                  <RotateCcw className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Formulario */}
-            <div className="p-6 space-y-4">
-              {/* Pedidos iniciales */}
-              <div className="bg-slate-50 dark:bg-navy-800 rounded-xl p-4">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Pedidos Iniciales
-                </label>
-                <input
-                  type="number"
-                  value={pedidosIniciales || ''}
-                  onChange={(e) => setPedidosIniciales(parseInt(e.target.value) || 0)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-slate-800 dark:text-white text-center text-xl font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                  placeholder="0"
-                />
-              </div>
-
-              {/* Contadores */}
-              <div className="space-y-3">
-                <Counter
-                  label="Realizado"
-                  value={realizado}
-                  onChange={setRealizado}
-                  icon={<CheckCircle2 className="w-5 h-5" />}
-                  color="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
-                />
-                <Counter
-                  label="Cancelado"
-                  value={cancelado}
-                  onChange={setCancelado}
-                  icon={<XCircle className="w-5 h-5" />}
-                  color="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-                />
-                <Counter
-                  label="Agendado"
-                  value={agendado}
-                  onChange={setAgendado}
-                  icon={<Calendar className="w-5 h-5" />}
-                  color="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
-                />
-                <Counter
-                  label="Difíciles"
-                  value={dificiles}
-                  onChange={setDificiles}
-                  icon={<MessageSquare className="w-5 h-5" />}
-                  color="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
-                />
-                <Counter
-                  label="Pendientes"
-                  value={pendientes}
-                  onChange={setPendientes}
-                  icon={<Clock className="w-5 h-5" />}
-                  color="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400"
-                />
-                <Counter
-                  label="Revisado"
-                  value={revisado}
-                  onChange={setRevisado}
-                  icon={<Eye className="w-5 h-5" />}
-                  color="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400"
-                />
-              </div>
-
-              {/* Tiempo promedio */}
-              <div className="bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 rounded-xl p-4 text-center">
-                <p className="text-sm text-slate-500 dark:text-slate-400">Tiempo Promedio por Pedido</p>
-                <p className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">
-                  {tiempoPromedio} min
-                </p>
-              </div>
-
-              {/* Botón finalizar */}
-              <button
-                onClick={finalizarRonda}
-                className="w-full py-4 bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
-              >
-                <Save className="w-5 h-5" />
-                FINALIZAR RONDA
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // =====================================
-  // RENDER: FORMULARIO NOVEDADES
-  // =====================================
-  if (modo === 'usuario' && tipoRegistro === 'novedades') {
-    return (
-      <div className="h-full overflow-auto bg-gradient-to-br from-slate-50 to-slate-100 dark:from-navy-950 dark:to-navy-900 p-4">
-        <div className="max-w-lg mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <button
-              onClick={() => setTipoRegistro(null)}
-              className="flex items-center gap-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-            >
-              <ChevronLeft className="w-5 h-5" />
-              Volver
-            </button>
-            <div className="text-right">
-              <p className="text-sm text-slate-500">{usuarioActual?.nombre}</p>
-              <p className="text-xs text-slate-400">{new Date().toLocaleDateString('es-CO')}</p>
-            </div>
-          </div>
-
-          {/* Card principal */}
-          <div className="bg-white dark:bg-navy-900 rounded-2xl shadow-xl overflow-hidden">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-white">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            {/* Usuario */}
+            <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
               <div className="flex items-center gap-3">
-                <AlertTriangle className="w-8 h-8" />
+                <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${niv.color} flex items-center justify-center text-white font-bold`}>{usuario.nombre.charAt(0)}</div>
                 <div>
-                  <h2 className="text-xl font-bold">REGISTRO DE NOVEDADES</h2>
-                  <p className="text-sm opacity-80">
-                    Usuario: {usuarioActual?.nombre} | Fecha: {new Date().toLocaleDateString('es-CO')}
-                  </p>
+                  <div className="font-bold text-white">{usuario.nombre}</div>
+                  <div className="text-sm text-slate-400">Nivel {niv.nivel} - {niv.nombre}</div>
+                </div>
+              </div>
+              <div className="mt-2">
+                <div className="flex justify-between text-xs text-slate-400 mb-1">
+                  <span>{usuario.xp} XP</span><span>{Math.round(niv.progreso)}%</span>
+                </div>
+                <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                  <div className={`h-full bg-gradient-to-r ${niv.color}`} style={{width: `${niv.progreso}%`}}/>
                 </div>
               </div>
             </div>
-
-            {/* Formulario */}
-            <div className="p-6 space-y-4">
-              {/* Gestión */}
-              <div className="space-y-3">
-                <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm uppercase tracking-wide">
-                  Estado de Gestión
-                </h3>
-                <Counter
-                  label="Solucionadas"
-                  value={solucionadas}
-                  onChange={setSolucionadas}
-                  icon={<CheckCircle2 className="w-5 h-5" />}
-                  color="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
-                />
-                <Counter
-                  label="Revisadas"
-                  value={revisadas}
-                  onChange={setRevisadas}
-                  icon={<Eye className="w-5 h-5" />}
-                  color="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
-                />
-                <Counter
-                  label="Devolución"
-                  value={devolucion}
-                  onChange={setDevolucion}
-                  icon={<RefreshCw className="w-5 h-5" />}
-                  color="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400"
-                />
+            {/* Meta */}
+            <div className="bg-gradient-to-br from-purple-600/20 to-pink-600/20 rounded-xl p-4 border border-purple-500/30">
+              <div className="flex items-center gap-2 mb-2">
+                <Target className="w-5 h-5 text-purple-400" /><span className="font-bold text-white">MISIÓN DEL DÍA</span>
               </div>
-
-              <hr className="border-slate-200 dark:border-navy-700" />
-
-              {/* Origen del problema */}
-              <div className="space-y-3">
-                <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm uppercase tracking-wide flex items-center gap-2">
-                  📍 Origen del Problema
-                </h3>
-                <Counter
-                  label="Cliente"
-                  value={clienteNov}
-                  onChange={setClienteNov}
-                  icon={<User className="w-5 h-5" />}
-                  color="bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400"
-                />
-                <Counter
-                  label="Transportadora"
-                  value={transportadoraNov}
-                  onChange={setTransportadoraNov}
-                  icon={<Truck className="w-5 h-5" />}
-                  color="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
-                />
-                <Counter
-                  label="Litper"
-                  value={litperNov}
-                  onChange={setLitperNov}
-                  icon={<Building2 className="w-5 h-5" />}
-                  color="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-                />
+              <div className="text-2xl font-bold text-white">{guiasHoy}/{config.metaDiaria}</div>
+              <div className="h-2 bg-slate-700 rounded-full overflow-hidden mt-2">
+                <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500" style={{width: `${progMeta}%`}}/>
               </div>
+            </div>
+          </div>
 
-              {/* Botón guardar */}
-              <button
-                onClick={guardarNovedades}
-                className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
-              >
-                <Save className="w-5 h-5" />
-                GUARDAR REGISTRO
+          {/* Timer */}
+          <div className="bg-slate-800/80 rounded-xl p-6 border border-slate-700 mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2"><Timer className="w-5 h-5 text-cyan-400"/>RONDA {rondaNum}</h2>
+              {combo > 1 && <span className="bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 rounded-full text-white text-sm font-bold animate-pulse">🔥 COMBO x{combo}</span>}
+            </div>
+            <div className="text-center mb-4">
+              <div className={`text-6xl font-mono font-bold ${color}`}>{fmt(displayTime)}</div>
+              <div className={`text-sm ${color}`}>{isCrit ? '🔴 CRÍTICO' : isWarn ? '🟡 ALERTA' : '🟢 NORMAL'}</div>
+            </div>
+            <div className="flex justify-center gap-3">
+              <button onClick={() => setActivo(!activo)} className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 ${activo ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-500 hover:bg-emerald-600'} text-white`}>
+                {activo ? <><Pause className="w-5 h-5"/>PAUSAR</> : <><Play className="w-5 h-5"/>INICIAR</>}
               </button>
+              <button onClick={() => { setTiempo(0); setActivo(false); }} className="p-3 bg-slate-700 hover:bg-slate-600 rounded-xl"><RotateCcw className="w-5 h-5 text-white"/></button>
+              <button onClick={finalizarRonda} className="px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-cyan-500 to-blue-500 text-white flex items-center gap-2"><Save className="w-5 h-5"/>GUARDAR</button>
+            </div>
+          </div>
+
+          {/* Contadores */}
+          <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
+            <h3 className="font-bold text-white mb-3 flex items-center gap-2"><BarChart3 className="w-5 h-5 text-cyan-400"/>CONTADORES</h3>
+            <div className="grid grid-cols-5 gap-2">
+              {[
+                {k: 'r', icon: '✅', label: 'Realizado', color: 'bg-emerald-500/20 text-emerald-400'},
+                {k: 'c', icon: '❌', label: 'Cancelado', color: 'bg-red-500/20 text-red-400'},
+                {k: 'a', icon: '📅', label: 'Agendado', color: 'bg-blue-500/20 text-blue-400'},
+                {k: 'd', icon: '⚠️', label: 'Difícil', color: 'bg-amber-500/20 text-amber-400'},
+                {k: 'p', icon: '⏳', label: 'Pendiente', color: 'bg-purple-500/20 text-purple-400'},
+              ].map(({k, icon, label, color}) => (
+                <div key={k} className={`${color} rounded-xl p-3 text-center`}>
+                  <div className="text-xl mb-1">{icon}</div>
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <button onClick={() => setContadores({...contadores, [k]: Math.max(0, contadores[k as keyof typeof contadores] - 1)})} className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20">-</button>
+                    <span className="w-8 font-bold text-lg">{contadores[k as keyof typeof contadores]}</span>
+                    <button onClick={() => setContadores({...contadores, [k]: contadores[k as keyof typeof contadores] + 1})} className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20">+</button>
+                  </div>
+                  <div className="text-xs opacity-70">{label}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 bg-cyan-600/20 rounded-xl p-3 text-center border border-cyan-500/30">
+              <p className="text-sm text-slate-400">Tiempo Promedio</p>
+              <p className="text-3xl font-bold text-cyan-400">{tiempoProm.toFixed(2)} <span className="text-sm">min</span></p>
             </div>
           </div>
         </div>
@@ -916,146 +730,72 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
     );
   }
 
-  // =====================================
-  // RENDER: MODO ADMIN
-  // =====================================
+  // ADMIN
   if (modo === 'admin') {
     return (
-      <div className="h-full overflow-auto bg-gradient-to-br from-slate-50 to-slate-100 dark:from-navy-950 dark:to-navy-900">
-        {/* Header Admin */}
-        <div className="bg-white dark:bg-navy-900 border-b border-slate-200 dark:border-navy-700 p-4">
+      <div className="h-full overflow-auto bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        {userModal}
+        <div className="bg-slate-800/80 border-b border-slate-700 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button
-                onClick={() => setModo('selector')}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-navy-800 rounded-lg"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
+              <button onClick={() => setModo('selector')} className="p-2 hover:bg-slate-700 rounded-lg"><ChevronLeft className="w-5 h-5 text-white"/></button>
               <div>
-                <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                  <BarChart3 className="w-6 h-6 text-amber-500" />
-                  PANEL DE CONTROL
-                </h1>
-                <p className="text-sm text-slate-500">LITPER Procesos</p>
+                <h1 className="text-lg font-bold text-white flex items-center gap-2"><Crown className="w-5 h-5 text-amber-500"/>PANEL ADMIN</h1>
+                <p className="text-xs text-slate-400">Gaming Edition v2.0</p>
               </div>
             </div>
-
-            <button
-              onClick={exportarExcel}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Exportar
+            <button onClick={exportExcel} className="flex items-center gap-2 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm">
+              <Download className="w-4 h-4"/>Excel
             </button>
           </div>
-
-          {/* Tabs */}
           <div className="flex gap-2 mt-4">
-            {[
-              { id: 'hoy', label: '📅 HOY', icon: Calendar },
-              { id: 'semana', label: '📆 SEMANA', icon: Calendar },
-              { id: 'equipo', label: '👥 EQUIPO', icon: Users },
-              { id: 'config', label: '⚙️ CONFIG', icon: Settings },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setVistaAdmin(tab.id as any)}
-                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                  vistaAdmin === tab.id
-                    ? 'bg-amber-500 text-white'
-                    : 'bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-navy-700'
-                }`}
-              >
-                {tab.label}
+            {['hoy', 'ranking', 'equipo', 'config'].map(t => (
+              <button key={t} onClick={() => setVistaAdmin(t as any)} className={`px-3 py-1.5 rounded-lg text-sm ${vistaAdmin === t ? 'bg-amber-500 text-white' : 'bg-slate-700 text-slate-400 hover:text-white'}`}>
+                {t === 'hoy' ? '📅 HOY' : t === 'ranking' ? '🏆 RANKING' : t === 'equipo' ? '👥 EQUIPO' : '⚙️ CONFIG'}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Contenido según vista */}
         <div className="p-4">
           {vistaAdmin === 'hoy' && (
-            <div className="space-y-6">
-              {/* Métricas principales */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-white dark:bg-navy-900 rounded-xl p-4 shadow">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-slate-500">Total Rondas</span>
-                    <Target className="w-5 h-5 text-blue-500" />
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {[
+                  {label: 'Rondas', value: stats.rondas, icon: <Target className="w-4 h-4 text-blue-500"/>},
+                  {label: 'Realizadas', value: stats.realizado, icon: <CheckCircle2 className="w-4 h-4 text-emerald-500"/>, color: 'text-emerald-400'},
+                  {label: 'Canceladas', value: stats.cancelado, icon: <XCircle className="w-4 h-4 text-red-500"/>, color: 'text-red-400'},
+                  {label: 'T. Prom', value: `${stats.prom}m`, icon: <Clock className="w-4 h-4 text-purple-500"/>, color: 'text-purple-400'},
+                  {label: 'XP Total', value: stats.xp, icon: <Star className="w-4 h-4 text-yellow-500"/>, color: 'text-yellow-400'},
+                ].map(({label, value, icon, color}) => (
+                  <div key={label} className="bg-slate-800/80 rounded-xl p-3 border border-slate-700">
+                    <div className="flex items-center justify-between mb-1"><span className="text-xs text-slate-400">{label}</span>{icon}</div>
+                    <p className={`text-2xl font-bold ${color || 'text-white'}`}>{value}</p>
                   </div>
-                  <p className="text-3xl font-bold text-slate-800 dark:text-white">
-                    {estadisticasHoy.totalRondas}
-                  </p>
-                </div>
-
-                <div className="bg-white dark:bg-navy-900 rounded-xl p-4 shadow">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-slate-500">Pedidos</span>
-                    <Package className="w-5 h-5 text-emerald-500" />
-                  </div>
-                  <p className="text-3xl font-bold text-slate-800 dark:text-white">
-                    {estadisticasHoy.totalRealizado}
-                    <span className="text-sm text-slate-400 ml-1">/ {estadisticasHoy.totalPedidos}</span>
-                  </p>
-                </div>
-
-                <div className="bg-white dark:bg-navy-900 rounded-xl p-4 shadow">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-slate-500">Cancelados</span>
-                    <XCircle className="w-5 h-5 text-red-500" />
-                  </div>
-                  <p className="text-3xl font-bold text-slate-800 dark:text-white">
-                    {estadisticasHoy.totalCancelado}
-                  </p>
-                </div>
-
-                <div className="bg-white dark:bg-navy-900 rounded-xl p-4 shadow">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-slate-500">T. Promedio</span>
-                    <Clock className="w-5 h-5 text-purple-500" />
-                  </div>
-                  <p className="text-3xl font-bold text-slate-800 dark:text-white">
-                    {estadisticasHoy.promedioGeneral}
-                    <span className="text-sm text-slate-400 ml-1">min</span>
-                  </p>
-                </div>
+                ))}
               </div>
-
-              {/* Tabla de rondas del día */}
-              <div className="bg-white dark:bg-navy-900 rounded-xl shadow overflow-hidden">
-                <div className="p-4 border-b border-slate-200 dark:border-navy-700">
-                  <h3 className="font-bold text-slate-800 dark:text-white">Rondas de Hoy</h3>
-                </div>
+              <div className="bg-slate-800/80 rounded-xl border border-slate-700 overflow-hidden">
+                <div className="p-3 border-b border-slate-700"><h3 className="font-bold text-white">Rondas de Hoy</h3></div>
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-slate-50 dark:bg-navy-800">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-700/50">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400">Usuario</th>
-                        <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400">Ronda</th>
-                        <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400">Tiempo</th>
-                        <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400">Pedidos</th>
-                        <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400">Realizado</th>
-                        <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400">Cancel.</th>
-                        <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400">T.Prom</th>
+                        {['Usuario', 'Ronda', 'Tiempo', 'Realizado', 'Cancel.', 'XP'].map(h => (
+                          <th key={h} className="px-3 py-2 text-left text-xs font-bold text-slate-400">{h}</th>
+                        ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-navy-800">
-                      {rondas
-                        .filter((r) => r.fecha === new Date().toLocaleDateString('es-CO'))
-                        .map((ronda) => (
-                          <tr key={ronda.id} className="hover:bg-slate-50 dark:hover:bg-navy-800/50">
-                            <td className="px-4 py-3 font-medium text-slate-800 dark:text-white">
-                              {usuarios.find((u) => u.id === ronda.usuarioId)?.nombre}
-                            </td>
-                            <td className="px-4 py-3 text-center">{ronda.numero}</td>
-                            <td className="px-4 py-3 text-center">{formatTime(ronda.tiempoTotal)}</td>
-                            <td className="px-4 py-3 text-center">{ronda.pedidosIniciales}</td>
-                            <td className="px-4 py-3 text-center text-emerald-600 font-bold">{ronda.realizado}</td>
-                            <td className="px-4 py-3 text-center text-red-600">{ronda.cancelado}</td>
-                            <td className="px-4 py-3 text-center">{ronda.tiempoPromedio.toFixed(2)} min</td>
-                          </tr>
-                        ))}
+                    <tbody className="divide-y divide-slate-700">
+                      {rondas.filter(r => r.fecha === hoy).map(r => (
+                        <tr key={r.id} className="hover:bg-slate-700/30">
+                          <td className="px-3 py-2 text-white">{usuarios.find(u => u.id === r.usuarioId)?.nombre}</td>
+                          <td className="px-3 py-2 text-slate-300">{r.numero}</td>
+                          <td className="px-3 py-2 text-slate-300">{fmt(r.tiempoTotal)}</td>
+                          <td className="px-3 py-2 text-emerald-400 font-bold">{r.realizado}</td>
+                          <td className="px-3 py-2 text-red-400">{r.cancelado}</td>
+                          <td className="px-3 py-2 text-yellow-400">+{r.xpGanado}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -1063,144 +803,22 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
             </div>
           )}
 
-          {vistaAdmin === 'config' && (
-            <div className="max-w-lg mx-auto">
-              <div className="bg-white dark:bg-navy-900 rounded-xl shadow p-6 space-y-6">
-                <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-slate-500" />
-                  Configuración del Cronómetro
-                </h3>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                      Tiempo por ronda (minutos)
-                    </label>
-                    <input
-                      type="number"
-                      value={config.tiempoPorRonda}
-                      onChange={(e) => setConfig({ ...config, tiempoPorRonda: parseInt(e.target.value) || 25 })}
-                      className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-800"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                      Tiempo promedio por guía (minutos)
-                    </label>
-                    <input
-                      type="number"
-                      value={config.tiempoPromedioGuia}
-                      onChange={(e) => setConfig({ ...config, tiempoPromedioGuia: parseInt(e.target.value) || 3 })}
-                      className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-800"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                      Alerta temprana (segundos)
-                    </label>
-                    <input
-                      type="number"
-                      value={config.alertaTemprana}
-                      onChange={(e) => setConfig({ ...config, alertaTemprana: parseInt(e.target.value) || 150 })}
-                      className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-800"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                      Alerta crítica (segundos)
-                    </label>
-                    <input
-                      type="number"
-                      value={config.alertaCritica}
-                      onChange={(e) => setConfig({ ...config, alertaCritica: parseInt(e.target.value) || 240 })}
-                      className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-navy-700 bg-slate-50 dark:bg-navy-800"
-                    />
-                  </div>
-
-                  <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-navy-700">
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={config.sonidoActivo}
-                        onChange={(e) => setConfig({ ...config, sonidoActivo: e.target.checked })}
-                        className="w-5 h-5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
-                      />
-                      <span className="text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                        {config.sonidoActivo ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                        Activar sonido de alerta
-                      </span>
-                    </label>
-
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={config.notificacionesActivas}
-                        onChange={(e) => setConfig({ ...config, notificacionesActivas: e.target.checked })}
-                        className="w-5 h-5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
-                      />
-                      <span className="text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                        <Bell className="w-4 h-4" />
-                        Enviar notificación push
-                      </span>
-                    </label>
-
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={config.mensajesMotivacionales}
-                        onChange={(e) => setConfig({ ...config, mensajesMotivacionales: e.target.checked })}
-                        className="w-5 h-5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
-                      />
-                      <span className="text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                        <Star className="w-4 h-4" />
-                        Mostrar mensaje motivacional
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => saveToStorage(STORAGE_KEY_CONFIG, config)}
-                  className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-colors"
-                >
-                  APLICAR CONFIGURACIÓN
-                </button>
-              </div>
-            </div>
-          )}
-
-          {vistaAdmin === 'equipo' && (
-            <div className="grid gap-4">
-              {usuarios.map((usuario) => {
-                const rondasUsuario = rondas.filter((r) => r.usuarioId === usuario.id);
-                const totalRealizado = rondasUsuario.reduce((acc, r) => acc + r.realizado, 0);
-                const promedioUsuario = rondasUsuario.length > 0
-                  ? (rondasUsuario.reduce((acc, r) => acc + r.tiempoPromedio, 0) / rondasUsuario.length).toFixed(2)
-                  : '0';
-
+          {vistaAdmin === 'ranking' && (
+            <div className="max-w-xl mx-auto bg-slate-800/80 rounded-xl p-4 border border-slate-700">
+              <div className="flex items-center gap-2 mb-4"><Trophy className="w-5 h-5 text-yellow-400"/><h3 className="font-bold text-white">RANKING</h3></div>
+              {usuarios.sort((a, b) => b.xp - a.xp).map((u, i) => {
+                const niv = getNivel(u.xp);
                 return (
-                  <div key={usuario.id} className="bg-white dark:bg-navy-900 rounded-xl shadow p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                          {usuario.nombre.charAt(0)}
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-slate-800 dark:text-white">{usuario.nombre}</h4>
-                          <p className="text-sm text-slate-500">{rondasUsuario.length} rondas totales</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-emerald-600">{totalRealizado}</p>
-                        <p className="text-xs text-slate-500">guías procesadas</p>
-                      </div>
+                  <div key={u.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-700/30 mb-2">
+                    <span className="text-xl w-8">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`}</span>
+                    <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${niv.color} flex items-center justify-center text-white font-bold`}>{u.nombre.charAt(0)}</div>
+                    <div className="flex-1">
+                      <div className="font-bold text-white">{u.nombre}</div>
+                      <div className="text-xs text-slate-400">Lvl {niv.nivel} • {u.guiasTotales} guías</div>
                     </div>
-                    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-navy-800 flex justify-between text-sm">
-                      <span className="text-slate-500">Promedio: <span className="font-bold text-slate-800 dark:text-white">{promedioUsuario} min</span></span>
-                      <span className="text-slate-500">Cancelados: <span className="font-bold text-red-500">{rondasUsuario.reduce((acc, r) => acc + r.cancelado, 0)}</span></span>
+                    <div className="text-right">
+                      <div className="font-bold text-yellow-400">{u.xp} XP</div>
+                      <div className="text-xs text-slate-400">{u.racha}d racha</div>
                     </div>
                   </div>
                 );
@@ -1208,10 +826,60 @@ export const ProcesosLitperTab: React.FC<ProcesosLitperTabProps> = ({ selectedCo
             </div>
           )}
 
-          {vistaAdmin === 'semana' && (
-            <div className="bg-white dark:bg-navy-900 rounded-xl shadow p-6">
-              <h3 className="font-bold text-slate-800 dark:text-white mb-4">Resumen Semanal</h3>
-              <p className="text-slate-500">Próximamente: Gráficos y estadísticas semanales</p>
+          {vistaAdmin === 'equipo' && (
+            <div className="space-y-3">
+              <div className="flex justify-end">
+                <button onClick={() => { setEditUser(undefined); setShowUserModal(true); }} className="flex items-center gap-2 px-3 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm">
+                  <UserPlus className="w-4 h-4"/>Nuevo Usuario
+                </button>
+              </div>
+              {usuarios.map(u => {
+                const niv = getNivel(u.xp);
+                return (
+                  <div key={u.id} className="bg-slate-800/80 rounded-xl p-4 border border-slate-700 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${niv.color} flex items-center justify-center text-white font-bold text-lg`}>{u.nombre.charAt(0)}</div>
+                      <div>
+                        <div className="font-bold text-white">{u.nombre}</div>
+                        <div className="text-sm text-slate-400 flex gap-3">
+                          <span>Lvl {niv.nivel}</span><span>{u.xp} XP</span><span>{u.guiasTotales} guías</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button onClick={() => { setEditUser(u); setShowUserModal(true); }} className="p-2 hover:bg-slate-700 rounded-lg">
+                      <Edit3 className="w-5 h-5 text-slate-400"/>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {vistaAdmin === 'config' && (
+            <div className="max-w-md mx-auto bg-slate-800/80 rounded-xl p-6 border border-slate-700 space-y-4">
+              <h3 className="font-bold text-white flex items-center gap-2"><Settings className="w-5 h-5 text-slate-400"/>Configuración</h3>
+              {[
+                {label: 'Tiempo por ronda (seg)', key: 'tiempoRonda', value: config.tiempoRonda},
+                {label: 'Alerta temprana (seg)', key: 'alertaTemprana', value: config.alertaTemprana},
+                {label: 'Alerta crítica (seg)', key: 'alertaCritica', value: config.alertaCritica},
+                {label: 'Meta diaria', key: 'metaDiaria', value: config.metaDiaria},
+              ].map(({label, key, value}) => (
+                <div key={key}>
+                  <label className="block text-sm text-slate-300 mb-1">{label}</label>
+                  <input type="number" value={value} onChange={(e) => setConfig({...config, [key]: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-700 border border-slate-600 text-white"/>
+                </div>
+              ))}
+              <div className="space-y-2 pt-2 border-t border-slate-700">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" checked={config.countdown} onChange={(e) => setConfig({...config, countdown: e.target.checked})} className="w-5 h-5 rounded"/>
+                  <span className="text-slate-300">Modo Countdown (cuenta regresiva)</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" checked={config.sonido} onChange={(e) => setConfig({...config, sonido: e.target.checked})} className="w-5 h-5 rounded"/>
+                  <span className="text-slate-300 flex items-center gap-2">{config.sonido ? <Volume2 className="w-4 h-4"/> : <VolumeX className="w-4 h-4"/>} Sonidos de alerta</span>
+                </label>
+              </div>
             </div>
           )}
         </div>
