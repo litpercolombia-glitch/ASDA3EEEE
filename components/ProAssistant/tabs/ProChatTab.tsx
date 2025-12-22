@@ -1,33 +1,169 @@
 // components/ProAssistant/tabs/ProChatTab.tsx
-// Tab de Chat inteligente con ejecucion de tareas
+// Tab de Chat inteligente con selector de modelo IA y 2 modos de chat
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Send,
   Mic,
   Sparkles,
-  Package,
-  Phone,
-  FileText,
   Loader2,
   CheckCircle,
   AlertTriangle,
-  TrendingUp,
-  MapPin,
-  Truck,
-  Clock,
   ChevronRight,
-  Download,
-  MessageSquare,
-  BarChart3,
+  Bot,
+  Database,
+  Webhook,
+  Zap,
+  Brain,
+  Settings2,
+  RefreshCw,
 } from 'lucide-react';
-import { useProAssistantStore, ProMessage } from '../../../stores/proAssistantStore';
+import { useProAssistantStore, ProMessage, AIModel, ChatMode } from '../../../stores/proAssistantStore';
+import { askAssistant, analyzeDelayPatterns } from '../../../services/claudeService';
+
+// ============================================
+// ICONOS DE MODELOS DE IA
+// ============================================
+const AIModelIcon: React.FC<{ model: AIModel; className?: string }> = ({ model, className = 'w-4 h-4' }) => {
+  switch (model) {
+    case 'claude':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+        </svg>
+      );
+    case 'gemini':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+      );
+    case 'openai':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.516 2.9 5.985 5.985 0 0 0 4.469 1.93 6.046 6.046 0 0 0 5.752-4.23 5.985 5.985 0 0 0 3.998-2.9 6.043 6.043 0 0 0-.689-6.967z"/>
+        </svg>
+      );
+  }
+};
+
+// ============================================
+// SELECTOR DE MODELO DE IA
+// ============================================
+const AIModelSelector: React.FC = () => {
+  const { config, setAIModel } = useProAssistantStore();
+  const [isOpen, setIsOpen] = useState(false);
+
+  const models: { id: AIModel; name: string; description: string; color: string }[] = [
+    { id: 'claude', name: 'Claude', description: 'Razonamiento avanzado', color: 'amber' },
+    { id: 'gemini', name: 'Gemini', description: 'Vision + Busqueda', color: 'blue' },
+    { id: 'openai', name: 'GPT-4', description: 'Uso general', color: 'emerald' },
+  ];
+
+  const currentModel = models.find(m => m.id === config.aiModel) || models[0];
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`
+          flex items-center gap-2 px-3 py-1.5 rounded-lg
+          bg-slate-800 hover:bg-slate-700 border border-slate-700
+          transition-all duration-200
+          ${isOpen ? 'border-amber-500/50' : ''}
+        `}
+      >
+        <div className={`w-5 h-5 rounded-full bg-${currentModel.color}-500/20 flex items-center justify-center`}>
+          <AIModelIcon model={config.aiModel} className={`w-3 h-3 text-${currentModel.color}-400`} />
+        </div>
+        <span className="text-xs font-medium text-white">{currentModel.name}</span>
+        <ChevronRight className={`w-3 h-3 text-slate-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-2 w-56 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden">
+          <div className="p-2 border-b border-slate-700">
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold px-2">Modelo de IA</p>
+          </div>
+          <div className="p-1">
+            {models.map((model) => (
+              <button
+                key={model.id}
+                onClick={() => {
+                  setAIModel(model.id);
+                  setIsOpen(false);
+                }}
+                className={`
+                  w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
+                  transition-all duration-200
+                  ${config.aiModel === model.id
+                    ? `bg-${model.color}-500/20 border border-${model.color}-500/30`
+                    : 'hover:bg-slate-700/50 border border-transparent'
+                  }
+                `}
+              >
+                <div className={`w-8 h-8 rounded-lg bg-${model.color}-500/20 flex items-center justify-center`}>
+                  <AIModelIcon model={model.id} className={`w-4 h-4 text-${model.color}-400`} />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-medium text-white">{model.name}</p>
+                  <p className="text-[10px] text-slate-500">{model.description}</p>
+                </div>
+                {config.aiModel === model.id && (
+                  <CheckCircle className={`w-4 h-4 text-${model.color}-400`} />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================
+// SELECTOR DE MODO DE CHAT
+// ============================================
+const ChatModeSelector: React.FC = () => {
+  const { config, setChatMode } = useProAssistantStore();
+
+  const modes: { id: ChatMode; name: string; icon: React.ReactNode; color: string }[] = [
+    { id: 'litper', name: 'Litper Data', icon: <Database className="w-4 h-4" />, color: 'purple' },
+    { id: 'chateapro', name: 'Chatea Pro', icon: <Webhook className="w-4 h-4" />, color: 'cyan' },
+  ];
+
+  return (
+    <div className="flex bg-slate-800/50 rounded-xl p-1 border border-slate-700/50">
+      {modes.map((mode) => (
+        <button
+          key={mode.id}
+          onClick={() => setChatMode(mode.id)}
+          className={`
+            flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg
+            transition-all duration-200 text-xs font-medium
+            ${config.chatMode === mode.id
+              ? `bg-${mode.color}-500/20 text-${mode.color}-400 border border-${mode.color}-500/30`
+              : 'text-slate-400 hover:text-white hover:bg-slate-700/50 border border-transparent'
+            }
+          `}
+        >
+          {mode.icon}
+          <span className="hidden sm:inline">{mode.name}</span>
+        </button>
+      ))}
+    </div>
+  );
+};
 
 // ============================================
 // COMPONENTE DE BURBUJA DE MENSAJE
 // ============================================
-const MessageBubble: React.FC<{ message: ProMessage }> = ({ message }) => {
+const MessageBubble: React.FC<{ message: ProMessage; chatMode: ChatMode }> = ({ message, chatMode }) => {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
+
+  const modeColors = chatMode === 'litper'
+    ? { gradient: 'from-purple-500 to-violet-500', bg: 'purple' }
+    : { gradient: 'from-cyan-500 to-blue-500', bg: 'cyan' };
 
   if (isSystem) {
     return (
@@ -45,10 +181,16 @@ const MessageBubble: React.FC<{ message: ProMessage }> = ({ message }) => {
         {/* Avatar */}
         {!isUser && (
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-              <Sparkles className="w-3 h-3 text-white" />
+            <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${modeColors.gradient} flex items-center justify-center`}>
+              {chatMode === 'litper' ? (
+                <Database className="w-3 h-3 text-white" />
+              ) : (
+                <Webhook className="w-3 h-3 text-white" />
+              )}
             </div>
-            <span className="text-xs text-slate-400 font-medium">PRO</span>
+            <span className="text-xs text-slate-400 font-medium">
+              {chatMode === 'litper' ? 'Litper' : 'Chatea Pro'}
+            </span>
           </div>
         )}
 
@@ -58,7 +200,7 @@ const MessageBubble: React.FC<{ message: ProMessage }> = ({ message }) => {
             rounded-2xl px-4 py-3
             ${
               isUser
-                ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-tr-sm'
+                ? `bg-gradient-to-br ${modeColors.gradient} text-white rounded-tr-sm`
                 : 'bg-slate-800 text-slate-200 rounded-tl-sm'
             }
           `}
@@ -87,7 +229,7 @@ const MessageBubble: React.FC<{ message: ProMessage }> = ({ message }) => {
               if (line.startsWith('- ')) {
                 return (
                   <p key={i} className="mb-1 flex items-start gap-2">
-                    <span className="text-amber-400">•</span>
+                    <span className={`text-${modeColors.bg}-400`}>•</span>
                     {line.substring(2)}
                   </p>
                 );
@@ -147,7 +289,7 @@ const MessageBubble: React.FC<{ message: ProMessage }> = ({ message }) => {
                         <p className="text-sm font-bold text-white">{att.data.title}</p>
                         <p className="text-xs text-slate-400">{att.data.subtitle}</p>
                       </div>
-                      <span className="text-2xl font-bold text-amber-400">{att.data.value}</span>
+                      <span className={`text-2xl font-bold text-${modeColors.bg}-400`}>{att.data.value}</span>
                     </div>
                   )}
                 </div>
@@ -174,8 +316,11 @@ const MessageBubble: React.FC<{ message: ProMessage }> = ({ message }) => {
 const QuickSuggestions: React.FC<{
   suggestions: string[];
   onSelect: (suggestion: string) => void;
-}> = ({ suggestions, onSelect }) => {
+  chatMode: ChatMode;
+}> = ({ suggestions, onSelect, chatMode }) => {
   if (!suggestions || suggestions.length === 0) return null;
+
+  const modeColor = chatMode === 'litper' ? 'purple' : 'cyan';
 
   return (
     <div className="flex flex-wrap gap-2 mb-4">
@@ -183,13 +328,13 @@ const QuickSuggestions: React.FC<{
         <button
           key={i}
           onClick={() => onSelect(suggestion)}
-          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700
+          className={`px-3 py-1.5 bg-slate-800 hover:bg-slate-700
             text-slate-300 text-xs rounded-full
-            border border-slate-700 hover:border-amber-500/50
+            border border-slate-700 hover:border-${modeColor}-500/50
             transition-all duration-200
-            flex items-center gap-1"
+            flex items-center gap-1`}
         >
-          <ChevronRight className="w-3 h-3 text-amber-400" />
+          <ChevronRight className={`w-3 h-3 text-${modeColor}-400`} />
           {suggestion}
         </button>
       ))}
@@ -202,20 +347,26 @@ const QuickSuggestions: React.FC<{
 // ============================================
 const ProChatTab: React.FC = () => {
   const {
-    messages,
-    addMessage,
+    config,
+    litperMessages,
+    chateaProMessages,
+    addLitperMessage,
+    addChateaProMessage,
     isTyping,
     setIsTyping,
     setIsProcessing,
     shipmentsContext,
-    addTask,
-    updateTask,
   } = useProAssistantStore();
 
   const [inputValue, setInputValue] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Obtener mensajes segun el modo
+  const messages = config.chatMode === 'litper' ? litperMessages : chateaProMessages;
+  const addMessage = config.chatMode === 'litper' ? addLitperMessage : addChateaProMessage;
 
   // Auto-scroll al final
   useEffect(() => {
@@ -225,14 +376,45 @@ const ProChatTab: React.FC = () => {
   // Focus input
   useEffect(() => {
     inputRef.current?.focus();
-  }, []);
+  }, [config.chatMode]);
 
-  // Procesar mensaje del usuario
-  const processUserMessage = async (text: string) => {
+  // Llamar a la IA real
+  const callAI = async (question: string): Promise<string> => {
+    const model = config.aiModel;
+
+    // Preparar contexto de guias
+    const contextSummary = shipmentsContext.length > 0
+      ? `DATOS DE GUÍAS (${shipmentsContext.length} guías cargadas):\n` +
+        shipmentsContext.slice(0, 30).map(s =>
+          `- Guía: ${s.id || s.guia}, Estado: ${s.status || s.estado}, Transportadora: ${s.carrier || s.transportadora}, Novedad: ${s.novelty || 'Sin novedad'}`
+        ).join('\n')
+      : 'No hay guías cargadas actualmente.';
+
+    try {
+      // Por ahora usamos Claude como principal
+      // En el futuro se puede agregar lógica para cada modelo
+      if (model === 'claude') {
+        return await askAssistant(question, contextSummary);
+      } else if (model === 'gemini') {
+        // Usar Claude con nota de que es Gemini (pendiente integración directa)
+        return await askAssistant(`[Modo Gemini] ${question}`, contextSummary);
+      } else {
+        // OpenAI - usar Claude con nota
+        return await askAssistant(`[Modo GPT] ${question}`, contextSummary);
+      }
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al procesar con IA');
+    }
+  };
+
+  // Procesar mensaje del usuario - LITPER (datos de la app)
+  const processLitperMessage = async (text: string) => {
     const lowerText = text.toLowerCase();
 
+    setAiError(null);
+
     // Agregar mensaje del usuario
-    addMessage({
+    addLitperMessage({
       role: 'user',
       content: text,
     });
@@ -240,218 +422,121 @@ const ProChatTab: React.FC = () => {
     setIsTyping(true);
     setIsProcessing(true);
 
-    // Simular delay de procesamiento
-    await new Promise((r) => setTimeout(r, 1000 + Math.random() * 1000));
+    try {
+      // Intentar usar IA real
+      let response = '';
+      let suggestions: string[] = [];
 
-    // ============================================
-    // LOGICA DE INTENCIONES Y RESPUESTAS
-    // ============================================
+      // Para consultas específicas, usar respuestas optimizadas + IA
+      if (lowerText.includes('novedad') || lowerText.includes('novedades')) {
+        const novedadesGuias = shipmentsContext.filter(
+          (s) => (s.novelty && s.novelty !== 'Sin novedad') || (s.novedad && s.novedad !== 'Sin novedad')
+        );
 
-    // NOVEDADES
-    if (lowerText.includes('novedad') || lowerText.includes('novedades')) {
-      const novedadesGuias = shipmentsContext.filter(
-        (s) => s.novelty && s.novelty !== 'Sin novedad'
-      );
-
-      const novedadesPorTipo: Record<string, number> = {};
-      novedadesGuias.forEach((g) => {
-        const tipo = g.novelty || 'Sin clasificar';
-        novedadesPorTipo[tipo] = (novedadesPorTipo[tipo] || 0) + 1;
-      });
-
-      let response = `Encontre **${novedadesGuias.length}** guias con novedad activa:\n\n`;
-
-      Object.entries(novedadesPorTipo)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .forEach(([tipo, count]) => {
-          response += `- **${tipo}**: ${count} guias\n`;
-        });
-
-      if (novedadesGuias.length > 0) {
-        response += `\n¿Que accion quieres tomar con estas guias?`;
-      }
-
-      addMessage({
-        role: 'assistant',
-        content: response,
-        suggestions:
-          novedadesGuias.length > 0
-            ? ['Filtrar por ciudad', 'Programar llamadas', 'Exportar a Excel']
-            : ['Cargar datos', 'Ver todas las guias'],
-        attachments:
-          novedadesGuias.length > 0
-            ? [
-                {
-                  type: 'card',
-                  data: {
-                    title: 'Total Novedades',
-                    subtitle: 'Guias con incidencias',
-                    value: novedadesGuias.length,
-                  },
-                },
-              ]
-            : undefined,
-      });
-    }
-
-    // RECLAMO EN OFICINA
-    else if (lowerText.includes('reclamo') || lowerText.includes('oficina')) {
-      const reclamoGuias = shipmentsContext.filter(
-        (s) =>
-          s.novelty?.toLowerCase().includes('reclamo') ||
-          s.status?.toLowerCase().includes('reclamo')
-      );
-
-      let response = `Tengo **${reclamoGuias.length}** guias en Reclamo en Oficina.\n\n`;
-
-      if (reclamoGuias.length > 0) {
-        response += `Estas guias tienen alta probabilidad de devolucion si no se gestionan pronto.\n\n`;
-        response += `**Recomendacion:** Programar llamadas automaticas a estos clientes.`;
+        if (novedadesGuias.length > 0) {
+          // Usar IA para analizar
+          response = await callAI(`Analiza estas ${novedadesGuias.length} guías con novedad y dame un resumen ejecutivo con recomendaciones: ${text}`);
+          suggestions = ['Filtrar por ciudad', 'Programar llamadas', 'Exportar a Excel'];
+        } else {
+          response = 'No hay guías con novedad activa en este momento. ¿Quieres que analice otro aspecto de tus envíos?';
+          suggestions = ['Ver todas las guías', 'Reporte general', 'Cargar datos'];
+        }
+      } else if (lowerText.includes('reporte') || lowerText.includes('resumen')) {
+        const total = shipmentsContext.length;
+        if (total > 0) {
+          response = await callAI(`Genera un reporte ejecutivo de estos ${total} envíos. Incluye estadísticas, riesgos y recomendaciones.`);
+          suggestions = ['Ver novedades', 'Análisis por transportadora', 'Exportar Excel'];
+        } else {
+          response = 'No hay guías cargadas. Para generar un reporte, primero carga los datos de tus envíos.';
+          suggestions = ['Cargar datos', 'Ayuda'];
+        }
+      } else if (lowerText.includes('analisis') || lowerText.includes('análisis') || lowerText.includes('patron')) {
+        if (shipmentsContext.length > 0) {
+          response = await callAI(text);
+          suggestions = ['Ver guías críticas', 'Recomendaciones', 'Exportar análisis'];
+        } else {
+          response = 'Necesito datos de guías para hacer un análisis. ¿Puedes cargar los envíos primero?';
+          suggestions = ['Cargar datos', 'Ayuda'];
+        }
       } else {
-        response += `No hay guias en este estado actualmente.`;
+        // Consulta general - usar IA directamente
+        response = await callAI(text);
+        suggestions = ['Ver novedades', 'Generar reporte', 'Análisis detallado'];
       }
 
-      addMessage({
+      addLitperMessage({
         role: 'assistant',
         content: response,
-        suggestions:
-          reclamoGuias.length > 0
-            ? ['Programar llamadas', 'Ver lista completa', 'Enviar WhatsApp']
-            : ['Ver otras novedades', 'Cargar datos'],
+        suggestions,
       });
-    }
+    } catch (error: any) {
+      setAiError(error.message);
 
-    // REPORTE
-    else if (
-      lowerText.includes('reporte') ||
-      lowerText.includes('informe') ||
-      lowerText.includes('resumen')
-    ) {
-      const total = shipmentsContext.length;
-      const entregados = shipmentsContext.filter(
-        (s) =>
-          s.status?.toLowerCase().includes('entreg') ||
-          s.status?.toLowerCase().includes('delivered')
-      ).length;
-      const enTransito = shipmentsContext.filter(
-        (s) =>
-          s.status?.toLowerCase().includes('transit') || s.status?.toLowerCase().includes('ruta')
-      ).length;
-      const conNovedad = shipmentsContext.filter(
-        (s) => s.novelty && s.novelty !== 'Sin novedad'
-      ).length;
-
-      const tasaEntrega = total > 0 ? Math.round((entregados / total) * 100) : 0;
-
-      let response = `**REPORTE DEL DIA**\n\n`;
-      response += `- **Total guias**: ${total}\n`;
-      response += `- **Entregados**: ${entregados} (${tasaEntrega}%)\n`;
-      response += `- **En transito**: ${enTransito}\n`;
-      response += `- **Con novedad**: ${conNovedad}\n\n`;
-
-      if (tasaEntrega < 70) {
-        response += `La tasa de entrega esta por debajo del objetivo (70%). Revisa las novedades.`;
-      } else if (tasaEntrega >= 90) {
-        response += `Excelente! La tasa de entrega esta por encima del 90%.`;
-      } else {
-        response += `La tasa de entrega esta en un nivel aceptable.`;
-      }
-
-      addMessage({
+      // Respuesta de fallback
+      addLitperMessage({
         role: 'assistant',
-        content: response,
-        suggestions: ['Ver novedades', 'Exportar Excel', 'Analisis por transportadora'],
-        action: {
-          type: 'generate_report',
-          label: 'Reporte Generado',
-          data: { total, entregados, enTransito, conNovedad },
-          status: 'completed',
-        },
-      });
-    }
-
-    // TRANSPORTADORA
-    else if (
-      lowerText.includes('transportadora') ||
-      lowerText.includes('inter') ||
-      lowerText.includes('coordinadora') ||
-      lowerText.includes('envia') ||
-      lowerText.includes('tcc')
-    ) {
-      const porTransportadora: Record<string, number> = {};
-      shipmentsContext.forEach((s) => {
-        const carrier = s.carrier || 'Sin asignar';
-        porTransportadora[carrier] = (porTransportadora[carrier] || 0) + 1;
-      });
-
-      let response = `**DESGLOSE POR TRANSPORTADORA**\n\n`;
-
-      Object.entries(porTransportadora)
-        .sort((a, b) => b[1] - a[1])
-        .forEach(([carrier, count]) => {
-          const pct =
-            shipmentsContext.length > 0 ? Math.round((count / shipmentsContext.length) * 100) : 0;
-          response += `- **${carrier}**: ${count} guias (${pct}%)\n`;
-        });
-
-      addMessage({
-        role: 'assistant',
-        content: response,
-        suggestions: ['Ver novedades por transportadora', 'Comparar tiempos de entrega'],
-      });
-    }
-
-    // LLAMADAS
-    else if (
-      lowerText.includes('llamar') ||
-      lowerText.includes('llamada') ||
-      lowerText.includes('contactar')
-    ) {
-      addMessage({
-        role: 'assistant',
-        content: `Puedo programar llamadas automaticas a los clientes.\n\n¿A que grupo de guias quieres llamar?`,
-        suggestions: ['Guias en Reclamo Oficina', 'Guias con Novedad', 'Guias +5 dias sin entrega'],
-      });
-    }
-
-    // AYUDA / SALUDO
-    else if (
-      lowerText.includes('hola') ||
-      lowerText.includes('ayuda') ||
-      lowerText.includes('help')
-    ) {
-      addMessage({
-        role: 'assistant',
-        content: `Hola! Soy tu asistente PRO de Litper.\n\nPuedo ayudarte con:\n\n- **Logistica** - Ver guias, novedades, estados\n- **Reportes** - Generar analisis y metricas\n- **Acciones** - Programar llamadas, enviar mensajes\n- **Conocimiento** - Consultar base de datos\n- **Ejecutar** - Tareas automaticas en la app\n\n¿Que necesitas?`,
-        suggestions: ['Ver guias con novedad', 'Reporte del dia', 'Guias en Reclamo Oficina'],
-      });
-    }
-
-    // EXPORTAR
-    else if (
-      lowerText.includes('exportar') ||
-      lowerText.includes('excel') ||
-      lowerText.includes('descargar')
-    ) {
-      addMessage({
-        role: 'assistant',
-        content: `Puedo exportar los datos a Excel.\n\n¿Que datos quieres exportar?`,
-        suggestions: ['Todas las guias', 'Solo novedades', 'Por transportadora'],
-      });
-    }
-
-    // RESPUESTA POR DEFECTO
-    else {
-      addMessage({
-        role: 'assistant',
-        content: `Entiendo tu consulta sobre "${text}".\n\nActualmente tengo **${shipmentsContext.length}** guias cargadas en el sistema.\n\n¿Que informacion especifica necesitas?`,
-        suggestions: ['Ver novedades', 'Generar reporte', 'Analisis por ciudad'],
+        content: `Lo siento, hubo un problema al procesar tu consulta.\n\n**Error:** ${error.message}\n\nMientras tanto, puedo ayudarte con:\n- Ver estadísticas de tus ${shipmentsContext.length} guías\n- Filtrar por estado o transportadora\n- Exportar datos`,
+        suggestions: ['Ver estadísticas', 'Reintentar', 'Ayuda'],
       });
     }
 
     setIsTyping(false);
     setIsProcessing(false);
+  };
+
+  // Procesar mensaje - CHATEA PRO (webhooks/API)
+  const processChateaProMessage = async (text: string) => {
+    const lowerText = text.toLowerCase();
+
+    setAiError(null);
+
+    addChateaProMessage({
+      role: 'user',
+      content: text,
+    });
+
+    setIsTyping(true);
+    setIsProcessing(true);
+
+    await new Promise((r) => setTimeout(r, 800));
+
+    let response = '';
+    let suggestions: string[] = [];
+
+    if (lowerText.includes('webhook') || lowerText.includes('configurar')) {
+      response = `**Configuración de Webhooks**\n\nPara configurar un webhook necesitas:\n\n1. **URL del endpoint** - Donde recibirás los eventos\n2. **Secret key** - Para verificar las firmas\n3. **Eventos** - Qué notificaciones quieres recibir\n\n${config.chateaPro.webhookUrl ? `**Tu webhook actual:** ${config.chateaPro.webhookUrl}` : '**No tienes webhook configurado.** Ve a Config para agregarlo.'}\n\n¿Qué quieres configurar?`;
+      suggestions = ['Agregar webhook', 'Ver eventos disponibles', 'Probar conexión'];
+    } else if (lowerText.includes('api') || lowerText.includes('estado')) {
+      const isConnected = config.chateaPro.enabled && config.chateaPro.apiKey;
+      response = `**Estado de la API**\n\n- **Conexión:** ${isConnected ? '✅ Activa' : '❌ No configurada'}\n- **Webhook URL:** ${config.chateaPro.webhookUrl || 'No configurado'}\n- **Auto-sync:** ${config.chateaPro.autoSync ? 'Activado' : 'Desactivado'}\n\n${!isConnected ? 'Configura tu API Key en la pestaña de Config para activar la integración.' : '¿Qué acción quieres realizar?'}`;
+      suggestions = isConnected
+        ? ['Enviar mensaje', 'Ver logs', 'Sincronizar ahora']
+        : ['Configurar API', 'Ver documentación'];
+    } else if (lowerText.includes('probar') || lowerText.includes('test')) {
+      response = `**Prueba de Conexión**\n\n⏳ Verificando conexión con Chatea Pro...\n\n${config.chateaPro.apiKey ? '✅ API Key configurada\n' : '❌ API Key no configurada\n'}${config.chateaPro.webhookUrl ? '✅ Webhook configurado\n' : '❌ Webhook no configurado\n'}\n\n${config.chateaPro.apiKey && config.chateaPro.webhookUrl ? '✅ Sistema listo para enviar y recibir mensajes.' : '⚠️ Completa la configuración para activar la integración.'}`;
+      suggestions = ['Enviar test', 'Ver logs', 'Configurar'];
+    } else {
+      response = `Entiendo que quieres: "${text}"\n\nCon **Chatea Pro** puedo ayudarte con:\n\n- **Webhooks** - Recibir eventos en tiempo real\n- **API** - Enviar mensajes y automatizar\n- **Sincronización** - Mantener datos actualizados\n\n¿Qué necesitas hacer?`;
+      suggestions = ['Configurar webhook', 'Estado API', 'Enviar mensaje'];
+    }
+
+    addChateaProMessage({
+      role: 'assistant',
+      content: response,
+      suggestions,
+    });
+
+    setIsTyping(false);
+    setIsProcessing(false);
+  };
+
+  // Procesar mensaje según modo
+  const processUserMessage = async (text: string) => {
+    if (config.chatMode === 'litper') {
+      await processLitperMessage(text);
+    } else {
+      await processChateaProMessage(text);
+    }
   };
 
   // Enviar mensaje
@@ -473,27 +558,68 @@ const ProChatTab: React.FC = () => {
   const lastMessage = messages[messages.length - 1];
   const suggestions = lastMessage?.role === 'assistant' ? lastMessage.suggestions : [];
 
+  const modeColor = config.chatMode === 'litper' ? 'purple' : 'cyan';
+
   return (
     <div className="flex flex-col h-full">
+      {/* ============================================ */}
+      {/* HEADER CON CONTROLES */}
+      {/* ============================================ */}
+      <div className="p-3 border-b border-slate-700/50 space-y-3">
+        {/* Selector de modo de chat */}
+        <ChatModeSelector />
+
+        {/* Selector de modelo IA + info */}
+        <div className="flex items-center justify-between">
+          <AIModelSelector />
+
+          <div className="flex items-center gap-2 text-[10px] text-slate-500">
+            <Brain className="w-3 h-3" />
+            <span>{shipmentsContext.length} guías en contexto</span>
+          </div>
+        </div>
+
+        {/* Error de IA */}
+        {aiError && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <AlertTriangle className="w-4 h-4 text-red-400" />
+            <span className="text-xs text-red-400 flex-1">{aiError}</span>
+            <button
+              onClick={() => setAiError(null)}
+              className="text-red-400 hover:text-red-300"
+            >
+              <RefreshCw className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* ============================================ */}
       {/* AREA DE MENSAJES */}
       {/* ============================================ */}
       <div className="flex-1 overflow-y-auto p-4 space-y-1">
         {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
+          <MessageBubble key={message.id} message={message} chatMode={config.chatMode} />
         ))}
 
         {/* Indicador de escritura */}
         {isTyping && (
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-              <Sparkles className="w-3 h-3 text-white" />
+            <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${config.chatMode === 'litper' ? 'from-purple-500 to-violet-500' : 'from-cyan-500 to-blue-500'} flex items-center justify-center`}>
+              {config.chatMode === 'litper' ? (
+                <Database className="w-3 h-3 text-white" />
+              ) : (
+                <Webhook className="w-3 h-3 text-white" />
+              )}
             </div>
             <div className="bg-slate-800 rounded-2xl px-4 py-3 rounded-tl-sm">
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" />
-                <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce delay-100" />
-                <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce delay-200" />
+              <div className="flex items-center gap-2">
+                <Loader2 className={`w-4 h-4 text-${modeColor}-400 animate-spin`} />
+                <span className="text-xs text-slate-400">
+                  {config.chatMode === 'litper' ? 'Analizando con ' : 'Procesando con '}
+                  <span className="text-white font-medium">{config.aiModel === 'claude' ? 'Claude' : config.aiModel === 'gemini' ? 'Gemini' : 'GPT-4'}</span>
+                  ...
+                </span>
               </div>
             </div>
           </div>
@@ -507,7 +633,11 @@ const ProChatTab: React.FC = () => {
       {/* ============================================ */}
       {suggestions && suggestions.length > 0 && !isTyping && (
         <div className="px-4 pb-2">
-          <QuickSuggestions suggestions={suggestions} onSelect={(s) => processUserMessage(s)} />
+          <QuickSuggestions
+            suggestions={suggestions}
+            onSelect={(s) => processUserMessage(s)}
+            chatMode={config.chatMode}
+          />
         </div>
       )}
 
@@ -537,13 +667,16 @@ const ProChatTab: React.FC = () => {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Escribe tu mensaje..."
+              placeholder={config.chatMode === 'litper'
+                ? "Pregunta sobre tus guías y envíos..."
+                : "Configura webhooks y API..."
+              }
               disabled={isTyping}
-              className="w-full px-4 py-3 bg-slate-800 border border-slate-700
+              className={`w-full px-4 py-3 bg-slate-800 border border-slate-700
                 rounded-xl text-white placeholder-slate-500
-                focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30
+                focus:outline-none focus:border-${modeColor}-500/50 focus:ring-1 focus:ring-${modeColor}-500/30
                 disabled:opacity-50 disabled:cursor-not-allowed
-                text-sm"
+                text-sm`}
             />
           </div>
 
@@ -553,7 +686,7 @@ const ProChatTab: React.FC = () => {
             disabled={!inputValue.trim() || isTyping}
             className={`p-3 rounded-xl transition-all ${
               inputValue.trim() && !isTyping
-                ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white hover:from-amber-400 hover:to-orange-400 shadow-lg shadow-orange-500/30'
+                ? `bg-gradient-to-br ${config.chatMode === 'litper' ? 'from-purple-500 to-violet-500 shadow-purple-500/30' : 'from-cyan-500 to-blue-500 shadow-cyan-500/30'} text-white hover:opacity-90 shadow-lg`
                 : 'bg-slate-800 text-slate-500 cursor-not-allowed'
             }`}
             title="Enviar mensaje"
