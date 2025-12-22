@@ -38,6 +38,8 @@ import { InteligenciaIAUnificadoTab } from './components/tabs/InteligenciaIAUnif
 import { AnalisisUnificadoTab } from './components/tabs/AnalisisUnificadoTab';
 import { ProBubbleV4 } from './components/ProAssistant';
 import UniversalSearch from './components/search/UniversalSearch';
+// Cerebro IA - Dashboard con Chatea Pro, Webhooks y Analytics
+import { AIBrainDashboard } from './components/brain/AIBrainDashboard';
 import { AuthWrapper, UserProfilePanel } from './components/auth';
 import { EnhancedGuideTable } from './components/tables';
 import { AdminPanelPro } from './components/Admin/AdminPanelPro';
@@ -443,6 +445,7 @@ const App: React.FC = () => {
     'procesos-litper': 0,
     'ciudad-agentes': 0,
     'aprendizaje-ia': 0,
+    'cerebro-ia': 0,
   };
 
   const handleProcessInput = () => {
@@ -685,9 +688,10 @@ const App: React.FC = () => {
               </button>
 
               {[
-                // Navegación simplificada: 5 tabs principales
+                // Navegación simplificada: 6 tabs principales
                 { id: 'operaciones', icon: Package, label: '📦 Operaciones', isNew: false },
                 { id: 'inteligencia-ia', icon: Brain, label: '🧠 Inteligencia', isNew: false },
+                { id: 'cerebro-ia', icon: Sparkles, label: '🤖 Cerebro IA', isNew: true },
                 { id: 'negocio', icon: Users, label: '💼 Negocio', isNew: false },
                 { id: 'admin', icon: Shield, label: '⚙️ Config', isNew: false },
               ].map((item) => (
@@ -932,6 +936,14 @@ const App: React.FC = () => {
               selectedCountry={selectedCountry}
             />
           )}
+          {currentTab === 'analisis' && (
+            <AnalisisUnificadoTab
+              shipments={shipments}
+              selectedCountry={selectedCountry}
+            />
+          )}
+          {currentTab === 'cerebro-ia' && <AIBrainDashboard />}
+          {currentTab === 'procesos-litper' && <ProcesosLitperTab selectedCountry={selectedCountry} />}
           {currentTab === 'admin' && <AdminPanelPro />}
 
           {/* ====================================== */}
