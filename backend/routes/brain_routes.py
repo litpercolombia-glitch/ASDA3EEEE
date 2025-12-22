@@ -3,12 +3,12 @@ Brain Routes - Endpoints para interactuar con el cerebro autónomo
 Soporta: Gemini (gratis), Claude (premium), ChatGPT (backup)
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
 from pydantic import BaseModel, Field
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional
 from datetime import datetime
+from enum import Enum
 import os
-import asyncio
 
 # Cargar variables de entorno
 from dotenv import load_dotenv
@@ -16,133 +16,154 @@ load_dotenv('.env.backend')
 
 # Importar clientes de IA
 from brain.claude.gemini_client import GeminiBrainClient, GeminiConfig
+from brain.claude.openai_client import OpenAIBrainClient, OpenAIConfig
+from brain.claude.client import ClaudeBrainClient, ClaudeConfig
 
-# Intentar importar Claude (opcional)
-try:
-    from brain.claude.client import ClaudeBrainClient, ClaudeConfig, ClaudeModel
-    CLAUDE_AVAILABLE = True
-except ImportError:
-    CLAUDE_AVAILABLE = False
-
-router = APIRouter(prefix="/api/brain", tags=["Brain - Cerebro Autónomo"])
-
-# Instancia global del cliente (se inicializa lazy)
-_brain_client = None
-_current_provider = None
+router = APIRouter(prefix="/api/brain", tags=["Brain - Cerebro Autonomo"])
 
 
-def get_ai_provider() -> str:
-    """Determina qué proveedor de IA usar."""
+# =============================================================================
+# CONFIGURACION MULTI-PROVEEDOR
+# =============================================================================
+
+class AIProvider(str, Enum):
+    GEMINI = "gemini"
+    CLAUDE = "claude"
+    OPENAI = "openai"
+
+
+# Cache de clientes
+_clients: Dict[str, Any] = {}
+
+
+def get_available_providers() -> Dict[str, bool]:
+    """Retorna los proveedores disponibles segun las API keys configuradas."""
+    return {
+        "gemini": bool(os.getenv("GOOGLE_API_KEY")),
+        "claude": bool(os.getenv("ANTHROPIC_API_KEY")),
+        "openai": bool(os.getenv("OPENAI_API_KEY"))
+    }
+
+
+def get_default_provider() -> str:
+    """Obtiene el proveedor por defecto o el primero disponible."""
     default = os.getenv("DEFAULT_AI_PROVIDER", "gemini")
+    available = get_available_providers()
 
-    # Verificar disponibilidad
-    if default == "claude" and os.getenv("ANTHROPIC_API_KEY"):
-        return "claude"
-    elif default == "gemini" and os.getenv("GOOGLE_API_KEY"):
-        return "gemini"
-    elif os.getenv("GOOGLE_API_KEY"):
-        return "gemini"  # Fallback a Gemini (gratis)
-    elif os.getenv("ANTHROPIC_API_KEY"):
-        return "claude"
-    else:
+    # Si el default esta disponible, usarlo
+    if available.get(default):
+        return default
+
+    # Buscar el primero disponible (orden: gemini, claude, openai)
+    for provider in ["gemini", "claude", "openai"]:
+        if available.get(provider):
+            return provider
+
+    return None
+
+
+def get_client(provider: str = None):
+    """Obtiene o crea el cliente de IA para el proveedor especificado."""
+    global _clients
+
+    if provider is None:
+        provider = get_default_provider()
+
+    if provider is None:
         raise HTTPException(
             status_code=500,
-            detail="No hay API key configurada. Configura GOOGLE_API_KEY o ANTHROPIC_API_KEY en .env.backend"
+            detail="No hay ninguna API key configurada. Agrega GOOGLE_API_KEY, ANTHROPIC_API_KEY o OPENAI_API_KEY en .env.backend"
         )
 
-
-def get_brain_client():
-    """Obtiene o crea el cliente de IA apropiado."""
-    global _brain_client, _current_provider
-
-    provider = get_ai_provider()
-
-    # Si ya tenemos el cliente correcto, retornarlo
-    if _brain_client is not None and _current_provider == provider:
-        return _brain_client
+    # Usar cliente en cache si existe
+    if provider in _clients:
+        return _clients[provider], provider
 
     # Crear nuevo cliente
     if provider == "gemini":
-        _brain_client = GeminiBrainClient(GeminiConfig())
-        _current_provider = "gemini"
-    elif provider == "claude" and CLAUDE_AVAILABLE:
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        _brain_client = ClaudeBrainClient(ClaudeConfig(api_key=api_key))
-        _current_provider = "claude"
-    else:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Proveedor {provider} no disponible"
-        )
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="GOOGLE_API_KEY no configurada")
+        _clients[provider] = GeminiBrainClient(GeminiConfig(api_key=api_key))
 
-    return _brain_client
+    elif provider == "claude":
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY no configurada")
+        _clients[provider] = ClaudeBrainClient(ClaudeConfig(api_key=api_key))
+
+    elif provider == "openai":
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="OPENAI_API_KEY no configurada")
+        _clients[provider] = OpenAIBrainClient(OpenAIConfig(api_key=api_key))
+
+    else:
+        raise HTTPException(status_code=400, detail=f"Proveedor '{provider}' no soportado")
+
+    return _clients[provider], provider
 
 
 # =============================================================================
 # SCHEMAS
 # =============================================================================
 
-class AskRequest(BaseModel):
-    """Request para preguntar al cerebro"""
-    question: str = Field(..., description="Pregunta en lenguaje natural")
-    context: Optional[Dict[str, Any]] = Field(None, description="Contexto adicional")
+class ThinkRequest(BaseModel):
+    """Request para pensar/analizar"""
+    question: str = Field(..., description="Pregunta o contexto a analizar")
+    role: str = Field("brain", description="Rol: brain, decision, customer, analytics")
 
     class Config:
         json_schema_extra = {
             "example": {
-                "question": "¿Cuáles son los envíos más críticos hoy?",
-                "context": {"date": "2024-01-15"}
+                "question": "Cuales son las mejores practicas para entregas a tiempo?",
+                "role": "brain"
             }
         }
 
 
 class DecisionRequest(BaseModel):
-    """Request para tomar una decisión"""
-    situation: str = Field(..., description="Descripción de la situación")
+    """Request para tomar una decision"""
+    situation: str = Field(..., description="Descripcion de la situacion")
     options: Optional[List[str]] = Field(None, description="Opciones disponibles")
-    constraints: Optional[Dict[str, Any]] = Field(None, description="Restricciones")
     urgency: str = Field("normal", description="Nivel de urgencia: low, normal, high, critical")
+    context: Optional[Dict[str, Any]] = Field(None, description="Contexto adicional")
 
     class Config:
         json_schema_extra = {
             "example": {
-                "situation": "Envío 12345 lleva 5 días sin movimiento en Pasto",
+                "situation": "Envio 12345 lleva 5 dias sin movimiento en Pasto",
                 "options": ["Contactar cliente", "Escalar a carrier", "Esperar"],
                 "urgency": "high"
             }
         }
 
 
-class EventRequest(BaseModel):
-    """Request para enviar un evento al cerebro"""
-    event_type: str = Field(..., description="Tipo de evento")
-    data: Dict[str, Any] = Field(..., description="Datos del evento")
-    priority: str = Field("normal", description="Prioridad: low, normal, high, critical")
+class MessageRequest(BaseModel):
+    """Request para generar mensaje"""
+    customer_name: str = Field(..., description="Nombre del cliente")
+    situation: str = Field(..., description="Situacion a comunicar")
+    tone: str = Field("friendly", description="Tono: formal, friendly, urgent")
+    channel: str = Field("whatsapp", description="Canal: whatsapp, email, sms")
 
     class Config:
         json_schema_extra = {
             "example": {
-                "event_type": "delay_detected",
-                "data": {
-                    "guide_number": "12345678901",
-                    "days_delayed": 3,
-                    "city": "Pasto",
-                    "carrier": "Coordinadora",
-                    "customer_phone": "+573001234567"
-                },
-                "priority": "high"
+                "customer_name": "Maria Garcia",
+                "situation": "Tu pedido #12345 esta en camino y llegara manana",
+                "tone": "friendly",
+                "channel": "whatsapp"
             }
         }
 
 
-class AnalyzeShipmentRequest(BaseModel):
-    """Request para analizar un envío"""
+class ShipmentRequest(BaseModel):
+    """Request para analizar envio"""
     guide_number: str
     carrier: Optional[str] = None
     city: Optional[str] = None
     days_in_transit: Optional[int] = None
     status: Optional[str] = None
-    has_issue: Optional[bool] = False
     customer_name: Optional[str] = None
 
     class Config:
@@ -153,24 +174,7 @@ class AnalyzeShipmentRequest(BaseModel):
                 "city": "Pasto",
                 "days_in_transit": 5,
                 "status": "en_transito",
-                "has_issue": False,
-                "customer_name": "María García"
-            }
-        }
-
-
-class GenerateMessageRequest(BaseModel):
-    """Request para generar mensaje personalizado"""
-    customer_name: str
-    situation: str
-    tone: str = Field("friendly", description="Tono: formal, friendly, urgent")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "customer_name": "María García",
-                "situation": "Su pedido #12345 tiene un retraso de 2 días por condiciones climáticas",
-                "tone": "friendly"
+                "customer_name": "Maria Garcia"
             }
         }
 
@@ -178,6 +182,7 @@ class GenerateMessageRequest(BaseModel):
 class BrainResponse(BaseModel):
     """Respuesta del cerebro"""
     success: bool
+    provider: str
     data: Dict[str, Any]
     timestamp: str
     processing_time_ms: Optional[float] = None
@@ -187,53 +192,89 @@ class BrainResponse(BaseModel):
 # ENDPOINTS
 # =============================================================================
 
-@router.get("/health")
-async def brain_health():
+@router.get("/status")
+async def get_status():
     """
-    Verifica el estado del cerebro y la conexión a Claude.
+    Estado del cerebro y proveedores disponibles.
+    """
+    available = get_available_providers()
+    default = get_default_provider()
+
+    return {
+        "status": "active" if default else "no_api_keys",
+        "providers": {
+            "gemini": {
+                "available": available["gemini"],
+                "model": os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
+                "cost": "GRATIS"
+            },
+            "claude": {
+                "available": available["claude"],
+                "model": "claude-3-5-sonnet",
+                "cost": "$3/MTok"
+            },
+            "openai": {
+                "available": available["openai"],
+                "model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+                "cost": "$0.15/MTok"
+            }
+        },
+        "default_provider": default,
+        "active_providers": sum(available.values()),
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@router.get("/health")
+async def health_check(provider: Optional[str] = Query(None, description="Proveedor a verificar")):
+    """
+    Verifica la conexion con el proveedor de IA.
     """
     try:
-        client = get_brain_client()
+        client, used_provider = get_client(provider)
         health = await client.health_check()
 
         return {
-            "status": "healthy" if health["status"] == "healthy" else "degraded",
-            "claude_api": health["status"],
-            "brain_initialized": _brain_instance is not None,
+            "status": health.get("status", "unknown"),
+            "provider": used_provider,
+            "model": health.get("model"),
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
         return {
-            "status": "unhealthy",
+            "status": "error",
             "error": str(e),
             "timestamp": datetime.now().isoformat()
         }
 
 
-@router.post("/ask", response_model=BrainResponse)
-async def ask_brain(request: AskRequest):
+@router.post("/think", response_model=BrainResponse)
+async def think(
+    request: ThinkRequest,
+    provider: Optional[str] = Query(None, description="Proveedor: gemini, claude, openai")
+):
     """
-    Pregunta algo al cerebro en lenguaje natural.
-
-    Ejemplos de preguntas:
-    - "¿Cuáles son los envíos más críticos hoy?"
-    - "¿Qué transportadora tiene mejor rendimiento a Cali?"
-    - "¿Cómo puedo mejorar las entregas a tiempo?"
+    Procesa un pensamiento o pregunta con el cerebro.
     """
     start_time = datetime.now()
 
     try:
-        brain = get_brain()
-        response = await brain.ask(request.question, request.context)
+        client, used_provider = get_client(provider)
+        response = await client.think(
+            context=request.question,
+            role=request.role
+        )
 
         processing_time = (datetime.now() - start_time).total_seconds() * 1000
 
         return BrainResponse(
-            success=True,
+            success=response.get("success", False),
+            provider=used_provider,
             data={
-                "answer": response,
+                "response": response.get("response", ""),
                 "question": request.question,
-                "context_provided": request.context is not None
+                "role": request.role,
+                "usage": response.get("usage", {})
             },
             timestamp=datetime.now().isoformat(),
             processing_time_ms=round(processing_time, 2)
@@ -244,117 +285,34 @@ async def ask_brain(request: AskRequest):
 
 
 @router.post("/decide", response_model=BrainResponse)
-async def make_decision(request: DecisionRequest):
+async def decide(
+    request: DecisionRequest,
+    provider: Optional[str] = Query(None, description="Proveedor: gemini, claude, openai")
+):
     """
-    Solicita al cerebro que tome una decisión sobre una situación.
-
-    El cerebro analizará la situación, evaluará opciones y retornará
-    una decisión con nivel de confianza y razonamiento.
+    Solicita al cerebro que tome una decision.
     """
     start_time = datetime.now()
 
     try:
-        client = get_brain_client()
-        decision = await client.decide(
+        client, used_provider = get_client(provider)
+        response = await client.decide(
             situation=request.situation,
             options=request.options,
-            constraints=request.constraints,
-            urgency=request.urgency
+            urgency=request.urgency,
+            context=request.context
         )
 
         processing_time = (datetime.now() - start_time).total_seconds() * 1000
 
         return BrainResponse(
-            success=True,
+            success=response.get("success", False),
+            provider=used_provider,
             data={
-                "decision": decision,
+                "decision": response.get("decision", response.get("response", "")),
                 "situation": request.situation,
-                "urgency": request.urgency
-            },
-            timestamp=datetime.now().isoformat(),
-            processing_time_ms=round(processing_time, 2)
-        )
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/event", response_model=BrainResponse)
-async def submit_event(request: EventRequest, background_tasks: BackgroundTasks):
-    """
-    Envía un evento al cerebro para procesamiento.
-
-    Tipos de eventos soportados:
-    - delay_detected: Retraso detectado en un envío
-    - issue_reported: Novedad reportada
-    - delivery_confirmed: Entrega confirmada
-    - customer_inquiry: Consulta de cliente
-    - carrier_update: Actualización de transportadora
-    """
-    try:
-        brain = get_brain()
-        event_id = await brain.submit_event(
-            event_type=request.event_type,
-            data=request.data,
-            priority=request.priority
-        )
-
-        return BrainResponse(
-            success=True,
-            data={
-                "event_id": event_id,
-                "event_type": request.event_type,
-                "priority": request.priority,
-                "status": "queued",
-                "message": "Evento agregado a la cola de procesamiento"
-            },
-            timestamp=datetime.now().isoformat()
-        )
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/analyze-shipment", response_model=BrainResponse)
-async def analyze_shipment(request: AnalyzeShipmentRequest):
-    """
-    Analiza un envío específico y genera recomendaciones.
-
-    Retorna:
-    - Nivel de riesgo (0-100)
-    - Problemas potenciales
-    - Acciones recomendadas
-    - Mensaje sugerido para el cliente
-    """
-    start_time = datetime.now()
-
-    try:
-        client = get_brain_client()
-
-        # Construir contexto del envío
-        shipment_context = {
-            "guide": request.guide_number,
-            "carrier": request.carrier,
-            "destination_city": request.city,
-            "days_in_transit": request.days_in_transit,
-            "current_status": request.status,
-            "has_issue": request.has_issue,
-            "customer": request.customer_name
-        }
-
-        # Pedir análisis al cerebro
-        analysis = await client.decide(
-            situation=f"Analiza este envío y determina su riesgo: {shipment_context}",
-            urgency="normal"
-        )
-
-        processing_time = (datetime.now() - start_time).total_seconds() * 1000
-
-        return BrainResponse(
-            success=True,
-            data={
-                "shipment": shipment_context,
-                "analysis": analysis,
+                "urgency": request.urgency,
+                "usage": response.get("usage", {})
             },
             timestamp=datetime.now().isoformat(),
             processing_time_ms=round(processing_time, 2)
@@ -365,35 +323,34 @@ async def analyze_shipment(request: AnalyzeShipmentRequest):
 
 
 @router.post("/generate-message", response_model=BrainResponse)
-async def generate_customer_message(request: GenerateMessageRequest):
+async def generate_message(
+    request: MessageRequest,
+    provider: Optional[str] = Query(None, description="Proveedor: gemini, claude, openai")
+):
     """
-    Genera un mensaje personalizado para enviar al cliente.
-
-    Tonos disponibles:
-    - formal: Para comunicaciones oficiales
-    - friendly: Amigable y cercano (por defecto)
-    - urgent: Para situaciones que requieren atención inmediata
+    Genera un mensaje personalizado para el cliente.
     """
     start_time = datetime.now()
 
     try:
-        client = get_brain_client()
+        client, used_provider = get_client(provider)
         message = await client.generate_message(
             customer_name=request.customer_name,
             situation=request.situation,
             tone=request.tone,
-            channel="whatsapp"
+            channel=request.channel
         )
 
         processing_time = (datetime.now() - start_time).total_seconds() * 1000
 
         return BrainResponse(
             success=True,
+            provider=used_provider,
             data={
                 "message": message,
                 "customer": request.customer_name,
                 "tone": request.tone,
-                "channel": "whatsapp"
+                "channel": request.channel
             },
             timestamp=datetime.now().isoformat(),
             processing_time_ms=round(processing_time, 2)
@@ -403,162 +360,80 @@ async def generate_customer_message(request: GenerateMessageRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/status")
-async def get_brain_status():
+@router.post("/analyze-shipment", response_model=BrainResponse)
+async def analyze_shipment(
+    request: ShipmentRequest,
+    provider: Optional[str] = Query(None, description="Proveedor: gemini, claude, openai")
+):
     """
-    Obtiene el estado actual del cerebro incluyendo métricas.
+    Analiza un envio y genera recomendaciones.
     """
+    start_time = datetime.now()
+
     try:
-        brain = get_brain()
-        status = brain.get_status()
+        client, used_provider = get_client(provider)
 
-        return {
-            "success": True,
-            "data": status,
-            "timestamp": datetime.now().isoformat()
-        }
+        # Construir contexto
+        shipment_info = f"""
+        Guia: {request.guide_number}
+        Transportadora: {request.carrier or 'No especificada'}
+        Ciudad destino: {request.city or 'No especificada'}
+        Dias en transito: {request.days_in_transit or 'N/A'}
+        Estado: {request.status or 'Desconocido'}
+        Cliente: {request.customer_name or 'No especificado'}
+        """
 
-    except Exception as e:
-        # Si el cerebro no está inicializado
-        return {
-            "success": True,
-            "data": {
-                "state": "not_initialized",
-                "message": "El cerebro no ha sido inicializado. Envía un request para activarlo."
-            },
-            "timestamp": datetime.now().isoformat()
-        }
-
-
-@router.get("/metrics")
-async def get_brain_metrics():
-    """
-    Obtiene métricas detalladas del cerebro y el cliente de Claude.
-    """
-    try:
-        brain = get_brain()
-        client = get_brain_client()
-
-        brain_status = brain.get_status()
-        claude_metrics = client.get_metrics()
-        memory_stats = brain.memory.get_stats()
-        action_stats = brain.action_executor.get_stats()
-
-        return {
-            "success": True,
-            "data": {
-                "brain": brain_status,
-                "claude": claude_metrics,
-                "memory": memory_stats,
-                "actions": action_stats
-            },
-            "timestamp": datetime.now().isoformat()
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/learn")
-async def trigger_learning():
-    """
-    Fuerza un ciclo de aprendizaje del cerebro.
-
-    El cerebro analizará las experiencias recientes e identificará
-    patrones para mejorar sus decisiones futuras.
-    """
-    try:
-        brain = get_brain()
-        result = await brain._learn_from_buffer()
-
-        return {
-            "success": True,
-            "data": {
-                "learning_triggered": True,
-                "insights": result if result else "No hay suficientes experiencias para aprender"
-            },
-            "timestamp": datetime.now().isoformat()
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/start")
-async def start_brain(background_tasks: BackgroundTasks):
-    """
-    Inicia el loop autónomo del cerebro en background.
-
-    Una vez iniciado, el cerebro procesará eventos de forma autónoma.
-    """
-    try:
-        brain = get_brain()
-
-        # Iniciar en background
-        background_tasks.add_task(brain.start)
-
-        return {
-            "success": True,
-            "data": {
-                "message": "Cerebro autónomo iniciando en background",
-                "status": "starting"
-            },
-            "timestamp": datetime.now().isoformat()
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/stop")
-async def stop_brain():
-    """
-    Detiene el loop autónomo del cerebro.
-    """
-    try:
-        brain = get_brain()
-        await brain.stop()
-
-        return {
-            "success": True,
-            "data": {
-                "message": "Cerebro autónomo detenido",
-                "status": "stopped"
-            },
-            "timestamp": datetime.now().isoformat()
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# =============================================================================
-# ENDPOINT DE PRUEBA RÁPIDA
-# =============================================================================
-
-@router.get("/test")
-async def test_brain():
-    """
-    Endpoint de prueba rápida para verificar que el cerebro funciona.
-
-    Envía una pregunta simple y retorna la respuesta.
-    """
-    try:
-        client = get_brain_client()
-
-        # Pregunta simple de prueba
-        response = await client.think(
-            context="¿Cuál es la capital de Colombia? Responde en una línea.",
-            role='brain',
-            model=ClaudeModel.HAIKU  # Usar Haiku para prueba rápida
+        response = await client.decide(
+            situation=f"Analiza este envio y determina: 1) Nivel de riesgo (bajo/medio/alto), 2) Posibles problemas, 3) Acciones recomendadas.\n\n{shipment_info}",
+            urgency="normal"
         )
 
+        processing_time = (datetime.now() - start_time).total_seconds() * 1000
+
+        return BrainResponse(
+            success=response.get("success", False),
+            provider=used_provider,
+            data={
+                "shipment": {
+                    "guide": request.guide_number,
+                    "carrier": request.carrier,
+                    "city": request.city,
+                    "days_in_transit": request.days_in_transit
+                },
+                "analysis": response.get("decision", response.get("response", ""))
+            },
+            timestamp=datetime.now().isoformat(),
+            processing_time_ms=round(processing_time, 2)
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/test")
+async def test_brain(provider: Optional[str] = Query(None, description="Proveedor a probar")):
+    """
+    Test rapido del cerebro - pregunta simple.
+    """
+    start_time = datetime.now()
+
+    try:
+        client, used_provider = get_client(provider)
+
+        response = await client.think(
+            context="Cual es la capital de Colombia? Responde solo el nombre de la ciudad.",
+            role='brain'
+        )
+
+        processing_time = (datetime.now() - start_time).total_seconds() * 1000
+
         return {
-            "success": True,
-            "test": "passed",
-            "response": response,
-            "model_used": "claude-3-5-haiku",
-            "message": "🧠 El cerebro está funcionando correctamente!",
+            "success": response.get("success", False),
+            "provider": used_provider,
+            "test": "passed" if response.get("success") else "failed",
+            "response": response.get("response", ""),
+            "processing_time_ms": round(processing_time, 2),
+            "message": f"Cerebro {used_provider.upper()} funcionando correctamente!" if response.get("success") else "Error en el test",
             "timestamp": datetime.now().isoformat()
         }
 
@@ -567,6 +442,47 @@ async def test_brain():
             "success": False,
             "test": "failed",
             "error": str(e),
-            "message": "❌ Error al conectar con el cerebro",
+            "message": "Error al conectar con el cerebro",
             "timestamp": datetime.now().isoformat()
         }
+
+
+@router.get("/compare")
+async def compare_providers():
+    """
+    Compara las respuestas de todos los proveedores disponibles.
+    Util para evaluar cual funciona mejor.
+    """
+    available = get_available_providers()
+    results = {}
+    test_question = "En una frase corta, que es logistica?"
+
+    for provider_name, is_available in available.items():
+        if not is_available:
+            results[provider_name] = {"available": False}
+            continue
+
+        try:
+            start_time = datetime.now()
+            client, _ = get_client(provider_name)
+            response = await client.think(context=test_question, role='brain')
+            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+
+            results[provider_name] = {
+                "available": True,
+                "success": response.get("success", False),
+                "response": response.get("response", "")[:200],
+                "processing_time_ms": round(processing_time, 2)
+            }
+        except Exception as e:
+            results[provider_name] = {
+                "available": True,
+                "success": False,
+                "error": str(e)
+            }
+
+    return {
+        "question": test_question,
+        "results": results,
+        "timestamp": datetime.now().isoformat()
+    }
