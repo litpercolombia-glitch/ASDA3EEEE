@@ -118,6 +118,15 @@ except ImportError as e:
     TRACKER_SYSTEM_AVAILABLE = False
     logger.warning(f"Sistema de Tracker no disponible: {e}")
 
+# Sistema de Cerebro Autónomo (Claude AI)
+try:
+    from routes.brain_routes import router as brain_router
+    BRAIN_SYSTEM_AVAILABLE = True
+    logger.info("🧠 Sistema de Cerebro Autónomo cargado")
+except ImportError as e:
+    BRAIN_SYSTEM_AVAILABLE = False
+    logger.warning(f"Sistema de Cerebro no disponible: {e}")
+
 
 # ==================== CONFIGURACIÓN ====================
 
@@ -260,6 +269,11 @@ if WEBSOCKET_SYSTEM_AVAILABLE:
 if TRACKER_SYSTEM_AVAILABLE:
     app.include_router(tracker_router, prefix="/api")
     logger.success("📊 Rutas de Tracker registradas en /api/tracker")
+
+# Incluir router del Cerebro Autónomo
+if BRAIN_SYSTEM_AVAILABLE:
+    app.include_router(brain_router)
+    logger.success("🧠 Rutas del Cerebro Autónomo registradas en /api/brain")
 
 
 # ==================== ENDPOINTS DE SISTEMA ====================

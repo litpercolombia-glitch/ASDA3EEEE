@@ -21,9 +21,24 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Play,
+  Trophy,
+  PieChart,
+  Settings,
+  Download,
+  Upload,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useProcesosStore } from '../stores/procesosStore';
 import { AlertaIA, ReporteUsuario, COLORES_DISPONIBLES } from '../types';
+import TrackerPopup from './TrackerPopup';
+import RankingLive from './RankingLive';
+import ChartsDashboard from './ChartsDashboard';
+import SettingsPanel from './SettingsPanel';
+import ExportManager from './ExportManager';
+import ExcelImporter from './ExcelImporter';
+
+type TabType = 'usuarios' | 'ranking' | 'estadisticas';
 
 interface AdminDashboardProps {
   className?: string;
@@ -42,6 +57,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
 
   const [showAllAlerts, setShowAllAlerts] = useState(false);
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>('usuarios');
+  const [showSettings, setShowSettings] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [trackerUsuario, setTrackerUsuario] = useState<{
+    id: string;
+    nombre: string;
+    avatar: string;
+    color: string;
+  } | null>(null);
 
   // Calculate reports
   const reportes: ReporteUsuario[] = useMemo(() => {
@@ -173,6 +198,39 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
 
   return (
     <div className={`space-y-6 ${className}`}>
+      {/* Header with Actions */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-white">Dashboard Admin</h2>
+        <div className="flex items-center gap-2">
+          {/* Import */}
+          <button
+            onClick={() => setShowImport(true)}
+            className="px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors flex items-center gap-2"
+            title="Importar Excel"
+          >
+            <Upload className="w-4 h-4" />
+            <span className="text-sm hidden sm:inline">Importar</span>
+          </button>
+          {/* Export */}
+          <button
+            onClick={() => setShowExport(true)}
+            className="px-3 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg transition-colors flex items-center gap-2"
+            title="Exportar Excel"
+          >
+            <Download className="w-4 h-4" />
+            <span className="text-sm hidden sm:inline">Exportar</span>
+          </button>
+          {/* Settings */}
+          <button
+            onClick={() => setShowSettings(true)}
+            className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+            title="Configuración"
+          >
+            <Settings className="w-5 h-5 text-slate-400 hover:text-white" />
+          </button>
+        </div>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-xl p-4 border border-blue-500/30">
@@ -200,6 +258,49 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
         </div>
       </div>
 
+      {/* Navigation Tabs */}
+      <div className="flex gap-2 bg-slate-800 rounded-xl p-2">
+        <button
+          onClick={() => setActiveTab('usuarios')}
+          className={`flex-1 py-2.5 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+            activeTab === 'usuarios'
+              ? 'bg-blue-500 text-white'
+              : 'text-slate-400 hover:bg-slate-700 hover:text-white'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          Usuarios
+        </button>
+        <button
+          onClick={() => setActiveTab('ranking')}
+          className={`flex-1 py-2.5 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+            activeTab === 'ranking'
+              ? 'bg-yellow-500 text-white'
+              : 'text-slate-400 hover:bg-slate-700 hover:text-white'
+          }`}
+        >
+          <Trophy className="w-4 h-4" />
+          Ranking
+        </button>
+        <button
+          onClick={() => setActiveTab('estadisticas')}
+          className={`flex-1 py-2.5 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+            activeTab === 'estadisticas'
+              ? 'bg-emerald-500 text-white'
+              : 'text-slate-400 hover:bg-slate-700 hover:text-white'
+          }`}
+        >
+          <PieChart className="w-4 h-4" />
+          Estadísticas
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'ranking' && <RankingLive />}
+      {activeTab === 'estadisticas' && <ChartsDashboard />}
+
+      {activeTab === 'usuarios' && (
+        <>
       {/* AI Recommendations */}
       {recomendacionesIA.length > 0 && (
         <div className="bg-slate-800 rounded-xl p-4">
@@ -331,6 +432,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
                 <th className="px-4 py-3 text-center text-xs font-medium text-slate-400 uppercase">
                   Tendencia
                 </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-slate-400 uppercase">
+                  Acción
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/50">
@@ -393,6 +497,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
                         )}
                       </div>
                     </td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const usuario = usuarios.find(u => u.id === reporte.usuarioId);
+                          if (usuario) {
+                            setTrackerUsuario({
+                              id: usuario.id,
+                              nombre: usuario.nombre,
+                              avatar: usuario.avatar,
+                              color: getColorHex(usuario.color),
+                            });
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium flex items-center gap-1 mx-auto transition-colors"
+                      >
+                        <Play className="w-3 h-3" />
+                        Iniciar
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -407,6 +531,37 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
           </div>
         )}
       </div>
+        </>
+      )}
+
+      {/* Tracker Popup */}
+      {trackerUsuario && (
+        <TrackerPopup
+          usuarioId={trackerUsuario.id}
+          usuarioNombre={trackerUsuario.nombre}
+          usuarioAvatar={trackerUsuario.avatar}
+          usuarioColor={trackerUsuario.color}
+          onClose={() => setTrackerUsuario(null)}
+        />
+      )}
+
+      {/* Settings Panel */}
+      <SettingsPanel
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
+
+      {/* Export Manager */}
+      <ExportManager
+        isOpen={showExport}
+        onClose={() => setShowExport(false)}
+      />
+
+      {/* Excel Importer */}
+      <ExcelImporter
+        isOpen={showImport}
+        onClose={() => setShowImport(false)}
+      />
     </div>
   );
 };

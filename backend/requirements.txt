@@ -23,8 +23,10 @@ scikit-learn==1.4.0
 xgboost==2.0.3
 joblib==1.3.2
 
-# IA - Anthropic Claude
-anthropic==0.18.1
+# IA - Cerebro Autónomo (Multi-proveedor)
+anthropic>=0.40.0          # Claude (Anthropic)
+aiohttp>=3.9.0             # Para cliente Gemini
+# openai>=1.0.0            # ChatGPT (opcional)
 
 # Tareas Programadas
 apscheduler==3.10.4
