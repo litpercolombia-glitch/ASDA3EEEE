@@ -127,6 +127,15 @@ except ImportError as e:
     BRAIN_SYSTEM_AVAILABLE = False
     logger.warning(f"Sistema de Cerebro no disponible: {e}")
 
+# Sistema de Integracion Chatea Pro / N8N / Dropi
+try:
+    from routes.chatea_pro_routes import router as chatea_pro_router
+    CHATEA_PRO_AVAILABLE = True
+    logger.info("💬 Sistema Chatea Pro / Dropi cargado")
+except ImportError as e:
+    CHATEA_PRO_AVAILABLE = False
+    logger.warning(f"Sistema Chatea Pro no disponible: {e}")
+
 
 # ==================== CONFIGURACIÓN ====================
 
@@ -274,6 +283,11 @@ if TRACKER_SYSTEM_AVAILABLE:
 if BRAIN_SYSTEM_AVAILABLE:
     app.include_router(brain_router)
     logger.success("🧠 Rutas del Cerebro Autónomo registradas en /api/brain")
+
+# Incluir router de Chatea Pro / Dropi / N8N
+if CHATEA_PRO_AVAILABLE:
+    app.include_router(chatea_pro_router)
+    logger.success("💬 Rutas de Chatea Pro registradas en /api/chatea-pro")
 
 
 # ==================== ENDPOINTS DE SISTEMA ====================
