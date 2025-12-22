@@ -23,8 +23,8 @@ scikit-learn==1.4.0
 xgboost==2.0.3
 joblib==1.3.2
 
-# IA - Anthropic Claude
-anthropic==0.18.1
+# IA - Anthropic Claude (Cerebro Autónomo)
+anthropic>=0.40.0
 
 # Tareas Programadas
 apscheduler==3.10.4
