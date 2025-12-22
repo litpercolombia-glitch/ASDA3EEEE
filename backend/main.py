@@ -127,6 +127,15 @@ except ImportError as e:
     WEBHOOK_SYSTEM_AVAILABLE = False
     logger.warning(f"Sistema de Webhooks no disponible: {e}")
 
+# Sistema de Cerebro Autónomo (Claude AI)
+try:
+    from routes.brain_routes import router as brain_router
+    BRAIN_SYSTEM_AVAILABLE = True
+    logger.info("🧠 Sistema de Cerebro Autónomo cargado")
+except ImportError as e:
+    BRAIN_SYSTEM_AVAILABLE = False
+    logger.warning(f"Sistema de Cerebro no disponible: {e}")
+
 
 # ==================== CONFIGURACIÓN ====================
 
@@ -274,6 +283,11 @@ if PUSH_SYSTEM_AVAILABLE:
 if WEBHOOK_SYSTEM_AVAILABLE:
     app.include_router(webhook_router)
     logger.success("🪝 Rutas de Webhooks registradas en /api/webhooks")
+
+# Incluir router del Cerebro Autónomo
+if BRAIN_SYSTEM_AVAILABLE:
+    app.include_router(brain_router)
+    logger.success("🧠 Rutas del Cerebro Autónomo registradas en /api/brain")
 
 
 # ==================== ENDPOINTS DE SISTEMA ====================
