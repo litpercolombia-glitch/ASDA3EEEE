@@ -146,30 +146,28 @@ const UserManager: React.FC = () => {
 
               {/* Actions (Admin only) */}
               {vistaAdmin && (
-                <div className="absolute top-2 right-2 flex gap-1">
+                <div className="absolute top-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleEdit(usuario);
                     }}
-                    className="p-1.5 bg-slate-700/80 rounded-lg hover:bg-blue-500 transition-colors"
-                    title="Editar"
+                    className="p-1 bg-slate-700 rounded hover:bg-slate-600 transition-colors"
                   >
-                    <Edit2 className="w-3.5 h-3.5 text-slate-300" />
+                    <Edit2 className="w-3 h-3 text-slate-300" />
                   </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDelete(usuario.id);
                     }}
-                    className={`p-1.5 rounded-lg transition-colors ${
+                    className={`p-1 rounded transition-colors ${
                       confirmDelete === usuario.id
-                        ? 'bg-red-500 text-white animate-pulse'
-                        : 'bg-slate-700/80 hover:bg-red-500 text-slate-300'
+                        ? 'bg-red-500 text-white'
+                        : 'bg-slate-700 hover:bg-red-500/50 text-slate-300'
                     }`}
-                    title={confirmDelete === usuario.id ? 'Click para confirmar' : 'Eliminar'}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
               )}
