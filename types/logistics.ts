@@ -15,12 +15,8 @@ export type MainTabNew =
   | 'inteligencia-ia'
   | 'analisis'
   | 'procesos-litper'
-  | 'procesos-2'
   | 'admin'
   | 'negocio'
-  // Enterprise tabs
-  | 'admin-enterprise'
-  | 'finanzas'
   // Legacy tabs (para compatibilidad)
   | 'seguimiento'
   | 'demanda'

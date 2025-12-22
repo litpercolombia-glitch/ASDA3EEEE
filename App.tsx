@@ -35,13 +35,8 @@ import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
 import { OperacionesUnificadoTab } from './components/tabs/OperacionesUnificadoTab';
 import { InteligenciaIAUnificadoTab } from './components/tabs/InteligenciaIAUnificadoTab';
 import { AnalisisUnificadoTab } from './components/tabs/AnalisisUnificadoTab';
-// Procesos 2.0 - Nuevo módulo con gamificación
-import { ProcesosTab } from './components/features/procesos';
 import { ProBubbleV2, ProBubbleV3 } from './components/ProAssistant';
-import { SmartAssistant } from './components/floating/SmartAssistant';
 import { AuthWrapper, UserProfilePanel } from './components/auth';
-// Enterprise Components - Admin Panel (incluye Finanzas), AI Chat
-import { AdminEnterprisePanel, AIBusinessChatButton } from './components/enterprise';
 import { EnhancedGuideTable } from './components/tables';
 import { AdminPanelPro } from './components/Admin/AdminPanelPro';
 import CountrySelector from './components/CountrySelector';
@@ -431,12 +426,8 @@ const App: React.FC = () => {
     asistente: 0,
     ml: 0,
     'procesos-litper': 0,
-    'procesos-2': 0,
     'ciudad-agentes': 0,
     'aprendizaje-ia': 0,
-    // Enterprise tabs
-    'admin-enterprise': 0,
-    'finanzas': 0,
   };
 
   const handleProcessInput = () => {
@@ -679,14 +670,13 @@ const App: React.FC = () => {
               </button>
 
               {[
-                // Navegación simplificada con Enterprise
+                // Navegación simplificada: 6 tabs principales
                 { id: 'negocio', icon: Users, label: '💼 Negocio', isNew: true },
                 { id: 'operaciones', icon: Package, label: '📦 Operaciones', isNew: false },
                 { id: 'inteligencia-ia', icon: Brain, label: '🧠 Inteligencia IA', isNew: false },
                 { id: 'analisis', icon: BarChart3, label: '📊 Análisis', isNew: false },
                 { id: 'procesos-litper', icon: Layers, label: '🏢 Procesos' },
-                { id: 'procesos-2', icon: Sparkles, label: '✨ Procesos 2.0', isNew: true },
-                { id: 'admin-enterprise', icon: Shield, label: '👑 Admin', isNew: true },
+                { id: 'admin', icon: Shield, label: '⚙️ Config' },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -936,13 +926,7 @@ const App: React.FC = () => {
             />
           )}
           {currentTab === 'procesos-litper' && <ProcesosLitperTab selectedCountry={selectedCountry} />}
-          {currentTab === 'procesos-2' && <ProcesosTab />}
           {currentTab === 'admin' && <AdminPanelPro />}
-
-          {/* ====================================== */}
-          {/* ENTERPRISE TABS - Admin Enterprise (incluye Finanzas) */}
-          {/* ====================================== */}
-          {currentTab === 'admin-enterprise' && <AdminEnterprisePanel />}
 
           {/* ====================================== */}
           {/* LEGACY TABS (Para compatibilidad) */}
@@ -1053,15 +1037,12 @@ const App: React.FC = () => {
         </div>
       </footer>
 
-      {/* Smart Assistant - Centro de Control Unificado con IA */}
-      <SmartAssistant
+      {/* Floating AI Assistant PRO Button - V3 Mejorado */}
+      <ProBubbleV3
         shipments={shipments}
         onNavigateToTab={(tab) => setCurrentTab(tab as MainTabNew)}
         onExportData={handleDownloadExcel}
       />
-
-      {/* AI Business Chat - Asistente Enterprise con BI */}
-      <AIBusinessChatButton />
     </div>
   );
 };
