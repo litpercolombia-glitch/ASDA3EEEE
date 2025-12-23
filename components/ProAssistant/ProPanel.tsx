@@ -10,17 +10,19 @@ import {
   Zap,
   Settings,
   Sparkles,
+  BarChart3,
 } from 'lucide-react';
 import { useProAssistantStore } from '../../stores/proAssistantStore';
 import ProChatTab from './tabs/ProChatTab';
 import ProKnowledgeTab from './tabs/ProKnowledgeTab';
 import ProTasksTab from './tabs/ProTasksTab';
 import ProConfigTab from './tabs/ProConfigTab';
+import ProMetricsTab from './tabs/ProMetricsTab';
 
 const tabs = [
   { id: 'chat' as const, label: 'Chat', icon: MessageCircle, color: 'amber' },
+  { id: 'metrics' as const, label: 'Metricas', icon: BarChart3, color: 'cyan' },
   { id: 'knowledge' as const, label: 'Conocimiento', icon: Brain, color: 'purple' },
-  { id: 'tasks' as const, label: 'Tareas', icon: Zap, color: 'emerald' },
   { id: 'config' as const, label: 'Config', icon: Settings, color: 'slate' },
 ];
 
@@ -126,6 +128,7 @@ const ProPanel: React.FC = () => {
       {/* ============================================ */}
       <div className="flex-1 overflow-hidden bg-slate-900">
         {activeTab === 'chat' && <ProChatTab />}
+        {activeTab === 'metrics' && <ProMetricsTab />}
         {activeTab === 'knowledge' && <ProKnowledgeTab />}
         {activeTab === 'tasks' && <ProTasksTab />}
         {activeTab === 'config' && <ProConfigTab />}

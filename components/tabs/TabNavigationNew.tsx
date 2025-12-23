@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, Activity, Target, FileBarChart, Bot, Brain, TrendingUp, Trophy, Building2, GraduationCap, Plug, ShieldCheck, BarChart2 } from 'lucide-react';
+import { Package, Activity, Target, FileBarChart, Bot, Brain, TrendingUp, Trophy, Building2, GraduationCap, Plug, ShieldCheck, BarChart2, Truck } from 'lucide-react';
 import { MainTabNew } from '../../types/logistics';
 
 interface TabNavigationNewProps {
@@ -10,6 +10,7 @@ interface TabNavigationNewProps {
     demanda?: number;
     gamificacion?: number;
     'inteligencia-logistica'?: number;
+    'tracking-ordenes'?: number;
     semaforo?: number;
     predicciones?: number;
     reporte?: number;
@@ -68,6 +69,15 @@ const tabs: TabConfig[] = [
     shortLabel: 'Intel.',
     color: 'text-cyan-500',
     activeColor: 'bg-gradient-to-r from-cyan-500 to-blue-600',
+    isNew: true,
+  },
+  {
+    id: 'tracking-ordenes',
+    icon: Truck,
+    label: 'Tracking Órdenes',
+    shortLabel: 'Track.',
+    color: 'text-violet-500',
+    activeColor: 'bg-gradient-to-r from-violet-500 to-purple-600',
     isNew: true,
   },
   {

@@ -30,15 +30,16 @@ import {
 } from './components/tabs';
 import { CiudadAgentesTab } from './components/tabs/CiudadAgentesTab';
 import { InteligenciaLogisticaTab } from './components/tabs/InteligenciaLogisticaTab';
+import { TrackingOrdenesTab } from './components/tabs/TrackingOrdenesTab';
 import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
 // Nuevos tabs unificados
 import { OperacionesUnificadoTab } from './components/tabs/OperacionesUnificadoTab';
 import { InteligenciaIAUnificadoTab } from './components/tabs/InteligenciaIAUnificadoTab';
 import { AnalisisUnificadoTab } from './components/tabs/AnalisisUnificadoTab';
+import { ProBubbleV4 } from './components/ProAssistant';
+import UniversalSearch from './components/search/UniversalSearch';
 // Cerebro IA - Dashboard con Chatea Pro, Webhooks y Analytics
 import { AIBrainDashboard } from './components/brain/AIBrainDashboard';
-// ProBubbleV3 eliminado - unificado en SmartAssistant
-import { SmartAssistant } from './components/floating/SmartAssistant';
 import { AuthWrapper, UserProfilePanel } from './components/auth';
 import { EnhancedGuideTable } from './components/tables';
 import { AdminPanelPro } from './components/Admin/AdminPanelPro';
@@ -354,6 +355,7 @@ const App: React.FC = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [showUniversalSearch, setShowUniversalSearch] = useState(false);
 
   // Excel parser hook
   const {
@@ -396,6 +398,18 @@ const App: React.FC = () => {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+
+  // Keyboard shortcut: Ctrl+K para búsqueda universal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowUniversalSearch(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     saveShipments(shipments);
@@ -674,14 +688,12 @@ const App: React.FC = () => {
               </button>
 
               {[
-                // Navegación simplificada: 7 tabs principales
-                { id: 'negocio', icon: Users, label: '💼 Negocio', isNew: true },
+                // Navegación simplificada: 6 tabs principales
                 { id: 'operaciones', icon: Package, label: '📦 Operaciones', isNew: false },
-                { id: 'inteligencia-ia', icon: Brain, label: '🧠 Inteligencia IA', isNew: false },
+                { id: 'inteligencia-ia', icon: Brain, label: '🧠 Inteligencia', isNew: false },
                 { id: 'cerebro-ia', icon: Sparkles, label: '🤖 Cerebro IA', isNew: true },
-                { id: 'analisis', icon: BarChart3, label: '📊 Análisis', isNew: false },
-                { id: 'procesos-litper', icon: Layers, label: '🏢 Procesos' },
-                { id: 'admin', icon: Shield, label: '⚙️ Config' },
+                { id: 'negocio', icon: Users, label: '💼 Negocio', isNew: false },
+                { id: 'admin', icon: Shield, label: '⚙️ Config', isNew: false },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -951,6 +963,7 @@ const App: React.FC = () => {
           {currentTab === 'ml' && <MLSystemTab />}
           {currentTab === 'ciudad-agentes' && <CiudadAgentesTab selectedCountry={selectedCountry} />}
           {currentTab === 'inteligencia-logistica' && <InteligenciaLogisticaTab />}
+          {currentTab === 'tracking-ordenes' && <TrackingOrdenesTab />}
         </div>
       </main>
 
@@ -1043,8 +1056,16 @@ const App: React.FC = () => {
         </div>
       </footer>
 
-      {/* Smart Assistant - Centro de Control Unificado con IA */}
-      <SmartAssistant
+      {/* Búsqueda Universal (Ctrl+K) */}
+      <UniversalSearch
+        shipments={shipments}
+        isOpen={showUniversalSearch}
+        onClose={() => setShowUniversalSearch(false)}
+        onNavigate={(tab) => setCurrentTab(tab as MainTabNew | 'home')}
+      />
+
+      {/* Floating AI Assistant PRO Button - V4 con Chat IA y Modos */}
+      <ProBubbleV4
         shipments={shipments}
         onNavigateToTab={(tab) => setCurrentTab(tab as MainTabNew)}
         onExportData={handleDownloadExcel}
