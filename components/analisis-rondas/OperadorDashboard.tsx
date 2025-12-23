@@ -27,7 +27,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { MetricasGlobales, MetricasUsuario, AlertaPersonal } from '../../types/analisis-rondas';
-import { COLORES_ESTADO, COLORES_ALERTA, UMBRALES, ICONOS } from '../../constants/analisis-rondas';
+import { COLORES_ESTADO, COLORES_ALERTA, UMBRALES, ICONOS, COLORES_SEMAFORO, METRICAS_AVANZADAS } from '../../constants/analisis-rondas';
 
 interface OperadorDashboardProps {
   usuario: string;
@@ -184,6 +184,143 @@ export const OperadorDashboard: React.FC<OperadorDashboardProps> = ({
       {/* Métricas personales */}
       {misMetricas && (
         <>
+          {/* RESUMEN DEL DÍA - 3 Números Principales */}
+          {misMetricas.avanzadas && (
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl border border-indigo-200 dark:border-indigo-800 p-6">
+              <h3 className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 mb-4 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                RESUMEN DEL DÍA
+              </h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="text-3xl mb-1">{misMetricas.avanzadas.resumenDia.numero1.icono}</div>
+                  <div className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
+                    {misMetricas.avanzadas.resumenDia.numero1.valor}%
+                  </div>
+                  <div className="text-xs text-indigo-600 dark:text-indigo-400">
+                    {misMetricas.avanzadas.resumenDia.numero1.label}
+                  </div>
+                </div>
+                <div className="text-center border-x border-indigo-200 dark:border-indigo-700">
+                  <div className="text-3xl mb-1">{misMetricas.avanzadas.resumenDia.numero2.icono}</div>
+                  <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                    {misMetricas.avanzadas.resumenDia.numero2.valor}
+                  </div>
+                  <div className="text-xs text-purple-600 dark:text-purple-400">
+                    {misMetricas.avanzadas.resumenDia.numero2.label}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl mb-1">{misMetricas.avanzadas.resumenDia.numero3.icono}</div>
+                  <div className="text-2xl font-bold text-violet-700 dark:text-violet-300">
+                    {misMetricas.avanzadas.resumenDia.numero3.valor}
+                  </div>
+                  <div className="text-xs text-violet-600 dark:text-violet-400">
+                    {misMetricas.avanzadas.resumenDia.numero3.label}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SEMÁFORO + RACHA + EFICIENCIA */}
+          {misMetricas.avanzadas && (
+            <div className="grid grid-cols-3 gap-4">
+              {/* Semáforo */}
+              <div className={`rounded-xl border p-4 text-center ${COLORES_SEMAFORO[misMetricas.avanzadas.semaforo].bg} ${COLORES_SEMAFORO[misMetricas.avanzadas.semaforo].border}`}>
+                <div className="text-4xl mb-2">
+                  {misMetricas.avanzadas.semaforo === 'verde' && '🟢'}
+                  {misMetricas.avanzadas.semaforo === 'amarillo' && '🟡'}
+                  {misMetricas.avanzadas.semaforo === 'rojo' && '🔴'}
+                  {misMetricas.avanzadas.semaforo === 'gris' && '⚪'}
+                </div>
+                <div className={`text-sm font-semibold ${COLORES_SEMAFORO[misMetricas.avanzadas.semaforo].text}`}>
+                  {misMetricas.avanzadas.semaforo === 'verde' && 'Excelente'}
+                  {misMetricas.avanzadas.semaforo === 'amarillo' && 'Atención'}
+                  {misMetricas.avanzadas.semaforo === 'rojo' && 'Crítico'}
+                  {misMetricas.avanzadas.semaforo === 'gris' && 'Sin datos'}
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Semáforo</div>
+              </div>
+
+              {/* Racha */}
+              <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-xl border border-orange-200 dark:border-orange-800 p-4 text-center">
+                <div className="text-3xl mb-1">{misMetricas.avanzadas.racha.icono}</div>
+                <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">
+                  {misMetricas.avanzadas.racha.dias}
+                </div>
+                <div className="text-xs text-orange-600 dark:text-orange-400">
+                  {misMetricas.avanzadas.racha.dias === 1 ? 'día' : 'días'} en racha
+                </div>
+              </div>
+
+              {/* Eficiencia */}
+              <div className={`rounded-xl border p-4 text-center ${
+                misMetricas.avanzadas.eficiencia >= 100
+                  ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
+                  : misMetricas.avanzadas.eficiencia >= 80
+                  ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                  : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+              }`}>
+                <Zap className={`w-6 h-6 mx-auto mb-1 ${
+                  misMetricas.avanzadas.eficiencia >= 100 ? 'text-emerald-500' :
+                  misMetricas.avanzadas.eficiencia >= 80 ? 'text-blue-500' : 'text-red-500'
+                }`} />
+                <div className={`text-2xl font-bold ${
+                  misMetricas.avanzadas.eficiencia >= 100 ? 'text-emerald-700 dark:text-emerald-300' :
+                  misMetricas.avanzadas.eficiencia >= 80 ? 'text-blue-700 dark:text-blue-300' : 'text-red-700 dark:text-red-300'
+                }`}>
+                  {misMetricas.avanzadas.eficiencia.toFixed(0)}%
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  Eficiencia (base: 3min/guía)
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* META DIARIA */}
+          {misMetricas.avanzadas && (
+            <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-6">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                  <Target className="w-5 h-5 text-purple-500" />
+                  Meta Diaria
+                </h3>
+                <span className="text-sm text-slate-500 dark:text-slate-400">
+                  {misMetricas.avanzadas.metaDiaria.guiasHoy} / {misMetricas.avanzadas.metaDiaria.metaGuias} guías
+                </span>
+              </div>
+              <div className="relative h-6 bg-slate-100 dark:bg-navy-700 rounded-full overflow-hidden mb-2">
+                <div
+                  className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
+                    misMetricas.avanzadas.metaDiaria.progreso >= 100
+                      ? 'bg-gradient-to-r from-emerald-400 to-emerald-600'
+                      : misMetricas.avanzadas.metaDiaria.progreso >= 75
+                      ? 'bg-gradient-to-r from-blue-400 to-blue-600'
+                      : misMetricas.avanzadas.metaDiaria.progreso >= 50
+                      ? 'bg-gradient-to-r from-amber-400 to-amber-600'
+                      : 'bg-gradient-to-r from-red-400 to-red-600'
+                  }`}
+                  style={{ width: `${Math.min(misMetricas.avanzadas.metaDiaria.progreso, 100)}%` }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center text-sm font-medium text-slate-700 dark:text-white">
+                  {misMetricas.avanzadas.metaDiaria.progreso.toFixed(0)}%
+                </div>
+              </div>
+              {misMetricas.avanzadas.metaDiaria.progreso < 100 && misMetricas.avanzadas.metaDiaria.horasRestantes > 0 && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+                  A tu ritmo actual, te faltan ~{misMetricas.avanzadas.metaDiaria.horasRestantes.toFixed(1)}h para completar la meta
+                </p>
+              )}
+              {misMetricas.avanzadas.metaDiaria.progreso >= 100 && (
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 text-center font-medium">
+                  ¡Meta cumplida! Excelente trabajo 🎉
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Cards de métricas principales */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {/* Total Rondas */}
@@ -228,6 +365,9 @@ export const OperadorDashboard: React.FC<OperadorDashboardProps> = ({
             <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
               <div className="flex items-center justify-between mb-2">
                 <Zap className="w-5 h-5 text-amber-500" />
+                <span className="text-xs text-slate-500">
+                  meta: {METRICAS_AVANZADAS.GUIAS_POR_HORA_ESPERADAS}
+                </span>
               </div>
               <div className="text-2xl font-bold text-slate-800 dark:text-white">
                 {misMetricas.guiasPorHora.toFixed(1)}

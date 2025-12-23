@@ -40,6 +40,73 @@ export const UMBRALES = {
   TIEMPO_MINIMO_RONDA: 1,   // minutos mínimos válidos
 };
 
+// ===== MÉTRICAS AVANZADAS (Base: 3 min/guía) =====
+export const METRICAS_AVANZADAS = {
+  // Tiempo base por guía
+  TIEMPO_POR_GUIA: 3,           // 3 minutos por guía
+  GUIAS_POR_HORA_ESPERADAS: 20, // 60/3 = 20 guías por hora
+
+  // Meta diaria
+  META_DIARIA_GUIAS: 80,        // 80 guías/día (4 horas efectivas)
+  META_DIARIA_HORAS: 4,         // 4 horas de trabajo efectivo
+
+  // Eficiencia = (Guías × 3) / Tiempo Real × 100
+  EFICIENCIA_EXCELENTE: 100,    // >= 100% = trabaja más rápido que base
+  EFICIENCIA_BUENA: 80,         // >= 80% = bien
+  EFICIENCIA_REGULAR: 60,       // >= 60% = regular
+  EFICIENCIA_BAJA: 0,           // < 60% = lento
+
+  // Racha de días consecutivos (tasa >= 70%)
+  RACHA_MINIMA_TASA: 70,        // Tasa mínima para contar día
+  RACHA_DIAS: {
+    FUEGO: 7,      // 🔥🔥🔥 7+ días
+    CALIENTE: 5,   // 🔥🔥 5-6 días
+    ENCENDIDO: 3,  // 🔥 3-4 días
+    INICIO: 1,     // ✨ 1-2 días
+  },
+
+  // Detector de anomalías
+  TIEMPO_MINIMO_GUIA: 0.5,      // Mínimo 30 segundos por guía
+  TIEMPO_MAXIMO_GUIA: 10,       // Máximo 10 minutos por guía
+  GUIAS_MINIMAS_RONDA: 1,       // Mínimo 1 guía por ronda
+};
+
+// ===== SEMÁFORO DE USUARIOS =====
+export const SEMAFORO = {
+  VERDE: { icon: '🟢', label: 'Excelente', minEficiencia: 80, minTasa: 80 },
+  AMARILLO: { icon: '🟡', label: 'Atención', minEficiencia: 60, minTasa: 60 },
+  ROJO: { icon: '🔴', label: 'Crítico', minEficiencia: 0, minTasa: 0 },
+  GRIS: { icon: '⚪', label: 'Sin datos', minEficiencia: -1, minTasa: -1 },
+};
+
+// ===== COLORES SEMÁFORO =====
+export const COLORES_SEMAFORO = {
+  verde: {
+    bg: 'bg-emerald-100 dark:bg-emerald-900/30',
+    text: 'text-emerald-700 dark:text-emerald-400',
+    border: 'border-emerald-500',
+    gradient: 'from-emerald-400 to-emerald-600',
+  },
+  amarillo: {
+    bg: 'bg-amber-100 dark:bg-amber-900/30',
+    text: 'text-amber-700 dark:text-amber-400',
+    border: 'border-amber-500',
+    gradient: 'from-amber-400 to-amber-600',
+  },
+  rojo: {
+    bg: 'bg-red-100 dark:bg-red-900/30',
+    text: 'text-red-700 dark:text-red-400',
+    border: 'border-red-500',
+    gradient: 'from-red-400 to-red-600',
+  },
+  gris: {
+    bg: 'bg-slate-100 dark:bg-slate-900/30',
+    text: 'text-slate-500 dark:text-slate-400',
+    border: 'border-slate-400',
+    gradient: 'from-slate-400 to-slate-500',
+  },
+};
+
 // ===== COLORES POR ESTADO =====
 export const COLORES_ESTADO = {
   excelente: {

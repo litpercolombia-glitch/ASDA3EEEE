@@ -16,6 +16,11 @@ import {
   Recomendacion,
   ReporteHistorico,
   EstadoRendimiento,
+  MetricasAvanzadasUsuario,
+  Anomalia,
+  Problema,
+  EstadoSemaforo,
+  NivelRacha,
 } from '../../types/analisis-rondas';
 import {
   USUARIOS_OPERADORES,
@@ -24,6 +29,8 @@ import {
   STORAGE_KEYS,
   CSV_HEADERS,
   MENSAJES_RECOMENDACION,
+  METRICAS_AVANZADAS,
+  SEMAFORO,
 } from '../../constants/analisis-rondas';
 import { LoginSelector } from '../analisis-rondas/LoginSelector';
 import { OperadorDashboard } from '../analisis-rondas/OperadorDashboard';
@@ -154,6 +161,284 @@ const calcularEstado = (tasaExito: number): EstadoRendimiento => {
   return 'bajo';
 };
 
+// ===== MÉTRICAS AVANZADAS =====
+
+// Calcular eficiencia: (Guías × 3) / Tiempo Real × 100
+const calcularEficiencia = (guiasRealizadas: number, tiempoTotal: number): number => {
+  if (tiempoTotal <= 0) return 0;
+  const tiempoEsperado = guiasRealizadas * METRICAS_AVANZADAS.TIEMPO_POR_GUIA;
+  return (tiempoEsperado / tiempoTotal) * 100;
+};
+
+const calcularEstadoEficiencia = (eficiencia: number): EstadoRendimiento => {
+  if (eficiencia >= METRICAS_AVANZADAS.EFICIENCIA_EXCELENTE) return 'excelente';
+  if (eficiencia >= METRICAS_AVANZADAS.EFICIENCIA_BUENA) return 'bueno';
+  if (eficiencia >= METRICAS_AVANZADAS.EFICIENCIA_REGULAR) return 'regular';
+  return 'bajo';
+};
+
+// Calcular semáforo basado en eficiencia + tasa de éxito
+const calcularSemaforo = (eficiencia: number, tasaExito: number): EstadoSemaforo => {
+  if (eficiencia <= 0 && tasaExito <= 0) return 'gris';
+  if (eficiencia >= SEMAFORO.VERDE.minEficiencia && tasaExito >= SEMAFORO.VERDE.minTasa) return 'verde';
+  if (eficiencia >= SEMAFORO.AMARILLO.minEficiencia && tasaExito >= SEMAFORO.AMARILLO.minTasa) return 'amarillo';
+  return 'rojo';
+};
+
+// Calcular nivel de racha (días consecutivos con tasa >= 70%)
+const calcularNivelRacha = (diasRacha: number): { nivel: NivelRacha; icono: string } => {
+  if (diasRacha >= METRICAS_AVANZADAS.RACHA_DIAS.FUEGO) {
+    return { nivel: 'fuego', icono: '🔥🔥🔥' };
+  }
+  if (diasRacha >= METRICAS_AVANZADAS.RACHA_DIAS.CALIENTE) {
+    return { nivel: 'caliente', icono: '🔥🔥' };
+  }
+  if (diasRacha >= METRICAS_AVANZADAS.RACHA_DIAS.ENCENDIDO) {
+    return { nivel: 'encendido', icono: '🔥' };
+  }
+  if (diasRacha >= METRICAS_AVANZADAS.RACHA_DIAS.INICIO) {
+    return { nivel: 'inicio', icono: '✨' };
+  }
+  return { nivel: 'ninguno', icono: '💤' };
+};
+
+// Calcular racha de días consecutivos
+const calcularRacha = (rondas: RondaCSV[], usuario: string): { dias: number; nivel: NivelRacha; icono: string } => {
+  const rondasUsuario = rondas.filter(r => r.usuario === usuario);
+  if (rondasUsuario.length === 0) return { dias: 0, ...calcularNivelRacha(0) };
+
+  // Agrupar por fecha
+  const porFecha = new Map<string, { iniciales: number; realizadas: number }>();
+  rondasUsuario.forEach(r => {
+    const existing = porFecha.get(r.fecha) || { iniciales: 0, realizadas: 0 };
+    porFecha.set(r.fecha, {
+      iniciales: existing.iniciales + r.guiasIniciales,
+      realizadas: existing.realizadas + r.guiasRealizadas,
+    });
+  });
+
+  // Calcular tasa por día y ordenar fechas
+  const fechasOrdenadas = Array.from(porFecha.entries())
+    .map(([fecha, data]) => ({
+      fecha,
+      tasa: data.iniciales > 0 ? (data.realizadas / data.iniciales) * 100 : 0,
+    }))
+    .sort((a, b) => b.fecha.localeCompare(a.fecha)); // Más reciente primero
+
+  // Contar días consecutivos con tasa >= 70%
+  let diasConsecutivos = 0;
+  for (const dia of fechasOrdenadas) {
+    if (dia.tasa >= METRICAS_AVANZADAS.RACHA_MINIMA_TASA) {
+      diasConsecutivos++;
+    } else {
+      break;
+    }
+  }
+
+  return { dias: diasConsecutivos, ...calcularNivelRacha(diasConsecutivos) };
+};
+
+// Calcular métricas avanzadas para un usuario
+const calcularMetricasAvanzadas = (rondas: RondaCSV[], usuario: string, tasaExito: number): MetricasAvanzadasUsuario => {
+  const rondasUsuario = rondas.filter(r => r.usuario === usuario);
+  const guiasRealizadas = rondasUsuario.reduce((sum, r) => sum + r.guiasRealizadas, 0);
+  const tiempoTotal = rondasUsuario.reduce((sum, r) => sum + r.tiempoRegistro, 0);
+
+  // Eficiencia
+  const eficiencia = calcularEficiencia(guiasRealizadas, tiempoTotal);
+  const eficienciaEstado = calcularEstadoEficiencia(eficiencia);
+
+  // Semáforo
+  const semaforo = calcularSemaforo(eficiencia, tasaExito);
+
+  // Racha
+  const racha = calcularRacha(rondas, usuario);
+
+  // Meta diaria (usando datos del día más reciente)
+  const fechaHoy = rondasUsuario[0]?.fecha || new Date().toISOString().split('T')[0];
+  const rondasHoy = rondasUsuario.filter(r => r.fecha === fechaHoy);
+  const guiasHoy = rondasHoy.reduce((sum, r) => sum + r.guiasRealizadas, 0);
+  const progreso = (guiasHoy / METRICAS_AVANZADAS.META_DIARIA_GUIAS) * 100;
+  const guiasFaltantes = METRICAS_AVANZADAS.META_DIARIA_GUIAS - guiasHoy;
+  const ritmoActual = tiempoTotal > 0 ? guiasRealizadas / (tiempoTotal / 60) : METRICAS_AVANZADAS.GUIAS_POR_HORA_ESPERADAS;
+  const horasRestantes = guiasFaltantes > 0 && ritmoActual > 0 ? guiasFaltantes / ritmoActual : 0;
+
+  // Análisis por horario
+  const guiasPorHora: { hora: string; guias: number; eficiencia: number }[] = [];
+  const horasMap = new Map<string, { guias: number; tiempo: number }>();
+  rondasUsuario.forEach(r => {
+    const hora = r.horaInicio?.split(':')[0] || '00';
+    const existing = horasMap.get(hora) || { guias: 0, tiempo: 0 };
+    horasMap.set(hora, {
+      guias: existing.guias + r.guiasRealizadas,
+      tiempo: existing.tiempo + r.tiempoRegistro,
+    });
+  });
+  horasMap.forEach((data, hora) => {
+    guiasPorHora.push({
+      hora: `${hora}:00`,
+      guias: data.guias,
+      eficiencia: data.tiempo > 0 ? calcularEficiencia(data.guias, data.tiempo) : 0,
+    });
+  });
+  guiasPorHora.sort((a, b) => a.hora.localeCompare(b.hora));
+
+  const mejorHora = guiasPorHora.reduce((best, curr) =>
+    curr.eficiencia > (best?.eficiencia || 0) ? curr : best, guiasPorHora[0])?.hora || 'N/A';
+  const peorHora = guiasPorHora.filter(h => h.guias > 0).reduce((worst, curr) =>
+    curr.eficiencia < (worst?.eficiencia || 999) ? curr : worst, guiasPorHora[0])?.hora || 'N/A';
+
+  // Resumen del día (3 números principales)
+  const resumenDia = {
+    numero1: { valor: Math.round(eficiencia), label: 'Eficiencia', icono: '⚡' },
+    numero2: { valor: guiasHoy, label: 'Guías hoy', icono: '📦' },
+    numero3: { valor: racha.dias, label: 'Días racha', icono: racha.icono },
+  };
+
+  return {
+    eficiencia,
+    eficienciaEstado,
+    metaDiaria: {
+      guiasHoy,
+      metaGuias: METRICAS_AVANZADAS.META_DIARIA_GUIAS,
+      progreso: Math.min(progreso, 100),
+      horasRestantes: Math.max(0, horasRestantes),
+    },
+    racha,
+    semaforo,
+    analisisPorHorario: {
+      mejorHora,
+      peorHora,
+      guiasPorHora,
+    },
+    resumenDia,
+  };
+};
+
+// Detectar anomalías en los datos
+const detectarAnomalias = (rondas: RondaCSV[]): Anomalia[] => {
+  const anomalias: Anomalia[] = [];
+
+  rondas.forEach((r, index) => {
+    // Tiempo imposible (muy rápido)
+    if (r.guiasRealizadas > 0 && r.tiempoRegistro > 0) {
+      const tiempoPorGuia = r.tiempoRegistro / r.guiasRealizadas;
+      if (tiempoPorGuia < METRICAS_AVANZADAS.TIEMPO_MINIMO_GUIA) {
+        anomalias.push({
+          id: `anom-tiempo-${index}`,
+          tipo: 'tiempo_imposible',
+          usuario: r.usuario,
+          descripcion: `Tiempo por guía muy bajo: ${tiempoPorGuia.toFixed(2)} min (mín: ${METRICAS_AVANZADAS.TIEMPO_MINIMO_GUIA} min)`,
+          valor: tiempoPorGuia,
+          valorEsperado: METRICAS_AVANZADAS.TIEMPO_POR_GUIA,
+          severidad: 'alta',
+          fecha: r.fecha,
+          ronda: r.rondaNumero,
+        });
+      }
+    }
+
+    // Guías cero con tiempo registrado
+    if (r.guiasRealizadas === 0 && r.tiempoRegistro > 10) {
+      anomalias.push({
+        id: `anom-guias-${index}`,
+        tipo: 'guias_cero',
+        usuario: r.usuario,
+        descripcion: `${r.tiempoRegistro} min registrados sin guías realizadas`,
+        valor: 0,
+        valorEsperado: Math.floor(r.tiempoRegistro / METRICAS_AVANZADAS.TIEMPO_POR_GUIA),
+        severidad: 'media',
+        fecha: r.fecha,
+        ronda: r.rondaNumero,
+      });
+    }
+
+    // Eficiencia anormalmente alta (>200%)
+    if (r.guiasRealizadas > 0 && r.tiempoRegistro > 0) {
+      const eficiencia = calcularEficiencia(r.guiasRealizadas, r.tiempoRegistro);
+      if (eficiencia > 200) {
+        anomalias.push({
+          id: `anom-efic-${index}`,
+          tipo: 'eficiencia_anormal',
+          usuario: r.usuario,
+          descripcion: `Eficiencia anormalmente alta: ${eficiencia.toFixed(0)}%`,
+          valor: eficiencia,
+          valorEsperado: 100,
+          severidad: 'media',
+          fecha: r.fecha,
+          ronda: r.rondaNumero,
+        });
+      }
+    }
+  });
+
+  return anomalias;
+};
+
+// Identificar top 3 problemas del día
+const identificarTop3Problemas = (metricas: MetricasGlobales, anomalias: Anomalia[]): Problema[] => {
+  const problemas: Problema[] = [];
+
+  // Problema 1: Usuarios con bajo rendimiento
+  const usuariosBajos = metricas.ranking.filter(u => u.estado === 'bajo');
+  if (usuariosBajos.length > 0) {
+    problemas.push({
+      id: 'prob-rendimiento',
+      titulo: `${usuariosBajos.length} usuario(s) con rendimiento crítico`,
+      descripcion: `Tasa de éxito por debajo del 50%`,
+      usuariosAfectados: usuariosBajos.map(u => u.usuario),
+      impacto: usuariosBajos.length * 20,
+      categoria: 'rendimiento',
+      icono: '📉',
+    });
+  }
+
+  // Problema 2: Alto ratio de novedades
+  if (metricas.ratioNovedades > UMBRALES.ALERTA_NOVEDADES) {
+    problemas.push({
+      id: 'prob-novedades',
+      titulo: `Alto ratio de novedades: ${metricas.ratioNovedades.toFixed(1)}%`,
+      descripcion: `Supera el umbral de ${UMBRALES.ALERTA_NOVEDADES}%`,
+      usuariosAfectados: metricas.ranking.filter(u =>
+        u.totalGuiasIniciales > 0 && (u.novedades / u.totalGuiasIniciales) * 100 > UMBRALES.ALERTA_NOVEDADES
+      ).map(u => u.usuario),
+      impacto: Math.min(metricas.ratioNovedades * 5, 100),
+      categoria: 'novedades',
+      icono: '⚠️',
+    });
+  }
+
+  // Problema 3: Anomalías detectadas
+  if (anomalias.length > 0) {
+    const usuariosConAnomalias = [...new Set(anomalias.map(a => a.usuario))];
+    problemas.push({
+      id: 'prob-anomalias',
+      titulo: `${anomalias.length} anomalía(s) en datos`,
+      descripcion: `Tiempos imposibles o datos inconsistentes`,
+      usuariosAfectados: usuariosConAnomalias,
+      impacto: Math.min(anomalias.length * 10, 100),
+      categoria: 'anomalias',
+      icono: '🔍',
+    });
+  }
+
+  // Problema 4: Rondas con tiempo cero
+  if (metricas.rondasConTiempoCero > 0) {
+    problemas.push({
+      id: 'prob-tiempo',
+      titulo: `${metricas.rondasConTiempoCero} rondas sin tiempo registrado`,
+      descripcion: `Posible error de registro`,
+      usuariosAfectados: [],
+      impacto: metricas.rondasConTiempoCero * 5,
+      categoria: 'tiempo',
+      icono: '⏱️',
+    });
+  }
+
+  // Ordenar por impacto y tomar top 3
+  return problemas.sort((a, b) => b.impacto - a.impacto).slice(0, 3);
+};
+
 const calcularMetricasUsuario = (rondas: RondaCSV[], usuario: string): MetricasUsuario => {
   const rondasUsuario = rondas.filter(r => r.usuario === usuario);
 
@@ -207,6 +492,9 @@ const calcularMetricasUsuario = (rondas: RondaCSV[], usuario: string): MetricasU
     });
   }
 
+  // Calcular métricas avanzadas
+  const avanzadas = calcularMetricasAvanzadas(rondas, usuario, tasaExito);
+
   return {
     usuario,
     totalRondas,
@@ -223,6 +511,7 @@ const calcularMetricasUsuario = (rondas: RondaCSV[], usuario: string): MetricasU
     estado,
     alertas,
     tendencia: 'estable', // TODO: Calcular con histórico
+    avanzadas,
   };
 };
 
@@ -260,7 +549,22 @@ const calcularMetricasGlobales = (rondas: RondaCSV[], duplicadosEliminados: numb
     bajo: ranking.filter(u => u.estado === 'bajo').length,
   };
 
-  return {
+  // Métricas avanzadas globales
+  const tiempoTotalEquipo = rondas.reduce((sum, r) => sum + r.tiempoRegistro, 0);
+  const eficienciaEquipo = calcularEficiencia(totalGuiasRealizadas, tiempoTotalEquipo);
+
+  // Detectar anomalías
+  const anomalias = detectarAnomalias(rondas);
+
+  // Distribución semáforo
+  const semaforoEquipo = {
+    verde: ranking.filter(u => u.avanzadas?.semaforo === 'verde').length,
+    amarillo: ranking.filter(u => u.avanzadas?.semaforo === 'amarillo').length,
+    rojo: ranking.filter(u => u.avanzadas?.semaforo === 'rojo').length,
+    gris: ranking.filter(u => u.avanzadas?.semaforo === 'gris' || !u.avanzadas).length,
+  };
+
+  const metricasBase: MetricasGlobales = {
     fecha: new Date().toISOString(),
     tasaExitoEquipo,
     totalGuiasProcesadas,
@@ -274,6 +578,17 @@ const calcularMetricasGlobales = (rondas: RondaCSV[], duplicadosEliminados: numb
     ranking,
     distribucionEstados,
     metaEquipo: UMBRALES.META_EXITO_EQUIPO,
+    eficienciaEquipo,
+    anomalias,
+    semaforoEquipo,
+  };
+
+  // Identificar top 3 problemas (necesita metricas para calcular)
+  const top3Problemas = identificarTop3Problemas(metricasBase, anomalias);
+
+  return {
+    ...metricasBase,
+    top3Problemas,
   };
 };
 

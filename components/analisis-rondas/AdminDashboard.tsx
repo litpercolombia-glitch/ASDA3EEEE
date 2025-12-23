@@ -61,6 +61,8 @@ import {
   COLORES_PRIORIDAD,
   UMBRALES,
   ICONOS,
+  COLORES_SEMAFORO,
+  METRICAS_AVANZADAS,
 } from '../../constants/analisis-rondas';
 
 interface AdminDashboardProps {
@@ -389,6 +391,132 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
 
+          {/* SEMÁFORO DEL EQUIPO + EFICIENCIA + TOP 3 PROBLEMAS */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Semáforo del Equipo */}
+            {datos.semaforoEquipo && (
+              <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-6">
+                <h3 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-cyan-500" />
+                  Semáforo del Equipo
+                </h3>
+                <div className="grid grid-cols-4 gap-2 text-center">
+                  <div className={`p-3 rounded-lg ${COLORES_SEMAFORO.verde.bg}`}>
+                    <div className="text-2xl">🟢</div>
+                    <div className={`text-xl font-bold ${COLORES_SEMAFORO.verde.text}`}>
+                      {datos.semaforoEquipo.verde}
+                    </div>
+                    <div className="text-xs text-slate-500">Excelente</div>
+                  </div>
+                  <div className={`p-3 rounded-lg ${COLORES_SEMAFORO.amarillo.bg}`}>
+                    <div className="text-2xl">🟡</div>
+                    <div className={`text-xl font-bold ${COLORES_SEMAFORO.amarillo.text}`}>
+                      {datos.semaforoEquipo.amarillo}
+                    </div>
+                    <div className="text-xs text-slate-500">Atención</div>
+                  </div>
+                  <div className={`p-3 rounded-lg ${COLORES_SEMAFORO.rojo.bg}`}>
+                    <div className="text-2xl">🔴</div>
+                    <div className={`text-xl font-bold ${COLORES_SEMAFORO.rojo.text}`}>
+                      {datos.semaforoEquipo.rojo}
+                    </div>
+                    <div className="text-xs text-slate-500">Crítico</div>
+                  </div>
+                  <div className={`p-3 rounded-lg ${COLORES_SEMAFORO.gris.bg}`}>
+                    <div className="text-2xl">⚪</div>
+                    <div className={`text-xl font-bold ${COLORES_SEMAFORO.gris.text}`}>
+                      {datos.semaforoEquipo.gris}
+                    </div>
+                    <div className="text-xs text-slate-500">Sin datos</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Eficiencia del Equipo */}
+            <div className={`rounded-xl border p-6 ${
+              (datos.eficienciaEquipo || 0) >= 100
+                ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700'
+                : (datos.eficienciaEquipo || 0) >= 80
+                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700'
+                : 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
+            }`}>
+              <h3 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                <Zap className={`w-5 h-5 ${
+                  (datos.eficienciaEquipo || 0) >= 100 ? 'text-emerald-500' :
+                  (datos.eficienciaEquipo || 0) >= 80 ? 'text-blue-500' : 'text-red-500'
+                }`} />
+                Eficiencia del Equipo
+              </h3>
+              <div className="text-center">
+                <div className={`text-4xl font-bold mb-2 ${
+                  (datos.eficienciaEquipo || 0) >= 100 ? 'text-emerald-700 dark:text-emerald-300' :
+                  (datos.eficienciaEquipo || 0) >= 80 ? 'text-blue-700 dark:text-blue-300' : 'text-red-700 dark:text-red-300'
+                }`}>
+                  {(datos.eficienciaEquipo || 0).toFixed(0)}%
+                </div>
+                <div className="text-sm text-slate-500 dark:text-slate-400">
+                  Base: {METRICAS_AVANZADAS.TIEMPO_POR_GUIA} min/guía
+                </div>
+                <div className="mt-3 h-3 bg-slate-200 dark:bg-navy-600 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      (datos.eficienciaEquipo || 0) >= 100 ? 'bg-emerald-500' :
+                      (datos.eficienciaEquipo || 0) >= 80 ? 'bg-blue-500' : 'bg-red-500'
+                    }`}
+                    style={{ width: `${Math.min(datos.eficienciaEquipo || 0, 150)}%`, maxWidth: '100%' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Top 3 Problemas */}
+            {datos.top3Problemas && datos.top3Problemas.length > 0 && (
+              <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-xl border border-red-200 dark:border-red-800 p-6">
+                <h3 className="font-semibold text-red-800 dark:text-red-300 mb-4 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-500" />
+                  Top 3 Problemas del Día
+                </h3>
+                <div className="space-y-3">
+                  {datos.top3Problemas.map((problema, index) => (
+                    <div
+                      key={problema.id}
+                      className="flex items-start gap-3 bg-white/50 dark:bg-navy-800/50 rounded-lg p-3"
+                    >
+                      <span className="text-xl">{problema.icono}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-slate-800 dark:text-slate-200 text-sm truncate">
+                          {problema.titulo}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {problema.descripcion}
+                        </p>
+                        {problema.usuariosAfectados.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {problema.usuariosAfectados.slice(0, 3).map(u => (
+                              <span key={u} className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded text-xs">
+                                {u}
+                              </span>
+                            ))}
+                            {problema.usuariosAfectados.length > 3 && (
+                              <span className="text-xs text-slate-500">+{problema.usuariosAfectados.length - 3}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className={`px-2 py-1 rounded text-xs font-medium ${
+                        problema.impacto >= 50 ? 'bg-red-500 text-white' :
+                        problema.impacto >= 25 ? 'bg-orange-500 text-white' : 'bg-amber-500 text-white'
+                      }`}>
+                        {problema.impacto}%
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Gráficos */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Gráfico de Barras - Rendimiento por Usuario */}
@@ -495,16 +623,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <tr className="border-b border-slate-200 dark:border-navy-700">
                     <th className="text-left py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">#</th>
                     <th className="text-left py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Usuario</th>
+                    <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Semáforo</th>
                     <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Tasa Éxito</th>
+                    <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Eficiencia</th>
                     <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Guías</th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Rondas</th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">G/Hora</th>
+                    <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Racha</th>
                     <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
                   {datos.ranking.map((usuario, index) => {
                     const estadoColors = getEstadoColor(usuario.estado);
+                    const semaforo = usuario.avanzadas?.semaforo || 'gris';
+                    const semaforoColors = COLORES_SEMAFORO[semaforo];
                     return (
                       <tr
                         key={usuario.usuario}
@@ -519,18 +650,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </span>
                         </td>
                         <td className="py-3 px-2 text-center">
+                          <span className="text-xl">
+                            {semaforo === 'verde' && '🟢'}
+                            {semaforo === 'amarillo' && '🟡'}
+                            {semaforo === 'rojo' && '🔴'}
+                            {semaforo === 'gris' && '⚪'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2 text-center">
                           <span className={`font-semibold ${estadoColors.text}`}>
                             {usuario.tasaExito.toFixed(1)}%
+                          </span>
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          <span className={`font-medium ${
+                            (usuario.avanzadas?.eficiencia || 0) >= 100 ? 'text-emerald-600 dark:text-emerald-400' :
+                            (usuario.avanzadas?.eficiencia || 0) >= 80 ? 'text-blue-600 dark:text-blue-400' :
+                            'text-red-600 dark:text-red-400'
+                          }`}>
+                            {(usuario.avanzadas?.eficiencia || 0).toFixed(0)}%
                           </span>
                         </td>
                         <td className="py-3 px-2 text-center text-slate-700 dark:text-slate-300">
                           {usuario.guiasRealizadas}/{usuario.totalGuiasIniciales}
                         </td>
-                        <td className="py-3 px-2 text-center text-slate-700 dark:text-slate-300">
-                          {usuario.totalRondas}
-                        </td>
-                        <td className="py-3 px-2 text-center text-slate-700 dark:text-slate-300">
-                          {usuario.guiasPorHora.toFixed(1)}
+                        <td className="py-3 px-2 text-center">
+                          <span className="text-sm">
+                            {usuario.avanzadas?.racha.icono || '💤'} {usuario.avanzadas?.racha.dias || 0}
+                          </span>
                         </td>
                         <td className="py-3 px-2 text-center">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${estadoColors.bg} ${estadoColors.text}`}>
