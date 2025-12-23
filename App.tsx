@@ -42,6 +42,8 @@ import { AuthWrapper, UserProfilePanel } from './components/auth';
 import { EnhancedGuideTable } from './components/tables';
 import { AdminPanelPro } from './components/Admin/AdminPanelPro';
 import CountrySelector from './components/CountrySelector';
+// Chat-First Design System
+import { ChatCommandCenter } from './components/ChatFirst';
 import { detectarGuiasRetrasadas } from './utils/patternDetection';
 import {
   Crown,
@@ -902,7 +904,25 @@ const App: React.FC = () => {
 
         {/* Tab Content */}
         <div className="min-h-[600px]">
+          {/* ====================================== */}
+          {/* CHAT-FIRST COMMAND CENTER (NEW) */}
+          {/* ====================================== */}
           {currentTab === 'home' && (
+            <ChatCommandCenter
+              shipments={shipments}
+              criticalCities={[]} // TODO: Connect to real critical cities data
+              onNavigateToTab={(tab) => setCurrentTab(tab as MainTabNew)}
+              onRefreshData={() => {
+                // Trigger data refresh
+                setNotification('Datos actualizados');
+              }}
+            />
+          )}
+
+          {/* ====================================== */}
+          {/* DASHBOARD CLASICO (Legacy - accesible desde menu) */}
+          {/* ====================================== */}
+          {currentTab === 'dashboard-legacy' && (
             <PremiumDashboard
               shipments={shipments}
               onNavigate={(tab) => setCurrentTab(tab)}
