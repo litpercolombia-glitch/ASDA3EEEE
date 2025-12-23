@@ -21,6 +21,13 @@ import {
 import { Shipment } from '../../types';
 import { ContextPanel } from './ContextPanel';
 import { SkillsBar, CORE_SKILLS, Skill, SkillId } from './SkillsBar';
+import {
+  SeguimientoSkillView,
+  AlertasSkillView,
+  ReportesSkillView,
+  PrediccionesSkillView,
+  AutomatizacionesSkillView,
+} from './SkillViews';
 import { useProAssistantStore } from '../../stores/proAssistantStore';
 import { unifiedAI } from '../../services/unifiedAIService';
 
@@ -437,96 +444,162 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
           onCityClick={(city) => handleQuickAction(`Muestrame los envios de ${city}`)}
         />
 
-        {/* Chat Area */}
-        <div className="bg-gradient-to-b from-navy-900/80 to-navy-900/60 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
-          {/* Messages */}
-          <div className="h-[400px] overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-            {messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                onActionClick={(action) => action.onClick?.()}
-              />
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input Area */}
-          <div className="border-t border-white/10 p-4">
-            <div className="flex items-center gap-3">
-              <button
-                className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <Paperclip className="w-5 h-5" />
-              </button>
-
-              <div className="flex-1 relative">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={activeSkill
-                    ? `Pregunta sobre ${CORE_SKILLS.find(s => s.id === activeSkill)?.label.toLowerCase()}...`
-                    : "Escribe un comando o pregunta..."
-                  }
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-accent-500 focus:bg-white/10 transition-all"
-                  disabled={isProcessing}
-                />
-                {activeSkill && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2 py-0.5 bg-accent-500/20 rounded text-xs text-accent-300">
-                    {CORE_SKILLS.find(s => s.id === activeSkill)?.label}
-                    <button onClick={() => setActiveSkill(null)}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
+        {/* Main Content Area - Split when skill is active */}
+        <div className={`grid gap-6 ${activeSkill ? 'lg:grid-cols-2' : 'grid-cols-1'}`}>
+          {/* Skill Panel - Shows when a skill is active */}
+          {activeSkill && (
+            <div className="bg-gradient-to-b from-navy-900/80 to-navy-900/60 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden order-2 lg:order-1">
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const skill = CORE_SKILLS.find(s => s.id === activeSkill);
+                    if (!skill) return null;
+                    const Icon = skill.icon;
+                    return (
+                      <>
+                        <Icon className={`w-5 h-5 ${skill.color}`} />
+                        <span className="font-medium text-white">{skill.label}</span>
+                      </>
+                    );
+                  })()}
+                </div>
+                <button
+                  onClick={() => setActiveSkill(null)}
+                  className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-4 max-h-[500px] overflow-y-auto">
+                {activeSkill === 'seguimiento' && (
+                  <SeguimientoSkillView
+                    shipments={shipments}
+                    onShipmentClick={(s) => handleQuickAction(`Dame detalles de la guia ${s.trackingNumber || s.id}`)}
+                    onChatQuery={handleQuickAction}
+                  />
+                )}
+                {activeSkill === 'alertas' && (
+                  <AlertasSkillView
+                    shipments={shipments}
+                    onCityClick={(city) => handleQuickAction(`Analiza la situacion de ${city}`)}
+                    onChatQuery={handleQuickAction}
+                  />
+                )}
+                {activeSkill === 'reportes' && (
+                  <ReportesSkillView
+                    shipments={shipments}
+                    onGenerateReport={(type) => handleQuickAction(`Genera reporte de tipo ${type}`)}
+                    onChatQuery={handleQuickAction}
+                  />
+                )}
+                {activeSkill === 'predicciones' && (
+                  <PrediccionesSkillView
+                    shipments={shipments}
+                    onShipmentClick={(s) => handleQuickAction(`Prediccion detallada para guia ${s.trackingNumber || s.id}`)}
+                    onChatQuery={handleQuickAction}
+                  />
+                )}
+                {activeSkill === 'automatizaciones' && (
+                  <AutomatizacionesSkillView
+                    shipments={shipments}
+                    onChatQuery={handleQuickAction}
+                  />
                 )}
               </div>
+            </div>
+          )}
 
-              <button
-                className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <Mic className="w-5 h-5" />
-              </button>
-
-              <button
-                onClick={handleSendMessage}
-                disabled={!inputValue.trim() || isProcessing}
-                className={`
-                  p-3 rounded-xl transition-all
-                  ${inputValue.trim() && !isProcessing
-                    ? 'bg-gradient-to-r from-accent-500 to-accent-600 text-white hover:shadow-lg hover:shadow-accent-500/30'
-                    : 'bg-white/5 text-slate-500 cursor-not-allowed'
-                  }
-                `}
-              >
-                {isProcessing ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Send className="w-5 h-5" />
-                )}
-              </button>
+          {/* Chat Area */}
+          <div className={`bg-gradient-to-b from-navy-900/80 to-navy-900/60 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden ${activeSkill ? 'order-1 lg:order-2' : ''}`}>
+            {/* Messages */}
+            <div className={`${activeSkill ? 'h-[350px]' : 'h-[400px]'} overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent`}>
+              {messages.map((message) => (
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  onActionClick={(action) => action.onClick?.()}
+                />
+              ))}
+              <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick suggestions */}
-            {messages.length <= 2 && shipments.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {[
-                  'Cual es el resumen de hoy?',
-                  'Que envios necesitan atencion?',
-                  'Genera un reporte rapido',
-                ].map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    onClick={() => setInputValue(suggestion)}
-                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs text-slate-400 hover:text-white transition-colors"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
+            {/* Input Area */}
+            <div className="border-t border-white/10 p-4">
+              <div className="flex items-center gap-3">
+                <button
+                  className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <Paperclip className="w-5 h-5" />
+                </button>
+
+                <div className="flex-1 relative">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={activeSkill
+                      ? `Pregunta sobre ${CORE_SKILLS.find(s => s.id === activeSkill)?.label.toLowerCase()}...`
+                      : "Escribe un comando o pregunta..."
+                    }
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-accent-500 focus:bg-white/10 transition-all"
+                    disabled={isProcessing}
+                  />
+                  {activeSkill && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2 py-0.5 bg-accent-500/20 rounded text-xs text-accent-300">
+                      {CORE_SKILLS.find(s => s.id === activeSkill)?.label}
+                      <button onClick={() => setActiveSkill(null)}>
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <Mic className="w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!inputValue.trim() || isProcessing}
+                  className={`
+                    p-3 rounded-xl transition-all
+                    ${inputValue.trim() && !isProcessing
+                      ? 'bg-gradient-to-r from-accent-500 to-accent-600 text-white hover:shadow-lg hover:shadow-accent-500/30'
+                      : 'bg-white/5 text-slate-500 cursor-not-allowed'
+                    }
+                  `}
+                >
+                  {isProcessing ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Send className="w-5 h-5" />
+                  )}
+                </button>
               </div>
-            )}
+
+              {/* Quick suggestions */}
+              {messages.length <= 2 && shipments.length > 0 && !activeSkill && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {[
+                    'Cual es el resumen de hoy?',
+                    'Que envios necesitan atencion?',
+                    'Genera un reporte rapido',
+                  ].map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      onClick={() => setInputValue(suggestion)}
+                      className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs text-slate-400 hover:text-white transition-colors"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -534,7 +607,7 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
         <SkillsBar
           onSkillClick={handleSkillClick}
           activeSkill={activeSkill}
-          showExamples={true}
+          showExamples={!activeSkill}
         />
       </div>
     </div>
