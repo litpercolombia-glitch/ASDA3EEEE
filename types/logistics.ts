@@ -17,6 +17,7 @@ export type MainTabNew =
   | 'procesos-litper'
   | 'admin'
   | 'negocio'
+  | 'dashboard-legacy' // Dashboard clásico (para usuarios que prefieran el estilo antiguo)
   // Legacy tabs (para compatibilidad)
   | 'seguimiento'
   | 'demanda'
