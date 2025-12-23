@@ -379,4 +379,153 @@ Por favor:
   },
 };
 
+// ============================================
+// FUNCIÓN AUXILIAR PARA AGENTES
+// ============================================
+
+/**
+ * askAssistant - Función simple para hacer preguntas al asistente
+ * Utilizada por los servicios de agentes para consultas IA
+ */
+export async function askAssistant(prompt: string): Promise<string> {
+  if (!ANTHROPIC_API_KEY) {
+    console.warn('Claude API Key no configurada, retornando respuesta vacía');
+    return '';
+  }
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: CLAUDE_MODEL,
+        max_tokens: 2048,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Error en askAssistant:', response.status);
+      return '';
+    }
+
+    const data = await response.json();
+    return data.content[0]?.text || '';
+  } catch (error) {
+    console.error('Error en askAssistant:', error);
+    return '';
+  }
+}
+
+/**
+ * trackShipmentWithAI - Rastrear envío con análisis de IA
+ */
+export async function trackShipmentWithAI(trackingNumber: string, carrier?: string): Promise<{
+  status: string;
+  analysis: string;
+  recommendations: string[];
+}> {
+  const prompt = `Analiza el estado del envío con guía ${trackingNumber}${carrier ? ` de ${carrier}` : ''}.
+  Proporciona: status actual estimado, análisis del tiempo de tránsito, y recomendaciones.
+  Responde en JSON: { "status": "...", "analysis": "...", "recommendations": ["...", "..."] }`;
+
+  const response = await askAssistant(prompt);
+  try {
+    return JSON.parse(response);
+  } catch {
+    return {
+      status: 'Pendiente de análisis',
+      analysis: response || 'No se pudo analizar el envío',
+      recommendations: ['Verificar el número de guía', 'Contactar a la transportadora'],
+    };
+  }
+}
+
+/**
+ * analyzeEvidenceImage - Analizar imagen de evidencia
+ */
+export async function analyzeEvidenceImage(imageDescription: string): Promise<{
+  isValid: boolean;
+  confidence: number;
+  analysis: string;
+  issues: string[];
+}> {
+  const prompt = `Analiza esta descripción de una imagen de evidencia de entrega: "${imageDescription}".
+  Determina si parece ser una evidencia válida de entrega.
+  Responde en JSON: { "isValid": boolean, "confidence": number 0-100, "analysis": "...", "issues": ["..."] }`;
+
+  const response = await askAssistant(prompt);
+  try {
+    return JSON.parse(response);
+  } catch {
+    return {
+      isValid: false,
+      confidence: 0,
+      analysis: response || 'No se pudo analizar la imagen',
+      issues: ['Error en el análisis'],
+    };
+  }
+}
+
+/**
+ * analyzeDelayPatterns - Analizar patrones de retraso
+ */
+export async function analyzeDelayPatterns(data: {
+  ciudad?: string;
+  transportadora?: string;
+  periodo?: string;
+}): Promise<{
+  patterns: Array<{ pattern: string; frequency: number; impact: string }>;
+  recommendations: string[];
+  riskLevel: 'low' | 'medium' | 'high';
+}> {
+  const prompt = `Analiza patrones de retraso para:
+  ${data.ciudad ? `Ciudad: ${data.ciudad}` : ''}
+  ${data.transportadora ? `Transportadora: ${data.transportadora}` : ''}
+  ${data.periodo ? `Período: ${data.periodo}` : ''}
+
+  Identifica patrones comunes, frecuencia e impacto.
+  Responde en JSON: { "patterns": [{"pattern": "...", "frequency": number, "impact": "..."}], "recommendations": ["..."], "riskLevel": "low"|"medium"|"high" }`;
+
+  const response = await askAssistant(prompt);
+  try {
+    return JSON.parse(response);
+  } catch {
+    return {
+      patterns: [],
+      recommendations: ['Revisar datos manualmente', 'Aumentar período de análisis'],
+      riskLevel: 'medium',
+    };
+  }
+}
+
+/**
+ * analyzeTrackingScreenshot - Analizar screenshot de tracking
+ */
+export async function analyzeTrackingScreenshot(imageDescription: string): Promise<{
+  trackingNumbers: string[];
+  statuses: Array<{ guia: string; status: string; date?: string }>;
+  summary: string;
+}> {
+  const prompt = `Analiza esta descripción de un screenshot de seguimiento de envíos: "${imageDescription}".
+  Extrae los números de guía y sus estados.
+  Responde en JSON: { "trackingNumbers": ["..."], "statuses": [{"guia": "...", "status": "...", "date": "..."}], "summary": "..." }`;
+
+  const response = await askAssistant(prompt);
+  try {
+    return JSON.parse(response);
+  } catch {
+    return {
+      trackingNumbers: [],
+      statuses: [],
+      summary: response || 'No se pudo analizar el screenshot',
+    };
+  }
+}
+
 export default claudeService;
