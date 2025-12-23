@@ -3,7 +3,7 @@
 
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { QuickDashboard } from '../../components/dashboard/QuickDashboard';
+import { QuickDashboard } from '../../components/Dashboard/QuickDashboard';
 import { Shipment } from '../../types';
 
 // Mock de shipments para tests
