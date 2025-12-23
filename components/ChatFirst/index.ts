@@ -6,6 +6,9 @@ export { ContextPanel } from './ContextPanel';
 export { SkillsBar, CORE_SKILLS } from './SkillsBar';
 export type { SkillId, Skill } from './SkillsBar';
 
+// Proactive Intelligence
+export { ProactiveInsights, RealTimeAlert } from './ProactiveInsights';
+
 // Skill Views
 export {
   SeguimientoSkillView,

@@ -30,6 +30,8 @@ import {
 } from './SkillViews';
 import { useProAssistantStore } from '../../stores/proAssistantStore';
 import { unifiedAI } from '../../services/unifiedAIService';
+import { contextIntelligenceService } from '../../services/contextIntelligenceService';
+import { ProactiveInsights } from './ProactiveInsights';
 
 // ============================================
 // TIPOS
@@ -59,54 +61,54 @@ interface ChatCommandCenterProps {
 }
 
 // ============================================
-// CONTEXTO DE BRIEFING MATUTINO
+// CONTEXTO DE BRIEFING MATUTINO (Usando servicio de inteligencia)
 // ============================================
 
-const generateMorningBriefing = (shipments: Shipment[], criticalCities: string[]): string => {
-  const total = shipments.length;
-  if (total === 0) {
-    return `Buenos dias! No tienes envios cargados todavia.
+const generateMorningBriefing = (shipments: Shipment[]): { message: string; actions: ChatAction[] } => {
+  const briefing = contextIntelligenceService.generateDailyBriefing(shipments);
+  const message = contextIntelligenceService.formatBriefingAsMessage(briefing);
 
-Puedo ayudarte a:
-- **Cargar guias** desde Excel o texto
-- **Conectar con transportadoras** para tracking en tiempo real
-- **Configurar alertas** para novedades criticas
+  // Generar acciones basadas en el contexto
+  const actions: ChatAction[] = [];
 
-Que te gustaria hacer primero?`;
+  if (briefing.keyMetrics.total === 0) {
+    actions.push({
+      id: 'cargar',
+      label: 'Cargar guias',
+      type: 'primary',
+      onClick: () => {},
+    });
+  } else {
+    if (briefing.criticalAlerts.length > 0) {
+      const firstAlert = briefing.criticalAlerts[0];
+      actions.push({
+        id: 'alert-action',
+        label: firstAlert.action?.label || 'Ver alertas',
+        type: 'primary',
+        onClick: () => {},
+      });
+    }
+
+    if (briefing.recommendations.length > 0) {
+      const firstRec = briefing.recommendations[0];
+      actions.push({
+        id: 'rec-action',
+        label: firstRec.action?.label || 'Ver sugerencias',
+        type: 'secondary',
+        onClick: () => {},
+      });
+    }
+
+    // Siempre agregar opcion de reporte
+    actions.push({
+      id: 'reporte',
+      label: 'Generar reporte',
+      type: 'secondary',
+      onClick: () => {},
+    });
   }
 
-  const delivered = shipments.filter(s => s.status === 'delivered').length;
-  const issues = shipments.filter(s => s.status === 'issue' || s.status === 'exception').length;
-  const atRisk = shipments.filter(s => {
-    if (s.status === 'delivered') return false;
-    const days = s.detailedInfo?.daysInTransit || 0;
-    return days >= 3;
-  }).length;
-
-  const deliveryRate = Math.round((delivered / total) * 100);
-
-  let message = `Buenos dias! Aqui esta tu resumen de hoy:
-
-**${total.toLocaleString()} envios activos** | ${deliveryRate}% entregados`;
-
-  if (atRisk > 0 || issues > 0) {
-    message += `
-
-⚠️ **Atencion requerida:**
-${atRisk > 0 ? `- ${atRisk} envios en riesgo de retraso` : ''}
-${issues > 0 ? `- ${issues} con novedades pendientes` : ''}`;
-  }
-
-  if (criticalCities.length > 0) {
-    message += `
-- ${criticalCities.length} ciudad${criticalCities.length > 1 ? 'es' : ''} critica${criticalCities.length > 1 ? 's' : ''}: ${criticalCities.slice(0, 3).join(', ')}${criticalCities.length > 3 ? '...' : ''}`;
-  }
-
-  message += `
-
-Que te gustaria hacer?`;
-
-  return message;
+  return { message, actions };
 };
 
 // ============================================
@@ -251,42 +253,42 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // Inicializar con briefing matutino
+  // Inicializar con briefing matutino inteligente
   useEffect(() => {
     if (!isInitialized) {
-      const briefing = generateMorningBriefing(shipments, criticalCities);
+      const { message, actions } = generateMorningBriefing(shipments);
+      const briefingData = contextIntelligenceService.generateDailyBriefing(shipments);
+
+      // Mapear acciones con handlers reales
+      const mappedActions = actions.map(action => {
+        let query = '';
+        if (action.id === 'cargar') query = 'Quiero cargar guias desde Excel';
+        else if (action.id === 'alert-action' && briefingData.criticalAlerts[0]?.action) {
+          query = briefingData.criticalAlerts[0].action.query;
+        }
+        else if (action.id === 'rec-action' && briefingData.recommendations[0]?.action) {
+          query = briefingData.recommendations[0].action.query;
+        }
+        else if (action.id === 'reporte') query = 'Genera el reporte del dia';
+
+        return {
+          ...action,
+          onClick: () => handleQuickAction(query),
+        };
+      });
+
       setMessages([
         {
           id: 'welcome',
           role: 'assistant',
-          content: briefing,
+          content: message,
           timestamp: new Date(),
-          actions: shipments.length > 0 ? [
-            {
-              id: 'ver-riesgo',
-              label: 'Ver envios en riesgo',
-              type: 'primary',
-              onClick: () => handleQuickAction('Muestrame los envios en riesgo'),
-            },
-            {
-              id: 'reporte',
-              label: 'Generar reporte',
-              type: 'secondary',
-              onClick: () => handleQuickAction('Genera el reporte del dia'),
-            },
-          ] : [
-            {
-              id: 'cargar',
-              label: 'Cargar guias',
-              type: 'primary',
-              onClick: () => handleQuickAction('Quiero cargar guias desde Excel'),
-            },
-          ],
+          actions: mappedActions,
         },
       ]);
       setIsInitialized(true);
     }
-  }, [isInitialized, shipments, criticalCities]);
+  }, [isInitialized, shipments]);
 
   // Escuchar clicks en ejemplos de skills
   useEffect(() => {
@@ -443,6 +445,15 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
           criticalCities={criticalCities}
           onCityClick={(city) => handleQuickAction(`Muestrame los envios de ${city}`)}
         />
+
+        {/* Proactive Insights - Alertas y sugerencias inteligentes */}
+        {shipments.length > 0 && !activeSkill && (
+          <ProactiveInsights
+            shipments={shipments}
+            onInsightAction={handleQuickAction}
+            maxVisible={2}
+          />
+        )}
 
         {/* Main Content Area - Split when skill is active */}
         <div className={`grid gap-6 ${activeSkill ? 'lg:grid-cols-2' : 'grid-cols-1'}`}>
