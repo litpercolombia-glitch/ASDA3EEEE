@@ -67,18 +67,111 @@ const SESSION_LOGS_KEY = 'litper_session_logs';
 const ACTIVITY_LOGS_KEY = 'litper_activity_logs';
 const AUTH_TOKEN_KEY = 'litper_auth_token';
 
-// Usuario admin por defecto
-const DEFAULT_ADMIN: User = {
-  id: 'admin_001',
-  email: 'admin@litper.com',
-  nombre: 'Administrador',
-  rol: 'admin',
-  createdAt: new Date().toISOString(),
-  activo: true,
-};
-
-// Password hasheado simple (en producción usar bcrypt)
-const DEFAULT_ADMIN_PASSWORD = 'admin123';
+// Usuarios productivos de Litper
+const LITPER_USERS: Array<{ user: User; password: string }> = [
+  // Chat & Atención
+  {
+    user: {
+      id: 'litper_karen_001',
+      email: 'karenlitper@gmail.com',
+      nombre: 'Karen',
+      rol: 'operador',
+      createdAt: '2024-12-01T00:00:00.000Z',
+      activo: true,
+    },
+    password: 'LP.CAROLINA_2024?Jm',
+  },
+  {
+    user: {
+      id: 'litper_dayana_002',
+      email: 'litperdayana@gmail.com',
+      nombre: 'Dayana',
+      rol: 'operador',
+      createdAt: '2024-12-01T00:00:00.000Z',
+      activo: true,
+    },
+    password: 'tELLEZ_LITper2025Angie?',
+  },
+  {
+    user: {
+      id: 'litper_david_003',
+      email: 'litperdavid@gmail.com',
+      nombre: 'David',
+      rol: 'operador',
+      createdAt: '2024-12-01T00:00:00.000Z',
+      activo: true,
+    },
+    password: '2025NORMAN_?litper',
+  },
+  // Tracking & Envíos
+  {
+    user: {
+      id: 'litper_felipe_004',
+      email: 'felipelitper@gmail.com',
+      nombre: 'Felipe',
+      rol: 'operador',
+      createdAt: '2024-12-01T00:00:00.000Z',
+      activo: true,
+    },
+    password: '2025?LITper.FELIPE',
+  },
+  {
+    user: {
+      id: 'litper_jimmy_005',
+      email: 'jimmylitper@gmail.com',
+      nombre: 'Jimmy',
+      rol: 'operador',
+      createdAt: '2024-12-01T00:00:00.000Z',
+      activo: true,
+    },
+    password: '20.25_JIMMY.LITper?',
+  },
+  {
+    user: {
+      id: 'litper_jhonnatan_006',
+      email: 'jhonnatanlitper@gmail.com',
+      nombre: 'Jhonnatan',
+      rol: 'operador',
+      createdAt: '2024-12-01T00:00:00.000Z',
+      activo: true,
+    },
+    password: '2025_EVAN10?LITper.?',
+  },
+  // Administración
+  {
+    user: {
+      id: 'litper_daniel_007',
+      email: 'daniellitper@gmail.com',
+      nombre: 'Daniel',
+      rol: 'admin',
+      createdAt: '2024-12-01T00:00:00.000Z',
+      activo: true,
+    },
+    password: 'ALEJANDRA_?2025Litper',
+  },
+  {
+    user: {
+      id: 'litper_maletas_008',
+      email: 'maletaslitper@gmail.com',
+      nombre: 'Maletas',
+      rol: 'admin',
+      createdAt: '2024-12-01T00:00:00.000Z',
+      activo: true,
+    },
+    password: '2025_KAREN.litper10?',
+  },
+  {
+    user: {
+      id: 'litper_colombia_009',
+      email: 'litpercolombia@gmail.com',
+      nombre: 'Litper Colombia',
+      rol: 'admin',
+      createdAt: '2024-12-01T00:00:00.000Z',
+      activo: true,
+    },
+    password: '?2024LP.JEferMoreno?',
+  },
+];
 
 // =====================================
 // FUNCIONES DE UTILIDAD
@@ -132,14 +225,16 @@ const getUsers = (): Map<string, { user: User; passwordHash: string }> => {
     }
   }
 
-  // Crear usuario admin por defecto
-  const defaultUsers = new Map<string, { user: User; passwordHash: string }>();
-  defaultUsers.set(DEFAULT_ADMIN.email, {
-    user: DEFAULT_ADMIN,
-    passwordHash: hashPassword(DEFAULT_ADMIN_PASSWORD),
-  });
-  saveUsers(defaultUsers);
-  return defaultUsers;
+  // Crear usuarios productivos de Litper
+  const productionUsers = new Map<string, { user: User; passwordHash: string }>();
+  for (const userData of LITPER_USERS) {
+    productionUsers.set(userData.user.email.toLowerCase(), {
+      user: userData.user,
+      passwordHash: hashPassword(userData.password),
+    });
+  }
+  saveUsers(productionUsers);
+  return productionUsers;
 };
 
 const saveUsers = (users: Map<string, { user: User; passwordHash: string }>): void => {

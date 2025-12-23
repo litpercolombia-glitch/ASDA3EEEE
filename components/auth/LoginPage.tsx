@@ -229,17 +229,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
             </button>
           </div>
 
-          {/* Demo credentials */}
-          <div className="mt-6 p-4 bg-slate-50 dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700">
-            <p className="text-xs text-slate-500 dark:text-slate-400 text-center mb-2">
-              Credenciales de demostración:
-            </p>
-            <div className="flex items-center justify-center gap-4 text-xs">
-              <span className="font-mono text-slate-600 dark:text-slate-300">admin@litper.com</span>
-              <span className="text-slate-400">|</span>
-              <span className="font-mono text-slate-600 dark:text-slate-300">admin123</span>
-            </div>
-          </div>
         </div>
       </div>
 
