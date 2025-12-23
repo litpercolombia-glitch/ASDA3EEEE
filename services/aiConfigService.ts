@@ -71,7 +71,7 @@ const DEFAULT_PROVIDERS: Record<AIProvider, AIProviderConfig> = {
     lastTested: null,
     lastTestResult: null,
     lastTestMessage: null,
-    model: 'gemini-1.5-flash',
+    model: 'gemini-pro',
     maxTokens: 4096,
     temperature: 0.8,
   },
@@ -124,8 +124,9 @@ async function testClaudeConnection(apiKey: string): Promise<{ success: boolean;
 
 async function testGeminiConnection(apiKey: string): Promise<{ success: boolean; message: string }> {
   try {
+    // Usar gemini-pro que es el modelo más estable
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -338,5 +339,45 @@ export const getActiveAIApiKey = (provider: AIProvider): string => {
 export const isAIProviderConfigured = (provider: AIProvider): boolean => {
   return useAIConfigStore.getState().isProviderConfigured(provider);
 };
+
+// ============================================
+// INICIALIZACIÓN AUTOMÁTICA DESDE ENV
+// ============================================
+
+/**
+ * Inicializa las API keys desde variables de entorno si no están configuradas
+ * Llamar esta función al iniciar la app
+ */
+export const initializeAIConfigFromEnv = (): void => {
+  const store = useAIConfigStore.getState();
+
+  // Claude
+  const claudeEnvKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
+  if (claudeEnvKey && !store.providers.claude.apiKey) {
+    store.setApiKey('claude', claudeEnvKey);
+  }
+
+  // Gemini
+  const geminiEnvKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (geminiEnvKey && !store.providers.gemini.apiKey) {
+    store.setApiKey('gemini', geminiEnvKey);
+  }
+
+  // OpenAI
+  const openaiEnvKey = import.meta.env.VITE_OPENAI_API_KEY;
+  if (openaiEnvKey && !store.providers.openai.apiKey) {
+    store.setApiKey('openai', openaiEnvKey);
+  }
+
+  console.log('[AI Config] Initialized from environment variables');
+};
+
+// Auto-inicializar cuando se importa el módulo
+if (typeof window !== 'undefined') {
+  // Ejecutar después de que el store se hidrate desde localStorage
+  setTimeout(() => {
+    initializeAIConfigFromEnv();
+  }, 100);
+}
 
 export default useAIConfigStore;
