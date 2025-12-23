@@ -15,3 +15,4 @@ export { default as ChartsDashboard } from './ChartsDashboard';
 export { default as SettingsPanel } from './SettingsPanel';
 export { default as ExportManager } from './ExportManager';
 export { default as ExcelImporter } from './ExcelImporter';
+export { default as UserAnalysisPanel } from './UserAnalysisPanel';

@@ -4,9 +4,11 @@
 export { ShipmentTimeline } from './ShipmentTimeline';
 export { JourneyMap } from './JourneyMap';
 export { BrainDashboard } from './BrainDashboard';
+export { AIBrainDashboard } from './AIBrainDashboard';
 
 export default {
   ShipmentTimeline,
   JourneyMap,
   BrainDashboard,
+  AIBrainDashboard,
 };
