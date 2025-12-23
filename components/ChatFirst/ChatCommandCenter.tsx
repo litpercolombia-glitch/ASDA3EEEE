@@ -329,35 +329,45 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
     }]);
 
     try {
-      // Preparar contexto
-      const context = {
-        shipments: shipments.slice(0, 50), // Limitar para performance
-        totalShipments: shipments.length,
-        criticalCities,
-        activeSkill,
-      };
-
-      // Llamar a IA
+      // Llamar a IA con firma correcta: (message, shipments, options)
       const response = await unifiedAI.chat(
         userMessage.content,
-        'chat',
-        shipments
+        shipments.slice(0, 50), // Limitar para performance
+        {
+          provider: 'claude',
+          includeHistory: true,
+        }
       );
 
+      // Generar acciones sugeridas basadas en el contenido
+      const suggestedActions: ChatAction[] = [];
+      if (response.text.toLowerCase().includes('reporte')) {
+        suggestedActions.push({
+          id: 'gen-report',
+          label: 'Generar reporte',
+          type: 'secondary',
+          onClick: () => handleQuickAction('Genera el reporte del dia'),
+        });
+      }
+      if (response.text.toLowerCase().includes('critico') || response.text.toLowerCase().includes('riesgo')) {
+        suggestedActions.push({
+          id: 'view-critical',
+          label: 'Ver criticos',
+          type: 'primary',
+          onClick: () => handleQuickAction('Muestrame los envios criticos'),
+        });
+      }
+
       // Reemplazar mensaje de loading con respuesta
+      // Nota: AIResponse usa 'text', no 'content'
       setMessages(prev => prev.map(m =>
         m.id === loadingId
           ? {
               ...m,
               id: `assistant-${Date.now()}`,
-              content: response.content || 'Lo siento, hubo un problema procesando tu mensaje.',
+              content: response.text || 'Lo siento, hubo un problema procesando tu mensaje.',
               isLoading: false,
-              actions: response.suggestedActions?.map((action: any, i: number) => ({
-                id: `action-${i}`,
-                label: action.label,
-                type: 'secondary' as const,
-                onClick: () => handleQuickAction(action.prompt || action.label),
-              })),
+              actions: suggestedActions.length > 0 ? suggestedActions : undefined,
             }
           : m
       ));
