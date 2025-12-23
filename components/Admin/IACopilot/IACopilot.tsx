@@ -1,9 +1,10 @@
 // ============================================
 // LITPER PRO - IA COPILOT
 // Asistente inteligente de logística con IA
+// Conectado a datos reales de Supabase
 // ============================================
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Brain,
   Send,
@@ -33,7 +34,12 @@ import {
   X,
   Bot,
   User,
+  Database,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
+import { dashboardService, guiasService, ciudadesService, alertasService } from '../../../services/supabaseService';
+import { chateaService } from '../../../services/chateaService';
 
 // ============================================
 // TIPOS
@@ -122,127 +128,183 @@ const SUGGESTED_QUESTIONS = [
 ];
 
 // ============================================
-// RESPUESTAS MOCK (En producción conectar a API IA)
+// DATOS EN TIEMPO REAL
 // ============================================
 
-const generateMockResponse = (userMessage: string): { content: string; insights?: Insight[] } => {
-  const lowerMessage = userMessage.toLowerCase();
+interface RealTimeData {
+  guiasHoy: number;
+  entregadasHoy: number;
+  novedadesHoy: number;
+  ventasHoy: number;
+  tasaEntrega: number;
+  ciudadesCriticas: Array<{ ciudad: string; tasa_entrega: number; total_guias: number }>;
+  alertasPendientes: number;
+  isConnected: boolean;
+}
 
-  if (lowerMessage.includes('resumen') || lowerMessage.includes('hoy')) {
+// Función para generar respuestas basadas en datos REALES
+const generateRealResponse = async (
+  userMessage: string,
+  realData: RealTimeData
+): Promise<{ content: string; insights?: Insight[] }> => {
+  const lowerMessage = userMessage.toLowerCase();
+  const fecha = new Date().toLocaleDateString('es-CO');
+
+  // Formatear moneda colombiana
+  const formatCOP = (value: number) =>
+    new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value);
+
+  if (lowerMessage.includes('resumen') || lowerMessage.includes('hoy') || lowerMessage.includes('cómo va')) {
+    const tasaFormateada = realData.tasaEntrega.toFixed(1);
+    const ventasFormateadas = formatCOP(realData.ventasHoy);
+
     return {
-      content: `📊 **Resumen del día (${new Date().toLocaleDateString('es-CO')})**
+      content: `📊 **Resumen del día (${fecha})** - DATOS EN VIVO
 
 Hasta el momento llevas:
-- **187 guías** procesadas (+12% vs ayer)
-- **142 entregas** exitosas (75.9% tasa)
-- **$4.2M** en ventas brutas
-- **8 novedades** pendientes
+- **${realData.guiasHoy} guías** procesadas
+- **${realData.entregadasHoy} entregas** exitosas (${tasaFormateada}% tasa)
+- **${ventasFormateadas}** en ventas brutas
+- **${realData.novedadesHoy} novedades** pendientes
 
-**Lo destacado:**
-- Bogotá lidera con 45 entregas exitosas
-- Coordinadora tiene la mejor tasa (82%)
-- Hay 3 guías con más de 5 días en tránsito
+${realData.ciudadesCriticas.length > 0 ? `
+**⚠️ Ciudades requieren atención:**
+${realData.ciudadesCriticas.slice(0, 3).map(c => `- ${c.ciudad}: ${c.tasa_entrega.toFixed(1)}% (${c.total_guias} guías)`).join('\n')}
+` : '**✅ Todas las ciudades con buen rendimiento**'}
 
-**Recomendación:** Revisar las 8 novedades pendientes antes de las 2pm para mejorar la tasa de cierre del día.`,
+**Recomendación:** ${realData.novedadesHoy > 5
+  ? 'Revisar las novedades pendientes antes de las 2pm para mejorar la tasa de cierre.'
+  : 'Excelente gestión de novedades. Mantén el ritmo.'}`,
       insights: [
-        { type: 'success', title: 'Ventas arriba', description: '+12% comparado con ayer', action: 'Ver detalle' },
-        { type: 'warning', title: '8 novedades', description: 'Requieren atención hoy', action: 'Gestionar' },
+        realData.tasaEntrega >= 75
+          ? { type: 'success', title: 'Tasa saludable', description: `${tasaFormateada}% de entrega`, action: 'Ver detalle' }
+          : { type: 'warning', title: 'Tasa baja', description: `${tasaFormateada}% - Meta: 75%`, action: 'Analizar' },
+        realData.novedadesHoy > 0
+          ? { type: 'warning', title: `${realData.novedadesHoy} novedades`, description: 'Requieren atención', action: 'Gestionar' }
+          : { type: 'success', title: 'Sin novedades', description: 'Todo al día' },
       ],
     };
   }
 
-  if (lowerMessage.includes('ciudad') && lowerMessage.includes('problema')) {
+  if (lowerMessage.includes('ciudad') && (lowerMessage.includes('problema') || lowerMessage.includes('crítica'))) {
+    if (realData.ciudadesCriticas.length === 0) {
+      return {
+        content: `✅ **Todas las ciudades están funcionando bien**
+
+No hay ciudades con problemas críticos de entrega en este momento.
+
+**Recomendación:** Mantén el monitoreo activo y revisa el semáforo regularmente.`,
+        insights: [
+          { type: 'success', title: 'Sin ciudades críticas', description: 'Todas operando normalmente' },
+        ],
+      };
+    }
+
+    const criticas = realData.ciudadesCriticas.filter(c => c.tasa_entrega < 60);
+    const observacion = realData.ciudadesCriticas.filter(c => c.tasa_entrega >= 60 && c.tasa_entrega < 70);
+
     return {
-      content: `🚨 **Ciudades con problemas de entrega**
+      content: `🚨 **Ciudades con problemas de entrega** - DATOS EN VIVO
 
-**Críticas (menos de 60% entrega):**
-1. **Quibdó** - 45% tasa | 11 guías | Causa: Zona de difícil acceso
-2. **Buenaventura** - 52% tasa | 8 guías | Causa: Problemas de seguridad
-3. **Tumaco** - 55% tasa | 5 guías | Causa: Falta de cobertura
+${criticas.length > 0 ? `**Críticas (menos de 60% entrega):**
+${criticas.map((c, i) => `${i + 1}. **${c.ciudad}** - ${c.tasa_entrega.toFixed(1)}% tasa | ${c.total_guias} guías`).join('\n')}
+` : ''}
+${observacion.length > 0 ? `**En observación (60-70% entrega):**
+${observacion.map(c => `- ${c.ciudad} (${c.tasa_entrega.toFixed(1)}%)`).join('\n')}
+` : ''}
 
-**En observación (60-70% entrega):**
-- Apartadó (62%)
-- Turbo (65%)
-- Lorica (68%)
-
-**Recomendación inmediata:** Pausar envíos COD a Quibdó y Buenaventura hasta mejorar las condiciones. Usar prepago obligatorio.`,
-      insights: [
-        { type: 'danger', title: 'Quibdó crítico', description: '45% tasa de entrega', action: 'Pausar envíos' },
-        { type: 'warning', title: 'Buenaventura', description: '52% tasa de entrega', action: 'Revisar' },
-      ],
+**Recomendación inmediata:** ${criticas.length > 0
+  ? `Considerar pausar envíos COD a ${criticas[0].ciudad} hasta mejorar las condiciones.`
+  : 'Monitorear las ciudades en observación.'}`,
+      insights: criticas.slice(0, 2).map(c => ({
+        type: 'danger' as const,
+        title: `${c.ciudad} crítico`,
+        description: `${c.tasa_entrega.toFixed(1)}% tasa de entrega`,
+        action: 'Pausar envíos',
+      })),
     };
   }
 
-  if (lowerMessage.includes('transportadora') || lowerMessage.includes('mejor')) {
+  if (lowerMessage.includes('alerta') || lowerMessage.includes('notificación') || lowerMessage.includes('whatsapp')) {
     return {
-      content: `🏆 **Ranking de Transportadoras (Último mes)**
+      content: `📱 **Sistema de Alertas WhatsApp** - ACTIVO
 
-| Transportadora | Tasa Entrega | Tiempo Prom. | Guías |
-|----------------|--------------|--------------|-------|
-| 🥇 Coordinadora | 82% | 2.3 días | 1,245 |
-| 🥈 Servientrega | 78% | 2.8 días | 987 |
-| 🥉 Interrapidísimo | 75% | 3.1 días | 756 |
-| TCC | 72% | 3.4 días | 432 |
-| Envía | 68% | 4.2 días | 298 |
+El sistema de notificaciones está ${realData.isConnected ? '✅ **CONECTADO**' : '⚠️ **DESCONECTADO**'}
 
-**Insight:** Coordinadora es la mejor opción general, pero para ciudades pequeñas Interrapidísimo tiene mejor cobertura.
+**Alertas configuradas:**
+- 🔴 Ciudad crítica (<60% entrega) → WhatsApp inmediato
+- 🟠 Guía retrasada (>5 días) → WhatsApp + Email
+- 🟢 Resumen diario → WhatsApp 6pm
 
-**Recomendación:** Usar Coordinadora para ciudades principales y Servientrega como backup.`,
+**Alertas pendientes:** ${realData.alertasPendientes}
+
+¿Deseas que envíe una alerta de prueba o el resumen del día?`,
       insights: [
-        { type: 'success', title: 'Coordinadora #1', description: '82% tasa de entrega', action: 'Ver detalles' },
-        { type: 'info', title: 'Tip', description: 'Interrapidísimo mejor en zonas rurales' },
+        {
+          type: realData.isConnected ? 'success' : 'warning',
+          title: realData.isConnected ? 'WhatsApp conectado' : 'Sin conexión',
+          description: realData.isConnected ? 'Notificaciones activas' : 'Verificar configuración',
+          action: 'Configurar'
+        },
       ],
     };
   }
 
-  if (lowerMessage.includes('predicción') || lowerMessage.includes('ventas') || lowerMessage.includes('próxima')) {
-    return {
-      content: `🔮 **Predicción de Ventas - Próxima Semana**
+  if (lowerMessage.includes('enviar') && lowerMessage.includes('resumen')) {
+    // Intentar enviar resumen por WhatsApp
+    try {
+      await chateaService.sendResumenDiario(
+        ['+573001234567'], // Este número debería venir de configuración
+        {
+          guiasHoy: realData.guiasHoy,
+          entregadas: realData.entregadasHoy,
+          tasaEntrega: realData.tasaEntrega,
+          novedades: realData.novedadesHoy,
+          ventas: realData.ventasHoy,
+        }
+      );
+      return {
+        content: `✅ **Resumen enviado por WhatsApp**
 
-Basado en el análisis de las últimas 8 semanas:
+Se ha enviado el resumen del día con los siguientes datos:
+- Guías: ${realData.guiasHoy}
+- Entregas: ${realData.entregadasHoy}
+- Tasa: ${realData.tasaEntrega.toFixed(1)}%
+- Ventas: ${formatCOP(realData.ventasHoy)}`,
+        insights: [
+          { type: 'success', title: 'Mensaje enviado', description: 'WhatsApp entregado', action: 'Ver' },
+        ],
+      };
+    } catch {
+      return {
+        content: `⚠️ **Error al enviar WhatsApp**
 
-| Día | Predicción | Confianza |
-|-----|------------|-----------|
-| Lunes | $5.2M | Alta (89%) |
-| Martes | $4.8M | Alta (87%) |
-| Miércoles | $4.5M | Media (78%) |
-| Jueves | $5.1M | Alta (85%) |
-| Viernes | $6.2M | Alta (92%) |
-| Sábado | $3.8M | Media (75%) |
-| Domingo | $2.1M | Alta (88%) |
-
-**Total estimado: $31.7M** (±$3.2M)
-
-**Factores considerados:**
-- Tendencia histórica (+15% MoM)
-- Temporada navideña (+20% esperado)
-- Día de pago (jueves/viernes)
-
-**Recomendación:** Aumentar inventario un 20% para el viernes.`,
-      insights: [
-        { type: 'success', title: 'Viernes fuerte', description: '$6.2M proyectado', action: 'Preparar inventario' },
-        { type: 'info', title: 'Tendencia positiva', description: '+15% crecimiento mensual' },
-      ],
-    };
+No se pudo enviar el resumen. Verifica la conexión con Chatea API.`,
+        insights: [
+          { type: 'danger', title: 'Error WhatsApp', description: 'Verificar configuración', action: 'Reintentar' },
+        ],
+      };
+    }
   }
 
-  // Respuesta genérica
+  // Respuesta genérica con datos reales
   return {
-    content: `Entiendo tu consulta sobre "${userMessage}".
+    content: `📊 Entiendo tu consulta sobre "${userMessage}".
 
-Basándome en los datos actuales de Litper:
+**Datos actuales de Litper (EN VIVO):**
 
-- **Total guías hoy:** 187
-- **Tasa de entrega:** 75.9%
-- **Ventas del día:** $4.2M
+- **Total guías hoy:** ${realData.guiasHoy}
+- **Tasa de entrega:** ${realData.tasaEntrega.toFixed(1)}%
+- **Ventas del día:** ${formatCOP(realData.ventasHoy)}
+- **Ciudades críticas:** ${realData.ciudadesCriticas.length}
 
 ¿Hay algo más específico que te gustaría saber? Puedo analizar:
 - Rendimiento por ciudad
 - Métricas de transportadoras
-- Proyecciones de ventas
+- Estado de alertas WhatsApp
 - Análisis de novedades`,
     insights: [
-      { type: 'info', title: 'Tip', description: 'Prueba preguntas más específicas para mejores insights' },
+      { type: 'info', title: 'Datos en vivo', description: `Conectado a Supabase` },
     ],
   };
 };
@@ -264,6 +326,9 @@ Estoy aquí para ayudarte con:
 - 🚚 Optimización de rutas
 - ⚠️ Detección de problemas
 - 💡 Recomendaciones inteligentes
+- 📱 Alertas WhatsApp
+
+**Conectado a datos en tiempo real de Supabase**
 
 ¿En qué puedo ayudarte hoy?`,
       timestamp: new Date(),
@@ -273,8 +338,72 @@ Estoy aquí para ayudarte con:
   const [inputValue, setInputValue] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [realTimeData, setRealTimeData] = useState<RealTimeData>({
+    guiasHoy: 0,
+    entregadasHoy: 0,
+    novedadesHoy: 0,
+    ventasHoy: 0,
+    tasaEntrega: 0,
+    ciudadesCriticas: [],
+    alertasPendientes: 0,
+    isConnected: false,
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Cargar datos reales de Supabase
+  const fetchRealData = useCallback(async () => {
+    try {
+      // Obtener datos del dashboard
+      const dashData = await dashboardService.getStats();
+
+      // Obtener guías de hoy
+      const guiasHoy = await guiasService.getHoy();
+
+      // Obtener ciudades críticas
+      const ciudades = await ciudadesService.getCriticas();
+
+      // Obtener alertas no leídas
+      const alertas = await alertasService.getNoLeidas();
+
+      // Calcular estadísticas
+      const entregadas = guiasHoy.filter(g =>
+        g.estado?.toLowerCase().includes('entregad')
+      ).length;
+      const novedades = guiasHoy.filter(g => g.tiene_novedad).length;
+      const ventas = guiasHoy.reduce((sum, g) => sum + (g.valor_declarado || 0), 0);
+      const tasa = guiasHoy.length > 0 ? (entregadas / guiasHoy.length) * 100 : 0;
+
+      setRealTimeData({
+        guiasHoy: guiasHoy.length,
+        entregadasHoy: entregadas,
+        novedadesHoy: novedades,
+        ventasHoy: ventas,
+        tasaEntrega: tasa,
+        ciudadesCriticas: ciudades.map(c => ({
+          ciudad: c.ciudad,
+          tasa_entrega: c.tasa_entrega,
+          total_guias: c.total_guias,
+        })),
+        alertasPendientes: alertas.length,
+        isConnected: true,
+      });
+      setIsConnected(true);
+    } catch (error) {
+      console.error('Error fetching real data:', error);
+      setIsConnected(false);
+      // Usar datos de fallback si no hay conexión
+      setRealTimeData(prev => ({ ...prev, isConnected: false }));
+    }
+  }, []);
+
+  // Cargar datos al montar y cada 30 segundos
+  useEffect(() => {
+    fetchRealData();
+    const interval = setInterval(fetchRealData, 30000);
+    return () => clearInterval(interval);
+  }, [fetchRealData]);
 
   // Auto-scroll al final
   useEffect(() => {
@@ -302,21 +431,31 @@ Estoy aquí para ayudarte con:
     setMessages(prev => [...prev, userMessage, loadingMessage]);
     setInputValue('');
 
-    // Simular delay de IA
-    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
+    try {
+      // Obtener respuesta con datos reales
+      const response = await generateRealResponse(content, realTimeData);
 
-    const response = generateMockResponse(content);
+      const assistantMessage: Message = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: response.content,
+        timestamp: new Date(),
+        insights: response.insights,
+        suggestions: SUGGESTED_QUESTIONS.slice(Math.floor(Math.random() * 3), Math.floor(Math.random() * 3) + 2),
+      };
 
-    const assistantMessage: Message = {
-      id: `assistant-${Date.now()}`,
-      role: 'assistant',
-      content: response.content,
-      timestamp: new Date(),
-      insights: response.insights,
-      suggestions: SUGGESTED_QUESTIONS.slice(Math.floor(Math.random() * 3), Math.floor(Math.random() * 3) + 2),
-    };
-
-    setMessages(prev => prev.filter(m => !m.isLoading).concat(assistantMessage));
+      setMessages(prev => prev.filter(m => !m.isLoading).concat(assistantMessage));
+    } catch (error) {
+      console.error('Error generating response:', error);
+      const errorMessage: Message = {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: '⚠️ Error al procesar tu consulta. Por favor intenta de nuevo.',
+        timestamp: new Date(),
+        insights: [{ type: 'danger', title: 'Error', description: 'Revisa la conexión' }],
+      };
+      setMessages(prev => prev.filter(m => !m.isLoading).concat(errorMessage));
+    }
   };
 
   const handleQuickAction = (action: QuickAction) => {
@@ -354,6 +493,31 @@ Estoy aquí para ayudarte con:
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Indicador de conexión */}
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
+              isConnected
+                ? 'bg-emerald-500/20 text-emerald-400'
+                : 'bg-red-500/20 text-red-400'
+            }`}>
+              {isConnected ? (
+                <>
+                  <Wifi className="w-4 h-4" />
+                  <span className="text-xs font-medium">En vivo</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-4 h-4" />
+                  <span className="text-xs font-medium">Offline</span>
+                </>
+              )}
+            </div>
+            <button
+              onClick={fetchRealData}
+              className="p-2 hover:bg-navy-700 rounded-xl text-slate-400 hover:text-white transition-all"
+              title="Actualizar datos"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
             <button
               onClick={() => setShowHistory(!showHistory)}
               className="p-2 hover:bg-navy-700 rounded-xl text-slate-400 hover:text-white transition-all"
