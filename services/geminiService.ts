@@ -187,7 +187,7 @@ export const askAssistant = async (
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: API_CONFIG.GEMINI_MODELS.PRO,
       contents: fullPrompt,
       config: {
         tools: tools,
@@ -259,7 +259,7 @@ export const trackShipmentWithAI = async (
         `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: API_CONFIG.GEMINI_MODELS.PRO,
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
@@ -325,7 +325,7 @@ export const parseTrackingScreenshot = async (
         `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: API_CONFIG.GEMINI_MODELS.VISION,
       contents: {
         parts: [{ inlineData: { mimeType: 'image/png', data: base64Data } }, { text: prompt }],
       },

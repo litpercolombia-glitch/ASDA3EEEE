@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Send,
   Mic,
+  MicOff,
   Paperclip,
   Sparkles,
   Bot,
@@ -19,7 +20,11 @@ import {
   X,
   Brain,
   Cloud,
+  Image as ImageIcon,
+  Globe,
+  Trash2,
 } from 'lucide-react';
+import { analyzeEvidenceImage, transcribeAudio } from '../../services/geminiService';
 import { Shipment } from '../../types';
 import { ContextPanel } from './ContextPanel';
 import { SkillsBar, CORE_SKILLS, Skill, SkillId } from './SkillsBar';
@@ -56,6 +61,8 @@ interface ChatMessage {
   timestamp: Date;
   actions?: ChatAction[];
   isLoading?: boolean;
+  image?: string; // Base64 image
+  imageUrl?: string; // Generated image URL
 }
 
 interface ChatAction {
@@ -179,6 +186,26 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onActionClick })
             </div>
           ) : (
             <div className="text-sm whitespace-pre-wrap leading-relaxed">
+              {/* Mostrar imagen adjunta del usuario */}
+              {message.image && (
+                <div className="mb-2">
+                  <img
+                    src={message.image}
+                    alt="Imagen adjunta"
+                    className="max-w-[200px] max-h-[200px] rounded-lg object-cover"
+                  />
+                </div>
+              )}
+              {/* Mostrar imagen generada por IA */}
+              {message.imageUrl && (
+                <div className="mb-2">
+                  <img
+                    src={message.imageUrl}
+                    alt="Imagen generada"
+                    className="max-w-full rounded-lg"
+                  />
+                </div>
+              )}
               {message.content.split('\n').map((line, i) => {
                 // Simple markdown-like parsing
                 if (line.startsWith('**') && line.endsWith('**')) {
@@ -256,8 +283,16 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
   const [selectedModel, setSelectedModel] = useState<AIProvider>(primaryProvider);
   const [showModelSelector, setShowModelSelector] = useState(false);
 
+  // Estados multimodales
+  const [attachedImage, setAttachedImage] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const [webSearchEnabled, setWebSearchEnabled] = useState(true);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-scroll a nuevos mensajes
   const scrollToBottom = useCallback(() => {
@@ -320,17 +355,21 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
 
   // Manejar envio de mensaje
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isProcessing) return;
+    if ((!inputValue.trim() && !attachedImage) || isProcessing) return;
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: inputValue.trim(),
+      content: inputValue.trim() || (attachedImage ? 'Analiza esta imagen' : ''),
       timestamp: new Date(),
+      image: attachedImage || undefined,
     };
 
+    const currentImage = attachedImage;
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
+    setAttachedImage(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setIsProcessing(true);
 
     // Mensaje de loading
@@ -344,15 +383,30 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
     }]);
 
     try {
+      let responseText = '';
+
+      // Si hay imagen adjunta, analizarla primero
+      if (currentImage) {
+        try {
+          const imageAnalysis = await analyzeEvidenceImage(currentImage);
+          responseText = `**Análisis de imagen:**\n${imageAnalysis}\n\n`;
+        } catch (imageError) {
+          console.error('Error analizando imagen:', imageError);
+          responseText = '*No se pudo analizar la imagen.*\n\n';
+        }
+      }
+
       // Llamar a IA con el modelo seleccionado
       const response = await unifiedAI.chat(
-        userMessage.content,
+        userMessage.content + (responseText ? `\n\nContexto de imagen: ${responseText}` : ''),
         shipments.slice(0, 50), // Limitar para performance
         {
           provider: selectedModel,
           includeHistory: true,
         }
       );
+
+      responseText += response.text;
 
       // Generar acciones sugeridas basadas en el contenido
       const suggestedActions: ChatAction[] = [];
@@ -374,15 +428,15 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
       }
 
       // Reemplazar mensaje de loading con respuesta
-      // Nota: AIResponse usa 'text', no 'content'
       setMessages(prev => prev.map(m =>
         m.id === loadingId
           ? {
               ...m,
               id: `assistant-${Date.now()}`,
-              content: response.text || 'Lo siento, hubo un problema procesando tu mensaje.',
+              content: responseText || 'Lo siento, hubo un problema procesando tu mensaje.',
               isLoading: false,
               actions: suggestedActions.length > 0 ? suggestedActions : undefined,
+              imageUrl: response.image, // Imagen generada por IA
             }
           : m
       ));
@@ -429,6 +483,101 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  // ============================================
+  // FUNCIONES MULTIMODALES
+  // ============================================
+
+  // Manejar selección de imagen
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAttachedImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Remover imagen adjunta
+  const handleRemoveImage = () => {
+    setAttachedImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Iniciar grabación de audio
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(chunks, { type: 'audio/wav' });
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64Audio = (reader.result as string).split(',')[1];
+
+          // Agregar mensaje de sistema indicando transcripción
+          setMessages(prev => [...prev, {
+            id: `system-${Date.now()}`,
+            role: 'system',
+            content: 'Transcribiendo audio...',
+            timestamp: new Date(),
+          }]);
+
+          try {
+            const transcription = await transcribeAudio(base64Audio);
+            if (transcription) {
+              setInputValue(transcription);
+              // Remover mensaje de transcripción
+              setMessages(prev => prev.filter(m => !m.content.includes('Transcribiendo')));
+            }
+          } catch (error) {
+            console.error('Error transcribiendo audio:', error);
+          }
+        };
+        reader.readAsDataURL(audioBlob);
+
+        // Detener tracks del stream
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error accediendo al micrófono:', error);
+      alert('No se pudo acceder al micrófono. Por favor verifica los permisos.');
+    }
+  };
+
+  // Detener grabación de audio
+  const stopRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      setMediaRecorder(null);
+    }
+  };
+
+  // Toggle de grabación
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
     }
   };
 
@@ -561,6 +710,31 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
 
             {/* Input Area */}
             <div className="border-t border-white/10 p-4">
+              {/* Image Preview */}
+              {attachedImage && (
+                <div className="mb-3 relative inline-block">
+                  <img
+                    src={attachedImage}
+                    alt="Preview"
+                    className="max-h-24 rounded-lg border border-white/20"
+                  />
+                  <button
+                    onClick={handleRemoveImage}
+                    className="absolute -top-2 -right-2 p-1 bg-red-500 rounded-full text-white hover:bg-red-600 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+
+              {/* Recording Indicator */}
+              {isRecording && (
+                <div className="mb-3 flex items-center gap-2 text-red-400 text-sm">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  <span>Grabando audio... Haz clic en el micrófono para detener</span>
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
                 {/* Model Selector */}
                 <div className="relative">
@@ -625,10 +799,39 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
                   )}
                 </div>
 
+                {/* File Input Hidden */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+
+                {/* Attach Image Button */}
                 <button
-                  className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`p-2 rounded-lg transition-colors ${
+                    attachedImage
+                      ? 'text-accent-400 bg-accent-500/20'
+                      : 'text-slate-400 hover:text-white hover:bg-white/10'
+                  }`}
+                  title="Adjuntar imagen"
                 >
                   <Paperclip className="w-5 h-5" />
+                </button>
+
+                {/* Web Search Toggle */}
+                <button
+                  onClick={() => setWebSearchEnabled(!webSearchEnabled)}
+                  className={`p-2 rounded-lg transition-colors ${
+                    webSearchEnabled
+                      ? 'text-blue-400 bg-blue-500/20'
+                      : 'text-slate-400 hover:text-white hover:bg-white/10'
+                  }`}
+                  title={webSearchEnabled ? 'Búsqueda web activa' : 'Activar búsqueda web'}
+                >
+                  <Globe className="w-5 h-5" />
                 </button>
 
                 <div className="flex-1 relative">
@@ -655,18 +858,25 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
                   )}
                 </div>
 
+                {/* Mic Button */}
                 <button
-                  className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                  onClick={toggleRecording}
+                  className={`p-2 rounded-lg transition-colors ${
+                    isRecording
+                      ? 'text-red-400 bg-red-500/20 animate-pulse'
+                      : 'text-slate-400 hover:text-white hover:bg-white/10'
+                  }`}
+                  title={isRecording ? 'Detener grabación' : 'Grabar audio'}
                 >
-                  <Mic className="w-5 h-5" />
+                  {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                 </button>
 
                 <button
                   onClick={handleSendMessage}
-                  disabled={!inputValue.trim() || isProcessing}
+                  disabled={(!inputValue.trim() && !attachedImage) || isProcessing}
                   className={`
                     p-3 rounded-xl transition-all
-                    ${inputValue.trim() && !isProcessing
+                    ${(inputValue.trim() || attachedImage) && !isProcessing
                       ? 'bg-gradient-to-r from-accent-500 to-accent-600 text-white hover:shadow-lg hover:shadow-accent-500/30'
                       : 'bg-white/5 text-slate-500 cursor-not-allowed'
                     }
