@@ -41,6 +41,71 @@ export interface DatosCSVProcesados {
 
 // ===== MÉTRICAS =====
 export type EstadoRendimiento = 'excelente' | 'bueno' | 'regular' | 'bajo';
+export type EstadoSemaforo = 'verde' | 'amarillo' | 'rojo' | 'gris';
+export type NivelRacha = 'fuego' | 'caliente' | 'encendido' | 'inicio' | 'ninguno';
+
+// Métricas avanzadas por usuario
+export interface MetricasAvanzadasUsuario {
+  // Eficiencia basada en 3 min/guía
+  eficiencia: number;           // (Guías × 3) / Tiempo Real × 100
+  eficienciaEstado: EstadoRendimiento;
+
+  // Meta diaria
+  metaDiaria: {
+    guiasHoy: number;
+    metaGuias: number;          // 80 por defecto
+    progreso: number;           // porcentaje
+    horasRestantes: number;     // basado en ritmo actual
+  };
+
+  // Racha de días consecutivos
+  racha: {
+    dias: number;
+    nivel: NivelRacha;
+    icono: string;
+  };
+
+  // Semáforo
+  semaforo: EstadoSemaforo;
+
+  // Análisis por horario
+  analisisPorHorario: {
+    mejorHora: string;
+    peorHora: string;
+    guiasPorHora: { hora: string; guias: number; eficiencia: number }[];
+  };
+
+  // Resumen del día
+  resumenDia: {
+    numero1: { valor: number; label: string; icono: string };
+    numero2: { valor: number; label: string; icono: string };
+    numero3: { valor: number; label: string; icono: string };
+  };
+}
+
+// Anomalías detectadas
+export interface Anomalia {
+  id: string;
+  tipo: 'tiempo_imposible' | 'guias_cero' | 'eficiencia_anormal' | 'datos_faltantes';
+  usuario: string;
+  descripcion: string;
+  valor: number;
+  valorEsperado: number;
+  severidad: 'alta' | 'media' | 'baja';
+  fecha?: string;
+  ronda?: number;
+}
+
+// Problema detectado
+export interface Problema {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  usuariosAfectados: string[];
+  impacto: number; // 1-100
+  categoria: 'rendimiento' | 'tiempo' | 'novedades' | 'anomalias';
+  icono: string;
+}
 
 export interface MetricasUsuario {
   usuario: string;
@@ -58,6 +123,8 @@ export interface MetricasUsuario {
   estado: EstadoRendimiento;
   alertas: AlertaPersonal[];
   tendencia: 'subiendo' | 'estable' | 'bajando';
+  // Nuevas métricas avanzadas
+  avanzadas?: MetricasAvanzadasUsuario;
 }
 
 export interface MetricasGlobales {
@@ -79,6 +146,16 @@ export interface MetricasGlobales {
     bajo: number;
   };
   metaEquipo: number; // 85% por defecto
+  // Nuevas métricas avanzadas
+  eficienciaEquipo?: number;       // Eficiencia promedio del equipo
+  top3Problemas?: Problema[];      // Top 3 problemas del día
+  anomalias?: Anomalia[];          // Anomalías detectadas
+  semaforoEquipo?: {               // Distribución semáforo
+    verde: number;
+    amarillo: number;
+    rojo: number;
+    gris: number;
+  };
 }
 
 // ===== ALERTAS =====
