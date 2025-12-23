@@ -1,608 +1,382 @@
-/**
- * Claude AI Service - Anthropic Integration
- * Replaces Google Gemini with Claude for superior reasoning and Spanish language support
- */
+// ============================================
+// LITPER COMMAND CENTER - CLAUDE AI SERVICE
+// Servicio de IA conversacional con Claude
+// ============================================
 
-import Anthropic from '@anthropic-ai/sdk';
-import { AITrackingResult, ShipmentStatus, Shipment } from '../types';
-import { API_CONFIG } from '../config/constants';
-import { APIError, logError } from '../utils/errorHandler';
-import { validateApiKey } from '../utils/validators';
+import { guiasService, ciudadesService, alertasService } from './supabaseService';
 
-/**
- * Get configured Anthropic client
- */
-const getClient = (): Anthropic => {
-  const apiKey = API_CONFIG.CLAUDE_API_KEY;
-  validateApiKey(apiKey);
-  return new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
-};
+// ============================================
+// CONFIGURACIÓN
+// ============================================
 
-/**
- * Analyze delivery evidence image using Claude Vision
- * @param base64Image - Base64 encoded image data
- * @returns Analysis description
- */
-export const analyzeEvidenceImage = async (base64Image: string): Promise<string> => {
+const ANTHROPIC_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || '';
+const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+const MAX_TOKENS = 4096;
+
+// ============================================
+// TIPOS
+// ============================================
+
+export interface ClaudeMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ClaudeResponse {
+  content: string;
+  artifacts?: Artifact[];
+  suggestions?: string[];
+  skillUsed?: string;
+  tokensUsed?: number;
+}
+
+export interface Artifact {
+  type: 'chart' | 'table' | 'report' | 'action' | 'alert';
+  title: string;
+  data: Record<string, unknown>;
+  actions?: ArtifactAction[];
+}
+
+export interface ArtifactAction {
+  label: string;
+  action: string;
+  params?: Record<string, unknown>;
+}
+
+export interface SkillContext {
+  guias: Awaited<ReturnType<typeof guiasService.getHoy>>;
+  ciudades: Awaited<ReturnType<typeof ciudadesService.getAll>>;
+  alertas: Awaited<ReturnType<typeof alertasService.getNoLeidas>>;
+  stats: {
+    totalGuiasHoy: number;
+    entregadas: number;
+    enTransito: number;
+    novedades: number;
+    tasaEntrega: number;
+    ventasHoy: number;
+  };
+}
+
+// ============================================
+// SYSTEM PROMPT
+// ============================================
+
+const getSystemPrompt = () => `Eres LITPER AI, el asistente inteligente del Centro de Comando de Litper, una empresa de logística en Colombia.
+
+## TU ROL
+- Eres experto en logística, envíos y gestión de guías
+- Tienes acceso en tiempo real a todos los datos del negocio
+- Puedes analizar, recomendar y ejecutar acciones
+- Hablas español colombiano de forma profesional pero amigable
+
+## DATOS QUE TIENES ACCESO
+- Guías y envíos (estados, ciudades, transportadoras)
+- Estadísticas de ciudades (tasa de entrega, semáforo)
+- Finanzas (ingresos, gastos, márgenes)
+- Alertas y notificaciones
+- Historial de cargas
+
+## SKILLS DISPONIBLES
+1. **[GUIAS]** - Buscar, analizar y gestionar guías
+2. **[CIUDADES]** - Monitorear ciudades, pausar/reanudar envíos
+3. **[FINANZAS]** - Analizar ingresos, gastos, márgenes
+4. **[REPORTES]** - Generar informes y estadísticas
+5. **[ALERTAS]** - Configurar y enviar alertas WhatsApp
+6. **[AUTOMATIZAR]** - Crear reglas de automatización
+
+## FORMATO DE RESPUESTAS
+- Usa markdown para formatear
+- Usa emojis relevantes pero sin exceso
+- Para datos usa tablas cuando sea apropiado
+- Sé conciso pero completo
+- Siempre ofrece acciones siguientes
+
+## CONTEXTO ACTUAL
+Fecha: ${new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+Hora: ${new Date().toLocaleTimeString('es-CO')}
+`;
+
+// ============================================
+// FUNCIONES AUXILIARES
+// ============================================
+
+async function getBusinessContext(): Promise<SkillContext> {
   try {
-    const client = getClient();
-    const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
+    const [guias, ciudades, alertas] = await Promise.all([
+      guiasService.getHoy(),
+      ciudadesService.getAll(),
+      alertasService.getNoLeidas(),
+    ]);
 
-    if (!base64Data) {
-      throw new APIError('Imagen inválida o vacía', 400);
-    }
+    const entregadas = guias.filter(g => g.estado?.toLowerCase().includes('entregad')).length;
+    const enTransito = guias.filter(g => g.estado?.toLowerCase().includes('transito')).length;
+    const novedades = guias.filter(g => g.tiene_novedad).length;
+    const ventasHoy = guias.reduce((sum, g) => sum + (g.valor_declarado || 0), 0);
+    const tasaEntrega = guias.length > 0 ? (entregadas / guias.length) * 100 : 0;
 
-    // Detect image type
-    const imageType = base64Image.match(/^data:image\/(\w+);base64,/)?.[1] || 'jpeg';
-    const mediaType = `image/${imageType}` as
-      | 'image/jpeg'
-      | 'image/png'
-      | 'image/gif'
-      | 'image/webp';
-
-    const response = await client.messages.create({
-      model: API_CONFIG.CLAUDE_MODELS.VISION,
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: mediaType,
-                data: base64Data,
-              },
-            },
-            {
-              type: 'text',
-              text: 'Analiza esta imagen de evidencia de entrega logística. Describe el estado del paquete, si es legible el número de guía, y si hay daños visibles. Sé breve y profesional en español.',
-            },
-          ],
-        },
-      ],
-    });
-
-    const result =
-      response.content[0].type === 'text'
-        ? response.content[0].text
-        : 'No se pudo analizar la imagen.';
-
-    return result;
-  } catch (error) {
-    logError(error, 'analyzeEvidenceImage');
-
-    if (error instanceof APIError) {
-      throw error;
-    }
-
-    throw new APIError('Error al analizar imagen con Claude Vision', 500, error);
-  }
-};
-
-/**
- * Generate marketing content using Claude
- * Note: Claude doesn't generate images, but can create compelling marketing copy
- * @param prompt - Marketing content prompt
- * @returns Marketing text
- */
-export const generateMarketingContent = async (prompt: string): Promise<string> => {
-  try {
-    const client = getClient();
-
-    if (!prompt || prompt.trim().length === 0) {
-      throw new APIError('Prompt vacío para generación de contenido', 400);
-    }
-
-    const response = await client.messages.create({
-      model: API_CONFIG.CLAUDE_MODELS.DEFAULT,
-      max_tokens: 2048,
-      messages: [
-        {
-          role: 'user',
-          content: `Eres un experto en marketing para empresas de logística. ${prompt}\n\nGenera contenido profesional y persuasivo en español.`,
-        },
-      ],
-    });
-
-    return response.content[0].type === 'text' ? response.content[0].text : '';
-  } catch (error) {
-    logError(error, 'generateMarketingContent');
-    throw new APIError('Error al generar contenido de marketing', 500, error);
-  }
-};
-
-/**
- * Track shipment using Claude with web search capabilities
- * @param trackingNumber - Tracking number
- * @param carrier - Carrier name
- * @returns AI tracking result
- */
-export const trackShipmentWithAI = async (
-  trackingNumber: string,
-  carrier: string
-): Promise<AITrackingResult> => {
-  try {
-    const client = getClient();
-
-    const response = await client.messages.create({
-      model: API_CONFIG.CLAUDE_MODELS.DEFAULT,
-      max_tokens: 2048,
-      messages: [
-        {
-          role: 'user',
-          content: `Analiza el siguiente número de guía de la transportadora ${carrier}: ${trackingNumber}
-
-Por favor, proporciona:
-1. Estado actual estimado
-2. Ubicación probable
-3. Tiempo estimado de entrega
-4. Recomendaciones
-
-Responde en español y en formato estructurado.`,
-        },
-      ],
-    });
-
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
-
-    // Parse Claude's response
     return {
-      status: ShipmentStatus.IN_TRANSIT,
-      location: 'Ubicación pendiente de confirmación',
-      estimatedDelivery: 'Por determinar',
-      lastUpdate: new Date().toISOString(),
-      aiSummary: text,
-      confidence: 0.7,
+      guias,
+      ciudades,
+      alertas,
+      stats: {
+        totalGuiasHoy: guias.length,
+        entregadas,
+        enTransito,
+        novedades,
+        tasaEntrega,
+        ventasHoy,
+      },
     };
   } catch (error) {
-    logError(error, 'trackShipmentWithAI');
-    throw new APIError('Error al rastrear envío con IA', 500, error);
-  }
-};
-
-/**
- * Analyze tracking screenshot using Claude Vision
- * @param base64Image - Base64 encoded screenshot
- * @returns Array of tracking results
- */
-export const analyzeTrackingScreenshot = async (
-  base64Image: string
-): Promise<AITrackingResult[]> => {
-  try {
-    const client = getClient();
-    const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
-
-    if (!base64Data) {
-      throw new APIError('Imagen inválida o vacía', 400);
-    }
-
-    const imageType = base64Image.match(/^data:image\/(\w+);base64,/)?.[1] || 'jpeg';
-    const mediaType = `image/${imageType}` as
-      | 'image/jpeg'
-      | 'image/png'
-      | 'image/gif'
-      | 'image/webp';
-
-    const response = await client.messages.create({
-      model: API_CONFIG.CLAUDE_MODELS.VISION,
-      max_tokens: 4096,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: mediaType,
-                data: base64Data,
-              },
-            },
-            {
-              type: 'text',
-              text: `Analiza esta captura de pantalla de seguimiento de envíos (probablemente de 17track.net).
-
-Extrae para cada guía visible:
-1. Número de guía
-2. Estado actual
-3. Última ubicación
-4. Fecha de última actualización
-5. Transportadora
-
-Responde en formato JSON array con esta estructura:
-[
-  {
-    "trackingNumber": "...",
-    "status": "...",
-    "location": "...",
-    "lastUpdate": "...",
-    "carrier": "..."
-  }
-]
-
-Si no puedes extraer toda la información, usa "N/A" para campos faltantes.`,
-            },
-          ],
-        },
-      ],
-    });
-
-    const text = response.content[0].type === 'text' ? response.content[0].text : '[]';
-
-    // Try to parse JSON from Claude's response
-    try {
-      const jsonMatch = text.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        return parsed.map((item: any) => ({
-          status: item.status || ShipmentStatus.PENDING,
-          location: item.location || 'Ubicación no disponible',
-          estimatedDelivery: item.estimatedDelivery || 'Por determinar',
-          lastUpdate: item.lastUpdate || new Date().toISOString(),
-          aiSummary: `Guía ${item.trackingNumber}: ${item.status}`,
-          confidence: 0.8,
-        }));
-      }
-    } catch (parseError) {
-      logError(parseError, 'analyzeTrackingScreenshot.parse');
-    }
-
-    // Fallback: return text summary
-    return [
-      {
-        status: ShipmentStatus.PENDING,
-        location: 'Análisis disponible',
-        estimatedDelivery: 'Ver resumen',
-        lastUpdate: new Date().toISOString(),
-        aiSummary: text,
-        confidence: 0.6,
+    console.error('Error getting business context:', error);
+    return {
+      guias: [],
+      ciudades: [],
+      alertas: [],
+      stats: {
+        totalGuiasHoy: 0,
+        entregadas: 0,
+        enTransito: 0,
+        novedades: 0,
+        tasaEntrega: 0,
+        ventasHoy: 0,
       },
-    ];
-  } catch (error) {
-    logError(error, 'analyzeTrackingScreenshot');
-    throw new APIError('Error al analizar captura de seguimiento', 500, error);
-  }
-};
-
-/**
- * AI Assistant for general queries with shipment context
- * @param question - User's question
- * @param context - Optional context (shipment data)
- * @returns Assistant's response
- */
-export const askAssistant = async (question: string, context?: string): Promise<string> => {
-  try {
-    const client = getClient();
-
-    if (!question || question.trim().length === 0) {
-      throw new APIError('Pregunta vacía', 400);
-    }
-
-    const systemPrompt = `Eres un asistente experto en logística y seguimiento de envíos en Colombia.
-Trabajas para Litper Pro, una plataforma de gestión logística.
-Ayudas con:
-- Seguimiento de guías
-- Análisis de riesgos de entrega
-- Recomendaciones para resolver novedades
-- Comunicación con clientes
-- Optimización de rutas y tiempos
-
-Siempre respondes en español de forma profesional, clara y útil.`;
-
-    const userMessage = context
-      ? `Contexto de envíos:\n${context}\n\nPregunta: ${question}`
-      : question;
-
-    const response = await client.messages.create({
-      model: API_CONFIG.CLAUDE_MODELS.DEFAULT,
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: userMessage,
-        },
-      ],
-    });
-
-    return response.content[0].type === 'text' ? response.content[0].text : 'Sin respuesta';
-  } catch (error) {
-    logError(error, 'askAssistant');
-    throw new APIError('Error al consultar asistente', 500, error);
-  }
-};
-
-/**
- * Batch analyze multiple shipments for risk assessment
- * @param shipments - Array of shipments
- * @returns Analysis summary
- */
-export const batchAnalyzeShipments = async (shipments: Shipment[]): Promise<string> => {
-  try {
-    const client = getClient();
-
-    const shipmentSummary = shipments
-      .slice(0, 20) // Limit to first 20 for token efficiency
-      .map(
-        (s) =>
-          `- Guía ${s.id}: ${s.carrier}, ${s.status}, ${s.detailedInfo?.daysInTransit || 0} días en tránsito`
-      )
-      .join('\n');
-
-    const response = await client.messages.create({
-      model: API_CONFIG.CLAUDE_MODELS.DEFAULT,
-      max_tokens: 3072,
-      messages: [
-        {
-          role: 'user',
-          content: `Analiza los siguientes envíos y proporciona:
-1. Resumen general del estado
-2. Envíos que requieren atención urgente
-3. Recomendaciones de acción
-4. Patrones o tendencias observadas
-
-Envíos:
-${shipmentSummary}
-
-Proporciona un análisis profesional y accionable en español.`,
-        },
-      ],
-    });
-
-    return response.content[0].type === 'text'
-      ? response.content[0].text
-      : 'Análisis no disponible';
-  } catch (error) {
-    logError(error, 'batchAnalyzeShipments');
-    throw new APIError('Error en análisis de lote', 500, error);
-  }
-};
-
-/**
- * Generate customer communication message
- * @param shipment - Shipment data
- * @param situation - Current situation
- * @returns Suggested message
- */
-export const generateCustomerMessage = async (
-  shipment: Shipment,
-  situation: string
-): Promise<string> => {
-  try {
-    const client = getClient();
-
-    const response = await client.messages.create({
-      model: API_CONFIG.CLAUDE_MODELS.DEFAULT,
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: `Genera un mensaje profesional y empático para un cliente sobre su envío.
-
-Datos del envío:
-- Guía: ${shipment.id}
-- Estado: ${shipment.status}
-- Transportadora: ${shipment.carrier}
-- Situación: ${situation}
-
-El mensaje debe ser:
-- Breve (máximo 3 líneas)
-- Profesional pero cercano
-- En español
-- Listo para enviar por WhatsApp
-- Sin saludos ni despedidas formales (solo el mensaje principal)`,
-        },
-      ],
-    });
-
-    return response.content[0].type === 'text' ? response.content[0].text : '';
-  } catch (error) {
-    logError(error, 'generateCustomerMessage');
-    throw new APIError('Error al generar mensaje', 500, error);
-  }
-};
-
-/**
- * AI Analysis of delay patterns as Colombian logistics expert
- * @param shipments - Array of shipments to analyze
- * @returns Detailed AI analysis with patterns, recommendations, and Colombian context
- */
-export const analyzeDelayPatterns = async (
-  shipments: Shipment[]
-): Promise<{
-  patterns: Array<{
-    type: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-    description: string;
-    affectedCount: number;
-    guideNumbers: string[];
-    daysWithoutMovement: number;
-    commonFactors: string[];
-    recommendation: string;
-  }>;
-  urgentReview: string[];
-  recommendations: {
-    immediate: string[];
-    shortTerm: string[];
-    strategic: string[];
-  };
-  riskSummary: {
-    totalAtRisk: number;
-    criticalCount: number;
-    estimatedLoss: number;
-    mainCauses: string[];
-  };
-  colombianContext: {
-    regionalIssues: string[];
-    carrierAlerts: string[];
-    seasonalFactors: string[];
-    marketInsights: string[];
-  };
-}> => {
-  try {
-    const client = getClient();
-
-    // Prepare shipment data summary
-    const shipmentData = shipments.map((s) => ({
-      guia: s.id,
-      transportadora: s.carrier,
-      estado: s.status,
-      diasTransito: s.detailedInfo?.daysInTransit || 0,
-      destino: s.detailedInfo?.destination || 'N/A',
-      origen: s.detailedInfo?.origin || 'N/A',
-      riesgo: s.riskAnalysis?.level || 'N/A',
-      ultimaActualizacion: s.detailedInfo?.events?.[0]?.date || 'Sin info',
-      telefono: s.phone || 'N/A',
-    }));
-
-    // Calculate basic metrics
-    const totalGuides = shipments.length;
-    const avgDays =
-      shipments.reduce((sum, s) => sum + (s.detailedInfo?.daysInTransit || 0), 0) / totalGuides;
-    const criticalCount = shipments.filter(
-      (s) => s.riskAnalysis?.level === 'URGENTE' || (s.detailedInfo?.daysInTransit || 0) > 7
-    ).length;
-
-    // Group by carrier
-    const byCarrier: Record<string, number> = {};
-    shipments.forEach((s) => {
-      byCarrier[s.carrier] = (byCarrier[s.carrier] || 0) + 1;
-    });
-
-    // Group by destination city
-    const byCity: Record<string, number> = {};
-    shipments.forEach((s) => {
-      const city = s.detailedInfo?.destination || 'Desconocido';
-      byCity[city] = (byCity[city] || 0) + 1;
-    });
-
-    const prompt = `Eres un EXPERTO EN LOGÍSTICA DE ÚLTIMA MILLA EN COLOMBIA con 15+ años de experiencia. Conoces perfectamente:
-- Las zonas de difícil acceso del país
-- Los tiempos realistas por ciudad y región
-- Los problemas típicos de cada transportadora colombiana (Inter Rapidísimo, Envía, Coordinadora, TCC, Veloces)
-- Factores estacionales (lluvias, paros, fiestas patrias, etc.)
-- El mercado logístico colombiano actual
-
-DATOS DE ENVÍOS A ANALIZAR (${totalGuides} guías):
-${JSON.stringify(shipmentData.slice(0, 50), null, 2)}
-
-MÉTRICAS ACTUALES:
-- Total de guías: ${totalGuides}
-- Promedio días en tránsito: ${avgDays.toFixed(1)}
-- Guías críticas (>7 días o URGENTES): ${criticalCount}
-- Distribución por transportadora: ${JSON.stringify(byCarrier)}
-- Distribución por ciudad destino (top): ${JSON.stringify(Object.entries(byCity).slice(0, 10))}
-
-ANALIZA y responde en formato JSON con esta estructura EXACTA:
-{
-  "patterns": [
-    {
-      "type": "CRITICAL|HIGH|MEDIUM|LOW",
-      "description": "Descripción del patrón identificado",
-      "affectedCount": número,
-      "guideNumbers": ["guía1", "guía2"],
-      "daysWithoutMovement": número,
-      "commonFactors": ["factor1", "factor2"],
-      "recommendation": "Acción específica recomendada"
-    }
-  ],
-  "urgentReview": ["guías que necesitan revisión INMEDIATA"],
-  "recommendations": {
-    "immediate": ["acciones para las próximas 2 horas"],
-    "shortTerm": ["acciones para hoy/mañana"],
-    "strategic": ["mejoras a mediano plazo"]
-  },
-  "riskSummary": {
-    "totalAtRisk": número,
-    "criticalCount": número,
-    "estimatedLoss": número en COP (costo de devolución promedio 15000 por guía),
-    "mainCauses": ["causa principal 1", "causa 2"]
-  },
-  "colombianContext": {
-    "regionalIssues": ["problemas específicos de regiones colombianas afectadas"],
-    "carrierAlerts": ["alertas sobre transportadoras específicas según los datos"],
-    "seasonalFactors": ["factores estacionales actuales que pueden afectar"],
-    "marketInsights": ["insights del mercado logístico colombiano relevantes"]
+    };
   }
 }
 
-SÉ MUY ESPECÍFICO:
-- Menciona guías reales de los datos
-- Da tiempos realistas para Colombia
-- Menciona ciudades específicas de los datos
-- Usa tu experiencia en el mercado colombiano
-- Si hay zonas de difícil acceso menciónalas
-- Considera el día de la semana y mes actual para factores estacionales`;
+function formatContextForPrompt(context: SkillContext): string {
+  const { stats, ciudades, alertas } = context;
 
-    const response = await client.messages.create({
-      model: API_CONFIG.CLAUDE_MODELS.DEFAULT,
-      max_tokens: 4096,
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-    });
+  const ciudadesCriticas = ciudades
+    .filter(c => c.tasa_entrega < 70 && c.total_guias > 0)
+    .sort((a, b) => a.tasa_entrega - b.tasa_entrega)
+    .slice(0, 5);
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '{}';
+  return `
+## DATOS EN TIEMPO REAL (${new Date().toLocaleTimeString('es-CO')})
 
-    // Parse JSON from response
+### Resumen del Día
+- Total guías: ${stats.totalGuiasHoy}
+- Entregadas: ${stats.entregadas} (${stats.tasaEntrega.toFixed(1)}%)
+- En tránsito: ${stats.enTransito}
+- Con novedad: ${stats.novedades}
+- Ventas: $${stats.ventasHoy.toLocaleString('es-CO')}
+
+### Alertas Pendientes: ${alertas.length}
+${alertas.slice(0, 3).map(a => `- [${a.tipo}] ${a.titulo}`).join('\n') || 'Sin alertas'}
+
+### Ciudades Críticas (${ciudadesCriticas.length})
+${ciudadesCriticas.map(c => `- ${c.ciudad}: ${c.tasa_entrega.toFixed(1)}% (${c.total_guias} guías)`).join('\n') || 'Todas las ciudades OK'}
+`;
+}
+
+function parseArtifacts(content: string): { cleanContent: string; artifacts: Artifact[] } {
+  const artifacts: Artifact[] = [];
+  const artifactRegex = /```artifact:(\w+):([^\n]+)\n([\s\S]*?)```/g;
+
+  let match;
+  let cleanContent = content;
+
+  while ((match = artifactRegex.exec(content)) !== null) {
+    const [fullMatch, type, title, dataStr] = match;
     try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        return {
-          patterns: parsed.patterns || [],
-          urgentReview: parsed.urgentReview || [],
-          recommendations: parsed.recommendations || {
-            immediate: [],
-            shortTerm: [],
-            strategic: [],
-          },
-          riskSummary: parsed.riskSummary || {
-            totalAtRisk: 0,
-            criticalCount: 0,
-            estimatedLoss: 0,
-            mainCauses: [],
-          },
-          colombianContext: parsed.colombianContext || {
-            regionalIssues: [],
-            carrierAlerts: [],
-            seasonalFactors: [],
-            marketInsights: [],
-          },
-        };
-      }
-    } catch (parseError) {
-      logError(parseError, 'analyzeDelayPatterns.parse');
+      const data = JSON.parse(dataStr.trim());
+      artifacts.push({
+        type: type as Artifact['type'],
+        title,
+        data,
+      });
+      cleanContent = cleanContent.replace(fullMatch, `📊 **${title}** [Ver abajo]`);
+    } catch {
+      // Si no es JSON válido, dejarlo como está
+    }
+  }
+
+  return { cleanContent, artifacts };
+}
+
+function generateSuggestions(content: string): string[] {
+  const suggestions: string[] = [];
+
+  if (content.toLowerCase().includes('ciudad') || content.toLowerCase().includes('semáforo')) {
+    suggestions.push('¿Debería pausar alguna ciudad?');
+    suggestions.push('Compara transportadoras por ciudad');
+  }
+
+  if (content.toLowerCase().includes('guía') || content.toLowerCase().includes('envío')) {
+    suggestions.push('Muestra las guías con más días en tránsito');
+    suggestions.push('¿Cuáles guías tienen novedad?');
+  }
+
+  if (content.toLowerCase().includes('venta') || content.toLowerCase().includes('ingreso')) {
+    suggestions.push('¿Cuál es el ticket promedio?');
+    suggestions.push('Compara con el mes anterior');
+  }
+
+  if (suggestions.length < 2) {
+    suggestions.push('Dame el resumen del día');
+    suggestions.push('¿Hay alertas pendientes?');
+  }
+
+  return suggestions.slice(0, 3);
+}
+
+// ============================================
+// SERVICIO PRINCIPAL
+// ============================================
+
+export const claudeService = {
+  isConfigured(): boolean {
+    return !!ANTHROPIC_API_KEY;
+  },
+
+  async chat(
+    messages: ClaudeMessage[],
+    includeContext: boolean = true
+  ): Promise<ClaudeResponse> {
+    if (!ANTHROPIC_API_KEY) {
+      throw new Error('Claude API Key no configurada');
     }
 
-    // Fallback response
-    return {
-      patterns: [],
-      urgentReview: [],
-      recommendations: {
-        immediate: ['Revisar guías con más de 5 días en tránsito'],
-        shortTerm: ['Contactar clientes afectados'],
-        strategic: ['Evaluar transportadoras con mayor tasa de retraso'],
-      },
-      riskSummary: {
-        totalAtRisk: criticalCount,
-        criticalCount,
-        estimatedLoss: criticalCount * 15000,
-        mainCauses: ['Análisis no disponible temporalmente'],
-      },
-      colombianContext: {
-        regionalIssues: [],
-        carrierAlerts: [],
-        seasonalFactors: [],
-        marketInsights: [],
-      },
+    let contextPrompt = '';
+    if (includeContext) {
+      const context = await getBusinessContext();
+      contextPrompt = formatContextForPrompt(context);
+    }
+
+    const fullSystemPrompt = getSystemPrompt() + contextPrompt;
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: CLAUDE_MODEL,
+          max_tokens: MAX_TOKENS,
+          system: fullSystemPrompt,
+          messages: messages.map(m => ({
+            role: m.role,
+            content: m.content,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Error en la API de Claude');
+      }
+
+      const data = await response.json();
+      const rawContent = data.content[0]?.text || '';
+
+      const { cleanContent, artifacts } = parseArtifacts(rawContent);
+
+      let skillUsed: string | undefined;
+      const skillMatch = rawContent.match(/\[(\w+)\]/);
+      if (skillMatch) {
+        skillUsed = skillMatch[1].toLowerCase();
+      }
+
+      const suggestions = generateSuggestions(rawContent);
+
+      return {
+        content: cleanContent,
+        artifacts: artifacts.length > 0 ? artifacts : undefined,
+        suggestions,
+        skillUsed,
+        tokensUsed: data.usage?.output_tokens,
+      };
+    } catch (error) {
+      console.error('Error calling Claude API:', error);
+      throw error;
+    }
+  },
+
+  async quickCommand(command: string): Promise<ClaudeResponse> {
+    const quickCommands: Record<string, string> = {
+      'resumen': '¿Cómo va el día de hoy? Dame un resumen completo.',
+      'ciudades': '¿Cuáles ciudades tienen problemas de entrega?',
+      'alertas': '¿Hay alertas pendientes? Muéstrame las más importantes.',
+      'guias': '¿Cuántas guías llevo hoy y cuál es su estado?',
+      'ventas': '¿Cómo van las ventas de hoy?',
+      'novedades': 'Analiza las novedades pendientes y recomienda acciones.',
     };
-  } catch (error) {
-    logError(error, 'analyzeDelayPatterns');
-    throw new APIError('Error en análisis de patrones de retraso', 500, error);
-  }
+
+    const prompt = quickCommands[command] || command;
+    return this.chat([{ role: 'user', content: prompt }]);
+  },
+
+  async analyzeFile(
+    fileName: string,
+    fileContent: string,
+    fileType: string
+  ): Promise<ClaudeResponse> {
+    const prompt = `He subido un archivo llamado "${fileName}" de tipo ${fileType}.
+
+Contenido del archivo:
+\`\`\`
+${fileContent.slice(0, 10000)}
+\`\`\`
+${fileContent.length > 10000 ? '\n(Contenido truncado por tamaño)' : ''}
+
+Por favor:
+1. Analiza qué tipo de datos contiene
+2. Identifica las columnas/campos relevantes
+3. Sugiere qué acciones puedo hacer con estos datos
+4. Si son guías, ofrece importarlas
+5. Si son finanzas, ofrece analizarlas`;
+
+    return this.chat([{ role: 'user', content: prompt }]);
+  },
+
+  async executeAction(
+    action: string,
+    params: Record<string, unknown>
+  ): Promise<{ success: boolean; message: string; data?: unknown }> {
+    try {
+      switch (action) {
+        case 'pausar_ciudad': {
+          const ciudadId = params.ciudadId as string;
+          await ciudadesService.pausar(ciudadId);
+          return { success: true, message: 'Ciudad pausada correctamente' };
+        }
+
+        case 'reanudar_ciudad': {
+          const ciudadId = params.ciudadId as string;
+          await ciudadesService.reanudar(ciudadId);
+          return { success: true, message: 'Ciudad reanudada correctamente' };
+        }
+
+        case 'crear_alerta': {
+          const alerta = await alertasService.create({
+            tipo: (params.tipo as 'critica' | 'advertencia' | 'info' | 'exito') || 'info',
+            titulo: params.titulo as string,
+            mensaje: params.mensaje as string,
+            fuente: 'LITPER_AI',
+            leida: false,
+          });
+          return { success: true, message: 'Alerta creada', data: alerta };
+        }
+
+        case 'marcar_alertas_leidas': {
+          await alertasService.marcarTodasLeidas();
+          return { success: true, message: 'Alertas marcadas como leídas' };
+        }
+
+        default:
+          return { success: false, message: `Acción no reconocida: ${action}` };
+      }
+    } catch (error) {
+      console.error('Error executing action:', error);
+      return { success: false, message: `Error ejecutando acción: ${error}` };
+    }
+  },
 };
+
+export default claudeService;
