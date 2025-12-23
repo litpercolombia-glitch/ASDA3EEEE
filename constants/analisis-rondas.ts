@@ -131,19 +131,25 @@ export const STORAGE_KEYS = {
 };
 
 // ===== HEADERS CSV ESPERADOS =====
+// Headers del formato LITPER TRACKER - Soporta variaciones
 export const CSV_HEADERS = {
   USUARIO: ['usuario', 'operador', 'nombre', 'user', 'name'],
   FECHA: ['fecha', 'date', 'dia'],
-  HORA_INICIO: ['hora_inicio', 'hora inicio', 'inicio', 'start'],
-  HORA_FIN: ['hora_fin', 'hora fin', 'fin', 'end'],
-  RONDA: ['ronda', 'numero_ronda', 'round', 'num'],
-  GUIAS_INICIALES: ['guias_iniciales', 'iniciales', 'initial', 'total_guias'],
-  GUIAS_REALIZADAS: ['guias_realizadas', 'realizadas', 'completed', 'realizado'],
+  HORA_INICIO: ['hora_inicio', 'hora inicio', 'horainicio', 'inicio', 'start'],
+  HORA_FIN: ['hora_fin', 'hora fin', 'horafin', 'fin', 'end'],
+  RONDA: ['ronda', 'numero_ronda', 'round', 'num', '#'],
+  GUIAS_INICIALES: ['iniciales', 'guias_iniciales', 'guiasiniciales', 'initial', 'total_guias', 'totalguias'],
+  GUIAS_REALIZADAS: ['realizadas', 'guias_realizadas', 'guiasrealizadas', 'completed', 'realizado'],
   CANCELADAS: ['canceladas', 'cancelado', 'cancelled', 'canceled'],
   AGENDADAS: ['agendadas', 'agendado', 'scheduled'],
   PENDIENTES: ['pendientes', 'pendiente', 'pending'],
-  TIEMPO: ['tiempo', 'tiempo_registro', 'minutos', 'time', 'duration'],
-  NOVEDADES: ['novedades', 'novedad', 'issues', 'problems'],
+  TIEMPO: ['tiempo', 'tiempo(min)', 'tiempomin', 'tiempo_registro', 'minutos', 'time', 'duration', 'min'],
+  NOVEDADES: ['novedades', 'novedad', 'issues', 'problems', 'dificiles', 'dificil'],
+  // Campos adicionales de LITPER TRACKER
+  DIFICILES: ['dificiles', 'dificil', 'difficult', 'hard'],
+  REVISADAS: ['revisadas', 'revisado', 'reviewed'],
+  SOLUCIONADAS: ['solucionadas', 'solucionado', 'solved', 'resueltas'],
+  DEVOLUCION: ['devolucion', 'devoluciones', 'returned', 'return'],
 };
 
 // ===== MENSAJES DE RECOMENDACIÓN =====
