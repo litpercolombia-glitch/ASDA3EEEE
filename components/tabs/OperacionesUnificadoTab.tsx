@@ -39,10 +39,13 @@ import { ShipmentTimeline } from '../brain/ShipmentTimeline';
 import { JourneyMap } from '../brain/JourneyMap';
 import TrackingMap from '../maps/TrackingMap';
 
+// Análisis de Rondas LITPER
+import { AnalisisRondasTab } from './AnalisisRondasTab';
+
 // =====================================
 // TIPOS
 // =====================================
-type SubView = 'carga' | 'tabla' | 'timeline' | 'mapa' | 'prioridad' | 'inteligencia' | 'semaforo' | 'cerebro';
+type SubView = 'carga' | 'tabla' | 'timeline' | 'mapa' | 'prioridad' | 'inteligencia' | 'semaforo' | 'cerebro' | 'analisis-rondas';
 
 interface OperacionesUnificadoTabProps {
   shipments: Shipment[];
@@ -109,6 +112,13 @@ const subNavItems: { id: SubView; label: string; icon: React.ElementType; descri
     icon: Activity,
     description: 'Vista por estados',
     color: 'amber'
+  },
+  {
+    id: 'analisis-rondas',
+    label: '📊 Análisis Rondas',
+    icon: TrendingUp,
+    description: 'Control de rondas',
+    color: 'emerald'
   },
 ];
 
@@ -312,6 +322,13 @@ export const OperacionesUnificadoTab: React.FC<OperacionesUnificadoTabProps> = (
         {activeView === 'cerebro' && (
           <div className="animate-fade-in">
             <CerebroView shipments={shipments} />
+          </div>
+        )}
+
+        {/* Tab: Análisis de Rondas LITPER */}
+        {activeView === 'analisis-rondas' && (
+          <div className="animate-fade-in">
+            <AnalisisRondasTab />
           </div>
         )}
       </div>
