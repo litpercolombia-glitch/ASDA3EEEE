@@ -103,23 +103,104 @@ const DEFAULT_ROLES: Role[] = [
   },
 ];
 
-const SAMPLE_TEAM: TeamMember[] = [
+// Equipo productivo de Litper
+const LITPER_TEAM: TeamMember[] = [
+  // Chat & Atención
   {
-    id: 'user-admin',
-    nombre: 'Administrador Principal',
-    email: 'admin@litper.com',
-    telefono: '3001234567',
+    id: 'litper-karen-001',
+    nombre: 'Karen',
+    email: 'karenlitper@gmail.com',
+    telefono: '',
+    rol: 'role-soporte',
+    permisos: DEFAULT_ROLES[2].permisos,
+    estado: 'activo',
+    createdAt: '2024-12-01T00:00:00.000Z',
+  },
+  {
+    id: 'litper-dayana-002',
+    nombre: 'Dayana',
+    email: 'litperdayana@gmail.com',
+    telefono: '',
+    rol: 'role-soporte',
+    permisos: DEFAULT_ROLES[2].permisos,
+    estado: 'activo',
+    createdAt: '2024-12-01T00:00:00.000Z',
+  },
+  {
+    id: 'litper-david-003',
+    nombre: 'David',
+    email: 'litperdavid@gmail.com',
+    telefono: '',
+    rol: 'role-soporte',
+    permisos: DEFAULT_ROLES[2].permisos,
+    estado: 'activo',
+    createdAt: '2024-12-01T00:00:00.000Z',
+  },
+  // Tracking & Envíos
+  {
+    id: 'litper-felipe-004',
+    nombre: 'Felipe',
+    email: 'felipelitper@gmail.com',
+    telefono: '',
+    rol: 'role-vendedor',
+    permisos: DEFAULT_ROLES[1].permisos,
+    estado: 'activo',
+    createdAt: '2024-12-01T00:00:00.000Z',
+  },
+  {
+    id: 'litper-jimmy-005',
+    nombre: 'Jimmy',
+    email: 'jimmylitper@gmail.com',
+    telefono: '',
+    rol: 'role-vendedor',
+    permisos: DEFAULT_ROLES[1].permisos,
+    estado: 'activo',
+    createdAt: '2024-12-01T00:00:00.000Z',
+  },
+  {
+    id: 'litper-jhonnatan-006',
+    nombre: 'Jhonnatan',
+    email: 'jhonnatanlitper@gmail.com',
+    telefono: '',
+    rol: 'role-vendedor',
+    permisos: DEFAULT_ROLES[1].permisos,
+    estado: 'activo',
+    createdAt: '2024-12-01T00:00:00.000Z',
+  },
+  // Administración
+  {
+    id: 'litper-daniel-007',
+    nombre: 'Daniel',
+    email: 'daniellitper@gmail.com',
+    telefono: '',
     rol: 'role-admin',
     permisos: DEFAULT_ROLES[0].permisos,
     estado: 'activo',
-    ultimoAcceso: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
+    createdAt: '2024-12-01T00:00:00.000Z',
+  },
+  {
+    id: 'litper-maletas-008',
+    nombre: 'Maletas',
+    email: 'maletaslitper@gmail.com',
+    telefono: '',
+    rol: 'role-admin',
+    permisos: DEFAULT_ROLES[0].permisos,
+    estado: 'activo',
+    createdAt: '2024-12-01T00:00:00.000Z',
+  },
+  {
+    id: 'litper-colombia-009',
+    nombre: 'Litper Colombia',
+    email: 'litpercolombia@gmail.com',
+    telefono: '',
+    rol: 'role-admin',
+    permisos: DEFAULT_ROLES[0].permisos,
+    estado: 'activo',
+    createdAt: '2024-12-01T00:00:00.000Z',
   },
 ];
 
-const SAMPLE_LOGS: ActivityLog[] = [
-  { id: 'log-1', userId: 'user-admin', userName: 'Administrador', accion: 'login', modulo: 'auth', detalle: 'Inicio de sesión', ip: '192.168.1.1', dispositivo: 'Chrome', createdAt: new Date().toISOString() },
-];
+const INITIAL_LOGS: ActivityLog[] = [];
 
 const DEFAULT_SECURITY: SecuritySettings = {
   requiere2FA: false,
@@ -159,9 +240,9 @@ const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9
 export const useSecurityStore = create<SecurityState>()(
   persist(
     (set, get) => ({
-      team: SAMPLE_TEAM,
+      team: LITPER_TEAM,
       roles: DEFAULT_ROLES,
-      activityLogs: SAMPLE_LOGS,
+      activityLogs: INITIAL_LOGS,
       securitySettings: DEFAULT_SECURITY,
 
       addMember: (member) => {
