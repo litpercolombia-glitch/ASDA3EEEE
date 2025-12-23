@@ -4,11 +4,35 @@
 // ============================================
 
 import { guiasService, ciudadesService, alertasService } from './supabaseService';
+import { useAIConfigStore } from './aiConfigService';
 
 // ============================================
 // CONFIGURACIÓN
 // ============================================
 
+// Función para obtener la API key activa (desde config store o env)
+const getAnthropicApiKey = (): string => {
+  // Primero intentar desde el store de configuración
+  const storedKey = useAIConfigStore.getState().providers.claude.apiKey;
+  if (storedKey) return storedKey;
+
+  // Fallback a variable de entorno
+  return import.meta.env.VITE_ANTHROPIC_API_KEY || '';
+};
+
+// Función para obtener el modelo configurado
+const getClaudeModel = (): string => {
+  const config = useAIConfigStore.getState().providers.claude;
+  return config.model || 'claude-sonnet-4-20250514';
+};
+
+// Función para obtener max tokens configurado
+const getMaxTokens = (): number => {
+  const config = useAIConfigStore.getState().providers.claude;
+  return config.maxTokens || 4096;
+};
+
+// Constantes legacy para compatibilidad
 const ANTHROPIC_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || '';
 const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
 const MAX_TOKENS = 4096;
@@ -228,14 +252,15 @@ function generateSuggestions(content: string): string[] {
 
 export const claudeService = {
   isConfigured(): boolean {
-    return !!ANTHROPIC_API_KEY;
+    return !!getAnthropicApiKey();
   },
 
   async chat(
     messages: ClaudeMessage[],
     includeContext: boolean = true
   ): Promise<ClaudeResponse> {
-    if (!ANTHROPIC_API_KEY) {
+    const apiKey = getAnthropicApiKey();
+    if (!apiKey) {
       throw new Error('Claude API Key no configurada');
     }
 
@@ -252,13 +277,13 @@ export const claudeService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': ANTHROPIC_API_KEY,
+          'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
           'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
-          model: CLAUDE_MODEL,
-          max_tokens: MAX_TOKENS,
+          model: getClaudeModel(),
+          max_tokens: getMaxTokens(),
           system: fullSystemPrompt,
           messages: messages.map(m => ({
             role: m.role,
@@ -388,7 +413,9 @@ Por favor:
  * Utilizada por los servicios de agentes para consultas IA
  */
 export async function askAssistant(prompt: string): Promise<string> {
-  if (!ANTHROPIC_API_KEY) {
+  const apiKey = getAnthropicApiKey();
+
+  if (!apiKey) {
     console.warn('Claude API Key no configurada, retornando respuesta vacía');
     return '';
   }
@@ -398,13 +425,13 @@ export async function askAssistant(prompt: string): Promise<string> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
-        model: CLAUDE_MODEL,
-        max_tokens: 2048,
+        model: getClaudeModel(),
+        max_tokens: getMaxTokens(),
         messages: [{ role: 'user', content: prompt }],
       }),
     });
