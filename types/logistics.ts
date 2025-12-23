@@ -18,6 +18,7 @@ export type MainTabNew =
   | 'admin'
   | 'negocio'
   | 'dashboard-legacy' // Dashboard clásico (para usuarios que prefieran el estilo antiguo)
+  | 'cerebro-ia'  // Dashboard Cerebro IA con Chatea Pro, Webhooks y Analytics
   // Legacy tabs (para compatibilidad)
   | 'seguimiento'
   | 'demanda'

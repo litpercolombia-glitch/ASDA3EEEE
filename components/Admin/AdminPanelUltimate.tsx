@@ -14,6 +14,7 @@ import { RulesEngine } from './RulesEngine';
 import { FinanceDashboard } from './FinanceCenter';
 import { SecurityDashboard } from './SecurityCenter';
 import { CRMDashboard } from './CRMCenter';
+import { AIConfigDashboard } from './AIConfigCenter';
 import { isAuthenticated, getCurrentUser, logout } from '../../services/authService';
 import {
   Lock,
@@ -237,6 +238,8 @@ export const AdminPanelUltimate: React.FC = () => {
         return <ReportsStudio />;
       case 'ia-copilot':
         return <IACopilot />;
+      case 'ia-config':
+        return <AIConfigDashboard />;
       case 'seguridad':
         return <SecurityDashboard />;
       case 'crm':

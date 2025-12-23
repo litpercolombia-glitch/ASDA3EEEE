@@ -37,6 +37,7 @@ import {
   CheckCircle,
   Clock,
   Command,
+  Bot,
 } from 'lucide-react';
 import { getCurrentUser, logout, isAuthenticated } from '../../services/authService';
 
@@ -57,6 +58,7 @@ export type AdminSection =
   | 'marketing'
   | 'soporte'
   | 'ia-copilot'
+  | 'ia-config'
   | 'integraciones'
   | 'usuarios'
   | 'seguridad'
@@ -118,6 +120,7 @@ const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
     title: 'Inteligencia',
     items: [
       { id: 'ia-copilot', label: 'IA Co-pilot', icon: Brain, color: 'from-violet-500 to-purple-500', isPro: true },
+      { id: 'ia-config', label: 'Config IA', icon: Bot, color: 'from-purple-500 to-pink-500', isNew: true },
       { id: 'integraciones', label: 'Integraciones', icon: Plug, color: 'from-slate-500 to-gray-500' },
     ],
   },

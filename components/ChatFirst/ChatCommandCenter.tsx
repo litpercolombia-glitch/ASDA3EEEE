@@ -17,6 +17,8 @@ import {
   Package,
   RefreshCw,
   X,
+  Brain,
+  Cloud,
 } from 'lucide-react';
 import { Shipment } from '../../types';
 import { ContextPanel } from './ContextPanel';
@@ -32,6 +34,16 @@ import { useProAssistantStore } from '../../stores/proAssistantStore';
 import { unifiedAI } from '../../services/unifiedAIService';
 import { contextIntelligenceService } from '../../services/contextIntelligenceService';
 import { ProactiveInsights } from './ProactiveInsights';
+import { useAIConfigStore, type AIProvider } from '../../services/aiConfigService';
+
+// ============================================
+// CONFIGURACIÓN DE MODELOS
+// ============================================
+const AI_MODELS = [
+  { id: 'claude' as AIProvider, name: 'Claude', icon: Sparkles, color: 'text-purple-400' },
+  { id: 'gemini' as AIProvider, name: 'Gemini', icon: Brain, color: 'text-blue-400' },
+  { id: 'openai' as AIProvider, name: 'GPT-4', icon: Cloud, color: 'text-emerald-400' },
+];
 
 // ============================================
 // TIPOS
@@ -234,12 +246,15 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
   onRefreshData,
 }) => {
   const { config, setIsProcessing, isProcessing } = useProAssistantStore();
+  const { primaryProvider, providers } = useAIConfigStore();
 
   // Estados
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [activeSkill, setActiveSkill] = useState<SkillId | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<AIProvider>(primaryProvider);
+  const [showModelSelector, setShowModelSelector] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -329,35 +344,45 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
     }]);
 
     try {
-      // Preparar contexto
-      const context = {
-        shipments: shipments.slice(0, 50), // Limitar para performance
-        totalShipments: shipments.length,
-        criticalCities,
-        activeSkill,
-      };
-
-      // Llamar a IA
+      // Llamar a IA con el modelo seleccionado
       const response = await unifiedAI.chat(
         userMessage.content,
-        'chat',
-        shipments
+        shipments.slice(0, 50), // Limitar para performance
+        {
+          provider: selectedModel,
+          includeHistory: true,
+        }
       );
 
+      // Generar acciones sugeridas basadas en el contenido
+      const suggestedActions: ChatAction[] = [];
+      if (response.text.toLowerCase().includes('reporte')) {
+        suggestedActions.push({
+          id: 'gen-report',
+          label: 'Generar reporte',
+          type: 'secondary',
+          onClick: () => handleQuickAction('Genera el reporte del dia'),
+        });
+      }
+      if (response.text.toLowerCase().includes('critico') || response.text.toLowerCase().includes('riesgo')) {
+        suggestedActions.push({
+          id: 'view-critical',
+          label: 'Ver criticos',
+          type: 'primary',
+          onClick: () => handleQuickAction('Muestrame los envios criticos'),
+        });
+      }
+
       // Reemplazar mensaje de loading con respuesta
+      // Nota: AIResponse usa 'text', no 'content'
       setMessages(prev => prev.map(m =>
         m.id === loadingId
           ? {
               ...m,
               id: `assistant-${Date.now()}`,
-              content: response.content || 'Lo siento, hubo un problema procesando tu mensaje.',
+              content: response.text || 'Lo siento, hubo un problema procesando tu mensaje.',
               isLoading: false,
-              actions: response.suggestedActions?.map((action: any, i: number) => ({
-                id: `action-${i}`,
-                label: action.label,
-                type: 'secondary' as const,
-                onClick: () => handleQuickAction(action.prompt || action.label),
-              })),
+              actions: suggestedActions.length > 0 ? suggestedActions : undefined,
             }
           : m
       ));
@@ -537,6 +562,69 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
             {/* Input Area */}
             <div className="border-t border-white/10 p-4">
               <div className="flex items-center gap-3">
+                {/* Model Selector */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowModelSelector(!showModelSelector)}
+                    className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm transition-colors"
+                  >
+                    {(() => {
+                      const model = AI_MODELS.find(m => m.id === selectedModel);
+                      if (!model) return null;
+                      const Icon = model.icon;
+                      return (
+                        <>
+                          <Icon className={`w-4 h-4 ${model.color}`} />
+                          <span className="text-white hidden sm:inline">{model.name}</span>
+                          <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showModelSelector ? 'rotate-180' : ''}`} />
+                        </>
+                      );
+                    })()}
+                  </button>
+
+                  {/* Dropdown */}
+                  {showModelSelector && (
+                    <div className="absolute bottom-full left-0 mb-2 w-48 bg-navy-800 border border-white/20 rounded-xl shadow-xl overflow-hidden z-50">
+                      <div className="p-2 border-b border-white/10">
+                        <span className="text-xs text-slate-400 font-medium">Seleccionar Modelo</span>
+                      </div>
+                      {AI_MODELS.map((model) => {
+                        const Icon = model.icon;
+                        const isSelected = selectedModel === model.id;
+                        const isConfigured = providers[model.id]?.isConfigured;
+                        return (
+                          <button
+                            key={model.id}
+                            onClick={() => {
+                              if (isConfigured) {
+                                setSelectedModel(model.id);
+                                setShowModelSelector(false);
+                              }
+                            }}
+                            disabled={!isConfigured}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
+                              isSelected ? 'bg-accent-500/20' : 'hover:bg-white/5'
+                            } ${!isConfigured ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            <Icon className={`w-5 h-5 ${model.color}`} />
+                            <div className="flex-1">
+                              <span className={`text-sm ${isSelected ? 'text-white font-medium' : 'text-slate-300'}`}>
+                                {model.name}
+                              </span>
+                              {!isConfigured && (
+                                <span className="block text-xs text-slate-500">Sin configurar</span>
+                              )}
+                            </div>
+                            {isSelected && (
+                              <CheckCircle className="w-4 h-4 text-accent-400" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
                 <button
                   className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
                 >
