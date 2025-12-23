@@ -48,14 +48,46 @@ const saveToStorage = <T,>(key: string, data: T): void => {
 };
 
 // ===== PROCESADOR CSV =====
+// Headers esperados del formato LITPER TRACKER
+const LITPER_HEADERS = ['fecha', 'usuario', 'ronda', 'hora inicio', 'hora fin', 'tiempo', 'iniciales', 'realizadas'];
+
 const findHeader = (headers: string[], possibleNames: string[]): number => {
-  const normalizedHeaders = headers.map(h => h.toLowerCase().trim().replace(/[_\s]/g, ''));
+  const normalizedHeaders = headers.map(h => String(h || '').toLowerCase().trim().replace(/[_\s()]/g, ''));
   for (const name of possibleNames) {
-    const normalizedName = name.toLowerCase().trim().replace(/[_\s]/g, '');
+    const normalizedName = name.toLowerCase().trim().replace(/[_\s()]/g, '');
     const index = normalizedHeaders.findIndex(h => h.includes(normalizedName) || normalizedName.includes(h));
     if (index !== -1) return index;
   }
   return -1;
+};
+
+// Detectar si una fila es la fila de headers
+const isHeaderRow = (row: any[]): boolean => {
+  if (!row || row.length < 5) return false;
+  const rowStr = row.map(cell => String(cell || '').toLowerCase()).join(' ');
+  // Debe contener al menos 3 de estos términos
+  const matches = LITPER_HEADERS.filter(h => rowStr.includes(h));
+  return matches.length >= 3;
+};
+
+// Detectar si una fila es válida (tiene datos)
+const isValidDataRow = (row: any[]): boolean => {
+  if (!row || row.length < 5) return false;
+  const firstCell = String(row[0] || '').trim();
+  // Ignorar filas vacías, #ERROR!, títulos, y resúmenes
+  if (!firstCell) return false;
+  if (firstCell.includes('#ERROR')) return false;
+  if (firstCell.includes('LITPER')) return false;
+  if (firstCell.includes('Usuario:')) return false;
+  if (firstCell.includes('Total')) return false;
+  // Verificar si parece una fecha (YYYY-MM-DD o DD/MM/YYYY)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(firstCell)) return true;
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(firstCell)) return true;
+  // Verificar si el segundo campo es un nombre de usuario conocido
+  const secondCell = String(row[1] || '').toUpperCase().trim();
+  const knownUsers = ['ANGIE', 'CATALINA', 'FELIPE', 'EVAN', 'NORMAN', 'ALEJANDRA', 'KAREN', 'JIMMY', 'CAROLINA'];
+  if (knownUsers.includes(secondCell)) return true;
+  return false;
 };
 
 const parseCSVData = (data: any[], headers: string[]): RondaCSV[] => {
@@ -438,19 +470,59 @@ export const AnalisisRondasTab: React.FC = () => {
       const workbook = XLSX.read(data, { type: 'array' });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
 
       if (jsonData.length < 2) {
         throw new Error('El archivo está vacío o no tiene datos válidos');
       }
 
-      const headers = (jsonData[0] as string[]).map(h => String(h || ''));
-      const rows = jsonData.slice(1);
+      console.log('📊 Procesando archivo LITPER TRACKER...');
+      console.log('Total filas en archivo:', jsonData.length);
+
+      // Buscar la fila de headers (puede no ser la primera)
+      let headerRowIndex = -1;
+      for (let i = 0; i < Math.min(jsonData.length, 20); i++) {
+        if (isHeaderRow(jsonData[i])) {
+          headerRowIndex = i;
+          console.log('✅ Headers encontrados en fila:', i, jsonData[i]);
+          break;
+        }
+      }
+
+      // Si no encontramos headers, usar la primera fila no vacía con múltiples columnas
+      if (headerRowIndex === -1) {
+        for (let i = 0; i < Math.min(jsonData.length, 10); i++) {
+          const row = jsonData[i];
+          if (row && row.length >= 5 && row[0] && !String(row[0]).includes('#ERROR')) {
+            headerRowIndex = i;
+            console.log('⚠️ Usando fila como headers (fallback):', i);
+            break;
+          }
+        }
+      }
+
+      if (headerRowIndex === -1) {
+        throw new Error('No se encontraron headers válidos en el archivo');
+      }
+
+      const headers = (jsonData[headerRowIndex] as any[]).map(h => String(h || ''));
+      console.log('📋 Headers:', headers);
+
+      // Filtrar solo las filas de datos válidas (después de los headers)
+      const validDataRows: any[][] = [];
+      for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        if (isValidDataRow(row)) {
+          validDataRows.push(row);
+        }
+      }
+
+      console.log('📊 Filas de datos válidas:', validDataRows.length);
 
       // Convertir rows a objetos
-      const dataRows = rows.map(row => {
+      const dataRows = validDataRows.map(row => {
         const obj: Record<string, any> = {};
-        (row as any[]).forEach((cell, i) => {
+        row.forEach((cell, i) => {
           obj[headers[i] || `col${i}`] = cell;
         });
         return obj;
@@ -459,6 +531,9 @@ export const AnalisisRondasTab: React.FC = () => {
       const totalRegistrosOriginales = dataRows.length;
       const rondas = parseCSVData(dataRows, headers);
       const duplicadosEliminados = totalRegistrosOriginales - rondas.length;
+
+      console.log('✅ Rondas procesadas:', rondas.length);
+      console.log('🔄 Duplicados eliminados:', duplicadosEliminados);
 
       if (rondas.length === 0) {
         throw new Error('No se encontraron datos válidos en el archivo');
