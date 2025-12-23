@@ -8,6 +8,62 @@ import { guideHistoryService } from './guideHistoryService';
 import { centralBrain } from './brain/core/CentralBrain';
 import { memoryManager } from './brain/core/MemoryManager';
 import { contextManager } from './brain/core/ContextManager';
+import { useAIConfigStore } from './aiConfigService';
+
+// ============================================
+// FUNCIÓN PARA LLAMAR A OPENAI
+// ============================================
+async function openaiAskAssistant(prompt: string): Promise<string> {
+  const config = useAIConfigStore.getState().providers.openai;
+  const apiKey = config.apiKey;
+
+  if (!apiKey) {
+    console.warn('OpenAI API Key no configurada');
+    return '';
+  }
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: config.model || 'gpt-4o-mini',
+        max_tokens: config.maxTokens || 4096,
+        temperature: config.temperature || 0.7,
+        messages: [
+          {
+            role: 'system',
+            content: `Eres un EXPERTO EN LOGÍSTICA DE ÚLTIMA MILLA EN COLOMBIA con 15+ años de experiencia.
+Trabajas para Litper Pro, una plataforma de gestión logística premium.
+Tu conocimiento incluye:
+- Todas las transportadoras colombianas (Inter Rapidísimo, Envía, Coordinadora, TCC, Servientrega)
+- Zonas de difícil acceso del país
+- Tiempos realistas de entrega por ciudad y región
+- Patrones de problemas comunes (novedades, devoluciones)
+- Mejores prácticas de atención al cliente
+Siempre respondes en ESPAÑOL COLOMBIANO de forma profesional, clara y accionable.`
+          },
+          { role: 'user', content: prompt }
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Error en OpenAI:', error);
+      return '';
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || '';
+  } catch (error) {
+    console.error('Error llamando a OpenAI:', error);
+    return '';
+  }
+}
 
 // ============================================
 // TIPOS E INTERFACES
@@ -304,8 +360,8 @@ CONTEXTO OPERACIONAL:
           break;
 
         case 'openai':
-          // OpenAI no está implementado directamente, usar Claude como proxy
-          text = await claudeAskAssistant(`[Modo OpenAI] ${prompt}`);
+          // OpenAI con implementación propia
+          text = await openaiAskAssistant(prompt);
           break;
 
         default:

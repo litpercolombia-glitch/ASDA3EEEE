@@ -45,11 +45,14 @@ export interface AIConfigState {
 // CONFIGURACIÓN POR DEFECTO
 // ============================================
 
+// Las API keys se cargan desde localStorage (guardadas por el usuario en el panel de configuración)
+// o desde variables de entorno como fallback
+
 const DEFAULT_PROVIDERS: Record<AIProvider, AIProviderConfig> = {
   claude: {
     provider: 'claude',
     name: 'Claude (Anthropic)',
-    apiKey: '',
+    apiKey: '', // Se carga desde localStorage o env
     isConfigured: false,
     isEnabled: true,
     lastTested: null,
@@ -62,9 +65,9 @@ const DEFAULT_PROVIDERS: Record<AIProvider, AIProviderConfig> = {
   gemini: {
     provider: 'gemini',
     name: 'Gemini (Google)',
-    apiKey: '',
+    apiKey: '', // Se carga desde localStorage o env
     isConfigured: false,
-    isEnabled: false,
+    isEnabled: true,
     lastTested: null,
     lastTestResult: null,
     lastTestMessage: null,
@@ -75,9 +78,9 @@ const DEFAULT_PROVIDERS: Record<AIProvider, AIProviderConfig> = {
   openai: {
     provider: 'openai',
     name: 'GPT (OpenAI)',
-    apiKey: '',
+    apiKey: '', // Se carga desde localStorage o env
     isConfigured: false,
-    isEnabled: false,
+    isEnabled: true,
     lastTested: null,
     lastTestResult: null,
     lastTestMessage: null,

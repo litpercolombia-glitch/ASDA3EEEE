@@ -3,12 +3,25 @@ import { AITrackingResult, ShipmentStatus, Shipment } from '../types';
 import { API_CONFIG } from '../config/constants';
 import { APIError, logError } from '../utils/errorHandler';
 import { validateApiKey } from '../utils/validators';
+import { useAIConfigStore } from './aiConfigService';
+
+/**
+ * Get Gemini API Key (from config store or env)
+ */
+const getGeminiApiKey = (): string => {
+  // Primero intentar desde el store de configuración
+  const storedKey = useAIConfigStore.getState().providers.gemini.apiKey;
+  if (storedKey) return storedKey;
+
+  // Fallback a variable de entorno
+  return API_CONFIG.GEMINI_API_KEY;
+};
 
 /**
  * Get configured GoogleGenAI instance
  */
 const getAI = (): GoogleGenAI => {
-  const apiKey = API_CONFIG.GEMINI_API_KEY;
+  const apiKey = getGeminiApiKey();
   validateApiKey(apiKey);
   return new GoogleGenAI({ apiKey });
 };
