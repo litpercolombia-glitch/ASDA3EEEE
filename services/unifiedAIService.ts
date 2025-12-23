@@ -8,6 +8,62 @@ import { guideHistoryService } from './guideHistoryService';
 import { centralBrain } from './brain/core/CentralBrain';
 import { memoryManager } from './brain/core/MemoryManager';
 import { contextManager } from './brain/core/ContextManager';
+import { useAIConfigStore } from './aiConfigService';
+
+// ============================================
+// FUNCIÓN PARA LLAMAR A OPENAI
+// ============================================
+async function openaiAskAssistant(prompt: string): Promise<string> {
+  const config = useAIConfigStore.getState().providers.openai;
+  const apiKey = config.apiKey;
+
+  if (!apiKey) {
+    console.warn('OpenAI API Key no configurada');
+    return '';
+  }
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: config.model || 'gpt-4o-mini',
+        max_tokens: config.maxTokens || 4096,
+        temperature: config.temperature || 0.7,
+        messages: [
+          {
+            role: 'system',
+            content: `Eres un EXPERTO EN LOGÍSTICA DE ÚLTIMA MILLA EN COLOMBIA con 15+ años de experiencia.
+Trabajas para Litper Pro, una plataforma de gestión logística premium.
+Tu conocimiento incluye:
+- Todas las transportadoras colombianas (Inter Rapidísimo, Envía, Coordinadora, TCC, Servientrega)
+- Zonas de difícil acceso del país
+- Tiempos realistas de entrega por ciudad y región
+- Patrones de problemas comunes (novedades, devoluciones)
+- Mejores prácticas de atención al cliente
+Siempre respondes en ESPAÑOL COLOMBIANO de forma profesional, clara y accionable.`
+          },
+          { role: 'user', content: prompt }
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Error en OpenAI:', error);
+      return '';
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || '';
+  } catch (error) {
+    console.error('Error llamando a OpenAI:', error);
+    return '';
+  }
+}
 
 // ============================================
 // TIPOS E INTERFACES
@@ -295,7 +351,7 @@ CONTEXTO OPERACIONAL:
 
       switch (provider) {
         case 'claude':
-          text = await claudeAskAssistant(prompt, this.formatContextForClaude(context));
+          text = await claudeAskAssistant(prompt);
           break;
 
         case 'gemini':
@@ -304,12 +360,18 @@ CONTEXTO OPERACIONAL:
           break;
 
         case 'openai':
-          // OpenAI no está implementado directamente, usar Claude como proxy
-          text = await claudeAskAssistant(`[Modo OpenAI] ${prompt}`, this.formatContextForClaude(context));
+          // OpenAI con implementación propia
+          text = await openaiAskAssistant(prompt);
           break;
 
         default:
           throw new Error(`Proveedor no soportado: ${provider}`);
+      }
+
+      // Verificar si la respuesta esta vacia (indica que no hay API key configurada)
+      if (!text || text.trim() === '') {
+        console.warn(`🤖 [UnifiedAI] ${provider} retorno respuesta vacia - posiblemente sin API key`);
+        throw new Error('API key no configurada o respuesta vacia del proveedor');
       }
 
       this.providerStatus[provider] = { available: true };
@@ -377,22 +439,38 @@ CONTEXTO OPERACIONAL:
   private getEmergencyResponse(context: ConversationContext): string {
     const stats = guideHistoryService.getStats();
 
-    return `Lo siento, estoy teniendo dificultades técnicas para procesar tu consulta.
+    // Verificar si hay datos de guías
+    if (stats.total === 0) {
+      return `**Configuracion requerida**
 
-**Mientras tanto, aquí tienes un resumen de tus datos:**
+Para activar el asistente de IA, necesitas configurar tu API key de Anthropic:
+
+1. Crea un archivo \`.env\` en la raiz del proyecto
+2. Agrega: \`VITE_ANTHROPIC_API_KEY=tu-api-key-aqui\`
+3. Obtén tu API key en: https://console.anthropic.com/
+
+Mientras tanto, puedes:
+- Navegar las Skills para ver datos
+- Cargar guías usando la skill "Automatizar"
+- Revisar métricas en el panel superior`;
+    }
+
+    return `**Conexion temporal no disponible**
+
+Mientras se restablece la conexión con IA, aquí tienes un resumen:
 
 - Total de guías: ${stats.total}
 - Tasa de entrega: ${stats.tasaEntrega.toFixed(1)}%
-- Guías con novedad: ${stats.porEstado.novedad}
+- Con novedad: ${stats.porEstado.novedad}
 - En tránsito: ${stats.porEstado.en_transito}
 - En reparto: ${stats.porEstado.en_reparto}
 
-**Acciones sugeridas:**
-1. Revisa las guías con novedad en la pestaña de Seguimiento
-2. Prioriza las guías con más días en tránsito
-3. Contacta a las transportadoras para guías críticas
+**Puedes continuar usando:**
+- Las Skills de seguimiento y alertas
+- Generar reportes básicos
+- Ver predicciones basadas en datos
 
-¿Puedo ayudarte con algo específico mientras se restaura la conexión completa?`;
+Tip: Verifica que tu archivo \`.env\` tenga \`VITE_ANTHROPIC_API_KEY\` configurado.`;
   }
 
   private formatContextForClaude(context: ConversationContext): string {

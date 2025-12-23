@@ -24,7 +24,14 @@ import {
   Phone,
   AlertTriangle,
   Activity,
+  Bot,
+  Sparkles,
+  Brain,
+  Cloud,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
+import { useAIConfigStore, type AIProvider } from '../../services/aiConfigService';
 
 // ============================================
 // TIPOS E INTERFACES
@@ -226,6 +233,263 @@ const COLORS = {
   disconnected: '#EF4444',
   info: '#3B82F6',
   warning: '#F59E0B',
+};
+
+// ============================================
+// CONFIGURACIÓN DE IA PROVIDERS
+// ============================================
+const AI_PROVIDERS_CONFIG = [
+  {
+    id: 'claude' as AIProvider,
+    name: 'Claude (Anthropic)',
+    icon: Sparkles,
+    color: '#A855F7',
+    description: 'IA principal para análisis y chat inteligente',
+    placeholder: 'sk-ant-api03-...',
+    docsUrl: 'https://console.anthropic.com/',
+  },
+  {
+    id: 'gemini' as AIProvider,
+    name: 'Gemini (Google)',
+    icon: Brain,
+    color: '#3B82F6',
+    description: 'IA multimodal de Google',
+    placeholder: 'AIza...',
+    docsUrl: 'https://aistudio.google.com/',
+  },
+  {
+    id: 'openai' as AIProvider,
+    name: 'GPT (OpenAI)',
+    icon: Cloud,
+    color: '#10B981',
+    description: 'GPT-4 y modelos de OpenAI',
+    placeholder: 'sk-proj-...',
+    docsUrl: 'https://platform.openai.com/',
+  },
+];
+
+// ============================================
+// COMPONENTE: AI CONNECTIONS SECTION
+// ============================================
+const AIConnectionsSection: React.FC = () => {
+  const {
+    providers,
+    primaryProvider,
+    setApiKey,
+    setPrimaryProvider,
+    testConnection,
+  } = useAIConfigStore();
+
+  const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
+  const [testingProvider, setTestingProvider] = useState<string | null>(null);
+  const [localKeys, setLocalKeys] = useState<Record<string, string>>({
+    claude: providers.claude.apiKey,
+    gemini: providers.gemini.apiKey,
+    openai: providers.openai.apiKey,
+  });
+
+  // Sincronizar con el store
+  useEffect(() => {
+    setLocalKeys({
+      claude: providers.claude.apiKey,
+      gemini: providers.gemini.apiKey,
+      openai: providers.openai.apiKey,
+    });
+  }, [providers]);
+
+  const handleSaveKey = (providerId: AIProvider) => {
+    setApiKey(providerId, localKeys[providerId]);
+  };
+
+  const handleTestConnection = async (providerId: AIProvider) => {
+    // Guardar primero si hay cambios
+    if (localKeys[providerId] !== providers[providerId].apiKey) {
+      setApiKey(providerId, localKeys[providerId]);
+    }
+
+    setTestingProvider(providerId);
+    await testConnection(providerId);
+    setTestingProvider(null);
+  };
+
+  const toggleShowKey = (providerId: string) => {
+    setShowKeys(prev => ({ ...prev, [providerId]: !prev[providerId] }));
+  };
+
+  const connectedCount = Object.values(providers).filter(p => p.lastTestResult === 'success').length;
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg" style={{ backgroundColor: '#A855F7' }}>
+            <Bot className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-white">Conexiones de IA</h2>
+            <p className="text-sm text-slate-400">Configura los proveedores de inteligencia artificial</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-slate-400">{connectedCount}/3 conectados</span>
+        </div>
+      </div>
+
+      {/* AI Provider Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {AI_PROVIDERS_CONFIG.map((config) => {
+          const provider = providers[config.id];
+          const isPrimary = primaryProvider === config.id;
+          const isConnected = provider.lastTestResult === 'success';
+          const hasError = provider.lastTestResult === 'error';
+          const isTesting = testingProvider === config.id;
+          const Icon = config.icon;
+
+          return (
+            <div
+              key={config.id}
+              className={`rounded-xl p-6 border-2 transition-all hover:shadow-lg relative ${
+                isPrimary ? 'ring-2 ring-offset-2 ring-offset-slate-900' : ''
+              }`}
+              style={{
+                backgroundColor: COLORS.cards,
+                borderColor: isConnected ? COLORS.connected : hasError ? COLORS.disconnected : '#334155',
+                ringColor: isPrimary ? config.color : undefined,
+              }}
+            >
+              {/* Primary Badge */}
+              {isPrimary && (
+                <div
+                  className="absolute -top-2 right-4 px-2 py-0.5 text-white text-xs font-medium rounded-full"
+                  style={{ backgroundColor: config.color }}
+                >
+                  Principal
+                </div>
+              )}
+
+              {/* Card Header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg text-white" style={{ backgroundColor: config.color }}>
+                    <Icon className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">{config.name}</h3>
+                    <p className="text-xs text-slate-400">{config.description}</p>
+                  </div>
+                </div>
+                {/* Status */}
+                {isConnected && (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: COLORS.connected }} />
+                    <span className="text-xs" style={{ color: COLORS.connected }}>Conectado</span>
+                  </div>
+                )}
+                {hasError && (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.disconnected }} />
+                    <span className="text-xs" style={{ color: COLORS.disconnected }}>Error</span>
+                  </div>
+                )}
+              </div>
+
+              {/* API Key Input */}
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    API Key <span style={{ color: COLORS.disconnected }}>*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showKeys[config.id] ? 'text' : 'password'}
+                      value={localKeys[config.id] || ''}
+                      onChange={(e) => setLocalKeys(prev => ({ ...prev, [config.id]: e.target.value }))}
+                      placeholder={config.placeholder}
+                      className="w-full px-3 py-2 pr-10 rounded-lg border text-white placeholder-slate-500 focus:ring-2 outline-none transition-all text-sm font-mono"
+                      style={{
+                        backgroundColor: COLORS.background,
+                        borderColor: '#334155',
+                      }}
+                    />
+                    <button
+                      onClick={() => toggleShowKey(config.id)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded"
+                    >
+                      {showKeys[config.id] ? (
+                        <EyeOff className="w-4 h-4 text-slate-400" />
+                      ) : (
+                        <Eye className="w-4 h-4 text-slate-400" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Error Message */}
+                {hasError && provider.lastTestMessage && (
+                  <p className="text-xs" style={{ color: COLORS.disconnected }}>
+                    {provider.lastTestMessage}
+                  </p>
+                )}
+
+                {/* Buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleSaveKey(config.id)}
+                    disabled={localKeys[config.id] === providers[config.id].apiKey}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{
+                      backgroundColor: localKeys[config.id] !== providers[config.id].apiKey ? config.color : '#334155',
+                      color: 'white',
+                    }}
+                  >
+                    <Check className="w-4 h-4" />
+                    Guardar
+                  </button>
+                  <button
+                    onClick={() => handleTestConnection(config.id)}
+                    disabled={isTesting || !localKeys[config.id]}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-medium text-sm text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: COLORS.primary }}
+                  >
+                    {isTesting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Probando...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4" />
+                        Probar
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Make Primary Button */}
+                {!isPrimary && isConnected && (
+                  <button
+                    onClick={() => setPrimaryProvider(config.id)}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-medium text-sm text-slate-300 hover:bg-white/10 transition-all border border-slate-600"
+                  >
+                    Hacer Principal
+                  </button>
+                )}
+
+                {/* Last Tested */}
+                {provider.lastTested && (
+                  <div className="flex items-center gap-1 text-xs text-slate-500">
+                    <Clock className="w-3 h-3" />
+                    Última prueba: {new Date(provider.lastTested).toLocaleTimeString('es-CO')}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 };
 
 // ============================================
@@ -686,6 +950,11 @@ export const ConexionesTab: React.FC = () => {
           );
         })}
       </div>
+
+      {/* ============================================ */}
+      {/* CONEXIONES DE IA */}
+      {/* ============================================ */}
+      <AIConnectionsSection />
 
       {/* ============================================ */}
       {/* WEBHOOKS + LOGS */}
