@@ -36,10 +36,11 @@ import {
   AutomatizacionesSkillView,
 } from './SkillViews';
 import { useProAssistantStore } from '../../stores/proAssistantStore';
-import { unifiedAI } from '../../services/unifiedAIService';
+import { unifiedAI, CHAT_MODES, type ChatMode } from '../../services/unifiedAIService';
 import { contextIntelligenceService } from '../../services/contextIntelligenceService';
 import { ProactiveInsights } from './ProactiveInsights';
 import { useAIConfigStore, type AIProvider } from '../../services/aiConfigService';
+import { Zap } from 'lucide-react';
 
 // ============================================
 // CONFIGURACIÓN DE MODELOS
@@ -48,6 +49,14 @@ const AI_MODELS = [
   { id: 'claude' as AIProvider, name: 'Claude', icon: Sparkles, color: 'text-purple-400' },
   { id: 'gemini' as AIProvider, name: 'Gemini', icon: Brain, color: 'text-blue-400' },
   { id: 'openai' as AIProvider, name: 'GPT-4', icon: Cloud, color: 'text-emerald-400' },
+];
+
+// ============================================
+// CONFIGURACIÓN DE MODOS
+// ============================================
+const CHAT_MODE_OPTIONS = [
+  { id: 'fast' as ChatMode, name: 'Rápido', icon: Zap, color: 'text-yellow-400', description: 'Respuestas concisas' },
+  { id: 'reasoning' as ChatMode, name: 'Razonamiento', icon: Brain, color: 'text-pink-400', description: 'Análisis profundo' },
 ];
 
 // ============================================
@@ -282,6 +291,8 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
   const [isInitialized, setIsInitialized] = useState(false);
   const [selectedModel, setSelectedModel] = useState<AIProvider>(primaryProvider);
   const [showModelSelector, setShowModelSelector] = useState(false);
+  const [selectedMode, setSelectedMode] = useState<ChatMode>('fast');
+  const [showModeSelector, setShowModeSelector] = useState(false);
 
   // Estados multimodales
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
@@ -396,12 +407,13 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
         }
       }
 
-      // Llamar a IA con el modelo seleccionado
+      // Llamar a IA con el modelo y modo seleccionados
       const response = await unifiedAI.chat(
         userMessage.content + (responseText ? `\n\nContexto de imagen: ${responseText}` : ''),
         shipments.slice(0, 50), // Limitar para performance
         {
           provider: selectedModel,
+          mode: selectedMode,
           includeHistory: true,
         }
       );
@@ -788,6 +800,63 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
                               {!isConfigured && (
                                 <span className="block text-xs text-slate-500">Sin configurar</span>
                               )}
+                            </div>
+                            {isSelected && (
+                              <CheckCircle className="w-4 h-4 text-accent-400" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Mode Selector */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowModeSelector(!showModeSelector)}
+                    className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm transition-colors"
+                  >
+                    {(() => {
+                      const mode = CHAT_MODE_OPTIONS.find(m => m.id === selectedMode);
+                      if (!mode) return null;
+                      const Icon = mode.icon;
+                      return (
+                        <>
+                          <Icon className={`w-4 h-4 ${mode.color}`} />
+                          <span className="text-white hidden sm:inline">{mode.name}</span>
+                          <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showModeSelector ? 'rotate-180' : ''}`} />
+                        </>
+                      );
+                    })()}
+                  </button>
+
+                  {/* Mode Dropdown */}
+                  {showModeSelector && (
+                    <div className="absolute bottom-full left-0 mb-2 w-56 bg-navy-800 border border-white/20 rounded-xl shadow-xl overflow-hidden z-50">
+                      <div className="p-2 border-b border-white/10">
+                        <span className="text-xs text-slate-400 font-medium">Modo de Respuesta</span>
+                      </div>
+                      {CHAT_MODE_OPTIONS.map((mode) => {
+                        const Icon = mode.icon;
+                        const isSelected = selectedMode === mode.id;
+                        return (
+                          <button
+                            key={mode.id}
+                            onClick={() => {
+                              setSelectedMode(mode.id);
+                              setShowModeSelector(false);
+                            }}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
+                              isSelected ? 'bg-accent-500/20' : 'hover:bg-white/5'
+                            }`}
+                          >
+                            <Icon className={`w-5 h-5 ${mode.color}`} />
+                            <div className="flex-1">
+                              <span className={`text-sm ${isSelected ? 'text-white font-medium' : 'text-slate-300'}`}>
+                                {mode.name}
+                              </span>
+                              <span className="block text-xs text-slate-500">{mode.description}</span>
                             </div>
                             {isSelected && (
                               <CheckCircle className="w-4 h-4 text-accent-400" />
