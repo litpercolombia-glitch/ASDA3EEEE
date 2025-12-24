@@ -47,15 +47,14 @@ interface ProBubbleV4Props {
 }
 
 // ============================================
-// CONFIGURACIÓN DE MODOS RÁPIDOS
+// CONFIGURACIÓN DE ACCIONES OPERATIVAS
 // ============================================
 
-const QUICK_CHAT_MODES = [
-  { id: 'chat' as ChatMode, icon: MessageSquare, label: 'Chat', color: 'purple' },
-  { id: 'analysis' as ChatMode, icon: BarChart3, label: 'Análisis', color: 'cyan' },
-  { id: 'prediction' as ChatMode, icon: Sparkles, label: 'Predicción', color: 'amber' },
-  { id: 'automation' as ChatMode, icon: Zap, label: 'Auto', color: 'emerald' },
-  { id: 'report' as ChatMode, icon: FileText, label: 'Reporte', color: 'blue' },
+const OPERATIONAL_ACTIONS = [
+  { id: 'search', icon: Search, label: 'Buscar Guía', color: 'blue', description: 'Consultar estado' },
+  { id: 'novelty', icon: AlertTriangle, label: 'Novedades', color: 'orange', description: 'Gestionar casos' },
+  { id: 'whatsapp', icon: MessageCircle, label: 'WhatsApp', color: 'emerald', description: 'Mensaje rápido' },
+  { id: 'calls', icon: PhoneCall, label: 'Llamadas', color: 'cyan', description: 'Cola prioritaria' },
 ];
 
 // ============================================
@@ -271,18 +270,40 @@ const ProBubbleV4: React.FC<ProBubbleV4Props> = ({
             </div>
           </div>
 
-          {/* Modos de Chat IA */}
+          {/* Chat Operativo - Acceso Rápido */}
           <div className="p-3 border-b border-slate-700/50">
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2 px-1">Chat IA con Modos</p>
-            <div className="grid grid-cols-5 gap-2">
-              {QUICK_CHAT_MODES.map((chatMode) => (
+            <button
+              onClick={() => openChatWithMode('chat')}
+              className="w-full p-3 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 hover:from-purple-500/30 hover:to-indigo-500/30 rounded-xl transition-all flex items-center gap-3 group border border-purple-500/20"
+            >
+              <div className="p-2.5 bg-purple-500 rounded-xl">
+                <MessageSquare className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="font-bold text-white">Chat Operativo</p>
+                <p className="text-xs text-slate-400">Resolver casos 1 a 1, mensajes WhatsApp</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-purple-400 group-hover:translate-x-1 transition-all" />
+            </button>
+          </div>
+
+          {/* Acciones Operativas Rápidas */}
+          <div className="p-3 border-b border-slate-700/50">
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2 px-1">Acciones Rápidas</p>
+            <div className="grid grid-cols-4 gap-2">
+              {OPERATIONAL_ACTIONS.map((action) => (
                 <button
-                  key={chatMode.id}
-                  onClick={() => openChatWithMode(chatMode.id)}
-                  className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-all hover:scale-105 bg-${chatMode.color}-500/10 hover:bg-${chatMode.color}-500/20 border border-${chatMode.color}-500/20`}
+                  key={action.id}
+                  onClick={() => {
+                    if (action.id === 'search') setMode('list');
+                    else if (action.id === 'novelty') { setMode('list'); setListFilter('issue'); }
+                    else if (action.id === 'whatsapp') { setMode('list'); setListFilter('issue'); }
+                    else if (action.id === 'calls') { setMode('list'); setListFilter('critical'); }
+                  }}
+                  className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl transition-all hover:scale-105 bg-${action.color}-500/10 hover:bg-${action.color}-500/20 border border-${action.color}-500/20`}
                 >
-                  <chatMode.icon className={`w-5 h-5 text-${chatMode.color}-400`} />
-                  <span className={`text-[10px] font-medium text-${chatMode.color}-400`}>{chatMode.label}</span>
+                  <action.icon className={`w-5 h-5 text-${action.color}-400`} />
+                  <span className={`text-[9px] font-medium text-${action.color}-400 text-center`}>{action.label}</span>
                 </button>
               ))}
             </div>
@@ -354,20 +375,26 @@ const ProBubbleV4: React.FC<ProBubbleV4Props> = ({
               <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
             </button>
 
-            {/* Botón para ir a tabs */}
+            {/* Separador */}
+            <div className="border-t border-slate-700/50 my-2" />
+
+            {/* Botón Centro de Inteligencia IA - Chat Estratégico */}
             {onNavigateToTab && (
               <button
                 onClick={() => onNavigateToTab('inteligencia-ia')}
-                className="w-full p-3 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 hover:from-purple-500/30 hover:to-indigo-500/30 rounded-xl transition-all flex items-center gap-3 group border border-purple-500/30"
+                className="w-full p-4 bg-gradient-to-r from-indigo-600/30 via-purple-600/30 to-pink-600/30 hover:from-indigo-600/40 hover:via-purple-600/40 hover:to-pink-600/40 rounded-xl transition-all flex items-center gap-3 group border border-indigo-500/40"
               >
-                <div className="p-2 bg-purple-500/20 rounded-lg">
-                  <Maximize2 className="w-5 h-5 text-purple-400" />
+                <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl">
+                  <Brain className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="font-medium text-white text-sm">Centro de Inteligencia IA</p>
-                  <p className="text-xs text-slate-500">Ir a la pestaña completa</p>
+                  <p className="font-bold text-white">Centro de Inteligencia IA</p>
+                  <p className="text-xs text-indigo-300">Análisis • Predicciones • Decisiones estratégicas</p>
                 </div>
-                <ChevronRight className="w-5 h-5 text-purple-400 group-hover:translate-x-1 transition-all" />
+                <div className="flex flex-col items-center gap-0.5">
+                  <Sparkles className="w-4 h-4 text-purple-400" />
+                  <ChevronRight className="w-5 h-5 text-purple-400 group-hover:translate-x-1 transition-all" />
+                </div>
               </button>
             )}
           </div>
