@@ -71,7 +71,7 @@ const DEFAULT_PROVIDERS: Record<AIProvider, AIProviderConfig> = {
     lastTested: null,
     lastTestResult: null,
     lastTestMessage: null,
-    model: 'gemini-pro',
+    model: 'gemini-1.5-flash',
     maxTokens: 4096,
     temperature: 0.8,
   },
@@ -124,9 +124,9 @@ async function testClaudeConnection(apiKey: string): Promise<{ success: boolean;
 
 async function testGeminiConnection(apiKey: string): Promise<{ success: boolean; message: string }> {
   try {
-    // Usar gemini-pro que es el modelo más estable
+    // Usar gemini-1.5-flash que es el modelo actual estable
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
