@@ -28,10 +28,10 @@ export const API_CONFIG = {
   // @deprecated - Usar BACKEND_CONFIG.URL + AI_PROXY_PATH
   GEMINI_API_KEY: import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '',
   GEMINI_MODELS: {
-    VISION: 'gemini-pro-vision',
-    FLASH: 'gemini-pro',
-    IMAGE: 'gemini-pro-vision',
-    PRO: 'gemini-pro',
+    VISION: 'gemini-1.5-flash',
+    FLASH: 'gemini-1.5-flash',
+    IMAGE: 'gemini-1.5-flash',
+    PRO: 'gemini-1.5-flash',
   },
 } as const;
 
