@@ -7,11 +7,65 @@ import { askAssistant as geminiAskAssistant } from './geminiService';
 import { useAIConfigStore } from './aiConfigService';
 
 // ============================================
+// TIPOS DE MODO DE CHAT
+// ============================================
+export type ChatMode = 'fast' | 'reasoning';
+
+export interface ChatModeConfig {
+  id: ChatMode;
+  name: string;
+  description: string;
+  icon: string;
+  systemPromptAddition: string;
+  temperature: number;
+  maxTokens: number;
+}
+
+export const CHAT_MODES: Record<ChatMode, ChatModeConfig> = {
+  fast: {
+    id: 'fast',
+    name: 'Rápido',
+    description: 'Respuestas concisas y directas',
+    icon: '⚡',
+    systemPromptAddition: `
+MODO RÁPIDO - Responde de forma:
+- Concisa (máximo 2-3 oraciones)
+- Directa al punto
+- Sin explicaciones extensas
+- Solo lo esencial`,
+    temperature: 0.5,
+    maxTokens: 500,
+  },
+  reasoning: {
+    id: 'reasoning',
+    name: 'Razonamiento',
+    description: 'Análisis profundo paso a paso',
+    icon: '🧠',
+    systemPromptAddition: `
+MODO RAZONAMIENTO - Responde de forma:
+- Analítica y detallada
+- Paso a paso cuando sea necesario
+- Con justificación de tus conclusiones
+- Considerando múltiples perspectivas
+- Incluyendo pros y contras si aplica
+
+Estructura tu respuesta:
+1. **Análisis**: Evalúa la situación
+2. **Razonamiento**: Explica tu proceso de pensamiento
+3. **Conclusión**: Da tu recomendación final
+4. **Siguientes pasos**: Acciones sugeridas`,
+    temperature: 0.7,
+    maxTokens: 2048,
+  },
+};
+
+// ============================================
 // FUNCIÓN PARA LLAMAR A OPENAI
 // ============================================
-async function openaiAskAssistant(prompt: string): Promise<string> {
+async function openaiAskAssistant(prompt: string, mode: ChatMode = 'fast'): Promise<string> {
   const config = useAIConfigStore.getState().providers.openai;
   const apiKey = config.apiKey;
+  const modeConfig = CHAT_MODES[mode];
 
   if (!apiKey) {
     console.warn('OpenAI API Key no configurada');
@@ -27,20 +81,15 @@ async function openaiAskAssistant(prompt: string): Promise<string> {
       },
       body: JSON.stringify({
         model: config.model || 'gpt-4o-mini',
-        max_tokens: config.maxTokens || 4096,
-        temperature: config.temperature || 0.7,
+        max_tokens: modeConfig.maxTokens,
+        temperature: modeConfig.temperature,
         messages: [
           {
             role: 'system',
-            content: `Eres un EXPERTO EN LOGÍSTICA DE ÚLTIMA MILLA EN COLOMBIA con 15+ años de experiencia.
+            content: `Eres un EXPERTO EN LOGÍSTICA DE ÚLTIMA MILLA EN COLOMBIA.
 Trabajas para Litper Pro, una plataforma de gestión logística premium.
-Tu conocimiento incluye:
-- Todas las transportadoras colombianas (Inter Rapidísimo, Envía, Coordinadora, TCC, Servientrega)
-- Zonas de difícil acceso del país
-- Tiempos realistas de entrega por ciudad y región
-- Patrones de problemas comunes (novedades, devoluciones)
-- Mejores prácticas de atención al cliente
-Siempre respondes en ESPAÑOL COLOMBIANO de forma profesional, clara y accionable.`
+Siempre respondes en ESPAÑOL COLOMBIANO de forma profesional.
+${modeConfig.systemPromptAddition}`
           },
           { role: 'user', content: prompt }
         ],
@@ -153,17 +202,34 @@ class UnifiedAIService {
 
   // ==================== CHAT PRINCIPAL ====================
 
+  private currentMode: ChatMode = 'fast';
+
+  setMode(mode: ChatMode): void {
+    this.currentMode = mode;
+    console.log(`🤖 [UnifiedAI] Modo cambiado a: ${mode}`);
+  }
+
+  getMode(): ChatMode {
+    return this.currentMode;
+  }
+
+  getModeConfig(): ChatModeConfig {
+    return CHAT_MODES[this.currentMode];
+  }
+
   async chat(
     message: string,
     shipments: any[] = [],
     options?: {
       provider?: AIProvider;
+      mode?: ChatMode;
       temperature?: number;
       includeHistory?: boolean;
     }
   ): Promise<AIResponse> {
     const startTime = Date.now();
     const provider = options?.provider || this.currentProvider;
+    const mode = options?.mode || this.currentMode;
 
     // Agregar a queries recientes
     this.recentQueries.push(message);
@@ -171,16 +237,16 @@ class UnifiedAIService {
       this.recentQueries.shift();
     }
 
-    // Construir prompt simple (sin dependencias externas que puedan fallar)
-    const enrichedPrompt = this.buildSimplePrompt(message, shipments);
+    // Construir prompt con el modo seleccionado
+    const enrichedPrompt = this.buildSimplePrompt(message, shipments, mode);
 
     // Intentar con el proveedor seleccionado
-    let response = await this.callProvider(provider, enrichedPrompt, shipments);
+    let response = await this.callProvider(provider, enrichedPrompt, shipments, mode);
 
     // Si falla, intentar fallback
     if (response.error && !response.fallbackUsed) {
       console.log(`🤖 [UnifiedAI] ${provider} falló, intentando fallback...`);
-      response = await this.tryFallback(provider, enrichedPrompt, shipments);
+      response = await this.tryFallback(provider, enrichedPrompt, shipments, mode);
     }
 
     return {
@@ -189,7 +255,8 @@ class UnifiedAIService {
     };
   }
 
-  private buildSimplePrompt(message: string, shipments: any[]): string {
+  private buildSimplePrompt(message: string, shipments: any[], mode: ChatMode): string {
+    const modeConfig = CHAT_MODES[mode];
     const parts: string[] = [];
 
     // Contexto de envíos si hay
@@ -208,7 +275,9 @@ class UnifiedAIService {
     parts.push('=== PREGUNTA DEL USUARIO ===');
     parts.push(message);
     parts.push('');
-    parts.push('Responde de forma clara, profesional y en español colombiano.');
+
+    // Instrucciones según el modo
+    parts.push(modeConfig.systemPromptAddition);
 
     return parts.join('\n');
   }
@@ -218,7 +287,8 @@ class UnifiedAIService {
   private async callProvider(
     provider: AIProvider,
     prompt: string,
-    shipments: any[]
+    shipments: any[],
+    mode: ChatMode = 'fast'
   ): Promise<AIResponse> {
     try {
       let text: string = '';
@@ -239,7 +309,7 @@ class UnifiedAIService {
           break;
 
         case 'openai':
-          text = await openaiAskAssistant(prompt);
+          text = await openaiAskAssistant(prompt, mode);
           break;
 
         default:
@@ -294,13 +364,14 @@ class UnifiedAIService {
   private async tryFallback(
     failedProvider: AIProvider,
     prompt: string,
-    shipments: any[]
+    shipments: any[],
+    mode: ChatMode = 'fast'
   ): Promise<AIResponse> {
     const availableProviders = FALLBACK_ORDER.filter(p => p !== failedProvider);
 
     for (const provider of availableProviders) {
       console.log(`🤖 [UnifiedAI] Intentando fallback con: ${provider}`);
-      const response = await this.callProvider(provider, prompt, shipments);
+      const response = await this.callProvider(provider, prompt, shipments, mode);
 
       if (!response.error && response.text) {
         return {
