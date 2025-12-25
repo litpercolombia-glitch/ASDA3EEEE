@@ -19,6 +19,7 @@ import {
   BarChart3,
   Send,
   Loader2,
+  MessageSquare,
 } from 'lucide-react';
 import { UniversalChat } from '../chat/UniversalChat';
 import { SkillsHub } from '../skills/SkillsHub';
@@ -26,7 +27,7 @@ import { IntegrationsPanel } from '../admin/IntegrationsPanel';
 import { skillsEngine } from '../../services/skills/SkillsEngine';
 import { integrationManager } from '../../services/integrations/IntegrationManager';
 
-type TabType = 'ops' | 'strategy' | 'skills' | 'alerts' | 'config';
+type TabType = 'ops' | 'strategy' | 'chatea' | 'skills' | 'alerts' | 'config';
 
 interface SmartAssistantProps {
   shipments?: unknown[];
@@ -39,15 +40,19 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
   const [isHovered, setIsHovered] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false);
 
-  // Estado para chats OPS y Strategy
+  // Estado para chats OPS, Strategy y Chatea
   const [opsMessages, setOpsMessages] = useState<ChatMessage[]>([]);
   const [strategyMessages, setStrategyMessages] = useState<ChatMessage[]>([]);
+  const [chateaMessages, setChateaMessages] = useState<ChatMessage[]>([]);
   const [opsInput, setOpsInput] = useState('');
   const [strategyInput, setStrategyInput] = useState('');
+  const [chateaInput, setChateaInput] = useState('');
   const [opsLoading, setOpsLoading] = useState(false);
   const [strategyLoading, setStrategyLoading] = useState(false);
+  const [chateaLoading, setChateaLoading] = useState(false);
   const [opsThreadId, setOpsThreadId] = useState<string | null>(null);
   const [strategyThreadId, setStrategyThreadId] = useState<string | null>(null);
+  const [chateaThreadId, setChateaThreadId] = useState<string | null>(null);
 
   useEffect(() => {
     // Inicializar servicios
@@ -169,6 +174,57 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
     }
   }, [strategyInput, strategyLoading, strategyThreadId]);
 
+  // Enviar mensaje al chat Chatea Pro
+  const sendChateaMessage = useCallback(async () => {
+    if (!chateaInput.trim() || chateaLoading) return;
+
+    const userMessage: ChatMessage = {
+      role: 'user',
+      content: chateaInput,
+      timestamp: new Date().toISOString(),
+    };
+
+    setChateaMessages(prev => [...prev, userMessage]);
+    setChateaInput('');
+    setChateaLoading(true);
+
+    try {
+      const response = await fetch('/api/chat/chatea', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: chateaInput,
+          threadId: chateaThreadId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.ok) {
+        setChateaThreadId(data.threadId);
+        setChateaMessages(prev => [...prev, {
+          role: 'assistant',
+          content: data.message,
+          timestamp: new Date().toISOString(),
+        }]);
+      } else {
+        setChateaMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `Error: ${data.error || 'No se pudo procesar'}`,
+          timestamp: new Date().toISOString(),
+        }]);
+      }
+    } catch (error) {
+      setChateaMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Error de conexión. Verifica tu conexión a internet.',
+        timestamp: new Date().toISOString(),
+      }]);
+    } finally {
+      setChateaLoading(false);
+    }
+  }, [chateaInput, chateaLoading, chateaThreadId]);
+
   const quickActions = [
     {
       icon: <TrendingUp className="w-4 h-4" />,
@@ -213,7 +269,7 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
   const tabs = [
     { id: 'ops' as TabType, icon: <Wrench className="w-4 h-4" />, label: 'OPS' },
     { id: 'strategy' as TabType, icon: <BarChart3 className="w-4 h-4" />, label: 'Strategy' },
-    { id: 'skills' as TabType, icon: <Zap className="w-4 h-4" />, label: 'Skills' },
+    { id: 'chatea' as TabType, icon: <MessageSquare className="w-4 h-4" />, label: 'Chatea' },
     { id: 'alerts' as TabType, icon: <Bell className="w-4 h-4" />, label: 'Alertas', badge: alertCount },
     { id: 'config' as TabType, icon: <Settings className="w-4 h-4" />, label: 'Config' },
   ];
@@ -369,7 +425,21 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
                 />
               )}
 
-              {activeTab === 'skills' && (
+              {activeTab === 'chatea' && (
+                <ChatPanel
+                  title="Chatea Pro"
+                  subtitle="Control de WhatsApp, mensajes, templates"
+                  messages={chateaMessages}
+                  input={chateaInput}
+                  setInput={setChateaInput}
+                  onSend={sendChateaMessage}
+                  loading={chateaLoading}
+                  placeholder="Ej: enviar confirmacion a orden 12345"
+                  accentColor="green"
+                />
+              )}
+
+              {activeTab === 'alerts' && (
                 <div className="p-4 h-[500px] overflow-auto">
                   <SkillsHub />
                 </div>
@@ -507,7 +577,7 @@ interface ChatPanelProps {
   onSend: () => void;
   loading: boolean;
   placeholder: string;
-  accentColor: 'blue' | 'purple';
+  accentColor: 'blue' | 'purple' | 'green';
 }
 
 const ChatPanel: React.FC<ChatPanelProps> = ({
@@ -522,10 +592,15 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   accentColor,
 }) => {
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const prevMessagesLength = React.useRef(messages.length);
 
+  // Solo hacer scroll cuando hay mensajes NUEVOS, no al montar
   React.useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (messages.length > prevMessagesLength.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+    prevMessagesLength.current = messages.length;
+  }, [messages.length]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -544,6 +619,11 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
       badge: 'bg-purple-100 text-purple-700',
       button: 'bg-purple-600 hover:bg-purple-700',
       userBubble: 'bg-purple-600 text-white',
+    },
+    green: {
+      badge: 'bg-green-100 text-green-700',
+      button: 'bg-green-600 hover:bg-green-700',
+      userBubble: 'bg-green-600 text-white',
     },
   };
 
