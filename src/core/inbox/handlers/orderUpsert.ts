@@ -1,8 +1,10 @@
 // /src/core/inbox/handlers/orderUpsert.ts
-// Handler para crear o actualizar órdenes
+// Handler para crear o actualizar órdenes - CON SUPABASE
 
 import type { InboxEvent, DispatchResult, OrderUpsert } from '../types';
 import { calculateRiskScore, detectRiskFactors } from './riskEngine';
+import { supabase } from '../../../lib/supabase';
+import type { OrderInsert, ShipmentInsert, AlertInsert } from '../../../lib/database.types';
 
 /**
  * Maneja eventos de creación/actualización de órdenes
@@ -22,52 +24,66 @@ export async function handleOrderUpsert(event: InboxEvent): Promise<DispatchResu
     const riskScore = calculateRiskScore(event);
     const riskFactors = detectRiskFactors(event);
 
-    // 2. Construir objeto de orden para upsert
-    const orderData: OrderUpsert = {
-      id: `order_${source}_${data.orderId}`,
-      externalId: data.orderId,
+    // 2. Preparar datos para Supabase
+    const orderData: OrderInsert = {
+      external_id: String(data.orderId),
       source,
-      status: data.status,
-      statusHistory: [
-        {
-          status: data.status,
-          timestamp: occurredAt,
-          source,
-        },
-      ],
-      shippingGuide: data.shippingGuide,
-      shippingCompany: data.shippingCompany,
-      city: data.city,
-      state: data.state,
-      country: data.country,
-      total: data.total,
-      rateType: data.rateType,
-      customerName: data.customer.name
+      status: data.status || 'pending',
+      customer_name: data.customer.name
         ? `${data.customer.name} ${data.customer.surname || ''}`.trim()
         : null,
-      customerPhone: data.customer.phone,
-      customerEmail: data.customer.email,
-      customerAddress: data.customer.address,
-      items: data.items,
-      riskScore,
-      riskFactors,
-      createdAt: occurredAt,
-      updatedAt: new Date().toISOString(),
+      customer_phone: data.customer.phone || null,
+      customer_email: data.customer.email || null,
+      shipping_address: data.customer.address || null,
+      shipping_city: data.city || null,
+      shipping_department: data.state || null,
+      total_amount: data.total || null,
+      payment_method: data.rateType?.toLowerCase().includes('contraentrega') ? 'cod' : 'prepaid',
+      risk_score: riskScore,
     };
 
-    // 3. Persistir en base de datos
-    // TODO: Reemplazar con llamada real a Supabase/PostgreSQL
-    await upsertOrderToDatabase(orderData);
+    // 3. Upsert orden en Supabase
+    const { data: upsertedOrder, error: orderError } = await supabase
+      .from('orders')
+      .upsert(orderData, { onConflict: 'external_id' })
+      .select()
+      .single();
 
-    // 4. Disparar acciones según riesgo
-    if (riskScore >= 80) {
-      await triggerHighRiskAlert(orderData);
+    if (orderError) {
+      console.error(`[OrderUpsert] Supabase error:`, orderError);
+      throw orderError;
     }
 
-    // 5. Notificar cambios (opcional)
-    if (data.shippingGuide) {
-      await notifyGuideCreated(orderData);
+    console.log(`[OrderUpsert] Order saved:`, upsertedOrder?.id);
+
+    // 4. Si hay guía, crear/actualizar shipment
+    if (data.shippingGuide && upsertedOrder) {
+      const shipmentData: ShipmentInsert = {
+        order_id: upsertedOrder.id,
+        guide_number: data.shippingGuide,
+        carrier: normalizeCarrier(data.shippingCompany),
+        status: mapStatusToShipment(data.status),
+        city: data.city || null,
+        department: data.state || null,
+        risk_score: riskScore,
+      };
+
+      const { error: shipmentError } = await supabase
+        .from('shipments')
+        .upsert(shipmentData, { onConflict: 'guide_number' });
+
+      if (shipmentError) {
+        console.warn(`[OrderUpsert] Shipment error:`, shipmentError);
+      }
     }
+
+    // 5. Disparar alerta si alto riesgo
+    if (riskScore >= 60 && upsertedOrder) {
+      await createRiskAlert(upsertedOrder.id, riskScore, riskFactors);
+    }
+
+    // 6. Guardar evento en log
+    await logEvent(event);
 
     console.log(`[OrderUpsert] Successfully processed order ${data.orderId}`, {
       riskScore,
@@ -77,11 +93,11 @@ export async function handleOrderUpsert(event: InboxEvent): Promise<DispatchResu
     return {
       success: true,
       action: 'order.upserted',
-      orderId: data.orderId,
+      orderId: String(data.orderId),
       metadata: {
         riskScore,
         riskFactors,
-        isNew: true, // TODO: detectar si es nuevo o update
+        dbId: upsertedOrder?.id,
       },
     };
   } catch (error) {
@@ -90,65 +106,96 @@ export async function handleOrderUpsert(event: InboxEvent): Promise<DispatchResu
     return {
       success: false,
       action: 'order.upsert_failed',
-      orderId: data.orderId,
+      orderId: String(data.orderId),
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
 
 /**
- * Persiste la orden en la base de datos
- * TODO: Implementar con Supabase
+ * Crea alerta de riesgo en Supabase
  */
-async function upsertOrderToDatabase(order: OrderUpsert): Promise<void> {
-  // TODO: Implementar persistencia real
-  // Ejemplo con Supabase:
-  // const { data, error } = await supabase
-  //   .from('orders')
-  //   .upsert(order, { onConflict: 'external_id,source' })
-  //   .select();
-  //
-  // if (error) throw error;
+async function createRiskAlert(
+  orderId: string,
+  riskScore: number,
+  riskFactors: string[]
+): Promise<void> {
+  const priority = riskScore >= 80 ? 'critical' : riskScore >= 60 ? 'high' : 'medium';
 
-  // Por ahora, solo log
-  console.log(`[DB] Would upsert order:`, {
-    id: order.id,
-    externalId: order.externalId,
-    status: order.status,
-    riskScore: order.riskScore,
-  });
+  const alertData: AlertInsert = {
+    order_id: orderId,
+    type: 'high_risk',
+    priority,
+    message: `Orden con riesgo ${riskScore}/100. Factores: ${riskFactors.join(', ')}`,
+    resolved: false,
+  };
 
-  // Simular latencia de DB
-  await new Promise((resolve) => setTimeout(resolve, 10));
+  const { error } = await supabase.from('alerts').insert(alertData);
+
+  if (error) {
+    console.warn(`[Alert] Failed to create alert:`, error);
+  } else {
+    console.log(`[Alert] Created risk alert for order ${orderId}`);
+  }
 }
 
 /**
- * Dispara alerta de alto riesgo
+ * Guarda evento en tabla de log
  */
-async function triggerHighRiskAlert(order: OrderUpsert): Promise<void> {
-  // TODO: Implementar sistema de alertas
-  // - Enviar notificación push
-  // - Crear registro en tabla de alertas
-  // - Notificar canal de Slack/Discord
-
-  console.warn(`[Alert] HIGH RISK ORDER: ${order.externalId}`, {
-    riskScore: order.riskScore,
-    riskFactors: order.riskFactors,
-    city: order.city,
-    total: order.total,
+async function logEvent(event: InboxEvent): Promise<void> {
+  const { error } = await supabase.from('events').insert({
+    source: event.source,
+    event_type: event.eventType,
+    idempotency_key: event.idempotencyKey,
+    payload: event.raw as any,
+    processed: true,
   });
+
+  if (error) {
+    console.warn(`[Event] Failed to log event:`, error);
+  }
 }
 
 /**
- * Notifica que se creó una guía
+ * Normaliza nombre de transportadora
  */
-async function notifyGuideCreated(order: OrderUpsert): Promise<void> {
-  // TODO: Implementar notificaciones
-  // - Enviar a sistema de tracking
-  // - Actualizar dashboard en tiempo real
+function normalizeCarrier(carrier: string | null | undefined): string {
+  if (!carrier) return 'unknown';
 
-  console.log(`[Notify] Guide created for order ${order.externalId}:`, {
-    guide: order.shippingGuide,
-    carrier: order.shippingCompany,
-  });
+  const carrierMap: Record<string, string> = {
+    'SERVIENTREGA': 'servientrega',
+    'ENVIA': 'envia',
+    'COORDINADORA': 'coordinadora',
+    'TCC': 'tcc',
+    'INTERRAPIDISIMO': 'inter',
+    'INTER': 'inter',
+    '472': '472',
+  };
+
+  const upper = carrier.toUpperCase();
+  for (const [key, value] of Object.entries(carrierMap)) {
+    if (upper.includes(key)) return value;
+  }
+
+  return carrier.toLowerCase();
+}
+
+/**
+ * Mapea estado de orden a estado de shipment
+ */
+function mapStatusToShipment(status: string | undefined): string {
+  if (!status) return 'created';
+
+  const statusMap: Record<string, string> = {
+    'ENVIADO': 'in_transit',
+    'EN_TRANSITO': 'in_transit',
+    'EN_RUTA': 'in_transit',
+    'ENTREGADO': 'delivered',
+    'DEVOLUCION': 'returned',
+    'RECHAZADO': 'returned',
+    'NOVEDAD': 'issue',
+    'PENDIENTE': 'created',
+  };
+
+  return statusMap[status.toUpperCase()] || 'created';
 }
