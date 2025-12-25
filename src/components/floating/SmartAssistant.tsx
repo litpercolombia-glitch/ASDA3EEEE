@@ -1,9 +1,9 @@
 // components/floating/SmartAssistant.tsx
 // Asistente Flotante Inteligente - Portal al Cerebro Central
+// Con separación OPS (operativo) y STRATEGY (estratégico)
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Bot,
   X,
   MessageCircle,
   Zap,
@@ -15,6 +15,10 @@ import {
   ChevronRight,
   Brain,
   Sparkles,
+  Wrench,
+  BarChart3,
+  Send,
+  Loader2,
 } from 'lucide-react';
 import { UniversalChat } from '../chat/UniversalChat';
 import { SkillsHub } from '../skills/SkillsHub';
@@ -22,7 +26,7 @@ import { IntegrationsPanel } from '../admin/IntegrationsPanel';
 import { skillsEngine } from '../../services/skills/SkillsEngine';
 import { integrationManager } from '../../services/integrations/IntegrationManager';
 
-type TabType = 'chat' | 'skills' | 'alerts' | 'config';
+type TabType = 'ops' | 'strategy' | 'skills' | 'alerts' | 'config';
 
 interface SmartAssistantProps {
   shipments?: unknown[];
@@ -30,10 +34,20 @@ interface SmartAssistantProps {
 
 export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>('chat');
+  const [activeTab, setActiveTab] = useState<TabType>('ops');
   const [alertCount, setAlertCount] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false);
+
+  // Estado para chats OPS y Strategy
+  const [opsMessages, setOpsMessages] = useState<ChatMessage[]>([]);
+  const [strategyMessages, setStrategyMessages] = useState<ChatMessage[]>([]);
+  const [opsInput, setOpsInput] = useState('');
+  const [strategyInput, setStrategyInput] = useState('');
+  const [opsLoading, setOpsLoading] = useState(false);
+  const [strategyLoading, setStrategyLoading] = useState(false);
+  const [opsThreadId, setOpsThreadId] = useState<string | null>(null);
+  const [strategyThreadId, setStrategyThreadId] = useState<string | null>(null);
 
   useEffect(() => {
     // Inicializar servicios
@@ -51,22 +65,126 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
     calculateAlerts();
   }, [shipments]);
 
+  // Enviar mensaje al chat OPS
+  const sendOpsMessage = useCallback(async () => {
+    if (!opsInput.trim() || opsLoading) return;
+
+    const userMessage: ChatMessage = {
+      role: 'user',
+      content: opsInput,
+      timestamp: new Date().toISOString(),
+    };
+
+    setOpsMessages(prev => [...prev, userMessage]);
+    setOpsInput('');
+    setOpsLoading(true);
+
+    try {
+      const response = await fetch('/api/chat/ops', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: opsInput,
+          threadId: opsThreadId,
+          context: { alertCount, shipmentsCount: shipments.length },
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.ok) {
+        setOpsThreadId(data.threadId);
+        setOpsMessages(prev => [...prev, {
+          role: 'assistant',
+          content: data.message,
+          timestamp: new Date().toISOString(),
+        }]);
+      } else {
+        setOpsMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `Error: ${data.error || 'No se pudo procesar'}`,
+          timestamp: new Date().toISOString(),
+        }]);
+      }
+    } catch (error) {
+      setOpsMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Error de conexión. Verifica tu conexión a internet.',
+        timestamp: new Date().toISOString(),
+      }]);
+    } finally {
+      setOpsLoading(false);
+    }
+  }, [opsInput, opsLoading, opsThreadId, alertCount, shipments.length]);
+
+  // Enviar mensaje al chat Strategy
+  const sendStrategyMessage = useCallback(async () => {
+    if (!strategyInput.trim() || strategyLoading) return;
+
+    const userMessage: ChatMessage = {
+      role: 'user',
+      content: strategyInput,
+      timestamp: new Date().toISOString(),
+    };
+
+    setStrategyMessages(prev => [...prev, userMessage]);
+    setStrategyInput('');
+    setStrategyLoading(true);
+
+    try {
+      const response = await fetch('/api/chat/strategy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: strategyInput,
+          threadId: strategyThreadId,
+          includeMetrics: true,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.ok) {
+        setStrategyThreadId(data.threadId);
+        setStrategyMessages(prev => [...prev, {
+          role: 'assistant',
+          content: data.message,
+          timestamp: new Date().toISOString(),
+        }]);
+      } else {
+        setStrategyMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `Error: ${data.error || 'No se pudo procesar'}`,
+          timestamp: new Date().toISOString(),
+        }]);
+      }
+    } catch (error) {
+      setStrategyMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Error de conexión. Verifica tu conexión a internet.',
+        timestamp: new Date().toISOString(),
+      }]);
+    } finally {
+      setStrategyLoading(false);
+    }
+  }, [strategyInput, strategyLoading, strategyThreadId]);
+
   const quickActions = [
     {
       icon: <TrendingUp className="w-4 h-4" />,
       label: 'Ventas hoy',
       color: 'emerald',
       action: () => {
-        setActiveTab('chat');
+        setActiveTab('strategy');
         setIsOpen(true);
       },
     },
     {
       icon: <Package className="w-4 h-4" />,
-      label: 'Pendientes',
+      label: 'Operaciones',
       color: 'blue',
       action: () => {
-        setActiveTab('chat');
+        setActiveTab('ops');
         setIsOpen(true);
       },
     },
@@ -93,7 +211,8 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
   ];
 
   const tabs = [
-    { id: 'chat' as TabType, icon: <MessageCircle className="w-4 h-4" />, label: 'Chat' },
+    { id: 'ops' as TabType, icon: <Wrench className="w-4 h-4" />, label: 'OPS' },
+    { id: 'strategy' as TabType, icon: <BarChart3 className="w-4 h-4" />, label: 'Strategy' },
     { id: 'skills' as TabType, icon: <Zap className="w-4 h-4" />, label: 'Skills' },
     { id: 'alerts' as TabType, icon: <Bell className="w-4 h-4" />, label: 'Alertas', badge: alertCount },
     { id: 'config' as TabType, icon: <Settings className="w-4 h-4" />, label: 'Config' },
@@ -222,8 +341,32 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
 
             {/* Content */}
             <div className="flex-1 overflow-auto">
-              {activeTab === 'chat' && (
-                <UniversalChat compact onClose={handleClose} />
+              {activeTab === 'ops' && (
+                <ChatPanel
+                  title="Chat Operativo"
+                  subtitle="Guías, estados, novedades, acciones inmediatas"
+                  messages={opsMessages}
+                  input={opsInput}
+                  setInput={setOpsInput}
+                  onSend={sendOpsMessage}
+                  loading={opsLoading}
+                  placeholder="Ej: ¿Estado de la guía 123456?"
+                  accentColor="blue"
+                />
+              )}
+
+              {activeTab === 'strategy' && (
+                <ChatPanel
+                  title="Chat Estratégico"
+                  subtitle="Reportes, KPIs, decisiones, análisis"
+                  messages={strategyMessages}
+                  input={strategyInput}
+                  setInput={setStrategyInput}
+                  onSend={sendStrategyMessage}
+                  loading={strategyLoading}
+                  placeholder="Ej: ¿Cómo estamos este mes?"
+                  accentColor="purple"
+                />
               )}
 
               {activeTab === 'skills' && (
@@ -343,6 +486,155 @@ const AlertsPanel: React.FC<{ shipments: any[] }> = ({ shipments }) => {
           <p className="text-sm">¡Todo está bajo control!</p>
         </div>
       )}
+    </div>
+  );
+};
+
+// Interface para mensajes del chat
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
+// Chat Panel Component - Reutilizable para OPS y Strategy
+interface ChatPanelProps {
+  title: string;
+  subtitle: string;
+  messages: ChatMessage[];
+  input: string;
+  setInput: (value: string) => void;
+  onSend: () => void;
+  loading: boolean;
+  placeholder: string;
+  accentColor: 'blue' | 'purple';
+}
+
+const ChatPanel: React.FC<ChatPanelProps> = ({
+  title,
+  subtitle,
+  messages,
+  input,
+  setInput,
+  onSend,
+  loading,
+  placeholder,
+  accentColor,
+}) => {
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      onSend();
+    }
+  };
+
+  const colorClasses = {
+    blue: {
+      badge: 'bg-blue-100 text-blue-700',
+      button: 'bg-blue-600 hover:bg-blue-700',
+      userBubble: 'bg-blue-600 text-white',
+    },
+    purple: {
+      badge: 'bg-purple-100 text-purple-700',
+      button: 'bg-purple-600 hover:bg-purple-700',
+      userBubble: 'bg-purple-600 text-white',
+    },
+  };
+
+  const colors = colorClasses[accentColor];
+
+  return (
+    <div className="flex flex-col h-[500px]">
+      {/* Header del chat */}
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-navy-700">
+        <div className="flex items-center gap-2">
+          <span className={`px-2 py-1 text-xs font-medium rounded-full ${colors.badge}`}>
+            {title}
+          </span>
+        </div>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{subtitle}</p>
+      </div>
+
+      {/* Mensajes */}
+      <div className="flex-1 overflow-auto p-4 space-y-4">
+        {messages.length === 0 && (
+          <div className="text-center py-8 text-slate-500">
+            <Brain className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+            <p className="font-medium">{title}</p>
+            <p className="text-sm mt-1">{placeholder}</p>
+          </div>
+        )}
+
+        {messages.map((msg, i) => (
+          <div
+            key={i}
+            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-[85%] px-4 py-2 rounded-2xl ${
+                msg.role === 'user'
+                  ? colors.userBubble
+                  : 'bg-slate-100 dark:bg-navy-800 text-slate-800 dark:text-white'
+              }`}
+            >
+              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+              <p className={`text-xs mt-1 ${
+                msg.role === 'user' ? 'text-white/70' : 'text-slate-400'
+              }`}>
+                {new Date(msg.timestamp).toLocaleTimeString('es-CO', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+            </div>
+          </div>
+        ))}
+
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-slate-100 dark:bg-navy-800 px-4 py-3 rounded-2xl">
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
+                <span className="text-sm text-slate-500">Pensando...</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="p-4 border-t border-slate-200 dark:border-navy-700">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder={placeholder}
+            disabled={loading}
+            className="flex-1 px-4 py-2 rounded-xl border border-slate-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+          />
+          <button
+            onClick={onSend}
+            disabled={loading || !input.trim()}
+            className={`px-4 py-2 ${colors.button} text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
