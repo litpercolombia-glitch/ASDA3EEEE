@@ -39,8 +39,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // 2. Verificar API key
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    // 2. Verificar API key (soporta ambos formatos: con y sin VITE_)
+    const apiKey = process.env.ANTHROPIC_API_KEY || process.env.VITE_ANTHROPIC_API_KEY;
     if (!apiKey) {
       console.error('[Chat OPS] Missing ANTHROPIC_API_KEY');
       return res.status(500).json({
