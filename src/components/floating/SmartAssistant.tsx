@@ -1,6 +1,6 @@
 // components/floating/SmartAssistant.tsx
 // Asistente Flotante Inteligente - Portal al Cerebro Central
-// Con separación OPS (operativo) y STRATEGY (estratégico)
+// Simplificado: Chat Principal + Chatea Pro + Alertas + Config
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -15,43 +15,45 @@ import {
   ChevronRight,
   Brain,
   Sparkles,
-  Wrench,
-  BarChart3,
   Send,
   Loader2,
   MessageSquare,
 } from 'lucide-react';
-import { UniversalChat } from '../chat/UniversalChat';
-import { SkillsHub } from '../skills/SkillsHub';
 import { IntegrationsPanel } from '../admin/IntegrationsPanel';
-import { skillsEngine } from '../../services/skills/SkillsEngine';
 import { integrationManager } from '../../services/integrations/IntegrationManager';
 
-type TabType = 'ops' | 'strategy' | 'chatea' | 'skills' | 'alerts' | 'config';
+type TabType = 'main' | 'chatea' | 'alerts' | 'config';
+
+interface Shipment {
+  id: string;
+  guide?: string;
+  status: string;
+  carrier?: string;
+  city?: string;
+  risk?: number;
+}
 
 interface SmartAssistantProps {
-  shipments?: unknown[];
+  shipments?: Shipment[];
 }
 
 export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>('ops');
+  const [activeTab, setActiveTab] = useState<TabType>('main');
   const [alertCount, setAlertCount] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false);
 
-  // Estado para chats OPS, Strategy y Chatea
-  const [opsMessages, setOpsMessages] = useState<ChatMessage[]>([]);
-  const [strategyMessages, setStrategyMessages] = useState<ChatMessage[]>([]);
+  // Estado para Chat Principal
+  const [mainMessages, setMainMessages] = useState<ChatMessage[]>([]);
+  const [mainInput, setMainInput] = useState('');
+  const [mainLoading, setMainLoading] = useState(false);
+  const [mainThreadId, setMainThreadId] = useState<string | null>(null);
+
+  // Estado para Chat Chatea Pro
   const [chateaMessages, setChateaMessages] = useState<ChatMessage[]>([]);
-  const [opsInput, setOpsInput] = useState('');
-  const [strategyInput, setStrategyInput] = useState('');
   const [chateaInput, setChateaInput] = useState('');
-  const [opsLoading, setOpsLoading] = useState(false);
-  const [strategyLoading, setStrategyLoading] = useState(false);
   const [chateaLoading, setChateaLoading] = useState(false);
-  const [opsThreadId, setOpsThreadId] = useState<string | null>(null);
-  const [strategyThreadId, setStrategyThreadId] = useState<string | null>(null);
   const [chateaThreadId, setChateaThreadId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -60,8 +62,7 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
 
     // Calcular alertas
     const calculateAlerts = () => {
-      // Contar guías con problemas
-      const issues = (shipments as any[]).filter(
+      const issues = shipments.filter(
         (s) => s.status === 'issue' || s.status === 'in_office'
       ).length;
       setAlertCount(issues);
@@ -70,109 +71,90 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
     calculateAlerts();
   }, [shipments]);
 
-  // Enviar mensaje al chat OPS
-  const sendOpsMessage = useCallback(async () => {
-    if (!opsInput.trim() || opsLoading) return;
+  // Enviar mensaje al Chat Principal
+  const sendMainMessage = useCallback(async () => {
+    if (!mainInput.trim() || mainLoading) return;
 
     const userMessage: ChatMessage = {
       role: 'user',
-      content: opsInput,
+      content: mainInput,
       timestamp: new Date().toISOString(),
     };
 
-    setOpsMessages(prev => [...prev, userMessage]);
-    setOpsInput('');
-    setOpsLoading(true);
+    setMainMessages(prev => [...prev, userMessage]);
+    setMainInput('');
+    setMainLoading(true);
 
     try {
-      const response = await fetch('/api/chat/ops', {
+      // Preparar contexto de shipments para el chat
+      const shipmentsContext = shipments.slice(0, 50).map(s => ({
+        id: s.id,
+        guide: s.guide || s.id,
+        status: s.status,
+        carrier: s.carrier || 'Unknown',
+        city: s.city || 'Unknown',
+        risk: s.risk,
+      }));
+
+      const response = await fetch('/api/chat/main', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: opsInput,
-          threadId: opsThreadId,
-          context: { alertCount, shipmentsCount: shipments.length },
+          message: mainInput,
+          threadId: mainThreadId,
+          context: {
+            shipments: shipmentsContext,
+            alerts: [
+              {
+                type: 'issues',
+                message: `${shipments.filter(s => s.status === 'issue').length} guías con novedad`,
+                priority: 'high',
+              },
+              {
+                type: 'in_office',
+                message: `${shipments.filter(s => s.status === 'in_office').length} en oficina`,
+                priority: 'medium',
+              },
+            ],
+            metrics: {
+              totalOrders: shipments.length,
+              deliveredRate: shipments.length > 0
+                ? Math.round((shipments.filter(s => s.status === 'delivered').length / shipments.length) * 100)
+                : 0,
+              returnRate: shipments.length > 0
+                ? Math.round((shipments.filter(s => s.status === 'returned').length / shipments.length) * 100)
+                : 0,
+            },
+          },
         }),
       });
 
       const data = await response.json();
 
       if (data.ok) {
-        setOpsThreadId(data.threadId);
-        setOpsMessages(prev => [...prev, {
+        setMainThreadId(data.threadId);
+        setMainMessages(prev => [...prev, {
           role: 'assistant',
           content: data.message,
           timestamp: new Date().toISOString(),
         }]);
       } else {
-        setOpsMessages(prev => [...prev, {
+        setMainMessages(prev => [...prev, {
           role: 'assistant',
           content: `Error: ${data.error || 'No se pudo procesar'}`,
           timestamp: new Date().toISOString(),
         }]);
       }
     } catch (error) {
-      setOpsMessages(prev => [...prev, {
+      setMainMessages(prev => [...prev, {
         role: 'assistant',
         content: 'Error de conexión. Verifica tu conexión a internet.',
         timestamp: new Date().toISOString(),
       }]);
     } finally {
-      setOpsLoading(false);
+      setMainLoading(false);
     }
-  }, [opsInput, opsLoading, opsThreadId, alertCount, shipments.length]);
-
-  // Enviar mensaje al chat Strategy
-  const sendStrategyMessage = useCallback(async () => {
-    if (!strategyInput.trim() || strategyLoading) return;
-
-    const userMessage: ChatMessage = {
-      role: 'user',
-      content: strategyInput,
-      timestamp: new Date().toISOString(),
-    };
-
-    setStrategyMessages(prev => [...prev, userMessage]);
-    setStrategyInput('');
-    setStrategyLoading(true);
-
-    try {
-      const response = await fetch('/api/chat/strategy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: strategyInput,
-          threadId: strategyThreadId,
-          includeMetrics: true,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.ok) {
-        setStrategyThreadId(data.threadId);
-        setStrategyMessages(prev => [...prev, {
-          role: 'assistant',
-          content: data.message,
-          timestamp: new Date().toISOString(),
-        }]);
-      } else {
-        setStrategyMessages(prev => [...prev, {
-          role: 'assistant',
-          content: `Error: ${data.error || 'No se pudo procesar'}`,
-          timestamp: new Date().toISOString(),
-        }]);
-      }
-    } catch (error) {
-      setStrategyMessages(prev => [...prev, {
-        role: 'assistant',
-        content: 'Error de conexión. Verifica tu conexión a internet.',
-        timestamp: new Date().toISOString(),
-      }]);
-    } finally {
-      setStrategyLoading(false);
-    }
-  }, [strategyInput, strategyLoading, strategyThreadId]);
+  }, [mainInput, mainLoading, mainThreadId, shipments]);
 
   // Enviar mensaje al chat Chatea Pro
   const sendChateaMessage = useCallback(async () => {
@@ -228,19 +210,19 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
   const quickActions = [
     {
       icon: <TrendingUp className="w-4 h-4" />,
-      label: 'Ventas hoy',
+      label: 'Análisis',
       color: 'emerald',
       action: () => {
-        setActiveTab('strategy');
+        setActiveTab('main');
         setIsOpen(true);
       },
     },
     {
       icon: <Package className="w-4 h-4" />,
-      label: 'Operaciones',
+      label: 'Chat Principal',
       color: 'blue',
       action: () => {
-        setActiveTab('ops');
+        setActiveTab('main');
         setIsOpen(true);
       },
     },
@@ -255,20 +237,18 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
       },
     },
     {
-      icon: <Zap className="w-4 h-4" />,
-      label: 'Skills',
-      color: 'purple',
-      badge: skillsEngine.getActiveSkills().length,
+      icon: <MessageSquare className="w-4 h-4" />,
+      label: 'WhatsApp',
+      color: 'green',
       action: () => {
-        setActiveTab('skills');
+        setActiveTab('chatea');
         setIsOpen(true);
       },
     },
   ];
 
   const tabs = [
-    { id: 'ops' as TabType, icon: <Wrench className="w-4 h-4" />, label: 'OPS' },
-    { id: 'strategy' as TabType, icon: <BarChart3 className="w-4 h-4" />, label: 'Strategy' },
+    { id: 'main' as TabType, icon: <Brain className="w-4 h-4" />, label: 'Principal' },
     { id: 'chatea' as TabType, icon: <MessageSquare className="w-4 h-4" />, label: 'Chatea' },
     { id: 'alerts' as TabType, icon: <Bell className="w-4 h-4" />, label: 'Alertas', badge: alertCount },
     { id: 'config' as TabType, icon: <Settings className="w-4 h-4" />, label: 'Config' },
@@ -341,7 +321,7 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
         {/* Tooltip */}
         {!isOpen && isHovered && (
           <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-slate-800 text-white text-sm rounded-lg whitespace-nowrap">
-            Asistente Litper Pro
+            Asistente Litper Pro AI
             <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45" />
           </div>
         )}
@@ -360,7 +340,7 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
                 <div>
                   <h3 className="font-bold text-white">Litper Pro AI</h3>
                   <p className="text-xs text-white/70">
-                    Centro de Control Inteligente
+                    Tu asistente para el top global
                   </p>
                 </div>
               </div>
@@ -397,30 +377,16 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
 
             {/* Content */}
             <div className="flex-1 overflow-auto">
-              {activeTab === 'ops' && (
+              {activeTab === 'main' && (
                 <ChatPanel
-                  title="Chat Operativo"
-                  subtitle="Guías, estados, novedades, acciones inmediatas"
-                  messages={opsMessages}
-                  input={opsInput}
-                  setInput={setOpsInput}
-                  onSend={sendOpsMessage}
-                  loading={opsLoading}
-                  placeholder="Ej: ¿Estado de la guía 123456?"
-                  accentColor="blue"
-                />
-              )}
-
-              {activeTab === 'strategy' && (
-                <ChatPanel
-                  title="Chat Estratégico"
-                  subtitle="Reportes, KPIs, decisiones, análisis"
-                  messages={strategyMessages}
-                  input={strategyInput}
-                  setInput={setStrategyInput}
-                  onSend={sendStrategyMessage}
-                  loading={strategyLoading}
-                  placeholder="Ej: ¿Cómo estamos este mes?"
+                  title="Chat Principal"
+                  subtitle="Guías, órdenes, análisis, KPIs, reportes, predicciones"
+                  messages={mainMessages}
+                  input={mainInput}
+                  setInput={setMainInput}
+                  onSend={sendMainMessage}
+                  loading={mainLoading}
+                  placeholder="Ej: ¿Cómo estamos hoy? o Estado de guía 123456"
                   accentColor="purple"
                 />
               )}
@@ -428,7 +394,7 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
               {activeTab === 'chatea' && (
                 <ChatPanel
                   title="Chatea Pro"
-                  subtitle="Control de WhatsApp, mensajes, templates"
+                  subtitle="Control de WhatsApp, mensajes, templates, webhooks"
                   messages={chateaMessages}
                   input={chateaInput}
                   setInput={setChateaInput}
@@ -440,14 +406,8 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
               )}
 
               {activeTab === 'alerts' && (
-                <div className="p-4 h-[500px] overflow-auto">
-                  <SkillsHub />
-                </div>
-              )}
-
-              {activeTab === 'alerts' && (
                 <div className="p-4">
-                  <AlertsPanel shipments={shipments as any[]} />
+                  <AlertsPanel shipments={shipments} />
                 </div>
               )}
 
@@ -494,7 +454,7 @@ export const SmartAssistant: React.FC<SmartAssistantProps> = ({ shipments = [] }
 };
 
 // Alerts Panel Component
-const AlertsPanel: React.FC<{ shipments: any[] }> = ({ shipments }) => {
+const AlertsPanel: React.FC<{ shipments: Shipment[] }> = ({ shipments }) => {
   const alertsData = [
     {
       type: 'critical',
@@ -567,7 +527,7 @@ interface ChatMessage {
   timestamp: string;
 }
 
-// Chat Panel Component - Reutilizable para OPS y Strategy
+// Chat Panel Component - Reutilizable para Main y Chatea
 interface ChatPanelProps {
   title: string;
   subtitle: string;
@@ -577,7 +537,7 @@ interface ChatPanelProps {
   onSend: () => void;
   loading: boolean;
   placeholder: string;
-  accentColor: 'blue' | 'purple' | 'green';
+  accentColor: 'purple' | 'green';
 }
 
 const ChatPanel: React.FC<ChatPanelProps> = ({
@@ -610,11 +570,6 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   };
 
   const colorClasses = {
-    blue: {
-      badge: 'bg-blue-100 text-blue-700',
-      button: 'bg-blue-600 hover:bg-blue-700',
-      userBubble: 'bg-blue-600 text-white',
-    },
     purple: {
       badge: 'bg-purple-100 text-purple-700',
       button: 'bg-purple-600 hover:bg-purple-700',

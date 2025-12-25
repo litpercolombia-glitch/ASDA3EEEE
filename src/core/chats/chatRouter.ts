@@ -3,11 +3,12 @@
 
 import opsSystemPrompt from './prompts/ops.system.md?raw';
 import strategySystemPrompt from './prompts/strategy.system.md?raw';
+import mainSystemPrompt from './prompts/main.system.md?raw';
 
 /**
  * Tipos de chat disponibles
  */
-export type ChatType = 'ops' | 'strategy';
+export type ChatType = 'ops' | 'strategy' | 'main';
 
 /**
  * Mensaje del chat
@@ -46,6 +47,13 @@ export interface ChatConfig {
  * Configuraciones por tipo de chat
  */
 export const CHAT_CONFIGS: Record<ChatType, ChatConfig> = {
+  main: {
+    systemPrompt: mainSystemPrompt,
+    maxTokens: 2048,
+    temperature: 0.4, // Balance entre precisión y creatividad
+    model: 'claude-sonnet-4-20250514', // Modelo potente para análisis integral
+    contextWindow: 15, // Contexto amplio para consultas complejas
+  },
   ops: {
     systemPrompt: opsSystemPrompt,
     maxTokens: 1024,
@@ -232,7 +240,7 @@ export function getThreadStats(): {
 } {
   const stats = {
     total: threadStore.size,
-    byType: { ops: 0, strategy: 0 } as Record<ChatType, number>,
+    byType: { main: 0, ops: 0, strategy: 0 } as Record<ChatType, number>,
     avgMessages: 0,
   };
 
