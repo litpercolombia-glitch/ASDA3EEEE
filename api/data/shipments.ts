@@ -1,5 +1,6 @@
 // /api/data/shipments.ts
-// Endpoint para obtener shipments para el dashboard y chat
+// Endpoint para obtener guías para el dashboard y chat
+// Usa tabla real: guias
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
@@ -17,99 +18,87 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Query params
     const {
-      status,
-      carrier,
+      estado,
+      transportadora,
+      ciudad,
       limit = '50',
       offset = '0',
-      guide,
-      high_risk,
+      guia,
+      con_novedad,
+      carga_id,
     } = req.query;
 
     // Build query
     let query = supabase
-      .from('shipments')
-      .select(`
-        id,
-        guide_number,
-        carrier,
-        status,
-        status_detail,
-        city,
-        department,
-        risk_score,
-        tracking_url,
-        estimated_delivery,
-        delivered_at,
-        created_at,
-        updated_at,
-        order_id,
-        orders (
-          id,
-          external_id,
-          customer_name,
-          customer_phone,
-          total_amount,
-          payment_method
-        )
-      `)
-      .order('updated_at', { ascending: false })
+      .from('guias')
+      .select('*')
+      .order('fecha_actualizacion', { ascending: false })
       .range(Number(offset), Number(offset) + Number(limit) - 1);
 
     // Filters
-    if (status && typeof status === 'string') {
-      query = query.eq('status', status);
+    if (estado && typeof estado === 'string') {
+      query = query.eq('estado', estado);
     }
 
-    if (carrier && typeof carrier === 'string') {
-      query = query.eq('carrier', carrier);
+    if (transportadora && typeof transportadora === 'string') {
+      query = query.eq('transportadora', transportadora);
     }
 
-    if (guide && typeof guide === 'string') {
-      query = query.ilike('guide_number', `%${guide}%`);
+    if (ciudad && typeof ciudad === 'string') {
+      query = query.ilike('ciudad_destino', `%${ciudad}%`);
     }
 
-    if (high_risk === 'true') {
-      query = query.gte('risk_score', 60);
+    if (guia && typeof guia === 'string') {
+      query = query.ilike('numero_guia', `%${guia}%`);
     }
 
-    const { data: shipments, error, count } = await query;
+    if (con_novedad === 'true') {
+      query = query.eq('tiene_novedad', true);
+    }
+
+    if (carga_id && typeof carga_id === 'string') {
+      query = query.eq('carga_id', carga_id);
+    }
+
+    const { data: guias, error, count } = await query;
 
     if (error) throw error;
 
-    // Transform para el frontend
-    const transformed = shipments?.map(s => ({
-      id: s.id,
-      guide: s.guide_number,
-      carrier: s.carrier,
-      status: s.status,
-      statusDetail: s.status_detail,
-      city: s.city,
-      department: s.department,
-      risk: s.risk_score,
-      trackingUrl: s.tracking_url,
-      estimatedDelivery: s.estimated_delivery,
-      deliveredAt: s.delivered_at,
-      createdAt: s.created_at,
-      updatedAt: s.updated_at,
-      order: s.orders ? {
-        id: (s.orders as any).id,
-        externalId: (s.orders as any).external_id,
-        customerName: (s.orders as any).customer_name,
-        customerPhone: (s.orders as any).customer_phone,
-        total: (s.orders as any).total_amount,
-        paymentMethod: (s.orders as any).payment_method,
-      } : null,
+    // Transform para el frontend (mantener compatibilidad)
+    const transformed = guias?.map(g => ({
+      id: g.id,
+      guide: g.numero_guia,
+      carrier: g.transportadora,
+      status: g.estado,
+      statusDetail: g.estado_detalle,
+      city: g.ciudad_destino,
+      department: g.departamento,
+      customerName: g.nombre_cliente,
+      customerPhone: g.telefono,
+      address: g.direccion,
+      value: g.valor_declarado,
+      freight: g.valor_flete,
+      profit: g.ganancia,
+      daysInTransit: g.dias_transito,
+      hasIssue: g.tiene_novedad,
+      issueType: g.tipo_novedad,
+      issueDescription: g.descripcion_novedad,
+      createdAt: g.fecha_creacion,
+      updatedAt: g.fecha_actualizacion,
+      deliveredAt: g.fecha_entrega,
+      cargaId: g.carga_id,
+      source: g.fuente,
     }));
 
     return res.status(200).json({
       ok: true,
-      shipments: transformed,
+      guias: transformed,
       total: count,
       limit: Number(limit),
       offset: Number(offset),
     });
   } catch (error) {
-    console.error('[Shipments] Error:', error);
+    console.error('[Guias] Error:', error);
     return res.status(500).json({
       ok: false,
       error: error instanceof Error ? error.message : 'Unknown error',

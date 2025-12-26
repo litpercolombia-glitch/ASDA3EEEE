@@ -1,5 +1,6 @@
 // /api/data/metrics.ts
 // Endpoint para obtener métricas del dashboard
+// Usa esquema real: guias, cargas, alertas, ciudades_stats
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
@@ -15,123 +16,123 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 1. Obtener totales de órdenes por estado
-    const { data: orders, error: ordersError } = await supabase
-      .from('orders')
-      .select('status, risk_score, payment_method, total_amount');
+    // 1. Obtener guías
+    const { data: guias, error: guiasError } = await supabase
+      .from('guias')
+      .select('estado, transportadora, ciudad_destino, valor_declarado, ganancia, tiene_novedad, dias_transito');
 
-    if (ordersError) throw ordersError;
+    if (guiasError) throw guiasError;
 
-    // 2. Obtener totales de shipments por estado
-    const { data: shipments, error: shipmentsError } = await supabase
-      .from('shipments')
-      .select('status, carrier, risk_score, city');
+    // 2. Obtener cargas activas
+    const { data: cargas, error: cargasError } = await supabase
+      .from('cargas')
+      .select('*')
+      .eq('estado', 'activa');
 
-    if (shipmentsError) throw shipmentsError;
+    if (cargasError) throw cargasError;
 
-    // 3. Obtener alertas activas
-    const { data: alerts, error: alertsError } = await supabase
-      .from('alerts')
-      .select('type, priority, resolved')
-      .eq('resolved', false);
+    // 3. Obtener alertas no leídas
+    const { data: alertas, error: alertasError } = await supabase
+      .from('alertas')
+      .select('tipo, titulo')
+      .eq('leida', false);
 
-    if (alertsError) throw alertsError;
+    if (alertasError) throw alertasError;
 
-    // Calcular métricas
-    const totalOrders = orders?.length || 0;
-    const totalShipments = shipments?.length || 0;
+    // 4. Obtener ciudades stats
+    const { data: ciudades, error: ciudadesError } = await supabase
+      .from('ciudades_stats')
+      .select('*');
 
-    // Por estado de orden
-    const ordersByStatus: Record<string, number> = {};
-    orders?.forEach(o => {
-      ordersByStatus[o.status] = (ordersByStatus[o.status] || 0) + 1;
+    if (ciudadesError) throw ciudadesError;
+
+    // Calcular métricas de guías
+    const totalGuias = guias?.length || 0;
+
+    const guiasByEstado: Record<string, number> = {};
+    const guiasByTransportadora: Record<string, number> = {};
+    const guiasByCiudad: Record<string, number> = {};
+    let totalValor = 0;
+    let totalGanancia = 0;
+    let conNovedad = 0;
+    let totalDiasTransito = 0;
+
+    guias?.forEach(g => {
+      guiasByEstado[g.estado] = (guiasByEstado[g.estado] || 0) + 1;
+      guiasByTransportadora[g.transportadora] = (guiasByTransportadora[g.transportadora] || 0) + 1;
+      guiasByCiudad[g.ciudad_destino] = (guiasByCiudad[g.ciudad_destino] || 0) + 1;
+      totalValor += g.valor_declarado || 0;
+      totalGanancia += g.ganancia || 0;
+      if (g.tiene_novedad) conNovedad++;
+      totalDiasTransito += g.dias_transito || 0;
     });
 
-    // Por estado de shipment
-    const shipmentsByStatus: Record<string, number> = {};
-    shipments?.forEach(s => {
-      shipmentsByStatus[s.status] = (shipmentsByStatus[s.status] || 0) + 1;
-    });
+    // Tasas
+    const entregadas = guiasByEstado['Entregado'] || guiasByEstado['ENTREGADO'] || 0;
+    const devueltas = (guiasByEstado['Devolucion'] || 0) + (guiasByEstado['DEVOLUCION'] || 0) + (guiasByEstado['Rechazado'] || 0);
+    const enTransito = guiasByEstado['En transito'] || guiasByEstado['EN_TRANSITO'] || guiasByEstado['Pendiente'] || 0;
 
-    // Por transportadora
-    const shipmentsByCarrier: Record<string, number> = {};
-    shipments?.forEach(s => {
-      shipmentsByCarrier[s.carrier] = (shipmentsByCarrier[s.carrier] || 0) + 1;
-    });
-
-    // Tasas de entrega
-    const delivered = shipmentsByStatus['delivered'] || 0;
-    const returned = shipmentsByStatus['returned'] || 0;
-    const issues = shipmentsByStatus['issue'] || 0;
-
-    const deliveryRate = totalShipments > 0
-      ? Math.round((delivered / totalShipments) * 100)
-      : 0;
-
-    const returnRate = totalShipments > 0
-      ? Math.round((returned / totalShipments) * 100)
-      : 0;
-
-    // Alto riesgo
-    const highRiskOrders = orders?.filter(o => o.risk_score >= 60).length || 0;
-    const highRiskShipments = shipments?.filter(s => s.risk_score >= 60).length || 0;
-
-    // GMV
-    const totalGMV = orders?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
-    const codOrders = orders?.filter(o => o.payment_method === 'cod').length || 0;
-
-    // Alertas por tipo
-    const alertsByType: Record<string, number> = {};
-    const alertsByPriority: Record<string, number> = {};
-    alerts?.forEach(a => {
-      alertsByType[a.type] = (alertsByType[a.type] || 0) + 1;
-      alertsByPriority[a.priority] = (alertsByPriority[a.priority] || 0) + 1;
-    });
+    const tasaEntrega = totalGuias > 0 ? Math.round((entregadas / totalGuias) * 100) : 0;
+    const tasaDevolucion = totalGuias > 0 ? Math.round((devueltas / totalGuias) * 100) : 0;
+    const tiempoPromedio = totalGuias > 0 ? Math.round(totalDiasTransito / totalGuias) : 0;
 
     // Top ciudades con problemas
-    const citiesWithIssues: Record<string, number> = {};
-    shipments?.filter(s => s.status === 'issue' || s.status === 'returned')
-      .forEach(s => {
-        if (s.city) {
-          citiesWithIssues[s.city] = (citiesWithIssues[s.city] || 0) + 1;
-        }
-      });
-
-    const topProblemCities = Object.entries(citiesWithIssues)
-      .sort((a, b) => b[1] - a[1])
+    const ciudadesProblematicas = ciudades
+      ?.filter(c => c.status === 'rojo' || c.status === 'amarillo')
+      .sort((a, b) => b.tasa_devolucion - a.tasa_devolucion)
       .slice(0, 5)
-      .map(([city, count]) => ({ city, count }));
+      .map(c => ({
+        ciudad: c.ciudad,
+        tasaEntrega: c.tasa_entrega,
+        tasaDevolucion: c.tasa_devolucion,
+        status: c.status,
+      })) || [];
+
+    // Alertas por tipo
+    const alertasByTipo: Record<string, number> = {};
+    alertas?.forEach(a => {
+      alertasByTipo[a.tipo] = (alertasByTipo[a.tipo] || 0) + 1;
+    });
+
+    // Resumen de cargas
+    const cargasResumen = cargas?.map(c => ({
+      nombre: c.nombre,
+      totalGuias: c.total_guias,
+      entregadas: c.entregadas,
+      porcentajeEntrega: c.porcentaje_entrega,
+      valorTotal: c.valor_total,
+    })) || [];
 
     return res.status(200).json({
       ok: true,
       timestamp: new Date().toISOString(),
       metrics: {
         // Totales
-        totalOrders,
-        totalShipments,
-        activeAlerts: alerts?.length || 0,
+        totalGuias,
+        cargasActivas: cargas?.length || 0,
+        alertasSinLeer: alertas?.length || 0,
 
         // Tasas
-        deliveryRate,
-        returnRate,
-        issueRate: totalShipments > 0 ? Math.round((issues / totalShipments) * 100) : 0,
+        tasaEntrega,
+        tasaDevolucion,
+        tiempoPromedio,
 
-        // Riesgo
-        highRiskOrders,
-        highRiskShipments,
+        // Conteos
+        entregadas,
+        devueltas,
+        enTransito,
+        conNovedad,
 
         // Financiero
-        totalGMV,
-        codOrders,
-        codPercentage: totalOrders > 0 ? Math.round((codOrders / totalOrders) * 100) : 0,
+        totalValor,
+        totalGanancia,
 
         // Desglose
-        ordersByStatus,
-        shipmentsByStatus,
-        shipmentsByCarrier,
-        alertsByType,
-        alertsByPriority,
-        topProblemCities,
+        guiasByEstado,
+        guiasByTransportadora,
+        alertasByTipo,
+        ciudadesProblematicas,
+        cargasResumen,
       },
     });
   } catch (error) {

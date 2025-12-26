@@ -1,6 +1,6 @@
 // /api/chat/main.ts
 // Endpoint para el Chat Principal de Litper Pro AI
-// Combina capacidades operativas y estratégicas + datos reales de Supabase
+// Usa tablas reales: guias, cargas, alertas, ciudades_stats
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Anthropic from '@anthropic-ai/sdk';
@@ -11,15 +11,13 @@ import {
   addMessageToThread,
 } from '../../src/core/chats/chatRouter';
 
-// Importar prompt principal
 import mainSystemPrompt from '../../src/core/chats/prompts/main.system.md?raw';
 
-// Supabase client
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
 
 /**
- * Obtiene contexto real de Supabase
+ * Obtiene contexto real de Supabase usando el esquema de Litper Pro
  */
 async function getRealContext(): Promise<string> {
   if (!supabaseUrl || !supabaseKey) {
@@ -30,100 +28,111 @@ async function getRealContext(): Promise<string> {
   const contextParts: string[] = [];
 
   try {
-    // 1. Métricas de órdenes
-    const { data: orders } = await supabase
-      .from('orders')
-      .select('status, risk_score, payment_method, total_amount, shipping_city');
+    // 1. Métricas de guías
+    const { data: guias } = await supabase
+      .from('guias')
+      .select('estado, transportadora, ciudad_destino, valor_declarado, tiene_novedad, dias_transito')
+      .order('fecha_actualizacion', { ascending: false })
+      .limit(200);
 
-    if (orders && orders.length > 0) {
-      const ordersByStatus: Record<string, number> = {};
-      let totalGMV = 0;
-      let highRiskOrders = 0;
+    if (guias && guias.length > 0) {
+      const byEstado: Record<string, number> = {};
+      const byTransportadora: Record<string, number> = {};
+      let totalValor = 0;
+      let conNovedad = 0;
 
-      orders.forEach(o => {
-        ordersByStatus[o.status] = (ordersByStatus[o.status] || 0) + 1;
-        totalGMV += o.total_amount || 0;
-        if (o.risk_score >= 60) highRiskOrders++;
+      guias.forEach(g => {
+        byEstado[g.estado] = (byEstado[g.estado] || 0) + 1;
+        byTransportadora[g.transportadora] = (byTransportadora[g.transportadora] || 0) + 1;
+        totalValor += g.valor_declarado || 0;
+        if (g.tiene_novedad) conNovedad++;
       });
 
-      contextParts.push(`### Órdenes (${orders.length} total)`);
-      Object.entries(ordersByStatus).forEach(([status, count]) => {
-        contextParts.push(`- ${status}: ${count}`);
-      });
-      contextParts.push(`- GMV Total: $${totalGMV.toLocaleString('es-CO')} COP`);
-      if (highRiskOrders > 0) {
-        contextParts.push(`- ⚠️ Alto riesgo: ${highRiskOrders}`);
-      }
-    }
+      const entregadas = byEstado['Entregado'] || byEstado['ENTREGADO'] || 0;
+      const devueltas = byEstado['Devolucion'] || byEstado['DEVOLUCION'] || byEstado['Rechazado'] || 0;
+      const total = guias.length;
 
-    // 2. Métricas de shipments
-    const { data: shipments } = await supabase
-      .from('shipments')
-      .select('status, carrier, risk_score, city, guide_number')
-      .order('updated_at', { ascending: false })
-      .limit(100);
+      contextParts.push(`### Guías (${total} recientes)`);
+      contextParts.push(`- ✅ Entregadas: ${entregadas} (${Math.round((entregadas/total)*100)}%)`);
+      contextParts.push(`- 🔄 Devueltas: ${devueltas} (${Math.round((devueltas/total)*100)}%)`);
+      contextParts.push(`- ⚠️ Con novedad: ${conNovedad}`);
+      contextParts.push(`- 💰 Valor total: $${totalValor.toLocaleString('es-CO')} COP`);
 
-    if (shipments && shipments.length > 0) {
-      const byStatus: Record<string, number> = {};
-      const byCarrier: Record<string, number> = {};
-      let highRisk = 0;
-
-      shipments.forEach(s => {
-        byStatus[s.status] = (byStatus[s.status] || 0) + 1;
-        byCarrier[s.carrier] = (byCarrier[s.carrier] || 0) + 1;
-        if (s.risk_score >= 60) highRisk++;
-      });
-
-      const delivered = byStatus['delivered'] || 0;
-      const returned = byStatus['returned'] || 0;
-      const issues = byStatus['issue'] || 0;
-      const total = shipments.length;
-
-      contextParts.push(`\n### Envíos (${total} recientes)`);
-      contextParts.push(`- ✅ Entregados: ${delivered} (${Math.round((delivered/total)*100)}%)`);
-      contextParts.push(`- 🔄 Devoluciones: ${returned} (${Math.round((returned/total)*100)}%)`);
-      contextParts.push(`- ⚠️ Con novedad: ${issues}`);
-
-      if (highRisk > 0) {
-        contextParts.push(`- 🚨 Alto riesgo: ${highRisk}`);
-      }
+      contextParts.push(`\nPor estado:`);
+      Object.entries(byEstado)
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([estado, count]) => {
+          contextParts.push(`- ${estado}: ${count}`);
+        });
 
       contextParts.push(`\nPor transportadora:`);
-      Object.entries(byCarrier)
+      Object.entries(byTransportadora)
         .sort((a, b) => b[1] - a[1])
-        .forEach(([carrier, count]) => {
-          contextParts.push(`- ${carrier}: ${count}`);
+        .slice(0, 5)
+        .forEach(([trans, count]) => {
+          contextParts.push(`- ${trans}: ${count}`);
         });
     }
 
-    // 3. Alertas activas
-    const { data: alerts } = await supabase
-      .from('alerts')
-      .select('type, priority, message')
-      .eq('resolved', false)
+    // 2. Cargas activas
+    const { data: cargas } = await supabase
+      .from('cargas')
+      .select('*')
+      .eq('estado', 'activa')
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(5);
 
-    if (alerts && alerts.length > 0) {
-      contextParts.push(`\n### Alertas Activas (${alerts.length})`);
-      alerts.forEach(a => {
-        const icon = a.priority === 'critical' ? '🔴' : a.priority === 'high' ? '🟠' : '🟡';
-        contextParts.push(`${icon} [${a.type}] ${a.message?.substring(0, 80) || 'Sin mensaje'}`);
+    if (cargas && cargas.length > 0) {
+      contextParts.push(`\n### Cargas Activas (${cargas.length})`);
+      cargas.forEach(c => {
+        contextParts.push(`- ${c.nombre}: ${c.total_guias} guías, ${c.porcentaje_entrega}% entregado`);
       });
     }
 
-    // 4. Últimos shipments con problemas
-    const { data: problemShipments } = await supabase
-      .from('shipments')
-      .select('guide_number, status, carrier, city')
-      .in('status', ['issue', 'returned', 'lost'])
-      .order('updated_at', { ascending: false })
+    // 3. Alertas no leídas
+    const { data: alertas } = await supabase
+      .from('alertas')
+      .select('tipo, titulo, mensaje')
+      .eq('leida', false)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (alertas && alertas.length > 0) {
+      contextParts.push(`\n### Alertas Sin Leer (${alertas.length})`);
+      alertas.forEach(a => {
+        const icon = a.tipo === 'error' ? '🔴' : a.tipo === 'warning' ? '🟠' : '🟡';
+        contextParts.push(`${icon} ${a.titulo}`);
+      });
+    }
+
+    // 4. Ciudades problemáticas
+    const { data: ciudades } = await supabase
+      .from('ciudades_stats')
+      .select('ciudad, tasa_entrega, tasa_devolucion, status')
+      .or('status.eq.rojo,status.eq.amarillo')
+      .order('tasa_devolucion', { ascending: false })
       .limit(5);
 
-    if (problemShipments && problemShipments.length > 0) {
-      contextParts.push(`\n### Envíos Problemáticos Recientes`);
-      problemShipments.forEach(s => {
-        contextParts.push(`- Guía ${s.guide_number}: ${s.status} (${s.carrier}, ${s.city})`);
+    if (ciudades && ciudades.length > 0) {
+      contextParts.push(`\n### Ciudades con Problemas`);
+      ciudades.forEach(c => {
+        const icon = c.status === 'rojo' ? '🔴' : '🟡';
+        contextParts.push(`${icon} ${c.ciudad}: ${c.tasa_entrega}% entrega, ${c.tasa_devolucion}% devolución`);
+      });
+    }
+
+    // 5. Guías con novedad recientes
+    const { data: novedades } = await supabase
+      .from('guias')
+      .select('numero_guia, estado, transportadora, ciudad_destino, tipo_novedad')
+      .eq('tiene_novedad', true)
+      .order('fecha_actualizacion', { ascending: false })
+      .limit(5);
+
+    if (novedades && novedades.length > 0) {
+      contextParts.push(`\n### Guías con Novedad Recientes`);
+      novedades.forEach(g => {
+        contextParts.push(`- ${g.numero_guia}: ${g.tipo_novedad || g.estado} (${g.transportadora}, ${g.ciudad_destino})`);
       });
     }
 
@@ -140,10 +149,10 @@ async function getRealContext(): Promise<string> {
 async function searchGuide(message: string): Promise<string | null> {
   if (!supabaseUrl || !supabaseKey) return null;
 
-  // Detectar número de guía en el mensaje
+  // Detectar número de guía
   const guidePatterns = [
-    /gu[ií]a\s*[#:]?\s*(\d{6,})/i,
-    /guide\s*[#:]?\s*(\d{6,})/i,
+    /gu[ií]a\s*[#:]?\s*(\w{6,})/i,
+    /guide\s*[#:]?\s*(\w{6,})/i,
     /(\d{10,})/,
   ];
 
@@ -160,49 +169,33 @@ async function searchGuide(message: string): Promise<string | null> {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  const { data: shipment } = await supabase
-    .from('shipments')
-    .select(`
-      *,
-      orders (
-        external_id,
-        customer_name,
-        customer_phone,
-        shipping_address,
-        total_amount,
-        payment_method
-      )
-    `)
-    .ilike('guide_number', `%${guideNumber}%`)
+  const { data: guia } = await supabase
+    .from('guias')
+    .select('*')
+    .ilike('numero_guia', `%${guideNumber}%`)
     .single();
 
-  if (!shipment) return null;
-
-  const order = shipment.orders as any;
+  if (!guia) return null;
 
   return `
-### Información de Guía ${shipment.guide_number}
-- **Estado**: ${shipment.status} ${shipment.status_detail ? `(${shipment.status_detail})` : ''}
-- **Transportadora**: ${shipment.carrier}
-- **Ciudad**: ${shipment.city}, ${shipment.department}
-- **Riesgo**: ${shipment.risk_score}/100
-- **Creada**: ${new Date(shipment.created_at).toLocaleDateString('es-CO')}
-- **Actualizada**: ${new Date(shipment.updated_at).toLocaleString('es-CO')}
-${shipment.delivered_at ? `- **Entregada**: ${new Date(shipment.delivered_at).toLocaleString('es-CO')}` : ''}
-${order ? `
-**Orden Asociada**:
-- ID: ${order.external_id}
-- Cliente: ${order.customer_name || 'N/A'}
-- Teléfono: ${order.customer_phone || 'N/A'}
-- Dirección: ${order.shipping_address || 'N/A'}
-- Total: $${order.total_amount?.toLocaleString('es-CO') || 0} COP
-- Pago: ${order.payment_method === 'cod' ? 'Contra entrega' : 'Prepago'}
-` : ''}`;
+### Información de Guía ${guia.numero_guia}
+- **Estado**: ${guia.estado} ${guia.estado_detalle ? `(${guia.estado_detalle})` : ''}
+- **Transportadora**: ${guia.transportadora}
+- **Destino**: ${guia.ciudad_destino}, ${guia.departamento || 'N/A'}
+- **Cliente**: ${guia.nombre_cliente || 'N/A'}
+- **Teléfono**: ${guia.telefono || 'N/A'}
+- **Dirección**: ${guia.direccion || 'N/A'}
+- **Valor**: $${guia.valor_declarado?.toLocaleString('es-CO') || 0} COP
+- **Días en tránsito**: ${guia.dias_transito}
+- **Tiene novedad**: ${guia.tiene_novedad ? `Sí - ${guia.tipo_novedad}` : 'No'}
+${guia.descripcion_novedad ? `- **Novedad**: ${guia.descripcion_novedad}` : ''}
+- **Creada**: ${new Date(guia.fecha_creacion).toLocaleDateString('es-CO')}
+- **Actualizada**: ${new Date(guia.fecha_actualizacion).toLocaleString('es-CO')}
+${guia.fecha_entrega ? `- **Entregada**: ${new Date(guia.fecha_entrega).toLocaleString('es-CO')}` : ''}`;
 }
 
 /**
  * POST /api/chat/main
- * Chat Principal de Litper Pro - Operaciones + Estrategia
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -235,7 +228,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       searchGuide(message),
     ]);
 
-    // Construir contexto completo
+    // Construir contexto
     const contextParts: string[] = [];
     contextParts.push(`Fecha/Hora: ${new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' })}`);
 

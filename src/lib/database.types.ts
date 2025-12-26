@@ -1,5 +1,6 @@
 // /src/lib/database.types.ts
 // Tipos de la base de datos Supabase para Litper Pro
+// Adaptado al esquema real del proyecto
 
 export type Json =
   | string
@@ -12,170 +13,262 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
-      orders: {
+      cargas: {
         Row: {
           id: string;
-          external_id: string;
-          source: string;
-          status: string;
-          customer_name: string | null;
-          customer_phone: string | null;
-          customer_email: string | null;
-          shipping_address: string | null;
-          shipping_city: string | null;
-          shipping_department: string | null;
-          total_amount: number | null;
-          payment_method: string | null;
-          risk_score: number;
+          nombre: string;
+          numero_carga: number;
+          fecha: string;
+          usuario_id: string;
+          usuario_nombre: string;
+          estado: string;
+          total_guias: number;
+          entregadas: number;
+          en_transito: number;
+          con_novedad: number;
+          devueltas: number;
+          porcentaje_entrega: number;
+          valor_total: number;
+          ganancia_total: number;
           created_at: string;
           updated_at: string;
+          closed_at: string | null;
         };
         Insert: {
           id?: string;
-          external_id: string;
-          source: string;
-          status?: string;
-          customer_name?: string | null;
-          customer_phone?: string | null;
-          customer_email?: string | null;
-          shipping_address?: string | null;
-          shipping_city?: string | null;
-          shipping_department?: string | null;
-          total_amount?: number | null;
-          payment_method?: string | null;
-          risk_score?: number;
+          nombre: string;
+          numero_carga: number;
+          fecha?: string;
+          usuario_id: string;
+          usuario_nombre: string;
+          estado?: string;
+          total_guias?: number;
+          entregadas?: number;
+          en_transito?: number;
+          con_novedad?: number;
+          devueltas?: number;
+          porcentaje_entrega?: number;
+          valor_total?: number;
+          ganancia_total?: number;
           created_at?: string;
           updated_at?: string;
+          closed_at?: string | null;
         };
         Update: {
           id?: string;
-          external_id?: string;
-          source?: string;
-          status?: string;
-          customer_name?: string | null;
-          customer_phone?: string | null;
-          customer_email?: string | null;
-          shipping_address?: string | null;
-          shipping_city?: string | null;
-          shipping_department?: string | null;
-          total_amount?: number | null;
-          payment_method?: string | null;
-          risk_score?: number;
+          nombre?: string;
+          numero_carga?: number;
+          fecha?: string;
+          usuario_id?: string;
+          usuario_nombre?: string;
+          estado?: string;
+          total_guias?: number;
+          entregadas?: number;
+          en_transito?: number;
+          con_novedad?: number;
+          devueltas?: number;
+          porcentaje_entrega?: number;
+          valor_total?: number;
+          ganancia_total?: number;
           created_at?: string;
           updated_at?: string;
+          closed_at?: string | null;
         };
       };
-      shipments: {
+      guias: {
         Row: {
           id: string;
-          order_id: string | null;
-          guide_number: string | null;
-          carrier: string;
+          numero_guia: string;
+          transportadora: string;
+          ciudad_destino: string;
+          departamento: string | null;
+          estado: string;
+          estado_detalle: string | null;
+          nombre_cliente: string | null;
+          telefono: string | null;
+          direccion: string | null;
+          valor_declarado: number;
+          valor_flete: number;
+          ganancia: number;
+          dias_transito: number;
+          tiene_novedad: boolean;
+          tipo_novedad: string | null;
+          descripcion_novedad: string | null;
+          fecha_creacion: string;
+          fecha_actualizacion: string;
+          fecha_entrega: string | null;
+          carga_id: string | null;
+          usuario_id: string | null;
+          fuente: string;
+          metadata: Json;
+        };
+        Insert: {
+          id?: string;
+          numero_guia: string;
+          transportadora: string;
+          ciudad_destino: string;
+          departamento?: string | null;
+          estado?: string;
+          estado_detalle?: string | null;
+          nombre_cliente?: string | null;
+          telefono?: string | null;
+          direccion?: string | null;
+          valor_declarado?: number;
+          valor_flete?: number;
+          ganancia?: number;
+          dias_transito?: number;
+          tiene_novedad?: boolean;
+          tipo_novedad?: string | null;
+          descripcion_novedad?: string | null;
+          fecha_creacion?: string;
+          fecha_actualizacion?: string;
+          fecha_entrega?: string | null;
+          carga_id?: string | null;
+          usuario_id?: string | null;
+          fuente?: string;
+          metadata?: Json;
+        };
+        Update: {
+          id?: string;
+          numero_guia?: string;
+          transportadora?: string;
+          ciudad_destino?: string;
+          departamento?: string | null;
+          estado?: string;
+          estado_detalle?: string | null;
+          nombre_cliente?: string | null;
+          telefono?: string | null;
+          direccion?: string | null;
+          valor_declarado?: number;
+          valor_flete?: number;
+          ganancia?: number;
+          dias_transito?: number;
+          tiene_novedad?: boolean;
+          tipo_novedad?: string | null;
+          descripcion_novedad?: string | null;
+          fecha_creacion?: string;
+          fecha_actualizacion?: string;
+          fecha_entrega?: string | null;
+          carga_id?: string | null;
+          usuario_id?: string | null;
+          fuente?: string;
+          metadata?: Json;
+        };
+      };
+      ciudades_stats: {
+        Row: {
+          id: string;
+          ciudad: string;
+          departamento: string | null;
+          total_guias: number;
+          entregadas: number;
+          devueltas: number;
+          en_transito: number;
+          tasa_entrega: number;
+          tasa_devolucion: number;
+          tiempo_promedio: number;
           status: string;
-          status_detail: string | null;
-          city: string | null;
-          department: string | null;
-          risk_score: number;
-          tracking_url: string | null;
-          estimated_delivery: string | null;
-          delivered_at: string | null;
-          created_at: string;
-          updated_at: string;
+          transportadora_principal: string | null;
+          pausado: boolean;
+          ultima_actualizacion: string;
         };
         Insert: {
           id?: string;
-          order_id?: string | null;
-          guide_number?: string | null;
-          carrier: string;
+          ciudad: string;
+          departamento?: string | null;
+          total_guias?: number;
+          entregadas?: number;
+          devueltas?: number;
+          en_transito?: number;
+          tasa_entrega?: number;
+          tasa_devolucion?: number;
+          tiempo_promedio?: number;
           status?: string;
-          status_detail?: string | null;
-          city?: string | null;
-          department?: string | null;
-          risk_score?: number;
-          tracking_url?: string | null;
-          estimated_delivery?: string | null;
-          delivered_at?: string | null;
-          created_at?: string;
-          updated_at?: string;
+          transportadora_principal?: string | null;
+          pausado?: boolean;
+          ultima_actualizacion?: string;
         };
         Update: {
           id?: string;
-          order_id?: string | null;
-          guide_number?: string | null;
-          carrier?: string;
+          ciudad?: string;
+          departamento?: string | null;
+          total_guias?: number;
+          entregadas?: number;
+          devueltas?: number;
+          en_transito?: number;
+          tasa_entrega?: number;
+          tasa_devolucion?: number;
+          tiempo_promedio?: number;
           status?: string;
-          status_detail?: string | null;
-          city?: string | null;
-          department?: string | null;
-          risk_score?: number;
-          tracking_url?: string | null;
-          estimated_delivery?: string | null;
-          delivered_at?: string | null;
-          created_at?: string;
-          updated_at?: string;
+          transportadora_principal?: string | null;
+          pausado?: boolean;
+          ultima_actualizacion?: string;
         };
       };
-      events: {
+      alertas: {
         Row: {
           id: string;
-          source: string;
-          event_type: string;
-          idempotency_key: string | null;
-          payload: Json | null;
-          processed: boolean;
+          tipo: string;
+          titulo: string;
+          mensaje: string;
+          fuente: string | null;
+          leida: boolean;
+          accion_url: string | null;
+          usuario_id: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
-          source: string;
-          event_type: string;
-          idempotency_key?: string | null;
-          payload?: Json | null;
-          processed?: boolean;
+          tipo: string;
+          titulo: string;
+          mensaje: string;
+          fuente?: string | null;
+          leida?: boolean;
+          accion_url?: string | null;
+          usuario_id?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
-          source?: string;
-          event_type?: string;
-          idempotency_key?: string | null;
-          payload?: Json | null;
-          processed?: boolean;
+          tipo?: string;
+          titulo?: string;
+          mensaje?: string;
+          fuente?: string | null;
+          leida?: boolean;
+          accion_url?: string | null;
+          usuario_id?: string | null;
           created_at?: string;
         };
       };
-      alerts: {
+      actividad: {
         Row: {
           id: string;
-          shipment_id: string | null;
-          order_id: string | null;
-          type: string;
-          priority: string;
-          message: string | null;
-          resolved: boolean;
-          resolved_at: string | null;
+          tipo: string;
+          titulo: string;
+          descripcion: string | null;
+          usuario_id: string | null;
+          usuario_nombre: string | null;
+          metadata: Json;
           created_at: string;
         };
         Insert: {
           id?: string;
-          shipment_id?: string | null;
-          order_id?: string | null;
-          type: string;
-          priority?: string;
-          message?: string | null;
-          resolved?: boolean;
-          resolved_at?: string | null;
+          tipo: string;
+          titulo: string;
+          descripcion?: string | null;
+          usuario_id?: string | null;
+          usuario_nombre?: string | null;
+          metadata?: Json;
           created_at?: string;
         };
         Update: {
           id?: string;
-          shipment_id?: string | null;
-          order_id?: string | null;
-          type?: string;
-          priority?: string;
-          message?: string | null;
-          resolved?: boolean;
-          resolved_at?: string | null;
+          tipo?: string;
+          titulo?: string;
+          descripcion?: string | null;
+          usuario_id?: string | null;
+          usuario_nombre?: string | null;
+          metadata?: Json;
           created_at?: string;
         };
       };
@@ -193,17 +286,21 @@ export interface Database {
 }
 
 // Tipos de conveniencia
-export type Order = Database['public']['Tables']['orders']['Row'];
-export type OrderInsert = Database['public']['Tables']['orders']['Insert'];
-export type OrderUpdate = Database['public']['Tables']['orders']['Update'];
+export type Carga = Database['public']['Tables']['cargas']['Row'];
+export type CargaInsert = Database['public']['Tables']['cargas']['Insert'];
+export type CargaUpdate = Database['public']['Tables']['cargas']['Update'];
 
-export type Shipment = Database['public']['Tables']['shipments']['Row'];
-export type ShipmentInsert = Database['public']['Tables']['shipments']['Insert'];
-export type ShipmentUpdate = Database['public']['Tables']['shipments']['Update'];
+export type Guia = Database['public']['Tables']['guias']['Row'];
+export type GuiaInsert = Database['public']['Tables']['guias']['Insert'];
+export type GuiaUpdate = Database['public']['Tables']['guias']['Update'];
 
-export type Event = Database['public']['Tables']['events']['Row'];
-export type EventInsert = Database['public']['Tables']['events']['Insert'];
+export type CiudadStats = Database['public']['Tables']['ciudades_stats']['Row'];
+export type CiudadStatsInsert = Database['public']['Tables']['ciudades_stats']['Insert'];
+export type CiudadStatsUpdate = Database['public']['Tables']['ciudades_stats']['Update'];
 
-export type Alert = Database['public']['Tables']['alerts']['Row'];
-export type AlertInsert = Database['public']['Tables']['alerts']['Insert'];
-export type AlertUpdate = Database['public']['Tables']['alerts']['Update'];
+export type Alerta = Database['public']['Tables']['alertas']['Row'];
+export type AlertaInsert = Database['public']['Tables']['alertas']['Insert'];
+export type AlertaUpdate = Database['public']['Tables']['alertas']['Update'];
+
+export type Actividad = Database['public']['Tables']['actividad']['Row'];
+export type ActividadInsert = Database['public']['Tables']['actividad']['Insert'];
