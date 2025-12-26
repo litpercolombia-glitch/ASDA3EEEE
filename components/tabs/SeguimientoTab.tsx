@@ -71,6 +71,7 @@ import {
 import { SimpleUserSelector } from '../SimpleUserSelector';
 import { SimpleUser, getOCrearUsuarioDefault } from '../../services/simpleUserService';
 import { ChevronLeft, ChevronRight as ChevronRightIcon, Users } from 'lucide-react';
+import { ReviewedBadge, ReviewedCounter } from '../ReviewedBadge';
 
 // ============================================
 // COMPONENTES EXTRAÍDOS - DISPONIBLES PARA MIGRACIÓN
@@ -119,6 +120,16 @@ interface GuiaProcesada {
   dias: number;
   tieneTracking: boolean;
   tieneNovedad: boolean;
+  revisada: boolean;
+  fechaRevision?: Date;
+  revisadoPor?: string;
+}
+
+// Interface para guías revisadas persistidas
+interface GuiaRevisadaData {
+  guiaId: string;
+  fechaRevision: Date;
+  revisadoPor: string;
 }
 
 // =====================================
@@ -670,7 +681,9 @@ const GuiaTableRow: React.FC<{
   onExpand: () => void;
   isExpanded: boolean;
   rowNumber?: number;
-}> = ({ guia, onExpand, isExpanded, rowNumber }) => {
+  onMarkReviewed?: (guiaId: string) => void;
+  onToggleReviewed?: (guiaId: string) => void;
+}> = ({ guia, onExpand, isExpanded, rowNumber, onMarkReviewed, onToggleReviewed }) => {
   const [copiedGuia, setCopiedGuia] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
 
@@ -679,6 +692,17 @@ const GuiaTableRow: React.FC<{
     navigator.clipboard.writeText(guia.guia.id);
     setCopiedGuia(true);
     setTimeout(() => setCopiedGuia(false), 1500);
+    // Auto-marcar como revisada al copiar
+    if (onMarkReviewed && !guia.revisada) {
+      onMarkReviewed(guia.guia.id);
+    }
+  };
+
+  const handleToggleReviewed = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onToggleReviewed) {
+      onToggleReviewed(guia.guia.id);
+    }
   };
 
   const handleCopyPhone = (e: React.MouseEvent) => {
@@ -727,6 +751,18 @@ const GuiaTableRow: React.FC<{
       }`}
       onClick={onExpand}
     >
+      {/* REVISADA - Badge Meta-style */}
+      <td className="px-2 py-3 text-center">
+        <ReviewedBadge
+          revisada={guia.revisada}
+          fechaRevision={guia.fechaRevision}
+          revisadoPor={guia.revisadoPor}
+          size="md"
+          onClick={handleToggleReviewed}
+          animated={guia.revisada}
+        />
+      </td>
+
       {/* GUÍA + CELULAR + Badge Novedad */}
       <td className="px-4 py-3">
         <div className="flex flex-col gap-1.5">
@@ -744,7 +780,7 @@ const GuiaTableRow: React.FC<{
             <button
               onClick={handleCopyGuia}
               className="p-1 hover:bg-slate-200 dark:hover:bg-navy-700 rounded transition-colors"
-              title="Copiar guía"
+              title="Copiar guía (marca como revisada)"
             >
               {copiedGuia ? (
                 <Check className="w-3.5 h-3.5 text-green-500" />
@@ -953,7 +989,7 @@ const GuiaExpandedDetails: React.FC<{
 
   return (
     <tr>
-      <td colSpan={7} className="p-0">
+      <td colSpan={8} className="p-0">
         <div
           ref={cardRef}
           className="bg-slate-50 dark:bg-navy-950 p-4 border-t border-slate-200 dark:border-navy-700"
@@ -1214,6 +1250,23 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
   const [filterTransportadora, setFilterTransportadora] = useState<string | null>(null);
   const [expandedGuia, setExpandedGuia] = useState<string | null>(null);
 
+  // Estados para GUÍAS REVISADAS (persistencia localStorage)
+  const [guiasRevisadas, setGuiasRevisadas] = useState<Map<string, GuiaRevisadaData>>(() => {
+    try {
+      const stored = localStorage.getItem('litper_guias_revisadas');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return new Map(Object.entries(parsed).map(([k, v]: [string, any]) => [
+          k,
+          { ...v, fechaRevision: new Date(v.fechaRevision) }
+        ]));
+      }
+    } catch (e) {
+      console.error('Error loading reviewed guides:', e);
+    }
+    return new Map();
+  });
+
   // Estados para Tablero de Alertas
   const [showAlertDashboard, setShowAlertDashboard] = useState(false);
 
@@ -1238,6 +1291,53 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
 
   // Estados para NÚMERO DE CARGA del día
   const [numeroCargaHoy, setNumeroCargaHoy] = useState(1);
+
+  // ==========================================
+  // FUNCIONES PARA GESTIÓN DE GUÍAS REVISADAS
+  // ==========================================
+
+  // Guardar guías revisadas en localStorage
+  const guardarGuiasRevisadas = useCallback((nuevasRevisadas: Map<string, GuiaRevisadaData>) => {
+    try {
+      const obj: Record<string, GuiaRevisadaData> = {};
+      nuevasRevisadas.forEach((v, k) => { obj[k] = v; });
+      localStorage.setItem('litper_guias_revisadas', JSON.stringify(obj));
+    } catch (e) {
+      console.error('Error saving reviewed guides:', e);
+    }
+  }, []);
+
+  // Marcar guía como revisada
+  const marcarGuiaRevisada = useCallback((guiaId: string) => {
+    setGuiasRevisadas(prev => {
+      const nuevas = new Map(prev);
+      nuevas.set(guiaId, {
+        guiaId,
+        fechaRevision: new Date(),
+        revisadoPor: usuarioActual?.nombre || 'Usuario'
+      });
+      guardarGuiasRevisadas(nuevas);
+      return nuevas;
+    });
+  }, [usuarioActual, guardarGuiasRevisadas]);
+
+  // Toggle estado de revisión
+  const toggleGuiaRevisada = useCallback((guiaId: string) => {
+    setGuiasRevisadas(prev => {
+      const nuevas = new Map(prev);
+      if (nuevas.has(guiaId)) {
+        nuevas.delete(guiaId);
+      } else {
+        nuevas.set(guiaId, {
+          guiaId,
+          fechaRevision: new Date(),
+          revisadoPor: usuarioActual?.nombre || 'Usuario'
+        });
+      }
+      guardarGuiasRevisadas(nuevas);
+      return nuevas;
+    });
+  }, [usuarioActual, guardarGuiasRevisadas]);
 
   // Inicializar usuario al montar
   useEffect(() => {
@@ -1435,6 +1535,9 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
       // Determinar si tiene tracking real
       const tieneTracking = events.length > 0;
 
+      // Obtener datos de revisión
+      const reviewData = guiasRevisadas.get(guia.id);
+
       return {
         guia,
         celular: guia.phone || null,
@@ -1453,9 +1556,12 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
         dias,
         tieneTracking,
         tieneNovedad,
+        revisada: !!reviewData,
+        fechaRevision: reviewData?.fechaRevision,
+        revisadoPor: reviewData?.revisadoPor,
       };
     });
-  }, [shipments]);
+  }, [shipments, guiasRevisadas]);
 
   // Filtrar guías
   const guiasFiltradas = useMemo(() => {
@@ -1691,9 +1797,16 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
               <HelpCircle className="w-4 h-4 text-slate-400 hover:text-emerald-500 cursor-help transition-colors" />
             </HelpTooltip>
           </h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">
-            Operador: <span className="font-bold">{usuarioActual?.nombre || 'Cargando...'}</span>
-          </p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
+              Operador: <span className="font-bold">{usuarioActual?.nombre || 'Cargando...'}</span>
+            </p>
+            {/* Contador de Revisadas */}
+            <ReviewedCounter
+              revisadas={guiasProcesadas.filter(g => g.revisada).length}
+              total={guiasProcesadas.length}
+            />
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {/* Paginación rápida */}
@@ -2104,6 +2217,9 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 dark:bg-navy-950 border-b border-slate-200 dark:border-navy-700">
+                <th className="px-2 py-3 text-center text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                  ✓
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                   Guía
                 </th>
@@ -2135,6 +2251,8 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
                     onExpand={() => setExpandedGuia(expandedGuia === g.guia.id ? null : g.guia.id)}
                     isExpanded={expandedGuia === g.guia.id}
                     rowNumber={(paginaActual - 1) * tamanioPagina + index + 1}
+                    onMarkReviewed={marcarGuiaRevisada}
+                    onToggleReviewed={toggleGuiaRevisada}
                   />
                   {expandedGuia === g.guia.id && (
                     <GuiaExpandedDetails guia={g} onCollapse={() => setExpandedGuia(null)} />
