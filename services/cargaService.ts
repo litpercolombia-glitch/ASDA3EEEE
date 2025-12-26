@@ -482,8 +482,276 @@ class CargaService {
 
     return eliminadas;
   }
+
+  // ==================== SISTEMA DE REVISIÓN ====================
+
+  /**
+   * Marcar una guía como revisada
+   */
+  marcarGuiaRevisada(
+    cargaId: string,
+    guiaId: string,
+    usuarioId: string,
+    usuarioNombre: string
+  ): Carga | null {
+    const carga = this.getCarga(cargaId);
+    if (!carga) return null;
+
+    const guiasActualizadas = carga.guias.map(g => {
+      if (g.id === guiaId && !g.revisada) {
+        return {
+          ...g,
+          revisada: true,
+          fechaRevision: new Date(),
+          revisadoPor: usuarioNombre,
+          revisadoPorId: usuarioId,
+        };
+      }
+      return g;
+    });
+
+    return this.actualizarCarga(cargaId, {
+      guias: guiasActualizadas,
+      guiasRevisadas: guiasActualizadas.filter(g => g.revisada).length,
+      guiasPendientes: guiasActualizadas.filter(g => !g.revisada).length,
+    });
+  }
+
+  /**
+   * Desmarcar una guía como revisada
+   */
+  desmarcarGuiaRevisada(cargaId: string, guiaId: string): Carga | null {
+    const carga = this.getCarga(cargaId);
+    if (!carga) return null;
+
+    const guiasActualizadas = carga.guias.map(g => {
+      if (g.id === guiaId && g.revisada) {
+        return {
+          ...g,
+          revisada: false,
+          fechaRevision: undefined,
+          revisadoPor: undefined,
+          revisadoPorId: undefined,
+        };
+      }
+      return g;
+    });
+
+    return this.actualizarCarga(cargaId, {
+      guias: guiasActualizadas,
+      guiasRevisadas: guiasActualizadas.filter(g => g.revisada).length,
+      guiasPendientes: guiasActualizadas.filter(g => !g.revisada).length,
+    });
+  }
+
+  /**
+   * Marcar guía por número de guía (para cuando se copia)
+   */
+  marcarGuiaPorNumero(
+    cargaId: string,
+    numeroGuia: string,
+    usuarioId: string,
+    usuarioNombre: string
+  ): Carga | null {
+    const carga = this.getCarga(cargaId);
+    if (!carga) return null;
+
+    const guia = carga.guias.find(g => g.numeroGuia === numeroGuia);
+    if (!guia) return null;
+
+    return this.marcarGuiaRevisada(cargaId, guia.id, usuarioId, usuarioNombre);
+  }
+
+  /**
+   * Obtener informe de revisión de una carga
+   */
+  getInformeRevision(cargaId: string): {
+    totalGuias: number;
+    revisadas: number;
+    pendientes: number;
+    porcentajeRevision: number;
+    porTransportadora: Record<string, { revisadas: number; pendientes: number }>;
+    guiasRevisadas: GuiaCarga[];
+    guiasPendientes: GuiaCarga[];
+  } {
+    const carga = this.getCarga(cargaId);
+
+    if (!carga) {
+      return {
+        totalGuias: 0,
+        revisadas: 0,
+        pendientes: 0,
+        porcentajeRevision: 0,
+        porTransportadora: {},
+        guiasRevisadas: [],
+        guiasPendientes: [],
+      };
+    }
+
+    const guiasRevisadas = carga.guias.filter(g => g.revisada);
+    const guiasPendientes = carga.guias.filter(g => !g.revisada);
+
+    // Agrupar por transportadora
+    const porTransportadora: Record<string, { revisadas: number; pendientes: number }> = {};
+
+    carga.guias.forEach(g => {
+      if (!porTransportadora[g.transportadora]) {
+        porTransportadora[g.transportadora] = { revisadas: 0, pendientes: 0 };
+      }
+      if (g.revisada) {
+        porTransportadora[g.transportadora].revisadas++;
+      } else {
+        porTransportadora[g.transportadora].pendientes++;
+      }
+    });
+
+    return {
+      totalGuias: carga.guias.length,
+      revisadas: guiasRevisadas.length,
+      pendientes: guiasPendientes.length,
+      porcentajeRevision: carga.guias.length > 0
+        ? Math.round((guiasRevisadas.length / carga.guias.length) * 100)
+        : 0,
+      porTransportadora,
+      guiasRevisadas,
+      guiasPendientes,
+    };
+  }
+
+  // ==================== SISTEMA DE HOJAS (ARCHIVAR) ====================
+
+  /**
+   * Archivar una carga (hoja)
+   * Las cargas archivadas se eliminan automáticamente después de 24 horas
+   */
+  archivarCarga(cargaId: string): boolean {
+    const carga = this.actualizarCarga(cargaId, {
+      estado: 'archivada',
+      archivedAt: new Date(),
+    });
+    return carga !== null;
+  }
+
+  /**
+   * Restaurar una carga archivada
+   */
+  restaurarCarga(cargaId: string): boolean {
+    const carga = this.actualizarCarga(cargaId, {
+      estado: 'cerrada',
+      archivedAt: undefined,
+    });
+    return carga !== null;
+  }
+
+  /**
+   * Limpiar cargas archivadas mayores a 24 horas
+   * Se debe llamar periódicamente (al cargar la app)
+   */
+  limpiarCargasArchivadas(): number {
+    const cargas = this.getTodasLasCargas();
+    const hace24Horas = new Date();
+    hace24Horas.setHours(hace24Horas.getHours() - 24);
+
+    const cargasFiltradas = cargas.filter(c => {
+      // Si está archivada y tiene más de 24 horas, eliminar
+      if (c.estado === 'archivada' && c.archivedAt) {
+        return new Date(c.archivedAt) > hace24Horas;
+      }
+      return true;
+    });
+
+    const eliminadas = cargas.length - cargasFiltradas.length;
+
+    if (eliminadas > 0) {
+      this.guardarTodasLasCargas(cargasFiltradas);
+      console.log(`Cargas archivadas eliminadas: ${eliminadas}`);
+    }
+
+    return eliminadas;
+  }
+
+  /**
+   * Obtener todas las hojas (cargas) con metadata completa
+   */
+  getHojasConMetadata(): Array<{
+    id: string;
+    nombre: string;
+    usuario: string;
+    transportadoras: string[];
+    totalGuias: number;
+    guiasRevisadas: number;
+    guiasPendientes: number;
+    estado: 'activa' | 'cerrada' | 'archivada';
+    creadaEn: Date;
+    tiempoRestanteArchivada?: number; // minutos restantes antes de eliminación
+  }> {
+    const cargas = this.getTodasLasCargas();
+
+    return cargas.map(carga => {
+      // Calcular transportadoras únicas
+      const transportadoras = [...new Set(carga.guias.map(g => g.transportadora))].filter(Boolean);
+
+      // Calcular tiempo restante si está archivada
+      let tiempoRestanteArchivada: number | undefined;
+      if (carga.estado === 'archivada' && carga.archivedAt) {
+        const archivedAt = new Date(carga.archivedAt);
+        const eliminacionEn = new Date(archivedAt.getTime() + 24 * 60 * 60 * 1000);
+        const ahora = new Date();
+        tiempoRestanteArchivada = Math.max(0, Math.floor((eliminacionEn.getTime() - ahora.getTime()) / (1000 * 60)));
+      }
+
+      return {
+        id: carga.id,
+        nombre: carga.nombre,
+        usuario: carga.usuarioNombre,
+        transportadoras,
+        totalGuias: carga.totalGuias,
+        guiasRevisadas: carga.guiasRevisadas || 0,
+        guiasPendientes: carga.guiasPendientes || carga.totalGuias,
+        estado: carga.estado,
+        creadaEn: carga.creadaEn,
+        tiempoRestanteArchivada,
+      };
+    });
+  }
+
+  /**
+   * Obtener todas las guías de todas las hojas (vista combinada)
+   */
+  getTodasLasGuias(): Array<GuiaCarga & { cargaId: string; cargaNombre: string; cargaNumero: number }> {
+    const cargas = this.getTodasLasCargas().filter(c => c.estado !== 'archivada');
+
+    return cargas.flatMap(carga =>
+      carga.guias.map(guia => ({
+        ...guia,
+        cargaId: carga.id,
+        cargaNombre: carga.nombre,
+        cargaNumero: carga.numeroCarga,
+      }))
+    );
+  }
+
+  /**
+   * Actualizar transportadoras usadas en una carga
+   */
+  actualizarTransportadorasUsadas(cargaId: string): Carga | null {
+    const carga = this.getCarga(cargaId);
+    if (!carga) return null;
+
+    const transportadoras = [...new Set(carga.guias.map(g => g.transportadora))].filter(Boolean);
+
+    return this.actualizarCarga(cargaId, {
+      transportadorasUsadas: transportadoras,
+    });
+  }
 }
 
 // Singleton
 export const cargaService = new CargaService();
+
+// Limpiar cargas archivadas al cargar el módulo
+if (typeof window !== 'undefined') {
+  cargaService.limpiarCargasArchivadas();
+}
+
 export default cargaService;

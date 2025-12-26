@@ -1,13 +1,15 @@
 // components/GuideTable.tsx
 // Tabla de guías con paginación y numeración
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { usePagination, PageSize } from '../hooks/usePagination';
+import { ReviewedBadge } from './ReviewedBadge';
 
 export interface GuideRow {
   id: string;
   guia: string;
   estado: string;
+  estadoReal?: string;
   transportadora: string;
   ciudadDestino: string;
   telefono?: string;
@@ -16,15 +18,22 @@ export interface GuideRow {
   fechaCarga?: string;
   cargaId?: string;
   cargaNumero?: number;
+  // Campos de revisión
+  revisada?: boolean;
+  fechaRevision?: Date;
+  revisadoPor?: string;
 }
 
 interface GuideTableProps {
   guides: GuideRow[];
   onGuideClick?: (guide: GuideRow) => void;
   onGuideSelect?: (guideIds: string[]) => void;
+  onGuideReview?: (guideId: string, guia: string) => void;
+  onGuideCopy?: (guideId: string, guia: string) => void;
   selectable?: boolean;
   selectedIds?: string[];
   showCargaInfo?: boolean;
+  showReviewColumn?: boolean;
   emptyMessage?: string;
 }
 
@@ -32,11 +41,40 @@ export const GuideTable: React.FC<GuideTableProps> = ({
   guides,
   onGuideClick,
   onGuideSelect,
+  onGuideReview,
+  onGuideCopy,
   selectable = false,
   selectedIds = [],
   showCargaInfo = false,
+  showReviewColumn = true,
   emptyMessage = 'No hay guías cargadas',
 }) => {
+  // Estado para mostrar toast de copiado
+  const [copiedGuia, setCopiedGuia] = useState<string | null>(null);
+
+  // Función para copiar guía al portapapeles y marcar como revisada
+  const handleCopyGuia = async (guide: GuideRow, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    try {
+      await navigator.clipboard.writeText(guide.guia);
+      setCopiedGuia(guide.guia);
+
+      // Llamar al callback de copia (que debería marcar como revisada)
+      onGuideCopy?.(guide.id, guide.guia);
+
+      // Limpiar el toast después de 2 segundos
+      setTimeout(() => setCopiedGuia(null), 2000);
+    } catch (err) {
+      console.error('Error al copiar:', err);
+    }
+  };
+
+  // Función para toggle manual de revisión
+  const handleToggleReview = (guide: GuideRow, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onGuideReview?.(guide.id, guide.guia);
+  };
   const pagination = usePagination(guides, 50);
 
   const handleSelectAll = () => {
@@ -144,6 +182,7 @@ export const GuideTable: React.FC<GuideTableProps> = ({
                   />
                 </th>
               )}
+              {showReviewColumn && <th className="col-review" title="Estado de revisión"></th>}
               <th className="col-number">#</th>
               <th className="col-guia">GUÍA</th>
               <th className="col-estado">ESTADO</th>
@@ -177,11 +216,40 @@ export const GuideTable: React.FC<GuideTableProps> = ({
                       />
                     </td>
                   )}
+                  {showReviewColumn && (
+                    <td className="col-review" onClick={(e) => e.stopPropagation()}>
+                      <ReviewedBadge
+                        revisada={guide.revisada || false}
+                        fechaRevision={guide.fechaRevision}
+                        revisadoPor={guide.revisadoPor}
+                        size="sm"
+                        onClick={(e) => handleToggleReview(guide, e as unknown as React.MouseEvent)}
+                      />
+                    </td>
+                  )}
                   <td className="col-number">
                     <span className="row-number">{globalIndex}</span>
                   </td>
                   <td className="col-guia">
-                    <span className="guia-number">{guide.guia}</span>
+                    <div className="guia-cell">
+                      <span className="guia-number">{guide.guia}</span>
+                      <button
+                        className={`copy-btn ${copiedGuia === guide.guia ? 'copied' : ''}`}
+                        onClick={(e) => handleCopyGuia(guide, e)}
+                        title="Copiar número de guía (marca como revisada)"
+                      >
+                        {copiedGuia === guide.guia ? (
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        ) : (
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
                   </td>
                   <td className="col-estado">
                     <span
@@ -387,6 +455,12 @@ export const GuideTable: React.FC<GuideTableProps> = ({
           text-align: center;
         }
 
+        .col-review {
+          width: 40px;
+          text-align: center;
+          padding: 0.5rem !important;
+        }
+
         .col-number {
           width: 50px;
           text-align: center;
@@ -406,13 +480,50 @@ export const GuideTable: React.FC<GuideTableProps> = ({
         }
 
         .col-guia {
-          width: 140px;
+          width: 160px;
+        }
+
+        .guia-cell {
+          display: flex;
+          align-items: center;
+          gap: 0.375rem;
         }
 
         .guia-number {
           font-family: 'Monaco', 'Menlo', monospace;
           font-weight: 600;
           color: #1e293b;
+        }
+
+        .copy-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0.25rem;
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+          border-radius: 4px;
+          color: #64748b;
+          cursor: pointer;
+          opacity: 0;
+          transition: all 0.15s ease;
+        }
+
+        .guide-table tr:hover .copy-btn {
+          opacity: 1;
+        }
+
+        .copy-btn:hover {
+          background: #e2e8f0;
+          color: #3b82f6;
+          border-color: #3b82f6;
+        }
+
+        .copy-btn.copied {
+          opacity: 1;
+          background: #d1fae5;
+          border-color: #10b981;
+          color: #059669;
         }
 
         .col-estado {
