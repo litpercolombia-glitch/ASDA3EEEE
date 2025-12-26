@@ -11,6 +11,7 @@ import { TeamActivity } from './TeamActivity';
 import { useCargaBrainIntegration } from '../hooks/useCargaBrainIntegration';
 import { useFilteredShipments, useFilterOptionsFromItems } from '../hooks/useFilteredShipments';
 import { GuiaCarga } from '../types/carga.types';
+import { cargaService } from '../services/cargaService';
 
 export const CargaPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -33,6 +34,7 @@ export const CargaPage: React.FC = () => {
       id: guia.id,
       guia: guia.numeroGuia,
       estado: guia.estado,
+      estadoReal: guia.estadoReal,
       transportadora: guia.transportadora,
       ciudadDestino: guia.ciudadDestino,
       telefono: guia.telefono,
@@ -40,6 +42,10 @@ export const CargaPage: React.FC = () => {
       tieneNovedad: guia.tieneNovedad,
       cargaId: cargaActual?.id,
       cargaNumero: cargaActual?.numeroCarga,
+      // Campos de revisión
+      revisada: guia.revisada,
+      fechaRevision: guia.fechaRevision,
+      revisadoPor: guia.revisadoPor,
     }));
   }, [resultado.items, cargaActual]);
 
@@ -49,6 +55,25 @@ export const CargaPage: React.FC = () => {
 
   const handleGuideSelect = (ids: string[]) => {
     setSelectedGuiaIds(ids);
+  };
+
+  // Manejar copia de guía (marca como revisada automáticamente)
+  const handleGuideCopy = (guideId: string, guia: string) => {
+    if (cargaActual && user) {
+      cargaService.marcarGuiaRevisada(cargaActual.id, guideId, user.id, user.nombre);
+    }
+  };
+
+  // Manejar toggle manual de revisión
+  const handleGuideReview = (guideId: string, guia: string) => {
+    if (cargaActual && user) {
+      const guiaObj = cargaActual.guias.find(g => g.id === guideId);
+      if (guiaObj?.revisada) {
+        cargaService.desmarcarGuiaRevisada(cargaActual.id, guideId);
+      } else {
+        cargaService.marcarGuiaRevisada(cargaActual.id, guideId, user.id, user.nombre);
+      }
+    }
   };
 
   const handleAnalizar = () => {
@@ -131,9 +156,12 @@ export const CargaPage: React.FC = () => {
         guides={guideRows}
         onGuideClick={handleGuideClick}
         onGuideSelect={handleGuideSelect}
+        onGuideCopy={handleGuideCopy}
+        onGuideReview={handleGuideReview}
         selectedIds={selectedGuiaIds}
         selectable
         showCargaInfo={false}
+        showReviewColumn={true}
         emptyMessage="Carga las guías usando las pestañas de arriba"
       />
 

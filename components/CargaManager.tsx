@@ -5,6 +5,9 @@ import React, { useEffect, useState } from 'react';
 import { useCargaStore } from '../stores/cargaStore';
 import { Carga, CargaResumen } from '../types/carga.types';
 import { cargaService } from '../services/cargaService';
+import { CargaSheetsManager } from './CargaSheetsManager';
+import { ReviewReportPanel } from './ReviewReportPanel';
+import { ReviewedCounter } from './ReviewedBadge';
 
 interface CargaManagerProps {
   usuarioId: string;
@@ -34,6 +37,9 @@ export const CargaManager: React.FC<CargaManagerProps> = ({
   } = useCargaStore();
 
   const [showHistorial, setShowHistorial] = useState(false);
+  const [viendoTodas, setViendoTodas] = useState(false);
+  const [filtroRevision, setFiltroRevision] = useState<'todas' | 'revisadas' | 'pendientes'>('todas');
+  const [showReviewPanel, setShowReviewPanel] = useState(false);
 
   // Inicializar carga al montar
   useEffect(() => {
@@ -81,8 +87,29 @@ export const CargaManager: React.FC<CargaManagerProps> = ({
     setShowHistorial(false);
   };
 
+  const handleVerTodas = () => {
+    setViendoTodas(!viendoTodas);
+  };
+
+  const handleCambiarHoja = (cargaId: string) => {
+    cargarCarga(cargaId);
+    setViendoTodas(false);
+  };
+
+  // Calcular guías revisadas
+  const guiasRevisadas = cargaActual?.guias.filter(g => g.revisada).length || 0;
+  const totalGuias = cargaActual?.totalGuias || 0;
+
   return (
     <div className="carga-manager">
+      {/* Sistema de Hojas (Tabs) */}
+      <CargaSheetsManager
+        cargaActualId={cargaActual?.id || null}
+        onCargaChange={handleCambiarHoja}
+        onVerTodas={handleVerTodas}
+        viendoTodas={viendoTodas}
+      />
+
       {/* Barra de estado de carga */}
       <div className="carga-status-bar">
         <div className="status-left">
@@ -96,6 +123,7 @@ export const CargaManager: React.FC<CargaManagerProps> = ({
               <span className="carga-guias">
                 {cargaActual.totalGuias} guías
               </span>
+              <ReviewedCounter revisadas={guiasRevisadas} total={totalGuias} />
             </>
           ) : (
             <span className="sin-carga">Sin carga activa</span>
@@ -148,7 +176,23 @@ export const CargaManager: React.FC<CargaManagerProps> = ({
         >
           📁 {showHistorial ? 'Ocultar' : 'Ver'} Historial
         </button>
+
+        <button
+          className={`btn ${showReviewPanel ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setShowReviewPanel(!showReviewPanel)}
+        >
+          ✅ Informe Revisión
+        </button>
       </div>
+
+      {/* Panel de Informe de Revisión */}
+      {showReviewPanel && cargaActual && (
+        <ReviewReportPanel
+          cargaId={cargaActual.id}
+          onFilterChange={setFiltroRevision}
+          currentFilter={filtroRevision}
+        />
+      )}
 
       {/* Error */}
       {error && (
