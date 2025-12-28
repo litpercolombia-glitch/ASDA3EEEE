@@ -146,6 +146,80 @@ export interface CargaEvent {
   datos?: Record<string, unknown>;
 }
 
+// ==================== BATCH/LOTES ====================
+
+export interface CargaBatch {
+  id: string;
+  cargaId: string;
+  numeroBatch: number;
+  guias: GuiaCarga[];
+  totalGuias: number;
+  estado: 'pendiente' | 'procesando' | 'completado' | 'error';
+  errorMessage?: string;
+  creadoEn: Date;
+  procesadoEn?: Date;
+}
+
+export interface CargaProgress {
+  total: number;
+  procesados: number;
+  exitosos: number;
+  fallidos: number;
+  porcentaje: number;
+  batchActual: number;
+  totalBatches: number;
+  guiaActual?: string;
+  errores: CargaError[];
+  estado: 'idle' | 'procesando' | 'completado' | 'error' | 'pausado';
+  tiempoInicio?: Date;
+  tiempoEstimado?: number; // segundos restantes
+}
+
+export interface CargaError {
+  guiaId: string;
+  numeroGuia: string;
+  mensaje: string;
+  timestamp: Date;
+  reintentos: number;
+  resuelta: boolean;
+}
+
+// Configuración de lotes
+export interface BatchConfig {
+  tamanoLote: number; // Guías por lote (default: 25)
+  reintentosMax: number; // Reintentos por guía fallida (default: 3)
+  delayEntreGuias: number; // ms entre procesar guías (default: 100)
+  delayEntreLotes: number; // ms entre lotes (default: 1000)
+  autoSyncBackend: boolean; // Sincronizar automáticamente con backend
+  persistirEnLocalStorage: boolean; // Guardar en localStorage
+}
+
+export const DEFAULT_BATCH_CONFIG: BatchConfig = {
+  tamanoLote: 25,
+  reintentosMax: 3,
+  delayEntreGuias: 100,
+  delayEntreLotes: 1000,
+  autoSyncBackend: true,
+  persistirEnLocalStorage: true,
+};
+
+// ==================== SYNC ====================
+
+export interface SyncStatus {
+  ultimaSync: Date | null;
+  pendienteSync: boolean;
+  errorSync: string | null;
+  cargasPendientes: string[]; // IDs de cargas sin sincronizar
+}
+
+export interface BackendSyncResult {
+  success: boolean;
+  cargaId: string;
+  backendId?: string;
+  error?: string;
+  timestamp: Date;
+}
+
 // ==================== SISTEMA DE USUARIOS ====================
 
 export interface UsuarioCarga {
