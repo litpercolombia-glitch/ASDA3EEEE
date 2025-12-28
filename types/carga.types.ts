@@ -5,6 +5,7 @@ export interface GuiaCarga {
   id: string;
   numeroGuia: string;
   estado: string;
+  estadoReal?: string; // Estado extraído del último movimiento real
   transportadora: string;
   ciudadDestino: string;
   telefono?: string;
@@ -21,6 +22,11 @@ export interface GuiaCarga {
   historialEventos?: EventoGuia[];
   fuente: 'PHONES' | 'REPORT' | 'SUMMARY' | 'EXCEL' | 'MANUAL';
   datosExtra?: Record<string, unknown>;
+  // Campos de revisión
+  revisada: boolean;
+  fechaRevision?: Date;
+  revisadoPor?: string;
+  revisadoPorId?: string;
 }
 
 export interface EventoGuia {
@@ -50,6 +56,7 @@ export interface Carga {
 
   // Estado
   estado: 'activa' | 'cerrada' | 'archivada';
+  archivedAt?: Date; // Para auto-eliminación a las 24h
 
   // Timestamps
   creadaEn: Date;
@@ -59,6 +66,11 @@ export interface Carga {
   // Metadata
   notas?: string;
   tags?: string[];
+  transportadorasUsadas?: string[]; // Lista de transportadoras en esta carga
+
+  // Estadísticas de revisión
+  guiasRevisadas: number;
+  guiasPendientes: number;
 }
 
 export interface CargaStats {
@@ -206,4 +218,48 @@ export interface BackendSyncResult {
   backendId?: string;
   error?: string;
   timestamp: Date;
+}
+
+// ==================== SISTEMA DE USUARIOS ====================
+
+export interface UsuarioCarga {
+  id: string;
+  nombre: string;
+  creadoEn: Date;
+  ultimaActividad: Date;
+  totalCargas: number;
+  totalGuiasRevisadas: number;
+}
+
+// ==================== MAPEO DE ESTATUS ====================
+
+export interface MapeoEstatus {
+  descripcionOriginal: string;
+  estadoNormalizado: string;
+  transportadora: string;
+}
+
+// Estados normalizados del sistema
+export type EstadoNormalizado =
+  | 'Entregado'
+  | 'En Tránsito'
+  | 'En Reparto'
+  | 'En Destino'
+  | 'En Oficina'
+  | 'Intento Fallido'
+  | 'Novedad'
+  | 'Devuelto'
+  | 'Recibido'
+  | 'Creado'
+  | 'Desconocido';
+
+// Informe de revisión
+export interface InformeRevision {
+  totalGuias: number;
+  revisadas: number;
+  pendientes: number;
+  porcentajeRevision: number;
+  porTransportadora: Record<string, { revisadas: number; pendientes: number }>;
+  guiasRevisadas: GuiaCarga[];
+  guiasPendientes: GuiaCarga[];
 }
