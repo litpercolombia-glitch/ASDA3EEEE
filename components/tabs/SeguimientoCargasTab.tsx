@@ -10,11 +10,17 @@ import {
   HelpCircle,
   FileSpreadsheet,
   Loader2,
+  CloudOff,
+  Cloud,
 } from 'lucide-react';
 import { Shipment } from '../../types';
 import { CargasTrackingView } from '../CargasTrackingView';
 import { useCargasTracking } from '../../hooks/useCargasTracking';
 import { HelpTooltip } from '../HelpSystem/HelpTooltip';
+import { CargaProgressBar } from '../carga/CargaProgressBar';
+import { CargaSheetsManager } from '../CargaSheetsManager';
+import { useCargaStore } from '../../stores/cargaStore';
+import { GuiaCarga } from '../../types/carga.types';
 
 interface SeguimientoCargasTabProps {
   shipments: Shipment[];
@@ -26,6 +32,11 @@ interface SeguimientoCargasTabProps {
  * Organiza todas las guías por fecha/hora de carga
  * Permite eliminar cargas completas o guías individuales
  * Muestra últimos 2 estados en vista comprimida y timeline completo en expandida
+ *
+ * INTEGRADO CON:
+ * - CargaProgressBar: Barra de progreso profesional
+ * - CargaSheetsManager: Gestor de hojas/tabs
+ * - useCargaStore: Procesamiento en lotes con persistencia
  */
 export const SeguimientoCargasTab: React.FC<SeguimientoCargasTabProps> = ({
   shipments,
@@ -33,11 +44,13 @@ export const SeguimientoCargasTab: React.FC<SeguimientoCargasTabProps> = ({
 }) => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [viendoTodas, setViendoTodas] = useState(true);
 
+  // Hook antiguo para compatibilidad con CargasTrackingView
   const {
     hojas,
     hojaActiva,
-    isLoading,
+    isLoading: isLoadingHojas,
     isSaving,
     isSyncing,
     error,
@@ -49,10 +62,80 @@ export const SeguimientoCargasTab: React.FC<SeguimientoCargasTabProps> = ({
     clearError,
   } = useCargasTracking();
 
+  // Store nuevo con batch processing
+  const {
+    cargaActualId,
+    progress,
+    syncStatus,
+    agregarGuiasEnLotes,
+    sincronizarConBackend,
+    cargarCarga,
+    crearNuevaCarga,
+    resetProgress,
+  } = useCargaStore();
+
+  // Convertir shipments a GuiaCarga para procesamiento en lotes
+  const convertirAGuiaCarga = useCallback((shipment: Shipment): GuiaCarga => {
+    const detailedInfo = shipment.detailedInfo;
+    return {
+      id: shipment.id || `guia_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      numeroGuia: shipment.id || '',
+      estado: shipment.status || 'Desconocido',
+      transportadora: shipment.carrier || 'No especificada',
+      ciudadDestino: detailedInfo?.destination || '',
+      telefono: shipment.phone,
+      nombreCliente: undefined,
+      direccion: undefined,
+      diasTransito: detailedInfo?.daysInTransit || 0,
+      tieneNovedad: shipment.status === 'Novedad' || detailedInfo?.hasErrors || false,
+      tipoNovedad: detailedInfo?.hasErrors ? 'Error' : undefined,
+      descripcionNovedad: detailedInfo?.errorDetails?.join(', '),
+      valorDeclarado: detailedInfo?.declaredValue,
+      ultimoMovimiento: detailedInfo?.rawStatus,
+      fuente: 'EXCEL',
+      revisada: false,
+    };
+  }, []);
+
   /**
-   * Guardar carga actual como nueva hoja
+   * Guardar carga actual como nueva hoja CON procesamiento en lotes
    */
-  const handleGuardarCarga = useCallback(async () => {
+  const handleGuardarCargaEnLotes = useCallback(async () => {
+    if (shipments.length === 0) {
+      setSaveError('No hay guías cargadas para guardar');
+      return;
+    }
+
+    clearError();
+    setSaveError(null);
+    setSaveSuccess(false);
+
+    try {
+      // Crear carga si no existe
+      if (!cargaActualId) {
+        crearNuevaCarga('usuario_actual', 'Usuario');
+      }
+
+      // Convertir y procesar en lotes
+      const guias = shipments.map(convertirAGuiaCarga);
+      await agregarGuiasEnLotes(guias);
+
+      // También guardar con el hook antiguo para compatibilidad
+      const nuevaHoja = await guardarNuevaCarga(shipments);
+
+      if (nuevaHoja) {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      }
+    } catch (err) {
+      setSaveError(`Error al guardar: ${err}`);
+    }
+  }, [shipments, cargaActualId, convertirAGuiaCarga, agregarGuiasEnLotes, guardarNuevaCarga, crearNuevaCarga, clearError]);
+
+  /**
+   * Guardar sin lotes (método rápido para pocas guías)
+   */
+  const handleGuardarRapido = useCallback(async () => {
     if (shipments.length === 0) {
       setSaveError('No hay guías cargadas para guardar');
       return;
@@ -71,6 +154,18 @@ export const SeguimientoCargasTab: React.FC<SeguimientoCargasTabProps> = ({
       setSaveError('Error al guardar la carga');
     }
   }, [shipments, guardarNuevaCarga, clearError]);
+
+  /**
+   * Determinar qué método usar según cantidad
+   */
+  const handleGuardarCarga = useCallback(async () => {
+    // Usar lotes solo si hay más de 20 guías
+    if (shipments.length > 20) {
+      await handleGuardarCargaEnLotes();
+    } else {
+      await handleGuardarRapido();
+    }
+  }, [shipments.length, handleGuardarCargaEnLotes, handleGuardarRapido]);
 
   /**
    * Eliminar una carga completa
@@ -107,18 +202,45 @@ export const SeguimientoCargasTab: React.FC<SeguimientoCargasTabProps> = ({
   );
 
   /**
-   * Sincronizar con servidor
+   * Sincronizar con servidor (ambos sistemas)
    */
   const handleSincronizar = useCallback(async () => {
     await sincronizar();
-  }, [sincronizar]);
+    await sincronizarConBackend();
+  }, [sincronizar, sincronizarConBackend]);
+
+  /**
+   * Cambiar a una hoja específica
+   */
+  const handleCargaChange = useCallback((cargaId: string) => {
+    cargarCarga(cargaId);
+    setViendoTodas(false);
+  }, [cargarCarga]);
+
+  /**
+   * Ver todas las hojas
+   */
+  const handleVerTodas = useCallback(() => {
+    setViendoTodas(true);
+  }, []);
 
   // Calcular estadísticas totales
   const totalGuias = hojas.reduce((sum, h) => sum + h.cantidadGuias, 0);
   const totalCargas = hojas.length;
 
+  // Determinar si hay procesamiento activo
+  const procesandoActivo = progress.estado === 'procesando' || progress.estado === 'pausado';
+
   return (
     <div className="space-y-6">
+      {/* Barra de progreso (visible durante procesamiento) */}
+      {(procesandoActivo || (progress.estado !== 'idle' && progress.total > 0)) && (
+        <CargaProgressBar
+          showDetails={true}
+          className="shadow-lg"
+        />
+      )}
+
       {/* Header con controles */}
       <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -138,14 +260,28 @@ export const SeguimientoCargasTab: React.FC<SeguimientoCargasTabProps> = ({
                     'Puedes eliminar cargas completas o guías individuales',
                     'Ver los últimos 2 estados de cada guía sin expandir',
                     'Expandir para ver el historial completo de movimientos',
+                    'Procesamiento en lotes para cargas grandes (25 guías/lote)',
                   ]}
                   position="bottom"
                 >
                   <HelpCircle className="w-4 h-4 text-slate-400 hover:text-indigo-500 cursor-help" />
                 </HelpTooltip>
               </h2>
-              <p className="text-slate-500 dark:text-slate-400 text-sm">
+              <p className="text-slate-500 dark:text-slate-400 text-sm flex items-center gap-2">
                 {totalCargas} cargas • {totalGuias.toLocaleString()} guías totales
+                {/* Indicador de sync */}
+                {syncStatus.ultimaSync && (
+                  <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                    <Cloud className="w-3 h-3" />
+                    Sincronizado
+                  </span>
+                )}
+                {syncStatus.errorSync && (
+                  <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                    <CloudOff className="w-3 h-3" />
+                    Solo local
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -167,7 +303,7 @@ export const SeguimientoCargasTab: React.FC<SeguimientoCargasTabProps> = ({
             )}
 
             {/* Botón Guardar Nueva Carga */}
-            {shipments.length > 0 && (
+            {shipments.length > 0 && !procesandoActivo && (
               <button
                 onClick={handleGuardarCarga}
                 disabled={isSaving}
@@ -212,28 +348,45 @@ export const SeguimientoCargasTab: React.FC<SeguimientoCargasTabProps> = ({
         </div>
 
         {/* Info de carga actual */}
-        {shipments.length > 0 && (
+        {shipments.length > 0 && !procesandoActivo && (
           <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
             <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-sm">
               <Upload className="w-4 h-4" />
               <span>
                 <strong>{shipments.length} guías</strong> cargadas en memoria. Haz clic en "Guardar
                 Carga Actual" para crear una nueva hoja de seguimiento.
+                {shipments.length > 20 && (
+                  <span className="ml-1 text-xs opacity-75">
+                    (Se procesarán en lotes de 25)
+                  </span>
+                )}
               </span>
             </div>
           </div>
         )}
       </div>
 
+      {/* Gestor de Hojas (tabs) */}
+      {hojas.length > 0 && (
+        <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
+          <CargaSheetsManager
+            cargaActualId={cargaActualId}
+            onCargaChange={handleCargaChange}
+            onVerTodas={handleVerTodas}
+            viendoTodas={viendoTodas}
+          />
+        </div>
+      )}
+
       {/* Vista de Cargas */}
-      {isLoading && hojas.length === 0 ? (
+      {isLoadingHojas && hojas.length === 0 ? (
         <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-12 text-center">
           <Loader2 className="w-10 h-10 text-indigo-500 mx-auto mb-4 animate-spin" />
           <p className="text-slate-500 dark:text-slate-400">Cargando hojas de seguimiento...</p>
         </div>
       ) : (
         <CargasTrackingView
-          hojas={hojas}
+          hojas={viendoTodas ? hojas : hojas.filter(h => h.id === cargaActualId)}
           onDeleteHoja={handleEliminarCarga}
           onDeleteGuia={handleEliminarGuia}
           onRestoreHoja={
@@ -247,7 +400,7 @@ export const SeguimientoCargasTab: React.FC<SeguimientoCargasTabProps> = ({
       )}
 
       {/* Mensaje cuando no hay cargas ni guías */}
-      {hojas.length === 0 && shipments.length === 0 && !isLoading && (
+      {hojas.length === 0 && shipments.length === 0 && !isLoadingHojas && (
         <div className="bg-white dark:bg-navy-900 rounded-2xl border border-slate-200 dark:border-navy-700 p-12 text-center">
           <div className="w-20 h-20 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
             <FileSpreadsheet className="w-10 h-10 text-indigo-500" />
