@@ -163,11 +163,6 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
 
                   {/* Content */}
                   <div className="relative z-10">
-                    {/* Flag */}
-                    <div className="text-8xl mb-6 transform transition-transform duration-500 group-hover:scale-110">
-                      {country.flag}
-                    </div>
-
                     {/* Country code badge */}
                     <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 transition-colors ${
                       isSelected

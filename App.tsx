@@ -909,7 +909,7 @@ const App: React.FC = () => {
         )}
 
         {/* Tab Content */}
-        <div className="min-h-[600px]">
+        <div className={currentTab === 'home' ? '' : 'min-h-[600px]'}>
           {/* ====================================== */}
           {/* CHAT-FIRST COMMAND CENTER (NEW) */}
           {/* ====================================== */}

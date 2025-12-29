@@ -378,6 +378,44 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
     };
   }, []);
 
+  // Prevenir scroll automático de la página cuando el input está activo
+  useEffect(() => {
+    let scrollLocked = false;
+    let lastScrollY = 0;
+
+    const preventAutoScroll = () => {
+      // Si el input está enfocado, prevenir que la página haga scroll
+      if (document.activeElement === inputRef.current && scrollLocked) {
+        window.scrollTo({ top: lastScrollY, behavior: 'instant' });
+      }
+    };
+
+    const handleFocusIn = (e: FocusEvent) => {
+      if (e.target === inputRef.current) {
+        lastScrollY = window.scrollY;
+        scrollLocked = true;
+        // Escuchar intentos de scroll
+        window.addEventListener('scroll', preventAutoScroll, { passive: false });
+      }
+    };
+
+    const handleFocusOut = (e: FocusEvent) => {
+      if (e.target === inputRef.current) {
+        scrollLocked = false;
+        window.removeEventListener('scroll', preventAutoScroll);
+      }
+    };
+
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('focusout', handleFocusOut);
+
+    return () => {
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('focusout', handleFocusOut);
+      window.removeEventListener('scroll', preventAutoScroll);
+    };
+  }, []);
+
   // Manejar envio de mensaje
   const handleSendMessage = async () => {
     if ((!inputValue.trim() && !attachedImage) || isProcessing) return;
@@ -609,13 +647,17 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
 
   // Prevenir scroll de página cuando se hace focus en el input
   const handleInputFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    // Mantener el scroll de la página en su posición actual
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    // Guardar la posición actual del scroll
+    const currentScrollY = window.scrollY;
+
+    // Usar requestAnimationFrame para restaurar después del focus
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+    });
   }, []);
 
   return (
-    <div className="h-[calc(100vh-220px)] bg-gradient-to-br from-navy-950 via-navy-900 to-navy-950 rounded-2xl overflow-hidden flex flex-col">
+    <div className="h-[calc(100vh-160px)] min-h-[500px] bg-gradient-to-br from-navy-950 via-navy-900 to-navy-950 rounded-2xl overflow-hidden flex flex-col">
       {/* Header compacto - altura fija */}
       <div className="flex-shrink-0 p-4 border-b border-white/5">
         <div className="flex items-center justify-between">
