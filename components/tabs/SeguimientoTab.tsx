@@ -3,27 +3,12 @@ import {
   Package,
   Search,
   Filter,
-  AlertTriangle,
-  Clock,
-  MapPin,
-  Phone,
   RefreshCw,
   Camera,
-  MessageCircle,
-  ChevronDown,
-  ChevronUp,
-  ExternalLink,
-  Copy,
-  Check,
-  Truck,
-  Calendar,
-  AlertCircle,
   Bot,
   Download,
   List,
   LayoutGrid,
-  CheckCircle2,
-  XCircle,
   Eye,
   ClipboardCopy,
   TrendingUp,
@@ -39,14 +24,11 @@ import {
   FileSpreadsheet,
   X,
   Table,
-  Brain,
-  Zap,
   Activity,
-  Target,
   Shield,
-  Sun,
-  Cloud,
-  Snowflake,
+  ChevronLeft,
+  ChevronRight as ChevronRightIcon,
+  Users,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { AlertDashboard } from '../AlertDashboard';
@@ -70,29 +52,25 @@ import {
 } from '../../services/globalStorageService';
 import { SimpleUserSelector } from '../SimpleUserSelector';
 import { SimpleUser, getOCrearUsuarioDefault } from '../../services/simpleUserService';
-import { ChevronLeft, ChevronRight as ChevronRightIcon, Users } from 'lucide-react';
 import { ReviewedBadge, ReviewedCounter } from '../ReviewedBadge';
 import { CargaProgressBar } from '../carga/CargaProgressBar';
 import { useCargaStore } from '../../stores/cargaStore';
 import { GuiaCarga } from '../../types/carga.types';
 
-// ============================================
-// COMPONENTES EXTRAÍDOS - DISPONIBLES PARA MIGRACIÓN
-// Los siguientes componentes están disponibles en SeguimientoComponents.tsx
-// para una migración gradual que reducirá este archivo de 2,227 líneas:
-//
-// - GuiaProcesada (tipo)
-// - AnomaliaDetectada (tipo)
-// - getStatusColor, getStatusIcon (helpers)
-// - getSeasonInfo, isNearHoliday, detectarAnomalias (helpers)
-// - StatusBadge (componente)
-// - AnalysisPanel (componente)
-// - DynamicStatusButtons (componente)
-// - SummaryCards (componente)
-// - GuiaTableRow (componente)
-//
-// import { StatusBadge, AnalysisPanel, ... } from './SeguimientoComponents';
-// ============================================
+// Tipos y funciones de SeguimientoComponents
+import {
+  GuiaProcesada,
+  AnomaliaDetectada,
+  getStatusColor,
+  getStatusIcon,
+  getSeasonInfo,
+  isNearHoliday,
+  detectarAnomalias,
+  FESTIVOS_COLOMBIA,
+} from './SeguimientoComponents';
+// NOTA: Los componentes StatusBadge, AnalysisPanel, DynamicStatusButtons,
+// SummaryCards y GuiaTableRow tienen versiones locales con funcionalidad
+// adicional (HelpTooltip, onMarkReviewed, etc.)
 
 interface SeguimientoTabProps {
   shipments: Shipment[];
@@ -100,220 +78,18 @@ interface SeguimientoTabProps {
   onRestoreShipments?: (shipments: Shipment[]) => void;
 }
 
-// =====================================
-// INTERFACE PARA GUÍA PROCESADA
-// =====================================
-interface GuiaProcesada {
-  guia: Shipment;
-  celular: string | null;
-  transportadora: string;
-  origen: string;
-  destino: string;
-  ultimoEvento: {
-    fecha: string;
-    descripcion: string;
-  } | null;
-  ultimos2Estados: {
-    fecha: string;
-    descripcion: string;
-    ubicacion?: string;
-  }[];
-  estadoGeneral: string;
-  estadoReal: string; // Estado del último evento de tracking
-  dias: number;
-  tieneTracking: boolean;
-  tieneNovedad: boolean;
-  revisada: boolean;
-  fechaRevision?: Date;
-  revisadoPor?: string;
-}
-
-// Interface para guías revisadas persistidas
+// Interface para guías revisadas persistidas (unica de este archivo)
 interface GuiaRevisadaData {
   guiaId: string;
   fechaRevision: Date;
   revisadoPor: string;
 }
 
-// =====================================
-// COLORES POR ESTADO
-// =====================================
-const getStatusColor = (status: string): { bg: string; text: string; border: string } => {
-  const statusLower = status.toLowerCase();
-
-  if (
-    statusLower.includes('entregado') ||
-    statusLower === 'delivered' ||
-    status === ShipmentStatus.DELIVERED
-  ) {
-    return {
-      bg: 'bg-green-100 dark:bg-green-900/30',
-      text: 'text-green-700 dark:text-green-400',
-      border: 'border-green-300 dark:border-green-700',
-    };
-  }
-  if (
-    statusLower.includes('tránsito') ||
-    statusLower.includes('transito') ||
-    statusLower.includes('reparto') ||
-    status === ShipmentStatus.IN_TRANSIT
-  ) {
-    return {
-      bg: 'bg-blue-100 dark:bg-blue-900/30',
-      text: 'text-blue-700 dark:text-blue-400',
-      border: 'border-blue-300 dark:border-blue-700',
-    };
-  }
-  if (statusLower.includes('oficina') || status === ShipmentStatus.IN_OFFICE) {
-    return {
-      bg: 'bg-purple-100 dark:bg-purple-900/30',
-      text: 'text-purple-700 dark:text-purple-400',
-      border: 'border-purple-300 dark:border-purple-700',
-    };
-  }
-  if (
-    statusLower.includes('novedad') ||
-    statusLower.includes('rechazado') ||
-    statusLower.includes('devuelto') ||
-    statusLower.includes('problema') ||
-    status === ShipmentStatus.ISSUE
-  ) {
-    return {
-      bg: 'bg-red-100 dark:bg-red-900/30',
-      text: 'text-red-700 dark:text-red-400',
-      border: 'border-red-300 dark:border-red-700',
-    };
-  }
-  if (statusLower.includes('pendiente') || status === ShipmentStatus.PENDING) {
-    return {
-      bg: 'bg-yellow-100 dark:bg-yellow-900/30',
-      text: 'text-yellow-700 dark:text-yellow-400',
-      border: 'border-yellow-300 dark:border-yellow-700',
-    };
-  }
-  return {
-    bg: 'bg-gray-100 dark:bg-gray-800',
-    text: 'text-gray-700 dark:text-gray-400',
-    border: 'border-gray-300 dark:border-gray-700',
-  };
-};
-
-const getStatusIcon = (status: string): string => {
-  const statusLower = status.toLowerCase();
-
-  if (statusLower.includes('entregado') || statusLower === 'delivered') return '🟢';
-  if (
-    statusLower.includes('tránsito') ||
-    statusLower.includes('transito') ||
-    statusLower.includes('reparto')
-  )
-    return '🔵';
-  if (statusLower.includes('oficina')) return '🟣';
-  if (
-    statusLower.includes('novedad') ||
-    statusLower.includes('rechazado') ||
-    statusLower.includes('devuelto') ||
-    statusLower.includes('problema')
-  )
-    return '🔴';
-  if (statusLower.includes('pendiente')) return '🟡';
-  return '⚪';
-};
-
-// =====================================
-// FUNCIONES DE ANÁLISIS ML
-// =====================================
-const FESTIVOS_COLOMBIA = [
-  '2025-01-01', '2025-01-06', '2025-03-24', '2025-04-17', '2025-04-18',
-  '2025-05-01', '2025-06-02', '2025-06-23', '2025-06-30', '2025-07-20',
-  '2025-08-07', '2025-08-18', '2025-10-13', '2025-11-03', '2025-11-17',
-  '2025-12-08', '2025-12-25',
-  '2026-01-01', '2026-01-12', '2026-03-23', '2026-04-02', '2026-04-03',
-];
-
-const getSeasonInfo = (): { season: string; impact: number; icon: React.ReactNode; color: string } => {
-  const month = new Date().getMonth();
-  if (month >= 10 || month <= 1) {
-    return { season: 'Alta (Navidad)', impact: -15, icon: <Snowflake className="w-3.5 h-3.5" />, color: 'text-blue-500' };
-  }
-  if (month >= 3 && month <= 5) {
-    return { season: 'Lluvias', impact: -10, icon: <Cloud className="w-3.5 h-3.5" />, color: 'text-slate-500' };
-  }
-  if (month >= 6 && month <= 8) {
-    return { season: 'Seca', impact: 5, icon: <Sun className="w-3.5 h-3.5" />, color: 'text-yellow-500' };
-  }
-  return { season: 'Normal', impact: 0, icon: <Sun className="w-3.5 h-3.5" />, color: 'text-amber-500' };
-};
-
-const isNearHoliday = (): boolean => {
-  const today = new Date();
-  const dateStr = today.toISOString().split('T')[0];
-  const threeDaysBefore = new Date(today);
-  threeDaysBefore.setDate(today.getDate() - 3);
-  const threeDaysAfter = new Date(today);
-  threeDaysAfter.setDate(today.getDate() + 3);
-
-  return FESTIVOS_COLOMBIA.some(holiday => {
-    const h = new Date(holiday);
-    return h >= threeDaysBefore && h <= threeDaysAfter;
-  });
-};
-
-interface AnomaliaDetectada {
-  guia: GuiaProcesada;
-  tipo: 'SIN_MOVIMIENTO' | 'TRANSITO_LARGO' | 'OFICINA_MUCHO' | 'NOVEDAD_ABIERTA';
-  severidad: 'CRITICO' | 'ALTO' | 'MEDIO';
-  descripcion: string;
-  recomendacion: string;
-}
-
-const detectarAnomalias = (guias: GuiaProcesada[]): AnomaliaDetectada[] => {
-  const anomalias: AnomaliaDetectada[] = [];
-
-  guias.forEach(g => {
-    if (g.estadoGeneral.toLowerCase().includes('entregado')) return;
-
-    // Sin movimiento > 3 días
-    if (g.dias >= 3 && g.tieneTracking) {
-      const ultimoEvento = g.ultimoEvento?.descripcion?.toLowerCase() || '';
-      if (!ultimoEvento.includes('entregado')) {
-        anomalias.push({
-          guia: g,
-          tipo: 'SIN_MOVIMIENTO',
-          severidad: g.dias >= 5 ? 'CRITICO' : 'ALTO',
-          descripcion: `${g.dias} días sin movimiento`,
-          recomendacion: 'Contactar transportadora urgente'
-        });
-      }
-    }
-
-    // En oficina mucho tiempo
-    if (g.estadoGeneral.toLowerCase().includes('oficina') && g.dias >= 3) {
-      anomalias.push({
-        guia: g,
-        tipo: 'OFICINA_MUCHO',
-        severidad: g.dias >= 5 ? 'CRITICO' : 'MEDIO',
-        descripcion: `${g.dias} días en oficina sin retiro`,
-        recomendacion: 'Llamar cliente para coordinar retiro'
-      });
-    }
-
-    // Novedad sin gestión
-    if (g.tieneNovedad && g.dias >= 2) {
-      anomalias.push({
-        guia: g,
-        tipo: 'NOVEDAD_ABIERTA',
-        severidad: 'ALTO',
-        descripcion: 'Novedad abierta sin resolver',
-        recomendacion: 'Gestionar novedad con transportadora'
-      });
-    }
-  });
-
-  // Ordenar por severidad
-  const orden = { CRITICO: 0, ALTO: 1, MEDIO: 2 };
-  return anomalias.sort((a, b) => orden[a.severidad] - orden[b.severidad]);
-};
+// NOTA: Las siguientes funciones e interfaces ahora se importan de SeguimientoComponents:
+// - getStatusColor, getStatusIcon
+// - FESTIVOS_COLOMBIA, getSeasonInfo, isNearHoliday
+// - AnomaliaDetectada, detectarAnomalias
+// - StatusBadge, AnalysisPanel, DynamicStatusButtons, SummaryCards, GuiaTableRow
 
 // =====================================
 // PANEL DE ANÁLISIS COMPACTO
