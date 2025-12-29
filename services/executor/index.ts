@@ -9,6 +9,8 @@ export { ActionExecutor } from './ActionExecutor';
 export { ChateaService, MockChateaService } from './ChateaService';
 export { RateLimiter } from './RateLimiter';
 export { TemplateService, TEMPLATE_NO_MOVEMENT_48H, TEMPLATE_AT_OFFICE_3D } from './Templates';
+export { ExecutorRunLog } from './ExecutorRunLog';
+export { PIIVault, createPhoneLookup, hashPhone, normalizePhone } from './PIIVault';
 
 // Re-export types
 export type {
@@ -26,6 +28,11 @@ export type {
   WhatsAppTemplate,
   TemplateInput,
 } from '../../types/executor.types';
+
+export type {
+  ExecutorRunSummary,
+  ExecutorRunLogEntry,
+} from './ExecutorRunLog';
 
 export {
   buildExecutionKey,
