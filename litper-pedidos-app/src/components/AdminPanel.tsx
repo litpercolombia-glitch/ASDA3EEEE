@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserPlus, Trash2, Edit2, Check, X, Crown, User, Save } from 'lucide-react';
+import { UserPlus, Trash2, Edit2, Check, Crown, User, Save } from 'lucide-react';
 import { useAppStore, COLORES_USUARIO, AVATARES, Usuario } from '../stores/appStore';
 
 interface UserFormData {
