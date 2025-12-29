@@ -154,21 +154,41 @@ except ImportError as e:
     CHATEA_PRO_AVAILABLE = False
     logger.warning(f"Sistema Chatea Pro no disponible: {e}")
 
+# Sistema de Autenticación Segura (bcrypt + JWT)
+try:
+    from routes.auth_routes import router as auth_router
+    AUTH_SYSTEM_AVAILABLE = True
+    logger.info("🔐 Sistema de Autenticación Segura cargado")
+except ImportError as e:
+    AUTH_SYSTEM_AVAILABLE = False
+    logger.warning(f"Sistema de Autenticación no disponible: {e}")
+
 
 # ==================== CONFIGURACIÓN ====================
 
 # Tiempo de inicio del servidor
 START_TIME = datetime.now()
 
+# ==================== CORS SEGURO ====================
 # Lista de orígenes permitidos para CORS
-ALLOWED_ORIGINS = [
+# NOTA: En producción, NUNCA usar "*"
+
+ALLOWED_ORIGINS_PROD = [
+    "https://litper-logistica.vercel.app",
+    "https://app.litper.co",
+    "https://litper.co",
+]
+
+ALLOWED_ORIGINS_DEV = [
     "http://localhost:3000",
     "http://localhost:5173",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
-    "https://litper-logistica.vercel.app",
-    "https://*.vercel.app",
 ]
+
+# Detectar entorno
+IS_PRODUCTION = os.getenv("ENV", "development").lower() == "production"
+ALLOWED_ORIGINS = ALLOWED_ORIGINS_PROD if IS_PRODUCTION else ALLOWED_ORIGINS_PROD + ALLOWED_ORIGINS_DEV
 
 # ==================== MODELOS PYDANTIC ====================
 
@@ -248,13 +268,13 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configurar CORS
+# Configurar CORS con whitelist
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, especificar dominios
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With", "X-Webhook-Signature"],
 )
 
 # Incluir router del Sistema de Conocimiento
@@ -316,6 +336,11 @@ if TRACKING_ORDENES_AVAILABLE:
 if CHATEA_PRO_AVAILABLE:
     app.include_router(chatea_pro_router)
     logger.success("💬 Rutas de Chatea Pro registradas en /api/chatea-pro")
+
+# Incluir router de Autenticación Segura
+if AUTH_SYSTEM_AVAILABLE:
+    app.include_router(auth_router)
+    logger.success("🔐 Rutas de Autenticación registradas en /api/auth")
 
 
 # ==================== ENDPOINTS DE SISTEMA ====================
