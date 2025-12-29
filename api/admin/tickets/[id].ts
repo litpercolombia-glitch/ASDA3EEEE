@@ -4,47 +4,12 @@
  * GET - Get ticket by ID
  * PATCH - Update ticket (status, priority, resolution notes)
  *
- * Protected by CRON_SECRET.
+ * Protected by ADMIN_SECRET.
  * NO PII in responses.
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-// =====================================================
-// SECURITY
-// =====================================================
-
-function validateAdminAuth(req: VercelRequest): boolean {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    return false;
-  }
-
-  const [scheme, token] = authHeader.split(' ');
-
-  if (scheme !== 'Bearer' || !token) {
-    return false;
-  }
-
-  const secret = process.env.CRON_SECRET;
-
-  if (!secret) {
-    return false;
-  }
-
-  // Constant-time comparison
-  if (token.length !== secret.length) {
-    return false;
-  }
-
-  let result = 0;
-  for (let i = 0; i < token.length; i++) {
-    result |= token.charCodeAt(i) ^ secret.charCodeAt(i);
-  }
-
-  return result === 0;
-}
+import { requireAdminAuth, logAdminAction } from '../../../services/auth';
 
 // =====================================================
 // VALIDATION
@@ -114,9 +79,10 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ): Promise<void> {
-  // Validate auth
-  if (!validateAdminAuth(req)) {
-    res.status(401).json({ error: 'Unauthorized' });
+  // Validate auth (ADMIN_SECRET)
+  const auth = requireAdminAuth(req);
+  if (!auth.authorized) {
+    res.status(401).json({ error: auth.error || 'Unauthorized' });
     return;
   }
 
