@@ -170,7 +170,14 @@ export type ActionType = 'SEND_WHATSAPP' | 'CREATE_TICKET' | 'ADD_NOTE' | 'RESCH
 /**
  * Action execution status
  */
-export type ActionStatus = 'PLANNED' | 'SUCCESS' | 'FAILED' | 'SKIPPED_DUPLICATE' | 'PENDING';
+export type ActionStatus =
+  | 'PLANNED'           // Waiting to be executed
+  | 'RUNNING'           // Currently executing
+  | 'SUCCESS'           // Successfully completed
+  | 'FAILED'            // Permanently failed
+  | 'SKIPPED_DUPLICATE' // Skipped due to idempotency
+  | 'SKIPPED_RATE_LIMIT'// Skipped due to rate limiting
+  | 'PENDING';          // Legacy/waiting
 
 /**
  * ActionLog - Track all actions taken on shipments

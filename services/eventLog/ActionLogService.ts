@@ -169,6 +169,32 @@ class ActionLogServiceImpl {
   }
 
   /**
+   * Mark an action as running (in progress)
+   */
+  markRunning(actionId: string): ActionLog | null {
+    const action = this.actions.get(actionId);
+    if (!action) return null;
+
+    action.status = 'RUNNING' as ActionStatus;
+    action.metadata = { ...action.metadata, startedAt: new Date() };
+
+    return action;
+  }
+
+  /**
+   * Mark an action as skipped (rate limit, etc.)
+   */
+  markSkipped(actionId: string, reason: string): ActionLog | null {
+    const action = this.actions.get(actionId);
+    if (!action) return null;
+
+    action.status = 'SKIPPED_RATE_LIMIT' as ActionStatus;
+    action.metadata = { ...action.metadata, skipReason: reason };
+
+    return action;
+  }
+
+  /**
    * Get action by ID
    */
   getAction(id: string): ActionLog | null {
