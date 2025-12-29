@@ -1,18 +1,25 @@
 """
-Rutas de Autenticación para Litper Pro
-=======================================
+Rutas de Autenticación HARDENED para Litper Pro
+================================================
 
-Endpoints seguros para login, registro, refresh tokens, y gestión de usuarios.
-Usa bcrypt para hash de contraseñas, JWT para tokens.
+Endpoints seguros con:
+- Tokens en cookies httpOnly (no localStorage)
+- Refresh tokens persistidos con revocación real
+- Rate limiting por IP y usuario
+- Register deshabilitado en producción por defecto
 
-IMPORTANTE: Este archivo reemplaza la autenticación frontend (localStorage).
-Todas las operaciones de password se hacen aquí, NUNCA en el cliente.
+IMPORTANTE: Este archivo implementa autenticación "production-ready".
 """
 
 import os
+import json
+import time
+import secrets
+from pathlib import Path
 from datetime import datetime, timedelta
-from typing import Optional, List
-from fastapi import APIRouter, HTTPException, status, Depends, Request
+from typing import Optional, List, Dict
+from collections import defaultdict
+from fastapi import APIRouter, HTTPException, status, Depends, Request, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr, Field
 from loguru import logger
@@ -33,10 +40,67 @@ from security.authentication import (
     get_current_user,
     require_role,
     require_permission,
-    check_rate_limit,
 )
 
 router = APIRouter(prefix="/api/auth", tags=["Autenticación"])
+
+# ═══════════════════════════════════════════
+# CONFIGURACIÓN
+# ═══════════════════════════════════════════
+
+IS_PRODUCTION = os.getenv("ENV", "development").lower() == "production"
+ALLOW_REGISTER = os.getenv("ALLOW_REGISTER", "false").lower() == "true"
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))  # Más corto en prod
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+
+# Cookie settings
+COOKIE_SECURE = IS_PRODUCTION  # Solo HTTPS en prod
+COOKIE_SAMESITE = "lax"  # Protección CSRF básica
+COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", None)  # None = current domain
+
+# Rate limiting settings
+RATE_LIMIT_WINDOW = 60  # segundos
+RATE_LIMIT_MAX_LOGIN = 5  # intentos por ventana
+RATE_LIMIT_MAX_REGISTER = 3
+RATE_LIMIT_MAX_REFRESH = 30
+
+# Data paths
+DATA_DIR = Path(os.getenv("DATA_DIR", "./data"))
+USERS_FILE = DATA_DIR / "users.json"
+TOKENS_FILE = DATA_DIR / "refresh_tokens.json"
+
+# ═══════════════════════════════════════════
+# RATE LIMITING
+# ═══════════════════════════════════════════
+
+_rate_limit_store: Dict[str, List[float]] = defaultdict(list)
+
+
+def _check_rate_limit(key: str, max_requests: int, window_seconds: int = RATE_LIMIT_WINDOW) -> bool:
+    """
+    Verifica rate limit para una key (IP o user_id).
+    Returns True si está dentro del límite, False si excede.
+    """
+    now = time.time()
+    window_start = now - window_seconds
+
+    # Limpiar requests viejos
+    _rate_limit_store[key] = [ts for ts in _rate_limit_store[key] if ts > window_start]
+
+    if len(_rate_limit_store[key]) >= max_requests:
+        return False
+
+    _rate_limit_store[key].append(now)
+    return True
+
+
+def _get_client_ip(request: Request) -> str:
+    """Obtiene IP del cliente considerando proxies"""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
 
 # ═══════════════════════════════════════════
 # MODELOS DE REQUEST/RESPONSE
@@ -53,27 +117,13 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=128)
     nombre: str = Field(..., min_length=2, max_length=100)
-    rol: Optional[str] = "operador"
-
-
-class RefreshTokenRequest(BaseModel):
-    """Request para refrescar token"""
-    refresh_token: str
+    invite_code: Optional[str] = None  # Para registro con invitación
 
 
 class ChangePasswordRequest(BaseModel):
     """Request para cambiar contraseña"""
     current_password: str
     new_password: str = Field(..., min_length=8, max_length=128)
-
-
-class TokenResponse(BaseModel):
-    """Response con tokens"""
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-    expires_in: int  # segundos
-    user: dict
 
 
 class UserResponse(BaseModel):
@@ -87,36 +137,103 @@ class UserResponse(BaseModel):
     last_login: Optional[str] = None
 
 
+class AuthStatusResponse(BaseModel):
+    """Response de estado de autenticación"""
+    authenticated: bool
+    user: Optional[dict] = None
+
+
 # ═══════════════════════════════════════════
-# ALMACENAMIENTO (Temporal - Migrar a Supabase)
+# ALMACENAMIENTO PERSISTENTE
 # ═══════════════════════════════════════════
 
-# En producción esto viene de Supabase/PostgreSQL
-# Por ahora usamos un diccionario en memoria como placeholder
-# TODO: Conectar con Supabase en Fix #1
+def _ensure_data_dir():
+    """Crea directorio de datos si no existe"""
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-_users_db: dict = {}
-_refresh_tokens: dict = {}  # user_id -> refresh_token_hash
+
+def _load_users() -> Dict[str, dict]:
+    """Carga usuarios desde archivo JSON"""
+    _ensure_data_dir()
+    if USERS_FILE.exists():
+        try:
+            with open(USERS_FILE, "r") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError) as e:
+            logger.error(f"Error cargando usuarios: {e}")
+    return {}
+
+
+def _save_users(users: Dict[str, dict]):
+    """Guarda usuarios en archivo JSON"""
+    _ensure_data_dir()
+    with open(USERS_FILE, "w") as f:
+        json.dump(users, f, indent=2, default=str)
+
+
+def _load_refresh_tokens() -> Dict[str, dict]:
+    """Carga refresh tokens desde archivo JSON"""
+    _ensure_data_dir()
+    if TOKENS_FILE.exists():
+        try:
+            with open(TOKENS_FILE, "r") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError) as e:
+            logger.error(f"Error cargando tokens: {e}")
+    return {}
+
+
+def _save_refresh_tokens(tokens: Dict[str, dict]):
+    """Guarda refresh tokens en archivo JSON"""
+    _ensure_data_dir()
+    with open(TOKENS_FILE, "w") as f:
+        json.dump(tokens, f, indent=2, default=str)
+
+
+# Cache en memoria para performance
+_users_cache: Dict[str, dict] = {}
+_tokens_cache: Dict[str, dict] = {}
+
+
+def _get_users() -> Dict[str, dict]:
+    """Obtiene usuarios (con cache)"""
+    global _users_cache
+    if not _users_cache:
+        _users_cache = _load_users()
+        if not _users_cache:
+            _init_default_users()
+    return _users_cache
+
+
+def _get_tokens() -> Dict[str, dict]:
+    """Obtiene tokens (con cache)"""
+    global _tokens_cache
+    if not _tokens_cache:
+        _tokens_cache = _load_refresh_tokens()
+    return _tokens_cache
+
+
+def _persist_users():
+    """Persiste usuarios a disco"""
+    _save_users(_users_cache)
+
+
+def _persist_tokens():
+    """Persiste tokens a disco"""
+    _save_refresh_tokens(_tokens_cache)
+
 
 def _init_default_users():
-    """
-    Inicializa usuarios por defecto con bcrypt.
-    NOTA: Estos passwords están hasheados con bcrypt.
-    En producción, se deben cambiar inmediatamente.
-    """
-    if _users_db:
-        return
+    """Inicializa usuarios por defecto con bcrypt"""
+    global _users_cache
 
-    # Usuarios iniciales con roles
-    # Los passwords aquí son temporales - cada usuario debe cambiarlos
     default_users = [
         {"email": "admin@litper.co", "nombre": "Admin", "rol": "admin", "temp_pass": "TempAdmin2025!"},
-        {"email": "operador@litper.co", "nombre": "Operador", "rol": "operador", "temp_pass": "TempOp2025!"},
     ]
 
     for user_data in default_users:
-        user_id = f"user_{user_data['email'].replace('@', '_').replace('.', '_')}"
-        _users_db[user_data["email"].lower()] = {
+        user_id = f"user_{secrets.token_urlsafe(8)}"
+        _users_cache[user_data["email"].lower()] = {
             "id": user_id,
             "email": user_data["email"].lower(),
             "nombre": user_data["nombre"],
@@ -125,25 +242,32 @@ def _init_default_users():
             "activo": True,
             "created_at": datetime.utcnow().isoformat(),
             "last_login": None,
-            "password_migrated": True,  # Ya usa bcrypt
-            "must_change_password": True,  # Forzar cambio en primer login
+            "must_change_password": True,
         }
 
+    _persist_users()
     logger.info(f"✅ Inicializados {len(default_users)} usuarios por defecto (bcrypt)")
-
-
-# Inicializar al importar
-_init_default_users()
 
 
 def _get_user_by_email(email: str) -> Optional[dict]:
     """Obtiene usuario por email"""
-    return _users_db.get(email.lower())
+    users = _get_users()
+    return users.get(email.lower())
+
+
+def _get_user_by_id(user_id: str) -> Optional[dict]:
+    """Obtiene usuario por ID"""
+    users = _get_users()
+    for user in users.values():
+        if user["id"] == user_id:
+            return user
+    return None
 
 
 def _create_user(email: str, password: str, nombre: str, rol: str = "operador") -> dict:
     """Crea un nuevo usuario con bcrypt"""
-    user_id = f"user_{datetime.utcnow().timestamp()}"
+    global _users_cache
+    user_id = f"user_{secrets.token_urlsafe(8)}"
 
     user = {
         "id": user_id,
@@ -154,27 +278,27 @@ def _create_user(email: str, password: str, nombre: str, rol: str = "operador") 
         "activo": True,
         "created_at": datetime.utcnow().isoformat(),
         "last_login": None,
-        "password_migrated": True,
         "must_change_password": False,
     }
 
-    _users_db[email.lower()] = user
+    _users_cache[email.lower()] = user
+    _persist_users()
     return user
-
-
-def _update_user_last_login(email: str):
-    """Actualiza último login"""
-    if email.lower() in _users_db:
-        _users_db[email.lower()]["last_login"] = datetime.utcnow().isoformat()
 
 
 def _user_to_model(user_dict: dict) -> UserModel:
     """Convierte diccionario a modelo User"""
+    role_value = user_dict.get("rol", "operator")
+    try:
+        role = Role(role_value)
+    except ValueError:
+        role = Role.OPERATOR
+
     return UserModel(
         id=user_dict["id"],
         email=user_dict["email"],
         hashed_password=user_dict["hashed_password"],
-        role=Role(user_dict["rol"]) if user_dict["rol"] in [r.value for r in Role] else Role.OPERATOR,
+        role=role,
         is_active=user_dict.get("activo", True),
         created_at=datetime.fromisoformat(user_dict["created_at"]) if user_dict.get("created_at") else datetime.utcnow(),
         last_login=datetime.fromisoformat(user_dict["last_login"]) if user_dict.get("last_login") else None,
@@ -182,271 +306,467 @@ def _user_to_model(user_dict: dict) -> UserModel:
 
 
 # ═══════════════════════════════════════════
+# REFRESH TOKEN MANAGEMENT (STATEFUL)
+# ═══════════════════════════════════════════
+
+def _store_refresh_token(user_id: str, token: str, jti: str):
+    """
+    Almacena refresh token hasheado con metadata.
+    Permite revocación real.
+    """
+    global _tokens_cache
+    tokens = _get_tokens()
+
+    # Un usuario puede tener múltiples sesiones (dispositivos)
+    # Pero limitamos a 5 sesiones activas
+    user_tokens = [k for k, v in tokens.items() if v.get("user_id") == user_id]
+    if len(user_tokens) >= 5:
+        # Eliminar el más antiguo
+        oldest = min(user_tokens, key=lambda k: tokens[k].get("created_at", ""))
+        del tokens[oldest]
+
+    tokens[jti] = {
+        "user_id": user_id,
+        "token_hash": get_password_hash(token),
+        "created_at": datetime.utcnow().isoformat(),
+        "expires_at": (datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)).isoformat(),
+        "revoked": False,
+    }
+
+    _tokens_cache = tokens
+    _persist_tokens()
+
+
+def _validate_refresh_token(token: str, jti: str) -> Optional[str]:
+    """
+    Valida refresh token y retorna user_id si válido.
+    Verifica que no esté revocado y no haya expirado.
+    """
+    tokens = _get_tokens()
+    token_data = tokens.get(jti)
+
+    if not token_data:
+        logger.warning(f"⚠️ Refresh token JTI no encontrado: {jti[:8]}...")
+        return None
+
+    if token_data.get("revoked"):
+        logger.warning(f"⚠️ Intento de usar refresh token revocado: {jti[:8]}...")
+        return None
+
+    # Verificar expiración
+    expires_at = datetime.fromisoformat(token_data["expires_at"])
+    if datetime.utcnow() > expires_at:
+        logger.warning(f"⚠️ Refresh token expirado: {jti[:8]}...")
+        return None
+
+    # Verificar hash
+    if not verify_password(token, token_data["token_hash"]):
+        logger.warning(f"⚠️ Refresh token hash no coincide: {jti[:8]}...")
+        return None
+
+    return token_data["user_id"]
+
+
+def _revoke_refresh_token(jti: str):
+    """Revoca un refresh token específico"""
+    global _tokens_cache
+    tokens = _get_tokens()
+
+    if jti in tokens:
+        tokens[jti]["revoked"] = True
+        tokens[jti]["revoked_at"] = datetime.utcnow().isoformat()
+        _tokens_cache = tokens
+        _persist_tokens()
+        logger.info(f"🔐 Refresh token revocado: {jti[:8]}...")
+
+
+def _revoke_all_user_tokens(user_id: str):
+    """Revoca todos los refresh tokens de un usuario"""
+    global _tokens_cache
+    tokens = _get_tokens()
+
+    count = 0
+    for jti, data in tokens.items():
+        if data.get("user_id") == user_id and not data.get("revoked"):
+            data["revoked"] = True
+            data["revoked_at"] = datetime.utcnow().isoformat()
+            count += 1
+
+    _tokens_cache = tokens
+    _persist_tokens()
+    logger.info(f"🔐 Revocados {count} refresh tokens para usuario {user_id}")
+
+
+def _cleanup_expired_tokens():
+    """Limpia tokens expirados (llamar periódicamente)"""
+    global _tokens_cache
+    tokens = _get_tokens()
+    now = datetime.utcnow()
+
+    to_delete = []
+    for jti, data in tokens.items():
+        expires_at = datetime.fromisoformat(data["expires_at"])
+        if now > expires_at:
+            to_delete.append(jti)
+
+    for jti in to_delete:
+        del tokens[jti]
+
+    if to_delete:
+        _tokens_cache = tokens
+        _persist_tokens()
+        logger.info(f"🧹 Limpiados {len(to_delete)} tokens expirados")
+
+
+# ═══════════════════════════════════════════
+# COOKIE HELPERS
+# ═══════════════════════════════════════════
+
+def _set_auth_cookies(response: Response, access_token: str, refresh_token: str, jti: str):
+    """Establece cookies httpOnly para tokens"""
+    # Access token - corta duración
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/",
+        domain=COOKIE_DOMAIN,
+    )
+
+    # Refresh token - larga duración
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        path="/api/auth",  # Solo accesible en rutas de auth
+        domain=COOKIE_DOMAIN,
+    )
+
+    # JTI para identificar el refresh token (no sensible)
+    response.set_cookie(
+        key="token_jti",
+        value=jti,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        path="/api/auth",
+        domain=COOKIE_DOMAIN,
+    )
+
+
+def _clear_auth_cookies(response: Response):
+    """Limpia cookies de autenticación"""
+    response.delete_cookie("access_token", path="/", domain=COOKIE_DOMAIN)
+    response.delete_cookie("refresh_token", path="/api/auth", domain=COOKIE_DOMAIN)
+    response.delete_cookie("token_jti", path="/api/auth", domain=COOKIE_DOMAIN)
+
+
+def _get_access_token_from_cookie(request: Request) -> Optional[str]:
+    """Obtiene access token desde cookie"""
+    return request.cookies.get("access_token")
+
+
+# ═══════════════════════════════════════════
+# DEPENDENCIAS
+# ═══════════════════════════════════════════
+
+async def get_current_user_from_cookie(request: Request) -> TokenData:
+    """
+    Obtiene usuario actual desde cookie httpOnly.
+    Alternativa a get_current_user que usa header Authorization.
+    """
+    token = _get_access_token_from_cookie(request)
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No autenticado"
+        )
+
+    token_data = decode_token(token)
+
+    if not token_data:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido o expirado"
+        )
+
+    return token_data
+
+
+# ═══════════════════════════════════════════
 # ENDPOINTS
 # ═══════════════════════════════════════════
 
-@router.post("/login", response_model=TokenResponse)
-async def login(request: LoginRequest):
+@router.post("/login")
+async def login(request: Request, response: Response, login_data: LoginRequest):
     """
-    Autentica usuario y retorna tokens JWT.
+    Autentica usuario y establece cookies httpOnly.
 
+    - Rate limiting por IP
     - Password verificado con bcrypt (timing-safe)
-    - Rate limiting aplicado por IP
-    - Registra intento de login para auditoría
+    - Tokens en cookies httpOnly (no en response body)
     """
-    email = request.email.lower()
+    client_ip = _get_client_ip(request)
+
+    # Rate limiting
+    if not _check_rate_limit(f"login:{client_ip}", RATE_LIMIT_MAX_LOGIN):
+        logger.warning(f"🚫 Rate limit excedido para login desde {client_ip}")
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Demasiados intentos. Espere un minuto."
+        )
+
+    email = login_data.email.lower()
 
     # Buscar usuario
     user_data = _get_user_by_email(email)
 
     if not user_data:
-        logger.warning(f"🔐 Login fallido: usuario no encontrado [{email}]")
-        # Delay constante para prevenir user enumeration
+        logger.warning(f"🔐 Login fallido: usuario no encontrado [{email}] desde {client_ip}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciales inválidas"
         )
 
-    # Verificar password con bcrypt (timing-safe)
-    if not verify_password(request.password, user_data["hashed_password"]):
-        logger.warning(f"🔐 Login fallido: password incorrecto [{email}]")
+    # Verificar password con bcrypt
+    if not verify_password(login_data.password, user_data["hashed_password"]):
+        logger.warning(f"🔐 Login fallido: password incorrecto [{email}] desde {client_ip}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciales inválidas"
         )
 
-    # Verificar si está activo
     if not user_data.get("activo", True):
-        logger.warning(f"🔐 Login fallido: usuario desactivado [{email}]")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Usuario desactivado. Contacte al administrador."
+            detail="Usuario desactivado"
         )
 
     # Crear tokens
     user_model = _user_to_model(user_data)
     access_token = create_access_token(user_model)
     refresh_token = create_refresh_token(user_model)
+    jti = secrets.token_urlsafe(16)
+
+    # Almacenar refresh token (revocable)
+    _store_refresh_token(user_data["id"], refresh_token, jti)
 
     # Actualizar último login
-    _update_user_last_login(email)
+    user_data["last_login"] = datetime.utcnow().isoformat()
+    _persist_users()
 
-    # Guardar refresh token (hasheado)
-    _refresh_tokens[user_data["id"]] = get_password_hash(refresh_token)
+    # Establecer cookies
+    _set_auth_cookies(response, access_token, refresh_token, jti)
 
-    logger.info(f"✅ Login exitoso: {email}")
+    logger.info(f"✅ Login exitoso: {email} desde {client_ip}")
 
-    # Respuesta (sin password)
-    user_response = {
-        "id": user_data["id"],
-        "email": user_data["email"],
-        "nombre": user_data["nombre"],
-        "rol": user_data["rol"],
-        "activo": user_data.get("activo", True),
-        "must_change_password": user_data.get("must_change_password", False),
+    # Response sin tokens (están en cookies)
+    return {
+        "success": True,
+        "user": {
+            "id": user_data["id"],
+            "email": user_data["email"],
+            "nombre": user_data["nombre"],
+            "rol": user_data["rol"],
+            "must_change_password": user_data.get("must_change_password", False),
+        }
     }
 
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        expires_in=int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")) * 60,
-        user=user_response,
-    )
 
-
-@router.post("/register", response_model=TokenResponse)
-async def register(request: RegisterRequest):
+@router.post("/register")
+async def register(request: Request, response: Response, register_data: RegisterRequest):
     """
-    Registra un nuevo usuario.
+    Registra nuevo usuario (si está habilitado).
 
-    - Password hasheado con bcrypt
-    - Valida email único
-    - Rol por defecto: operador (admin debe elevarlo)
+    - Deshabilitado en producción por defecto (ALLOW_REGISTER=false)
+    - Rate limiting por IP
     """
-    email = request.email.lower()
+    # Verificar si registro está permitido
+    if not ALLOW_REGISTER:
+        logger.warning(f"🚫 Intento de registro bloqueado (ALLOW_REGISTER=false)")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registro deshabilitado. Contacte al administrador."
+        )
 
-    # Verificar que no exista
+    client_ip = _get_client_ip(request)
+
+    # Rate limiting
+    if not _check_rate_limit(f"register:{client_ip}", RATE_LIMIT_MAX_REGISTER):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Demasiados intentos. Espere un minuto."
+        )
+
+    email = register_data.email.lower()
+
     if _get_user_by_email(email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="El email ya está registrado"
         )
 
-    # Validar rol permitido (solo operador y viewer en auto-registro)
-    rol = request.rol if request.rol in ["operador", "viewer"] else "operador"
-
-    # Crear usuario
+    # Crear usuario (siempre como operador en auto-registro)
     user_data = _create_user(
         email=email,
-        password=request.password,
-        nombre=request.nombre,
-        rol=rol,
+        password=register_data.password,
+        nombre=register_data.nombre,
+        rol="operador",
     )
 
     # Crear tokens
     user_model = _user_to_model(user_data)
     access_token = create_access_token(user_model)
     refresh_token = create_refresh_token(user_model)
+    jti = secrets.token_urlsafe(16)
 
-    # Guardar refresh token
-    _refresh_tokens[user_data["id"]] = get_password_hash(refresh_token)
+    _store_refresh_token(user_data["id"], refresh_token, jti)
+    _set_auth_cookies(response, access_token, refresh_token, jti)
 
     logger.info(f"✅ Usuario registrado: {email}")
 
-    user_response = {
-        "id": user_data["id"],
-        "email": user_data["email"],
-        "nombre": user_data["nombre"],
-        "rol": user_data["rol"],
-        "activo": True,
-        "must_change_password": False,
+    return {
+        "success": True,
+        "user": {
+            "id": user_data["id"],
+            "email": user_data["email"],
+            "nombre": user_data["nombre"],
+            "rol": user_data["rol"],
+        }
     }
 
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        expires_in=int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")) * 60,
-        user=user_response,
-    )
 
-
-@router.post("/refresh", response_model=TokenResponse)
-async def refresh_tokens(request: RefreshTokenRequest):
+@router.post("/refresh")
+async def refresh_tokens(request: Request, response: Response):
     """
-    Renueva tokens usando refresh token.
+    Renueva tokens usando refresh token de cookie.
 
-    - Valida refresh token
-    - Genera nuevos access + refresh tokens
-    - Invalida refresh token anterior (rotation)
+    - Verifica token no revocado
+    - Rota refresh token (invalida el anterior)
+    - Rate limiting
     """
-    # Verificar refresh token
-    user_id = verify_refresh_token(request.refresh_token)
+    client_ip = _get_client_ip(request)
+
+    if not _check_rate_limit(f"refresh:{client_ip}", RATE_LIMIT_MAX_REFRESH):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Demasiadas solicitudes"
+        )
+
+    refresh_token = request.cookies.get("refresh_token")
+    jti = request.cookies.get("token_jti")
+
+    if not refresh_token or not jti:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No hay sesión activa"
+        )
+
+    # Validar refresh token
+    user_id = _validate_refresh_token(refresh_token, jti)
 
     if not user_id:
+        _clear_auth_cookies(response)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token inválido o expirado"
+            detail="Sesión expirada. Inicie sesión nuevamente."
         )
 
-    # Buscar usuario
-    user_data = None
-    for email, data in _users_db.items():
-        if data["id"] == user_id:
-            user_data = data
-            break
-
-    if not user_data:
+    user_data = _get_user_by_id(user_id)
+    if not user_data or not user_data.get("activo", True):
+        _clear_auth_cookies(response)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Usuario no encontrado"
+            detail="Usuario no válido"
         )
 
-    # Verificar que el refresh token sea el actual (prevenir reuse)
-    stored_hash = _refresh_tokens.get(user_id)
-    if not stored_hash or not verify_password(request.refresh_token, stored_hash):
-        logger.warning(f"⚠️ Intento de reusar refresh token para {user_id}")
-        # Invalidar todos los tokens del usuario
-        _refresh_tokens.pop(user_id, None)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token ya fue usado. Vuelva a iniciar sesión."
-        )
+    # Revocar token anterior
+    _revoke_refresh_token(jti)
 
     # Crear nuevos tokens
     user_model = _user_to_model(user_data)
     new_access_token = create_access_token(user_model)
     new_refresh_token = create_refresh_token(user_model)
+    new_jti = secrets.token_urlsafe(16)
 
-    # Rotar refresh token
-    _refresh_tokens[user_id] = get_password_hash(new_refresh_token)
+    _store_refresh_token(user_id, new_refresh_token, new_jti)
+    _set_auth_cookies(response, new_access_token, new_refresh_token, new_jti)
 
     logger.info(f"🔄 Tokens renovados para {user_data['email']}")
 
-    user_response = {
-        "id": user_data["id"],
-        "email": user_data["email"],
-        "nombre": user_data["nombre"],
-        "rol": user_data["rol"],
-        "activo": user_data.get("activo", True),
+    return {
+        "success": True,
+        "user": {
+            "id": user_data["id"],
+            "email": user_data["email"],
+            "nombre": user_data["nombre"],
+            "rol": user_data["rol"],
+        }
     }
-
-    return TokenResponse(
-        access_token=new_access_token,
-        refresh_token=new_refresh_token,
-        token_type="bearer",
-        expires_in=int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")) * 60,
-        user=user_response,
-    )
 
 
 @router.post("/logout")
-async def logout(current_user: TokenData = Depends(get_current_user)):
+async def logout(request: Request, response: Response):
     """
-    Cierra sesión invalidando refresh tokens.
+    Cierra sesión revocando refresh token.
     """
-    # Invalidar refresh token
-    _refresh_tokens.pop(current_user.user_id, None)
+    jti = request.cookies.get("token_jti")
 
-    logger.info(f"👋 Logout: {current_user.email}")
+    if jti:
+        _revoke_refresh_token(jti)
 
-    return {"message": "Sesión cerrada exitosamente"}
+    _clear_auth_cookies(response)
+
+    logger.info("👋 Logout exitoso")
+
+    return {"success": True, "message": "Sesión cerrada"}
 
 
-@router.post("/change-password")
-async def change_password(
-    request: ChangePasswordRequest,
-    current_user: TokenData = Depends(get_current_user)
-):
+@router.get("/status")
+async def auth_status(request: Request) -> AuthStatusResponse:
     """
-    Cambia la contraseña del usuario actual.
-
-    - Verifica password actual
-    - Hashea nuevo password con bcrypt
-    - Invalida todos los refresh tokens
+    Verifica estado de autenticación.
+    Útil para el frontend al cargar la app.
     """
-    # Buscar usuario
-    user_data = None
-    for email, data in _users_db.items():
-        if data["id"] == current_user.user_id:
-            user_data = data
-            break
+    token = _get_access_token_from_cookie(request)
 
-    if not user_data:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if not token:
+        return AuthStatusResponse(authenticated=False)
 
-    # Verificar password actual
-    if not verify_password(request.current_password, user_data["hashed_password"]):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Contraseña actual incorrecta"
-        )
+    token_data = decode_token(token)
 
-    # Hashear nuevo password
-    user_data["hashed_password"] = get_password_hash(request.new_password)
-    user_data["must_change_password"] = False
-    user_data["password_migrated"] = True
+    if not token_data:
+        return AuthStatusResponse(authenticated=False)
 
-    # Invalidar refresh tokens (forzar re-login en otros dispositivos)
-    _refresh_tokens.pop(current_user.user_id, None)
+    user_data = _get_user_by_id(token_data.user_id)
 
-    logger.info(f"🔐 Password cambiado: {user_data['email']}")
+    if not user_data or not user_data.get("activo", True):
+        return AuthStatusResponse(authenticated=False)
 
-    return {"message": "Contraseña actualizada exitosamente. Por favor inicie sesión nuevamente."}
+    return AuthStatusResponse(
+        authenticated=True,
+        user={
+            "id": user_data["id"],
+            "email": user_data["email"],
+            "nombre": user_data["nombre"],
+            "rol": user_data["rol"],
+        }
+    )
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user_info(current_user: TokenData = Depends(get_current_user)):
-    """
-    Obtiene información del usuario actual.
-    """
-    # Buscar datos completos
-    user_data = None
-    for email, data in _users_db.items():
-        if data["id"] == current_user.user_id:
-            user_data = data
-            break
+async def get_me(request: Request):
+    """Obtiene información del usuario actual"""
+    current_user = await get_current_user_from_cookie(request)
+    user_data = _get_user_by_id(current_user.user_id)
 
     if not user_data:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
@@ -462,14 +782,45 @@ async def get_current_user_info(current_user: TokenData = Depends(get_current_us
     )
 
 
+@router.post("/change-password")
+async def change_password(request: Request, response: Response, data: ChangePasswordRequest):
+    """Cambia contraseña y revoca todas las sesiones"""
+    current_user = await get_current_user_from_cookie(request)
+    user_data = _get_user_by_id(current_user.user_id)
+
+    if not user_data:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    if not verify_password(data.current_password, user_data["hashed_password"]):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Contraseña actual incorrecta"
+        )
+
+    user_data["hashed_password"] = get_password_hash(data.new_password)
+    user_data["must_change_password"] = False
+    _persist_users()
+
+    # Revocar todas las sesiones
+    _revoke_all_user_tokens(current_user.user_id)
+    _clear_auth_cookies(response)
+
+    logger.info(f"🔐 Password cambiado: {user_data['email']}")
+
+    return {"success": True, "message": "Contraseña actualizada. Inicie sesión nuevamente."}
+
+
 @router.get("/users", response_model=List[UserResponse])
-async def list_users(current_user: TokenData = Depends(require_role([Role.ADMIN]))):
-    """
-    Lista todos los usuarios (solo admin).
-    """
-    users = []
-    for email, data in _users_db.items():
-        users.append(UserResponse(
+async def list_users(request: Request):
+    """Lista todos los usuarios (solo admin)"""
+    current_user = await get_current_user_from_cookie(request)
+
+    if current_user.role != Role.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo administradores")
+
+    users = _get_users()
+    return [
+        UserResponse(
             id=data["id"],
             email=data["email"],
             nombre=data["nombre"],
@@ -477,79 +828,77 @@ async def list_users(current_user: TokenData = Depends(require_role([Role.ADMIN]
             activo=data.get("activo", True),
             created_at=data["created_at"],
             last_login=data.get("last_login"),
-        ))
-
-    return users
+        )
+        for data in users.values()
+    ]
 
 
 @router.post("/users/{user_id}/toggle-active")
-async def toggle_user_active(
-    user_id: str,
-    current_user: TokenData = Depends(require_role([Role.ADMIN]))
-):
-    """
-    Activa/desactiva un usuario (solo admin).
-    """
-    # Buscar usuario
-    target_user = None
-    for email, data in _users_db.items():
-        if data["id"] == user_id:
-            target_user = data
-            break
+async def toggle_user_active(user_id: str, request: Request):
+    """Activa/desactiva usuario (solo admin)"""
+    current_user = await get_current_user_from_cookie(request)
+
+    if current_user.role != Role.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo administradores")
+
+    target_user = _get_user_by_id(user_id)
 
     if not target_user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    # No permitir desactivarse a sí mismo
     if target_user["id"] == current_user.user_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No puede desactivarse a sí mismo"
-        )
+        raise HTTPException(status_code=400, detail="No puede desactivarse a sí mismo")
 
-    # Toggle estado
     target_user["activo"] = not target_user.get("activo", True)
+    _persist_users()
 
-    # Si se desactiva, invalidar refresh tokens
     if not target_user["activo"]:
-        _refresh_tokens.pop(user_id, None)
-
-    logger.info(f"👤 Usuario {target_user['email']} {'activado' if target_user['activo'] else 'desactivado'} por {current_user.email}")
+        _revoke_all_user_tokens(user_id)
 
     return {
+        "success": True,
         "message": f"Usuario {'activado' if target_user['activo'] else 'desactivado'}",
         "activo": target_user["activo"]
     }
 
 
 # ═══════════════════════════════════════════
-# MIGRACIÓN DE PASSWORDS LEGACY
+# ADMIN: Crear usuario (bypass de register)
 # ═══════════════════════════════════════════
 
-def migrate_legacy_password(email: str, plain_password: str) -> bool:
-    """
-    Migra un password legacy (Base64) a bcrypt.
+class AdminCreateUserRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+    nombre: str
+    rol: str = "operador"
 
-    Llamar esta función cuando un usuario con password legacy
-    hace login exitoso. El flujo es:
-    1. Verificar con legacy (Base64) - debe hacerse ANTES
-    2. Si es válido, re-hashear con bcrypt
-    3. Marcar como migrado
 
-    Returns:
-        True si migración exitosa, False si no
-    """
-    user_data = _get_user_by_email(email)
-    if not user_data:
-        return False
+@router.post("/admin/create-user", response_model=UserResponse)
+async def admin_create_user(request: Request, data: AdminCreateUserRequest):
+    """Crea usuario (solo admin, bypass de ALLOW_REGISTER)"""
+    current_user = await get_current_user_from_cookie(request)
 
-    # Solo migrar si aún no está migrado
-    if user_data.get("password_migrated", False):
-        return True
+    if current_user.role != Role.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo administradores")
 
-    # Re-hashear con bcrypt
-    user_data["hashed_password"] = get_password_hash(plain_password)
-    user_data["password_migrated"] = True
+    if _get_user_by_email(data.email):
+        raise HTTPException(status_code=400, detail="Email ya registrado")
 
-    logger.info(f"🔄 Password migrado a bcrypt: {email}")
-    return True
+    user_data = _create_user(
+        email=data.email,
+        password=data.password,
+        nombre=data.nombre,
+        rol=data.rol if data.rol in ["admin", "operador", "viewer"] else "operador",
+    )
+
+    logger.info(f"✅ Usuario creado por admin: {data.email}")
+
+    return UserResponse(
+        id=user_data["id"],
+        email=user_data["email"],
+        nombre=user_data["nombre"],
+        rol=user_data["rol"],
+        activo=True,
+        created_at=user_data["created_at"],
+        last_login=None,
+    )

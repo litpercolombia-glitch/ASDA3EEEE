@@ -1,12 +1,11 @@
 // services/authService.ts
-// Sistema de Autenticación SEGURO
-// ===============================
+// Sistema de Autenticación SEGURO con Cookies httpOnly
+// =====================================================
 //
-// IMPORTANTE: Este servicio usa el backend para autenticación.
-// - NO almacena passwords en el cliente
-// - NO hace hash de passwords en el cliente
-// - Solo almacena JWT tokens (corta duración)
-// - Refresh tokens rotados automáticamente
+// IMPORTANTE: Los tokens se manejan exclusivamente en cookies httpOnly.
+// - El frontend NUNCA tiene acceso directo a los tokens
+// - Las cookies se envían automáticamente con `credentials: 'include'`
+// - El backend controla la expiración y revocación
 
 // =====================================
 // TIPOS
@@ -18,7 +17,7 @@ export interface User {
   nombre: string;
   rol: 'admin' | 'operador' | 'viewer';
   avatar?: string;
-  activo: boolean;
+  activo?: boolean;
   must_change_password?: boolean;
 }
 
@@ -31,165 +30,111 @@ export interface RegisterData {
   email: string;
   password: string;
   nombre: string;
-  rol?: 'admin' | 'operador' | 'viewer';
-}
-
-export interface SessionLog {
-  id: string;
-  userId: string;
-  action: 'login' | 'logout' | 'register' | 'password_reset';
-  timestamp: string;
-  ip?: string;
-  userAgent?: string;
-  device?: string;
-  location?: string;
-}
-
-export interface ActivityLog {
-  id: string;
-  userId: string;
-  userEmail: string;
-  action: string;
-  details: string;
-  module: string;
-  timestamp: string;
-  metadata?: Record<string, unknown>;
 }
 
 export interface AuthResponse {
   success: boolean;
   user?: User;
-  token?: string;
   message?: string;
 }
 
-interface TokenResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  expires_in: number;
-  user: User;
+export interface AuthStatus {
+  authenticated: boolean;
+  user?: User;
 }
 
 // =====================================
-// CONSTANTES
+// CONFIGURACIÓN
 // =====================================
 
-const AUTH_TOKEN_KEY = 'litper_auth_token';
-const REFRESH_TOKEN_KEY = 'litper_refresh_token';
-const CURRENT_USER_KEY = 'litper_current_user';
-const TOKEN_EXPIRY_KEY = 'litper_token_expiry';
-
-// URL del backend API
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-// =====================================
-// FUNCIONES DE UTILIDAD
-// =====================================
-
-const generateId = (): string => {
-  return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-};
-
-const getDeviceInfo = (): string => {
-  const ua = navigator.userAgent;
-  if (ua.includes('Mobile')) return 'Móvil';
-  if (ua.includes('Tablet')) return 'Tablet';
-  return 'Desktop';
-};
-
-// Obtener headers con token
-const getAuthHeaders = (): HeadersInit => {
-  const token = localStorage.getItem(AUTH_TOKEN_KEY);
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-};
+// Cache del usuario actual (solo datos, no tokens)
+let _currentUser: User | null = null;
+let _authChecked = false;
 
 // =====================================
-// MANEJO DE TOKENS
+// HELPERS
 // =====================================
 
-const saveTokens = (response: TokenResponse): void => {
-  localStorage.setItem(AUTH_TOKEN_KEY, response.access_token);
-  localStorage.setItem(REFRESH_TOKEN_KEY, response.refresh_token);
-  localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(response.user));
+/**
+ * Realiza fetch con cookies incluidas automáticamente
+ */
+async function authFetch(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const url = `${API_BASE_URL}${endpoint}`;
 
-  // Guardar tiempo de expiración
-  const expiryTime = Date.now() + response.expires_in * 1000;
-  localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
-};
+  const response = await fetch(url, {
+    ...options,
+    credentials: 'include', // IMPORTANTE: Envía cookies httpOnly
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
-const clearTokens = (): void => {
-  localStorage.removeItem(AUTH_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
-  localStorage.removeItem(CURRENT_USER_KEY);
-  localStorage.removeItem(TOKEN_EXPIRY_KEY);
-};
-
-const isTokenExpired = (): boolean => {
-  const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
-  if (!expiry) return true;
-
-  // Refrescar 1 minuto antes de que expire
-  return Date.now() > parseInt(expiry) - 60000;
-};
-
-// =====================================
-// LOGS LOCALES (para actividad en frontend)
-// =====================================
-
-const SESSION_LOGS_KEY = 'litper_session_logs';
-const ACTIVITY_LOGS_KEY = 'litper_activity_logs';
-
-const getSessionLogs = (): SessionLog[] => {
-  const saved = localStorage.getItem(SESSION_LOGS_KEY);
-  if (saved) {
-    try {
-      return JSON.parse(saved);
-    } catch {
-      return [];
+  // Si el token expiró, intentar refrescar
+  if (response.status === 401 && !endpoint.includes('/refresh') && !endpoint.includes('/login')) {
+    const refreshed = await refreshTokens();
+    if (refreshed) {
+      // Reintentar la petición original
+      return fetch(url, {
+        ...options,
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+      });
     }
   }
-  return [];
-};
 
-const saveSessionLog = (log: SessionLog): void => {
-  const logs = getSessionLogs();
-  logs.unshift(log);
-  const limited = logs.slice(0, 100);
-  localStorage.setItem(SESSION_LOGS_KEY, JSON.stringify(limited));
-};
-
-const getActivityLogs = (): ActivityLog[] => {
-  const saved = localStorage.getItem(ACTIVITY_LOGS_KEY);
-  if (saved) {
-    try {
-      return JSON.parse(saved);
-    } catch {
-      return [];
-    }
-  }
-  return [];
-};
-
-const saveActivityLog = (log: ActivityLog): void => {
-  const logs = getActivityLogs();
-  logs.unshift(log);
-  const limited = logs.slice(0, 200);
-  localStorage.setItem(ACTIVITY_LOGS_KEY, JSON.stringify(limited));
-};
+  return response;
+}
 
 // =====================================
 // FUNCIONES DE AUTENTICACIÓN
 // =====================================
 
 /**
- * Iniciar sesión
- * Envía credenciales al backend, recibe JWT tokens
+ * Verifica el estado de autenticación
+ * Llama al backend que lee las cookies httpOnly
  */
-export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
+export async function checkAuthStatus(): Promise<AuthStatus> {
+  try {
+    const response = await authFetch('/api/auth/status');
+
+    if (!response.ok) {
+      _currentUser = null;
+      _authChecked = true;
+      return { authenticated: false };
+    }
+
+    const data = await response.json();
+
+    if (data.authenticated && data.user) {
+      _currentUser = data.user;
+    } else {
+      _currentUser = null;
+    }
+
+    _authChecked = true;
+    return data;
+  } catch (error) {
+    console.error('Error verificando autenticación:', error);
+    _currentUser = null;
+    _authChecked = true;
+    return { authenticated: false };
+  }
+}
+
+/**
+ * Iniciar sesión
+ * El backend establece cookies httpOnly en la respuesta
+ */
+export async function login(credentials: LoginCredentials): Promise<AuthResponse> {
   const { email, password } = credentials;
 
   if (!email || !password) {
@@ -197,39 +142,27 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    const response = await authFetch('/api/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Error de conexión' }));
       return {
         success: false,
-        message: error.detail || 'Credenciales inválidas',
+        message: data.detail || 'Credenciales inválidas',
       };
     }
 
-    const data: TokenResponse = await response.json();
-
-    // Guardar tokens
-    saveTokens(data);
-
-    // Registrar sesión local
-    saveSessionLog({
-      id: generateId(),
-      userId: data.user.id,
-      action: 'login',
-      timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent,
-      device: getDeviceInfo(),
-    });
+    // El backend estableció las cookies, guardamos solo el usuario
+    _currentUser = data.user;
+    _authChecked = true;
 
     return {
       success: true,
       user: data.user,
-      token: data.access_token,
       message: 'Inicio de sesión exitoso',
     };
   } catch (error) {
@@ -239,13 +172,13 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
       message: 'Error de conexión con el servidor',
     };
   }
-};
+}
 
 /**
  * Registrar nuevo usuario
  */
-export const register = async (data: RegisterData): Promise<AuthResponse> => {
-  const { email, password, nombre, rol = 'operador' } = data;
+export async function register(data: RegisterData): Promise<AuthResponse> {
+  const { email, password, nombre } = data;
 
   if (!email || !password || !nombre) {
     return { success: false, message: 'Todos los campos son requeridos' };
@@ -256,39 +189,26 @@ export const register = async (data: RegisterData): Promise<AuthResponse> => {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+    const response = await authFetch('/api/auth/register', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, nombre, rol }),
+      body: JSON.stringify({ email, password, nombre }),
     });
 
+    const responseData = await response.json();
+
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Error de registro' }));
       return {
         success: false,
-        message: error.detail || 'Error al registrar usuario',
+        message: responseData.detail || 'Error al registrar',
       };
     }
 
-    const tokenResponse: TokenResponse = await response.json();
-
-    // Guardar tokens
-    saveTokens(tokenResponse);
-
-    // Registrar sesión
-    saveSessionLog({
-      id: generateId(),
-      userId: tokenResponse.user.id,
-      action: 'register',
-      timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent,
-      device: getDeviceInfo(),
-    });
+    _currentUser = responseData.user;
+    _authChecked = true;
 
     return {
       success: true,
-      user: tokenResponse.user,
-      token: tokenResponse.access_token,
+      user: responseData.user,
       message: 'Registro exitoso',
     };
   } catch (error) {
@@ -298,151 +218,131 @@ export const register = async (data: RegisterData): Promise<AuthResponse> => {
       message: 'Error de conexión con el servidor',
     };
   }
-};
+}
 
 /**
  * Refrescar tokens
+ * El backend lee el refresh token de las cookies y establece nuevas cookies
  */
-export const refreshTokens = async (): Promise<boolean> => {
-  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-
-  if (!refreshToken) {
-    return false;
-  }
-
+export async function refreshTokens(): Promise<boolean> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshToken }),
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
 
     if (!response.ok) {
-      // Refresh token inválido o expirado
-      clearTokens();
+      _currentUser = null;
       return false;
     }
 
-    const data: TokenResponse = await response.json();
-    saveTokens(data);
+    const data = await response.json();
+    _currentUser = data.user;
     return true;
   } catch (error) {
     console.error('Error refrescando tokens:', error);
+    _currentUser = null;
     return false;
   }
-};
+}
 
 /**
  * Cerrar sesión
+ * El backend revoca el refresh token y limpia las cookies
  */
-export const logout = async (): Promise<void> => {
-  const user = getCurrentUser();
-
+export async function logout(): Promise<void> {
   try {
-    // Notificar al backend
-    await fetch(`${API_BASE_URL}/api/auth/logout`, {
+    await authFetch('/api/auth/logout', {
       method: 'POST',
-      headers: getAuthHeaders(),
     });
-  } catch {
-    // Continuar con logout local aunque falle el backend
-  }
+  } catch (error) {
+    console.error('Error en logout:', error);
+  } finally {
+    _currentUser = null;
+    _authChecked = false;
 
-  if (user) {
-    saveSessionLog({
-      id: generateId(),
-      userId: user.id,
-      action: 'logout',
-      timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent,
-      device: getDeviceInfo(),
-    });
+    // Limpiar cualquier dato legacy de localStorage
+    localStorage.removeItem('litper_auth_token');
+    localStorage.removeItem('litper_refresh_token');
+    localStorage.removeItem('litper_current_user');
+    localStorage.removeItem('litper_token_expiry');
   }
-
-  clearTokens();
-};
+}
 
 /**
- * Obtener usuario actual
+ * Obtener usuario actual (desde cache o verificar con backend)
  */
-export const getCurrentUser = (): User | null => {
-  const saved = localStorage.getItem(CURRENT_USER_KEY);
-  if (saved) {
-    try {
-      return JSON.parse(saved);
-    } catch {
-      return null;
-    }
+export function getCurrentUser(): User | null {
+  return _currentUser;
+}
+
+/**
+ * Obtener usuario actual (async, verifica con backend si no hay cache)
+ */
+export async function getCurrentUserAsync(): Promise<User | null> {
+  if (!_authChecked) {
+    await checkAuthStatus();
   }
-  return null;
-};
+  return _currentUser;
+}
 
 /**
  * Verificar si está autenticado
  */
-export const isAuthenticated = (): boolean => {
-  const token = localStorage.getItem(AUTH_TOKEN_KEY);
-  const user = getCurrentUser();
-
-  if (!token || !user) {
-    return false;
-  }
-
-  // Si el token está por expirar, intentar refrescar
-  if (isTokenExpired()) {
-    // Hacer refresh en background
-    refreshTokens().then((success) => {
-      if (!success) {
-        clearTokens();
-      }
-    });
-  }
-
-  return true;
-};
+export function isAuthenticated(): boolean {
+  return _currentUser !== null;
+}
 
 /**
- * Obtener token
+ * Verificar si está autenticado (async)
  */
-export const getToken = (): string | null => {
-  return localStorage.getItem(AUTH_TOKEN_KEY);
-};
+export async function isAuthenticatedAsync(): Promise<boolean> {
+  if (!_authChecked) {
+    const status = await checkAuthStatus();
+    return status.authenticated;
+  }
+  return _currentUser !== null;
+}
 
 /**
  * Cambiar contraseña
  */
-export const changePassword = async (
+export async function changePassword(
   currentPassword: string,
   newPassword: string
-): Promise<AuthResponse> => {
+): Promise<AuthResponse> {
   if (newPassword.length < 8) {
     return { success: false, message: 'La nueva contraseña debe tener al menos 8 caracteres' };
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+    const response = await authFetch('/api/auth/change-password', {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify({
         current_password: currentPassword,
         new_password: newPassword,
       }),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Error' }));
       return {
         success: false,
-        message: error.detail || 'Error al cambiar contraseña',
+        message: data.detail || 'Error al cambiar contraseña',
       };
     }
 
-    // Limpiar tokens para forzar re-login
-    clearTokens();
+    // Limpiar estado local (el backend revocó todas las sesiones)
+    _currentUser = null;
+    _authChecked = false;
 
     return {
       success: true,
-      message: 'Contraseña actualizada. Por favor inicie sesión nuevamente.',
+      message: data.message || 'Contraseña actualizada',
     };
   } catch (error) {
     console.error('Error cambiando contraseña:', error);
@@ -451,54 +351,151 @@ export const changePassword = async (
       message: 'Error de conexión con el servidor',
     };
   }
-};
+}
 
 /**
- * Actualizar perfil de usuario
+ * Obtener información del usuario actual desde el backend
  */
-export const updateProfile = async (updates: Partial<User>): Promise<AuthResponse> => {
-  const currentUser = getCurrentUser();
-  if (!currentUser) {
-    return { success: false, message: 'No hay sesión activa' };
-  }
-
+export async function getMe(): Promise<User | null> {
   try {
-    // Por ahora actualizamos solo localmente
-    // TODO: Agregar endpoint backend para actualizar perfil
-    const updatedUser = { ...currentUser, ...updates };
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+    const response = await authFetch('/api/auth/me');
 
-    logCurrentUserActivity('Actualización de perfil', 'Usuario actualizó su perfil', 'auth');
+    if (!response.ok) {
+      return null;
+    }
+
+    const user = await response.json();
+    _currentUser = user;
+    return user;
+  } catch (error) {
+    console.error('Error obteniendo usuario:', error);
+    return null;
+  }
+}
+
+/**
+ * Obtener todos los usuarios (solo admin)
+ */
+export async function getAllUsers(): Promise<User[]> {
+  try {
+    const response = await authFetch('/api/auth/users');
+
+    if (!response.ok) {
+      return [];
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error obteniendo usuarios:', error);
+    return [];
+  }
+}
+
+/**
+ * Activar/desactivar usuario (solo admin)
+ */
+export async function toggleUserStatus(userId: string): Promise<AuthResponse> {
+  try {
+    const response = await authFetch(`/api/auth/users/${userId}/toggle-active`, {
+      method: 'POST',
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { success: false, message: data.detail || 'Error' };
+    }
 
     return {
       success: true,
-      user: updatedUser,
-      message: 'Perfil actualizado',
+      message: data.message,
     };
-  } catch {
-    return {
-      success: false,
-      message: 'Error actualizando perfil',
-    };
+  } catch (error) {
+    console.error('Error toggling user status:', error);
+    return { success: false, message: 'Error de conexión' };
   }
-};
-
-// =====================================
-// FUNCIONES DE ACTIVIDAD
-// =====================================
+}
 
 /**
- * Registrar actividad
+ * Crear usuario (solo admin)
  */
-export const logActivity = (
+export async function adminCreateUser(userData: {
+  email: string;
+  password: string;
+  nombre: string;
+  rol?: string;
+}): Promise<AuthResponse> {
+  try {
+    const response = await authFetch('/api/auth/admin/create-user', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { success: false, message: data.detail || 'Error' };
+    }
+
+    return {
+      success: true,
+      user: data,
+      message: 'Usuario creado exitosamente',
+    };
+  } catch (error) {
+    console.error('Error creando usuario:', error);
+    return { success: false, message: 'Error de conexión' };
+  }
+}
+
+// =====================================
+// LOGS DE ACTIVIDAD (LOCAL)
+// =====================================
+// Mantenemos logs de actividad locales para el frontend
+
+interface ActivityLog {
+  id: string;
+  userId: string;
+  userEmail: string;
+  action: string;
+  details: string;
+  module: string;
+  timestamp: string;
+}
+
+const ACTIVITY_LOGS_KEY = 'litper_activity_logs';
+
+function generateId(): string {
+  return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+function getActivityLogs(): ActivityLog[] {
+  const saved = localStorage.getItem(ACTIVITY_LOGS_KEY);
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function saveActivityLog(log: ActivityLog): void {
+  const logs = getActivityLogs();
+  logs.unshift(log);
+  const limited = logs.slice(0, 200);
+  localStorage.setItem(ACTIVITY_LOGS_KEY, JSON.stringify(limited));
+}
+
+export function logActivity(
   userId: string,
   userEmail: string,
   action: string,
   details: string,
-  module: string,
-  metadata?: Record<string, unknown>
-): void => {
-  const log: ActivityLog = {
+  module: string
+): void {
+  saveActivityLog({
     id: generateId(),
     userId,
     userEmail,
@@ -506,128 +503,71 @@ export const logActivity = (
     details,
     module,
     timestamp: new Date().toISOString(),
-    metadata,
-  };
-  saveActivityLog(log);
-};
+  });
+}
 
-/**
- * Registrar actividad del usuario actual
- */
-export const logCurrentUserActivity = (
+export function logCurrentUserActivity(
   action: string,
   details: string,
-  module: string,
-  metadata?: Record<string, unknown>
-): void => {
+  module: string
+): void {
   const user = getCurrentUser();
   if (user) {
-    logActivity(user.id, user.email, action, details, module, metadata);
+    logActivity(user.id, user.email, action, details, module);
   }
-};
+}
 
-/**
- * Obtener historial de sesiones de un usuario
- */
-export const getUserSessionLogs = (userId?: string): SessionLog[] => {
-  const logs = getSessionLogs();
-  if (userId) {
-    return logs.filter((l) => l.userId === userId);
-  }
-  return logs;
-};
-
-/**
- * Obtener historial de actividad
- */
-export const getUserActivityLogs = (userId?: string): ActivityLog[] => {
+export function getUserActivityLogs(userId?: string): ActivityLog[] {
   const logs = getActivityLogs();
   if (userId) {
     return logs.filter((l) => l.userId === userId);
   }
   return logs;
-};
+}
+
+// =====================================
+// INICIALIZACIÓN
+// =====================================
 
 /**
- * Obtener todos los usuarios (solo admin, desde backend)
+ * Inicializar autenticación al cargar la app
+ * Verifica si hay una sesión activa via cookies
  */
-export const getAllUsers = async (): Promise<User[]> => {
-  const currentUser = getCurrentUser();
-  if (!currentUser || currentUser.rol !== 'admin') {
-    return [];
+export async function initAuth(): Promise<User | null> {
+  // Limpiar tokens legacy de localStorage si existen
+  if (localStorage.getItem('litper_auth_token')) {
+    localStorage.removeItem('litper_auth_token');
+    localStorage.removeItem('litper_refresh_token');
+    localStorage.removeItem('litper_current_user');
+    localStorage.removeItem('litper_token_expiry');
+    console.info('🔄 Migrado de localStorage a cookies httpOnly');
   }
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/users`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    });
+  const status = await checkAuthStatus();
+  return status.user || null;
+}
 
-    if (!response.ok) {
-      return [];
-    }
-
-    return await response.json();
-  } catch {
-    return [];
-  }
-};
-
-/**
- * Activar/desactivar usuario (solo admin)
- */
-export const toggleUserStatus = async (email: string): Promise<AuthResponse> => {
-  const currentUser = getCurrentUser();
-  if (!currentUser || currentUser.rol !== 'admin') {
-    return { success: false, message: 'No tienes permisos para esta acción' };
-  }
-
-  try {
-    // Primero obtener el user_id del email
-    const users = await getAllUsers();
-    const targetUser = users.find((u) => u.email === email);
-
-    if (!targetUser) {
-      return { success: false, message: 'Usuario no encontrado' };
-    }
-
-    const response = await fetch(
-      `${API_BASE_URL}/api/auth/users/${targetUser.id}/toggle-active`,
-      {
-        method: 'POST',
-        headers: getAuthHeaders(),
-      }
-    );
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Error' }));
-      return { success: false, message: error.detail || 'Error' };
-    }
-
-    const result = await response.json();
-    return {
-      success: true,
-      message: result.message,
-    };
-  } catch {
-    return { success: false, message: 'Error de conexión' };
-  }
-};
+// =====================================
+// EXPORTS
+// =====================================
 
 export default {
   login,
   register,
   logout,
   getCurrentUser,
+  getCurrentUserAsync,
   isAuthenticated,
-  getToken,
-  updateProfile,
+  isAuthenticatedAsync,
   changePassword,
-  logActivity,
-  logCurrentUserActivity,
-  getUserSessionLogs,
-  getUserActivityLogs,
+  getMe,
   getAllUsers,
   toggleUserStatus,
+  adminCreateUser,
+  checkAuthStatus,
   refreshTokens,
+  initAuth,
+  logActivity,
+  logCurrentUserActivity,
+  getUserActivityLogs,
 };
