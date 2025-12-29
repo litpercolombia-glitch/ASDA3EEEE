@@ -58,6 +58,10 @@ export interface GuiaProcesada {
   dias: number;
   tieneTracking: boolean;
   tieneNovedad: boolean;
+  // Campos para revision de guias
+  revisada?: boolean;
+  fechaRevision?: Date;
+  revisadoPor?: string;
 }
 
 export interface AnomaliaDetectada {
