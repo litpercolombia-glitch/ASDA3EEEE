@@ -9,9 +9,9 @@ const StatsPanel: React.FC = () => {
 
   // Stats generales
   const rondasHoy = rondas.filter((r) => r.fecha === hoy);
-  const totalPedidosHoy = rondasHoy.reduce((acc, r) => acc + r.pedidosRealizados, 0);
-  const totalCancelados = rondasHoy.reduce((acc, r) => acc + r.pedidosCancelados, 0);
-  const totalAgendados = rondasHoy.reduce((acc, r) => acc + r.pedidosAgendados, 0);
+  const totalPedidosHoy = rondasHoy.reduce((acc, r) => acc + r.realizados, 0);
+  const totalCancelados = rondasHoy.reduce((acc, r) => acc + r.cancelados, 0);
+  const totalAgendados = rondasHoy.reduce((acc, r) => acc + r.agendados, 0);
 
   // Ranking de usuarios
   const ranking = usuarios

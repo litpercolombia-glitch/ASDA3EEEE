@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Minus, X, Pin, PinOff, Settings, Minimize2, Maximize2, LayoutGrid, PanelRightClose } from 'lucide-react';
+import { Minus, X, Pin, PinOff, Settings, Maximize2, LayoutGrid, PanelRightClose } from 'lucide-react';
 import { useAppStore, DisplayMode } from '../stores/appStore';
 
 declare global {
