@@ -3,17 +3,8 @@ import { Plus, Save, Package, CheckCircle } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 
 const RoundForm: React.FC = () => {
-  const { usuarioActual, rondaActual, configTimer, timerState, registrarRonda, getTotalHoy, resetearTimer } = useAppStore();
-
+  const { usuarioActual, rondaActual, timerState, guardarRonda, getTotalHoy, resetearTimer } = useAppStore();
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
-    realizados: 0,
-    cancelados: 0,
-    agendados: 0,
-    dificiles: 0,
-    pendientes: 0,
-    revisados: 0,
-  });
 
   if (!usuarioActual) return null;
 
@@ -23,36 +14,15 @@ const RoundForm: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    registrarRonda({
-      usuarioId: usuarioActual.id,
-      numero: rondaActual,
-      fecha: new Date().toISOString().split('T')[0],
-      horaInicio: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
-      horaFin: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
-      tiempoUsado: configTimer.duracionMinutos * 60,
-      ...formData,
-    });
-
-    setFormData({
-      realizados: 0,
-      cancelados: 0,
-      agendados: 0,
-      dificiles: 0,
-      pendientes: 0,
-      revisados: 0,
-    });
-
+    guardarRonda();
     setShowForm(false);
     resetearTimer();
   };
 
-  // Mostrar automáticamente cuando termina el timer
   const shouldShowPrompt = timerState === 'finished' && !showForm;
 
   return (
     <div className="px-4 pb-4">
-      {/* Progress bar */}
       <div className="card mb-3">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs text-dark-400">Progreso del día</span>
@@ -76,7 +46,6 @@ const RoundForm: React.FC = () => {
         )}
       </div>
 
-      {/* Prompt when timer finishes */}
       {shouldShowPrompt && (
         <button
           onClick={() => setShowForm(true)}
@@ -88,7 +57,6 @@ const RoundForm: React.FC = () => {
         </button>
       )}
 
-      {/* Add button */}
       {!showForm && !shouldShowPrompt && (
         <button
           onClick={() => setShowForm(true)}
@@ -99,47 +67,13 @@ const RoundForm: React.FC = () => {
         </button>
       )}
 
-      {/* Form */}
       {showForm && (
         <form onSubmit={handleSubmit} className="card space-y-3 animate-fade-in">
           <h4 className="text-sm font-semibold text-white flex items-center gap-2">
             <Package className="w-4 h-4 text-primary-400" />
             Ronda #{rondaActual}
           </h4>
-
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <label className="block text-[10px] text-dark-400 mb-1 text-center">Realizados</label>
-              <input
-                type="number"
-                value={formData.realizados}
-                onChange={(e) => setFormData({ ...formData, realizados: parseInt(e.target.value) || 0 })}
-                className="w-full px-2 py-2 bg-accent-green/10 border border-accent-green/30 rounded-lg text-accent-green text-center text-lg font-bold no-drag"
-                min="0"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] text-dark-400 mb-1 text-center">Cancelados</label>
-              <input
-                type="number"
-                value={formData.cancelados}
-                onChange={(e) => setFormData({ ...formData, cancelados: parseInt(e.target.value) || 0 })}
-                className="w-full px-2 py-2 bg-accent-red/10 border border-accent-red/30 rounded-lg text-accent-red text-center text-lg font-bold no-drag"
-                min="0"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] text-dark-400 mb-1 text-center">Agendados</label>
-              <input
-                type="number"
-                value={formData.agendados}
-                onChange={(e) => setFormData({ ...formData, agendados: parseInt(e.target.value) || 0 })}
-                className="w-full px-2 py-2 bg-accent-blue/10 border border-accent-blue/30 rounded-lg text-accent-blue text-center text-lg font-bold no-drag"
-                min="0"
-              />
-            </div>
-          </div>
-
+          <p className="text-xs text-dark-400">Los contadores actuales se guardarán automáticamente.</p>
           <div className="flex gap-2 pt-1">
             <button
               type="button"
