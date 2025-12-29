@@ -23,35 +23,63 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 // SECURITY
 // =====================================================
 
-function validateCronSecret(req: VercelRequest): boolean {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    return false;
-  }
-
-  // Expected format: "Bearer <CRON_SECRET>"
-  const [scheme, token] = authHeader.split(' ');
-
-  if (scheme !== 'Bearer' || !token) {
-    return false;
-  }
-
+/**
+ * Validate CRON request authentication
+ *
+ * Supports multiple auth methods:
+ * 1. x-vercel-cron header (Vercel Cron native) - matches CRON_SECRET
+ * 2. Authorization: Bearer <CRON_SECRET> (manual calls)
+ *
+ * Vercel Cron sends x-vercel-cron header automatically.
+ * For security, we validate it matches our CRON_SECRET.
+ */
+function validateCronAuth(req: VercelRequest): { valid: boolean; method: string } {
   const cronSecret = process.env.CRON_SECRET;
 
   if (!cronSecret) {
     console.error('[CRON] CRON_SECRET not configured');
-    return false;
+    return { valid: false, method: 'none' };
   }
 
-  // Constant-time comparison to prevent timing attacks
-  if (token.length !== cronSecret.length) {
+  // Method 1: Vercel Cron header
+  // Vercel sends this header automatically for cron jobs
+  const vercelCronHeader = req.headers['x-vercel-cron'];
+  if (vercelCronHeader) {
+    // Validate the header value matches our secret
+    // This prevents unauthorized calls with fake x-vercel-cron headers
+    const isValid = constantTimeCompare(String(vercelCronHeader), cronSecret);
+    if (isValid) {
+      return { valid: true, method: 'x-vercel-cron' };
+    }
+    // If header exists but doesn't match, still check Bearer token
+  }
+
+  // Method 2: Authorization Bearer token (for manual/testing)
+  const authHeader = req.headers.authorization;
+  if (authHeader) {
+    const [scheme, token] = authHeader.split(' ');
+    if (scheme === 'Bearer' && token) {
+      const isValid = constantTimeCompare(token, cronSecret);
+      if (isValid) {
+        return { valid: true, method: 'bearer' };
+      }
+    }
+  }
+
+  return { valid: false, method: 'invalid' };
+}
+
+/**
+ * Constant-time string comparison to prevent timing attacks
+ */
+function constantTimeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) {
     return false;
   }
 
   let result = 0;
-  for (let i = 0; i < token.length; i++) {
-    result |= token.charCodeAt(i) ^ cronSecret.charCodeAt(i);
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
   }
 
   return result === 0;
@@ -91,7 +119,7 @@ async function runExecutor(): Promise<RunResult> {
   const { ActionExecutor } = await import('../../services/executor/ActionExecutor');
   const { ExecutorRunLog } = await import('../../services/executor/ExecutorRunLog');
   const { ActionLogService } = await import('../../services/eventLog/ActionLogService');
-  const { PIIVault, createPhoneLookup } = await import('../../services/executor/PIIVault');
+  const { createJITPhoneLookup } = await import('../../services/executor/PhoneResolver');
 
   const runId = ExecutorRunLog.generateRunId();
   const startedAt = new Date();
@@ -108,8 +136,8 @@ async function runExecutor(): Promise<RunResult> {
   ExecutorRunLog.log(runId, 'INFO', 'Starting executor run', { config });
 
   try {
-    // Set up phone lookup from PIIVault
-    ActionExecutor.setPhoneLookup(createPhoneLookup());
+    // Set up JIT phone lookup (serverless-safe, fetches from DB)
+    ActionExecutor.setPhoneLookup(createJITPhoneLookup());
 
     // Get planned actions count
     const plannedActions = ActionLogService.getPlannedActions();
@@ -201,9 +229,6 @@ async function runExecutor(): Promise<RunResult> {
       skipped: result.skippedDuplicate + result.skippedRateLimit,
     });
 
-    // Clear PIIVault after execution
-    PIIVault.clear();
-
     return summary;
   } catch (error) {
     const finishedAt = new Date();
@@ -215,9 +240,6 @@ async function runExecutor(): Promise<RunResult> {
       .replace(/\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/g, '[PHONE_REDACTED]');
 
     ExecutorRunLog.log(runId, 'ERROR', `Executor run failed: ${sanitizedError}`);
-
-    // Clear PIIVault on error too
-    PIIVault.clear();
 
     return {
       runId,
@@ -241,6 +263,54 @@ async function runExecutor(): Promise<RunResult> {
 }
 
 // =====================================================
+// SINGLE-RUN LOCK
+// =====================================================
+
+/**
+ * Simple in-memory lock for preventing concurrent runs.
+ * In serverless, this only prevents concurrent runs within the same instance.
+ * For true distributed locking, use Redis/KV storage.
+ */
+let currentRunId: string | null = null;
+let runStartedAt: Date | null = null;
+const MAX_RUN_DURATION_MS = 5 * 60 * 1000; // 5 minutes max
+
+function acquireLock(runId: string): boolean {
+  const now = Date.now();
+
+  // Check if there's an active lock
+  if (currentRunId && runStartedAt) {
+    const elapsed = now - runStartedAt.getTime();
+
+    // If lock is stale (exceeded max duration), release it
+    if (elapsed > MAX_RUN_DURATION_MS) {
+      console.warn(`[CRON] Stale lock detected, releasing: ${currentRunId}`);
+      releaseLock();
+    } else {
+      // Lock is still valid, reject
+      return false;
+    }
+  }
+
+  // Acquire lock
+  currentRunId = runId;
+  runStartedAt = new Date();
+  return true;
+}
+
+function releaseLock(): void {
+  currentRunId = null;
+  runStartedAt = null;
+}
+
+function getCurrentLock(): { runId: string; startedAt: Date } | null {
+  if (currentRunId && runStartedAt) {
+    return { runId: currentRunId, startedAt: runStartedAt };
+  }
+  return null;
+}
+
+// =====================================================
 // HANDLER
 // =====================================================
 
@@ -254,17 +324,44 @@ export default async function handler(
     return;
   }
 
-  // Validate CRON_SECRET
-  if (!validateCronSecret(req)) {
-    console.warn('[CRON] Unauthorized request to run-executor');
+  // Validate authentication
+  const auth = validateCronAuth(req);
+  if (!auth.valid) {
+    console.warn(`[CRON] Unauthorized request (method: ${auth.method})`);
     res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  // Generate run ID early for lock
+  const { ExecutorRunLog } = await import('../../services/executor/ExecutorRunLog');
+  const runId = ExecutorRunLog.generateRunId();
+
+  // Try to acquire lock
+  if (!acquireLock(runId)) {
+    const activeLock = getCurrentLock();
+    console.warn(`[CRON] Run already in progress: ${activeLock?.runId}`);
+
+    ExecutorRunLog.log(runId, 'WARN', 'Run rejected: another run in progress', {
+      activeRunId: activeLock?.runId,
+      activeRunStartedAt: activeLock?.startedAt?.toISOString(),
+    });
+
+    res.status(409).json({
+      error: 'Conflict',
+      message: 'Another run is in progress',
+      activeRunId: activeLock?.runId,
+      activeRunStartedAt: activeLock?.startedAt?.toISOString(),
+    });
     return;
   }
 
   try {
     const result = await runExecutor();
 
-    res.status(200).json(result);
+    res.status(200).json({
+      ...result,
+      authMethod: auth.method, // For debugging
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal error';
 
@@ -279,5 +376,8 @@ export default async function handler(
       error: 'Internal error',
       message: sanitized,
     });
+  } finally {
+    // Always release lock
+    releaseLock();
   }
 }

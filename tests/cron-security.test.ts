@@ -384,3 +384,164 @@ describe('ExecutorRunLog', () => {
     expect(id1).toMatch(/^run_/);
   });
 });
+
+// =====================================================
+// 24H METRICS TESTS (P0-4)
+// =====================================================
+
+describe('ExecutorRunLog 24h Metrics', () => {
+  let ExecutorRunLog: typeof import('../services/executor/ExecutorRunLog').ExecutorRunLog;
+
+  beforeEach(async () => {
+    const module = await import('../services/executor/ExecutorRunLog');
+    ExecutorRunLog = module.ExecutorRunLog;
+    ExecutorRunLog.clear();
+  });
+
+  function createMockRun(overrides: Partial<{
+    runId: string;
+    startedAt: Date;
+    success: number;
+    failed4xx: number;
+    failed5xx: number;
+    skippedDuplicate: number;
+    pilotCity: string;
+    pilotCarrier: string;
+  }> = {}) {
+    const now = new Date();
+    return {
+      runId: overrides.runId || `run_${Date.now()}`,
+      startedAt: overrides.startedAt || now,
+      finishedAt: now,
+      durationMs: 100,
+      planned: 10,
+      wouldSend: 8,
+      sent: overrides.success || 5,
+      success: overrides.success || 5,
+      failed4xx: overrides.failed4xx || 0,
+      failed5xx: overrides.failed5xx || 0,
+      skippedDuplicate: overrides.skippedDuplicate || 0,
+      skippedRateLimit: 0,
+      skippedDisabled: 0,
+      config: {
+        executorEnabled: true,
+        pilotCity: overrides.pilotCity,
+        pilotCarrier: overrides.pilotCarrier,
+        dailySendLimit: 100,
+        rateLimitPerMinute: 20,
+      },
+      errorSummary: [],
+      status: 'SUCCESS' as const,
+    };
+  }
+
+  it('should return 24h metrics with correct aggregation', () => {
+    // Add some runs
+    ExecutorRunLog.recordRun(createMockRun({ runId: 'run_1', success: 10 }));
+    ExecutorRunLog.recordRun(createMockRun({ runId: 'run_2', success: 5, failed4xx: 2 }));
+
+    const metrics = ExecutorRunLog.get24hMetrics();
+
+    expect(metrics.runs).toBe(2);
+    expect(metrics.success).toBe(15);
+    expect(metrics.failed4xx).toBe(2);
+    expect(metrics.successRate).toBeCloseTo(88.24, 1);
+  });
+
+  it('should aggregate by city and carrier', () => {
+    ExecutorRunLog.recordRun(createMockRun({
+      runId: 'run_1',
+      success: 10,
+      pilotCity: 'Bogota',
+      pilotCarrier: 'Servientrega',
+    }));
+    ExecutorRunLog.recordRun(createMockRun({
+      runId: 'run_2',
+      success: 5,
+      pilotCity: 'Bogota',
+      pilotCarrier: 'Coordinadora',
+    }));
+
+    const metrics = ExecutorRunLog.get24hMetrics();
+
+    expect(metrics.topCities).toHaveLength(1);
+    expect(metrics.topCities[0]).toEqual({ city: 'Bogota', count: 15 });
+    expect(metrics.topCarriers).toHaveLength(2);
+  });
+
+  it('should not include runs older than 24h', () => {
+    // Add old run (25 hours ago)
+    const oldDate = new Date(Date.now() - 25 * 60 * 60 * 1000);
+    ExecutorRunLog.recordRun(createMockRun({ runId: 'old_run', startedAt: oldDate, success: 100 }));
+
+    // Add recent run
+    ExecutorRunLog.recordRun(createMockRun({ runId: 'new_run', success: 5 }));
+
+    const metrics = ExecutorRunLog.get24hMetrics();
+
+    expect(metrics.runs).toBe(1);
+    expect(metrics.success).toBe(5);
+  });
+
+  it('should return empty metrics when no runs', () => {
+    const metrics = ExecutorRunLog.get24hMetrics();
+
+    expect(metrics.runs).toBe(0);
+    expect(metrics.success).toBe(0);
+    expect(metrics.successRate).toBe(100);
+    expect(metrics.topCities).toHaveLength(0);
+  });
+});
+
+// =====================================================
+// DAILY SUMMARY TESTS (P0-4)
+// =====================================================
+
+describe('ExecutorRunLog Daily Summary', () => {
+  let ExecutorRunLog: typeof import('../services/executor/ExecutorRunLog').ExecutorRunLog;
+
+  beforeEach(async () => {
+    const module = await import('../services/executor/ExecutorRunLog');
+    ExecutorRunLog = module.ExecutorRunLog;
+    ExecutorRunLog.clear();
+  });
+
+  it('should generate daily summary for today', () => {
+    const summary = ExecutorRunLog.generateDailySummary();
+
+    expect(summary).toHaveProperty('date');
+    expect(summary).toHaveProperty('runs');
+    expect(summary).toHaveProperty('totalPlanned');
+    expect(summary).toHaveProperty('totalSent');
+    expect(summary).toHaveProperty('totalSuccess');
+    expect(summary).toHaveProperty('totalFailed');
+    expect(summary).toHaveProperty('totalSkipped');
+    expect(summary).toHaveProperty('successRate');
+    expect(summary).toHaveProperty('errorBreakdown');
+    expect(summary).toHaveProperty('statusBreakdown');
+  });
+
+  it('should NOT contain any PII', () => {
+    const summary = ExecutorRunLog.generateDailySummary();
+    const jsonStr = JSON.stringify(summary);
+
+    expect(jsonStr).not.toMatch(/\+?\d{10,15}/);
+    expect(jsonStr).not.toMatch(/telefono/i);
+    expect(jsonStr).not.toMatch(/phone(?!Hash)/i);
+  });
+
+  it('should compare days correctly', () => {
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const comparison = ExecutorRunLog.compareDays(yesterday, today);
+
+    expect(comparison).toHaveProperty('day1');
+    expect(comparison).toHaveProperty('day2');
+    expect(comparison).toHaveProperty('delta');
+    expect(comparison.delta).toHaveProperty('runs');
+    expect(comparison.delta).toHaveProperty('sent');
+    expect(comparison.delta).toHaveProperty('successRateDelta');
+  });
+});

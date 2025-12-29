@@ -211,6 +211,202 @@ class ExecutorRunLogImpl {
   }
 
   /**
+   * Get detailed 24h metrics (P0-4)
+   * NO PII - only aggregated counts
+   */
+  get24hMetrics(): {
+    periodStart: string;
+    periodEnd: string;
+    runs: number;
+    sent: number;
+    success: number;
+    failed4xx: number;
+    failed5xx: number;
+    skippedDuplicate: number;
+    skippedRateLimit: number;
+    skippedDisabled: number;
+    successRate: number;
+    avgDurationMs: number;
+    topCities: { city: string; count: number }[];
+    topCarriers: { carrier: string; count: number }[];
+  } {
+    const now = Date.now();
+    const oneDayAgo = now - 24 * 60 * 60 * 1000;
+    const runs = Array.from(this.runs.values())
+      .filter(r => r.startedAt.getTime() > oneDayAgo);
+
+    // Aggregate metrics
+    let sent = 0;
+    let success = 0;
+    let failed4xx = 0;
+    let failed5xx = 0;
+    let skippedDuplicate = 0;
+    let skippedRateLimit = 0;
+    let skippedDisabled = 0;
+    let totalDuration = 0;
+    const cityCounts: Record<string, number> = {};
+    const carrierCounts: Record<string, number> = {};
+
+    for (const run of runs) {
+      sent += run.sent;
+      success += run.success;
+      failed4xx += run.failed4xx;
+      failed5xx += run.failed5xx;
+      skippedDuplicate += run.skippedDuplicate;
+      skippedRateLimit += run.skippedRateLimit;
+      skippedDisabled += run.skippedDisabled;
+      totalDuration += run.durationMs;
+
+      // Aggregate by city/carrier from config (pilot restrictions)
+      if (run.config.pilotCity) {
+        cityCounts[run.config.pilotCity] = (cityCounts[run.config.pilotCity] || 0) + run.success;
+      }
+      if (run.config.pilotCarrier) {
+        carrierCounts[run.config.pilotCarrier] = (carrierCounts[run.config.pilotCarrier] || 0) + run.success;
+      }
+    }
+
+    // Sort and get top 5
+    const topCities = Object.entries(cityCounts)
+      .map(([city, count]) => ({ city, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const topCarriers = Object.entries(carrierCounts)
+      .map(([carrier, count]) => ({ carrier, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const total = success + failed4xx + failed5xx;
+
+    return {
+      periodStart: new Date(oneDayAgo).toISOString(),
+      periodEnd: new Date(now).toISOString(),
+      runs: runs.length,
+      sent,
+      success,
+      failed4xx,
+      failed5xx,
+      skippedDuplicate,
+      skippedRateLimit,
+      skippedDisabled,
+      successRate: total > 0 ? Math.round((success / total) * 100 * 100) / 100 : 100,
+      avgDurationMs: runs.length > 0 ? Math.round(totalDuration / runs.length) : 0,
+      topCities,
+      topCarriers,
+    };
+  }
+
+  /**
+   * Generate daily summary (P0-4)
+   * Call at end of day or when requested
+   */
+  generateDailySummary(date?: Date): {
+    date: string;
+    runs: number;
+    totalPlanned: number;
+    totalSent: number;
+    totalSuccess: number;
+    totalFailed: number;
+    totalSkipped: number;
+    successRate: number;
+    avgDurationMs: number;
+    errorBreakdown: { type: string; count: number }[];
+    statusBreakdown: { status: string; count: number }[];
+  } {
+    const targetDate = date || new Date();
+    const dateStr = targetDate.toISOString().split('T')[0];
+    const dayStart = new Date(dateStr + 'T00:00:00.000Z').getTime();
+    const dayEnd = new Date(dateStr + 'T23:59:59.999Z').getTime();
+
+    const runs = Array.from(this.runs.values())
+      .filter(r => r.startedAt.getTime() >= dayStart && r.startedAt.getTime() <= dayEnd);
+
+    let totalPlanned = 0;
+    let totalSent = 0;
+    let totalSuccess = 0;
+    let totalFailed = 0;
+    let totalSkipped = 0;
+    let totalDuration = 0;
+    const errorCounts: Record<string, number> = {};
+    const statusCounts: Record<string, number> = {};
+
+    for (const run of runs) {
+      totalPlanned += run.planned;
+      totalSent += run.sent;
+      totalSuccess += run.success;
+      totalFailed += run.failed4xx + run.failed5xx;
+      totalSkipped += run.skippedDuplicate + run.skippedRateLimit + run.skippedDisabled;
+      totalDuration += run.durationMs;
+
+      // Aggregate errors
+      for (const err of run.errorSummary) {
+        errorCounts[err.type] = (errorCounts[err.type] || 0) + err.count;
+      }
+
+      // Count by status
+      statusCounts[run.status] = (statusCounts[run.status] || 0) + 1;
+    }
+
+    const errorBreakdown = Object.entries(errorCounts)
+      .map(([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const statusBreakdown = Object.entries(statusCounts)
+      .map(([status, count]) => ({ status, count }))
+      .sort((a, b) => b.count - a.count);
+
+    return {
+      date: dateStr,
+      runs: runs.length,
+      totalPlanned,
+      totalSent,
+      totalSuccess,
+      totalFailed,
+      totalSkipped,
+      successRate: totalSuccess + totalFailed > 0
+        ? Math.round((totalSuccess / (totalSuccess + totalFailed)) * 100 * 100) / 100
+        : 100,
+      avgDurationMs: runs.length > 0 ? Math.round(totalDuration / runs.length) : 0,
+      errorBreakdown,
+      statusBreakdown,
+    };
+  }
+
+  /**
+   * Compare two daily summaries (for day-over-day analysis)
+   */
+  compareDays(
+    date1: Date,
+    date2: Date
+  ): {
+    day1: ReturnType<typeof this.generateDailySummary>;
+    day2: ReturnType<typeof this.generateDailySummary>;
+    delta: {
+      runs: number;
+      sent: number;
+      success: number;
+      failed: number;
+      successRateDelta: number;
+    };
+  } {
+    const day1 = this.generateDailySummary(date1);
+    const day2 = this.generateDailySummary(date2);
+
+    return {
+      day1,
+      day2,
+      delta: {
+        runs: day2.runs - day1.runs,
+        sent: day2.totalSent - day1.totalSent,
+        success: day2.totalSuccess - day1.totalSuccess,
+        failed: day2.totalFailed - day1.totalFailed,
+        successRateDelta: Math.round((day2.successRate - day1.successRate) * 100) / 100,
+      },
+    };
+  }
+
+  /**
    * Export summary for JSON response (API-safe)
    */
   formatRunForApi(summary: ExecutorRunSummary): Record<string, unknown> {

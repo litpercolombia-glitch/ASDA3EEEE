@@ -89,6 +89,17 @@ export default async function handler(
     const rateLimiterStats = RateLimiter.getStats();
     const vaultStats = PIIVault.getStats();
 
+    // Get 24h detailed metrics (P0-4)
+    const metrics24h = ExecutorRunLog.get24hMetrics();
+
+    // Get today's summary
+    const todaySummary = ExecutorRunLog.generateDailySummary(new Date());
+
+    // Get yesterday for comparison
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdaySummary = ExecutorRunLog.generateDailySummary(yesterday);
+
     // Get recent runs
     const recentRuns = ExecutorRunLog.getAllRuns(10).map(run =>
       ExecutorRunLog.formatRunForApi(run)
@@ -118,6 +129,20 @@ export default async function handler(
         vault: {
           entriesInMemory: vaultStats.entryCount,
           ttlMs: vaultStats.ttlMs,
+        },
+      },
+      // P0-4: 24h metrics
+      metrics24h,
+      // P0-4: Daily summaries for comparison
+      dailySummary: {
+        today: todaySummary,
+        yesterday: yesterdaySummary,
+        delta: {
+          runs: todaySummary.runs - yesterdaySummary.runs,
+          sent: todaySummary.totalSent - yesterdaySummary.totalSent,
+          success: todaySummary.totalSuccess - yesterdaySummary.totalSuccess,
+          failed: todaySummary.totalFailed - yesterdaySummary.totalFailed,
+          successRateDelta: Math.round((todaySummary.successRate - yesterdaySummary.successRate) * 100) / 100,
         },
       },
       recentRuns,
