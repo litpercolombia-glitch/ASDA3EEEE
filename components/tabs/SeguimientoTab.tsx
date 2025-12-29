@@ -73,7 +73,6 @@ import { SimpleUser, getOCrearUsuarioDefault } from '../../services/simpleUserSe
 import { ChevronLeft, ChevronRight as ChevronRightIcon, Users } from 'lucide-react';
 import { ReviewedBadge, ReviewedCounter } from '../ReviewedBadge';
 import { CargaProgressBar } from '../carga/CargaProgressBar';
-import { CargaSheetsManager } from '../CargaSheetsManager';
 import { useCargaStore } from '../../stores/cargaStore';
 import { GuiaCarga } from '../../types/carga.types';
 
@@ -1813,24 +1812,65 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
       )}
 
       {/* ========================================== */}
-      {/* GESTOR DE HOJAS / TABS */}
+      {/* TABS DE HOJAS GUARDADAS */}
       {/* ========================================== */}
       {hojas.length > 0 && (
         <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-3">
-          <CargaSheetsManager
-            cargaActualId={hojaActiva}
-            onCargaChange={(id) => {
-              setHojaActiva(id);
-              setViendoTodas(false);
-              // Restaurar guías de la hoja seleccionada
-              const hoja = hojas.find(h => h.id === id);
-              if (hoja && onRestoreShipments) {
-                onRestoreShipments(hoja.guias);
-              }
-            }}
-            onVerTodas={() => setViendoTodas(true)}
-            viendoTodas={viendoTodas}
-          />
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            {/* Botón Ver Actual */}
+            <button
+              onClick={() => setShowHojas(false)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                !showHojas
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg'
+                  : 'bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+              }`}
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Carga Actual
+              <span className="px-1.5 py-0.5 bg-white/20 rounded text-xs">{shipments.length}</span>
+            </button>
+
+            {/* Separador */}
+            <div className="w-px h-6 bg-slate-300 dark:bg-navy-600" />
+
+            {/* Tabs de hojas guardadas */}
+            {hojas.slice(0, 5).map((hoja, idx) => (
+              <button
+                key={hoja.id}
+                onClick={() => {
+                  setShowHojas(true);
+                  setHojaActiva(hoja.id);
+                  if (onRestoreShipments) {
+                    onRestoreShipments(hoja.guias);
+                  }
+                }}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                  showHojas && hojaActiva === hoja.id
+                    ? 'bg-violet-500 text-white shadow-lg'
+                    : 'bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                }`}
+              >
+                <span className="w-5 h-5 flex items-center justify-center bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 rounded text-xs font-bold">
+                  #{idx + 1}
+                </span>
+                <span className="max-w-[100px] truncate">{hoja.nombre}</span>
+                <span className="px-1.5 py-0.5 bg-slate-200 dark:bg-navy-700 rounded text-xs">
+                  {hoja.cantidadGuias}
+                </span>
+              </button>
+            ))}
+
+            {/* Ver más hojas */}
+            {hojas.length > 5 && (
+              <button
+                onClick={() => setShowHojas(true)}
+                className="px-3 py-2 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-navy-800"
+              >
+                +{hojas.length - 5} más
+              </button>
+            )}
+          </div>
         </div>
       )}
 
