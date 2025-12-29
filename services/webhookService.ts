@@ -302,18 +302,64 @@ export const webhookOutbound = {
 
 export const webhookVerification = {
   /**
-   * Verificar firma HMAC de webhook
+   * Verificar firma HMAC SHA256 de webhook
+   * Usa Web Crypto API para seguridad real
    */
-  verifySignature(payload: string, signature: string, secret: string): boolean {
-    // Implementación básica - en producción usar crypto
-    // const expectedSignature = crypto
-    //   .createHmac('sha256', secret)
-    //   .update(payload)
-    //   .digest('hex');
-    // return signature === expectedSignature;
+  async verifySignature(payload: string, signature: string, secret: string): Promise<boolean> {
+    if (!signature || !secret || !payload) {
+      console.warn('⚠️ Webhook verification failed: missing signature, secret, or payload');
+      return false;
+    }
 
-    // Por ahora, verificación simple
-    return signature.length > 0 && secret.length > 0;
+    try {
+      // Extraer el hash de la firma (formato: sha256=abc123...)
+      const providedHash = signature.startsWith('sha256=')
+        ? signature.slice(7)
+        : signature;
+
+      // Crear la clave HMAC usando Web Crypto API
+      const encoder = new TextEncoder();
+      const keyData = encoder.encode(secret);
+      const key = await crypto.subtle.importKey(
+        'raw',
+        keyData,
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+      );
+
+      // Calcular el HMAC del payload
+      const payloadData = encoder.encode(payload);
+      const signatureBuffer = await crypto.subtle.sign('HMAC', key, payloadData);
+
+      // Convertir a hex
+      const hashArray = Array.from(new Uint8Array(signatureBuffer));
+      const expectedHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+      // Comparación segura (timing-safe no es posible en JS, pero esto es mejor que nada)
+      const isValid = providedHash.toLowerCase() === expectedHash.toLowerCase();
+
+      if (!isValid) {
+        console.warn('⚠️ Webhook signature mismatch');
+      }
+
+      return isValid;
+    } catch (error) {
+      console.error('❌ Error verifying webhook signature:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Verificación síncrona simple (para casos donde async no es posible)
+   * NOTA: Menos segura, usar verifySignature cuando sea posible
+   */
+  verifySignatureSync(payload: string, signature: string, secret: string): boolean {
+    if (!signature || !secret || !payload) {
+      return false;
+    }
+    // Verificación básica de formato - la verificación real debe ser async
+    return signature.length >= 64 && secret.length > 0;
   },
 
   /**
@@ -323,7 +369,36 @@ export const webhookVerification = {
     const webhookTime = new Date(timestamp).getTime();
     const now = Date.now();
     const age = (now - webhookTime) / 1000;
-    return age <= maxAgeSeconds;
+
+    if (age > maxAgeSeconds) {
+      console.warn(`⚠️ Webhook timestamp too old: ${age}s (max: ${maxAgeSeconds}s)`);
+      return false;
+    }
+
+    return true;
+  },
+
+  /**
+   * Verificación completa de webhook (firma + timestamp)
+   */
+  async verifyWebhook(
+    payload: string,
+    signature: string,
+    secret: string,
+    timestamp?: string
+  ): Promise<{ valid: boolean; reason?: string }> {
+    // Verificar firma
+    const signatureValid = await this.verifySignature(payload, signature, secret);
+    if (!signatureValid) {
+      return { valid: false, reason: 'Invalid signature' };
+    }
+
+    // Verificar timestamp si se proporciona
+    if (timestamp && !this.verifyTimestamp(timestamp)) {
+      return { valid: false, reason: 'Timestamp too old (possible replay attack)' };
+    }
+
+    return { valid: true };
   },
 };
 

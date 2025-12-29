@@ -161,14 +161,23 @@ except ImportError as e:
 START_TIME = datetime.now()
 
 # Lista de orígenes permitidos para CORS
-ALLOWED_ORIGINS = [
+# En producción solo se permiten dominios específicos
+ALLOWED_ORIGINS_PROD = [
+    "https://litper-logistica.vercel.app",
+    "https://app.litper.co",
+    "https://litper.co",
+]
+
+ALLOWED_ORIGINS_DEV = [
     "http://localhost:3000",
     "http://localhost:5173",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
-    "https://litper-logistica.vercel.app",
-    "https://*.vercel.app",
 ]
+
+# Determinar orígenes según el entorno
+IS_PRODUCTION = os.getenv("ENV", "development").lower() == "production"
+ALLOWED_ORIGINS = ALLOWED_ORIGINS_PROD if IS_PRODUCTION else ALLOWED_ORIGINS_PROD + ALLOWED_ORIGINS_DEV
 
 # ==================== MODELOS PYDANTIC ====================
 
@@ -248,14 +257,15 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configurar CORS
+# Configurar CORS con dominios específicos (SEGURIDAD)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, especificar dominios
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With", "X-Webhook-Signature"],
 )
+logger.info(f"🔒 CORS configurado para: {len(ALLOWED_ORIGINS)} orígenes (prod={IS_PRODUCTION})")
 
 # Incluir router del Sistema de Conocimiento
 if KNOWLEDGE_SYSTEM_AVAILABLE:

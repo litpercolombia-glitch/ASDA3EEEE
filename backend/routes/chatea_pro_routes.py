@@ -25,16 +25,66 @@ EJEMPLO DE PAYLOAD:
 }
 """
 
-from fastapi import APIRouter, HTTPException, Request, BackgroundTasks, Query
+from fastapi import APIRouter, HTTPException, Request, BackgroundTasks, Query, Header
 from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 import os
 import sys
+import hmac
+import hashlib
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from loguru import logger
+
 router = APIRouter(prefix="/api/chatea-pro", tags=["Chatea Pro - Integracion Dropi/N8N"])
+
+# Secret para verificar webhooks (debe estar en variables de entorno)
+WEBHOOK_SECRET = os.getenv("CHATEA_WEBHOOK_SECRET", "")
+SKIP_SIGNATURE_VERIFICATION = os.getenv("SKIP_WEBHOOK_SIGNATURE", "false").lower() == "true"
+
+
+def verify_webhook_signature(payload: bytes, signature: str, secret: str) -> bool:
+    """
+    Verifica la firma HMAC-SHA256 del webhook.
+
+    Args:
+        payload: Body del request en bytes
+        signature: Firma recibida (formato: sha256=abc123...)
+        secret: Secret compartido
+
+    Returns:
+        True si la firma es válida
+    """
+    if not secret:
+        logger.warning("⚠️ WEBHOOK_SECRET no configurado - verificación deshabilitada")
+        return True  # Si no hay secret configurado, permitir (pero con warning)
+
+    if not signature:
+        logger.warning("⚠️ Webhook recibido sin firma")
+        return False
+
+    # Extraer hash de la firma
+    if signature.startswith("sha256="):
+        provided_hash = signature[7:]
+    else:
+        provided_hash = signature
+
+    # Calcular hash esperado
+    expected_hash = hmac.new(
+        secret.encode('utf-8'),
+        payload,
+        hashlib.sha256
+    ).hexdigest()
+
+    # Comparación segura contra timing attacks
+    is_valid = hmac.compare_digest(provided_hash.lower(), expected_hash.lower())
+
+    if not is_valid:
+        logger.warning(f"⚠️ Webhook signature mismatch: provided={provided_hash[:20]}... expected={expected_hash[:20]}...")
+
+    return is_valid
 
 # Instancias globales (lazy loading)
 _chatea_client = None
@@ -121,15 +171,20 @@ class AnalyzeRequest(BaseModel):
 
 @router.post("/webhook")
 async def receive_chatea_pro_webhook(
-    event: ChateaProEvent,
     request: Request,
-    background_tasks: BackgroundTasks
+    background_tasks: BackgroundTasks,
+    x_webhook_signature: Optional[str] = Header(None, alias="X-Webhook-Signature"),
+    x_chatea_signature: Optional[str] = Header(None, alias="X-Chatea-Signature"),
 ):
     """
     ENDPOINT PRINCIPAL - Recibe eventos de Chatea Pro via N8N.
 
     Configura este URL en N8N:
     https://tu-servidor.com/api/chatea-pro/webhook
+
+    SEGURIDAD:
+    - El webhook debe incluir header X-Webhook-Signature o X-Chatea-Signature
+    - Firma: sha256=HMAC(payload, CHATEA_WEBHOOK_SECRET)
 
     Eventos soportados:
     - order_created: Nuevo pedido creado
@@ -139,6 +194,29 @@ async def receive_chatea_pro_webhook(
     - delivery_confirmed: Entrega confirmada
     - issue_reported: Novedad reportada
     """
+    # Obtener body raw para verificación de firma
+    body = await request.body()
+
+    # Verificar firma (si está configurado el secret)
+    signature = x_webhook_signature or x_chatea_signature
+    if WEBHOOK_SECRET and not SKIP_SIGNATURE_VERIFICATION:
+        if not verify_webhook_signature(body, signature or "", WEBHOOK_SECRET):
+            logger.warning(f"⚠️ Webhook rechazado: firma inválida desde {request.client.host}")
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid webhook signature"
+            )
+        logger.info("✅ Webhook signature verified")
+
+    # Parsear el evento
+    import json
+    try:
+        event_data = json.loads(body)
+        event = ChateaProEvent(**event_data)
+    except Exception as e:
+        logger.error(f"❌ Error parsing webhook body: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid event format: {str(e)}")
+
     # Guardar en historial
     event_record = {
         "id": f"evt_{datetime.now().strftime('%Y%m%d%H%M%S')}_{len(_event_history)}",
@@ -146,7 +224,8 @@ async def receive_chatea_pro_webhook(
         "data": event.data,
         "source": event.source,
         "timestamp": event.timestamp or datetime.now().isoformat(),
-        "processed": True
+        "processed": True,
+        "signature_verified": bool(signature and WEBHOOK_SECRET)
     }
     _event_history.insert(0, event_record)
 
