@@ -30,7 +30,20 @@ import SkillsRegistry from './skills/SkillsRegistry';
 import { Skill, SkillCategory, SKILL_CATEGORIES } from './skills/types';
 
 // Import skills to register them
+// Logistics
 import './skills/logistics/TrackShipment.skill';
+import './skills/logistics/GenerateReport.skill';
+import './skills/logistics/BulkStatusUpdate.skill';
+import './skills/logistics/AnalyzeCarrier.skill';
+import './skills/logistics/CreateTicket.skill';
+// Finance
+import './skills/finance/FinancialReport.skill';
+// Analytics
+import './skills/analytics/DashboardMetrics.skill';
+// Automation
+import './skills/automation/ScheduleTask.skill';
+// Communication
+import './skills/communication/SendWhatsApp.skill';
 
 // ============================================
 // STYLES
