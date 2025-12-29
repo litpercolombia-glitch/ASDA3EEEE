@@ -23,6 +23,7 @@ import {
   Image as ImageIcon,
   Globe,
   Trash2,
+  FileText,
 } from 'lucide-react';
 import { analyzeEvidenceImage, transcribeAudio } from '../../services/geminiService';
 import { Shipment } from '../../types';
@@ -656,37 +657,134 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
     });
   }, []);
 
+  // Calcular métricas
+  const metrics = React.useMemo(() => {
+    const total = shipments.length;
+    const delivered = shipments.filter(s => s.status === 'delivered' || s.status === 'DELIVERED').length;
+    const inTransit = shipments.filter(s => s.status === 'in_transit' || s.status === 'IN_TRANSIT').length;
+    const pending = shipments.filter(s => s.status === 'pending' || s.status === 'PENDING').length;
+    const issues = shipments.filter(s => s.status === 'exception' || s.status === 'EXCEPTION' || s.status === 'returned' || s.status === 'RETURNED').length;
+    const deliveryRate = total > 0 ? Math.round((delivered / total) * 100) : 0;
+    return { total, delivered, inTransit, pending, issues, deliveryRate };
+  }, [shipments]);
+
   return (
-    <div className="h-[calc(100vh-160px)] min-h-[500px] bg-gradient-to-br from-navy-950 via-navy-900 to-navy-950 rounded-2xl overflow-hidden flex flex-col">
-      {/* Header compacto - altura fija */}
-      <div className="flex-shrink-0 p-4 border-b border-white/5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative bg-gradient-to-br from-purple-500 to-violet-600 p-2 rounded-xl">
-              <Sparkles className="w-5 h-5 text-white" />
+    <div className="min-h-[600px] space-y-4">
+      {/* Skills Bar - Siempre visible */}
+      <SkillsBar
+        onSkillClick={handleSkillClick}
+        activeSkill={activeSkill}
+        showExamples={true}
+      />
+
+      {/* Layout principal: KPIs + Chat */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* Panel izquierdo: KPIs y métricas */}
+        <div className="lg:col-span-1 space-y-4">
+          {/* Métricas rápidas */}
+          <div className="bg-gradient-to-br from-navy-900/90 to-navy-950/90 backdrop-blur-xl rounded-2xl border border-white/10 p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <h3 className="text-sm font-bold text-white">Resumen</h3>
             </div>
-            <div>
-              <h1 className="text-base font-bold text-white">Asistente IA</h1>
-              <p className="text-[10px] text-slate-500">
-                {shipments.length > 0 ? `${shipments.length} guías` : 'Sin guías'}
-              </p>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-slate-400" />
+                  <span className="text-xs text-slate-400">Total</span>
+                </div>
+                <span className="text-lg font-bold text-white">{metrics.total}</span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-emerald-500/10 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-400" />
+                  <span className="text-xs text-emerald-400">Entregados</span>
+                </div>
+                <span className="text-lg font-bold text-emerald-400">{metrics.delivered}</span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-blue-500/10 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <ArrowRight className="w-4 h-4 text-blue-400" />
+                  <span className="text-xs text-blue-400">En tránsito</span>
+                </div>
+                <span className="text-lg font-bold text-blue-400">{metrics.inTransit}</span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-amber-500/10 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  <span className="text-xs text-amber-400">Pendientes</span>
+                </div>
+                <span className="text-lg font-bold text-amber-400">{metrics.pending}</span>
+              </div>
+
+              {metrics.issues > 0 && (
+                <div className="flex items-center justify-between p-3 bg-red-500/10 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-400" />
+                    <span className="text-xs text-red-400">Incidencias</span>
+                  </div>
+                  <span className="text-lg font-bold text-red-400">{metrics.issues}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Tasa de entrega */}
+            <div className="mt-4 p-3 bg-gradient-to-r from-purple-500/20 to-violet-500/20 rounded-xl border border-purple-500/20">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-purple-300">Tasa de entrega</span>
+                <span className="text-lg font-bold text-purple-400">{metrics.deliveryRate}%</span>
+              </div>
+              <div className="w-full bg-white/10 rounded-full h-2">
+                <div
+                  className="bg-gradient-to-r from-purple-500 to-violet-500 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${metrics.deliveryRate}%` }}
+                />
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <button onClick={onRefreshData} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg">
-              <RefreshCw className="w-4 h-4" />
-            </button>
-            <button onClick={() => onNavigateToTab?.('admin')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg">
-              <Settings className="w-4 h-4" />
-            </button>
+
+          {/* Acciones rápidas */}
+          <div className="bg-gradient-to-br from-navy-900/90 to-navy-950/90 backdrop-blur-xl rounded-2xl border border-white/10 p-4">
+            <h3 className="text-sm font-bold text-white mb-3">Acciones rápidas</h3>
+            <div className="space-y-2">
+              <button
+                onClick={() => handleQuickAction('Dame el resumen del día')}
+                className="w-full flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 rounded-xl text-left transition-colors"
+              >
+                <div className="p-2 bg-blue-500/20 rounded-lg">
+                  <FileText className="w-4 h-4 text-blue-400" />
+                </div>
+                <span className="text-xs text-slate-300">Resumen del día</span>
+              </button>
+              <button
+                onClick={() => handleQuickAction('¿Qué envíos están en riesgo?')}
+                className="w-full flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 rounded-xl text-left transition-colors"
+              >
+                <div className="p-2 bg-amber-500/20 rounded-lg">
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                </div>
+                <span className="text-xs text-slate-300">Envíos en riesgo</span>
+              </button>
+              <button
+                onClick={() => handleQuickAction('Genera un reporte para hoy')}
+                className="w-full flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 rounded-xl text-left transition-colors"
+              >
+                <div className="p-2 bg-purple-500/20 rounded-lg">
+                  <Brain className="w-4 h-4 text-purple-400" />
+                </div>
+                <span className="text-xs text-slate-300">Generar reporte</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Contenido principal - flex-1 para ocupar espacio restante */}
-      <div className="flex-1 flex flex-col overflow-hidden p-4">
-        {/* Grid de contenido */}
-        <div className={`flex-1 flex flex-col overflow-hidden ${activeSkill ? 'lg:grid lg:grid-cols-2 lg:gap-4' : ''}`}>
+        {/* Panel derecho: Chat + Skill Panel */}
+        <div className="lg:col-span-3">
+          <div className={`grid gap-4 ${activeSkill ? 'lg:grid-cols-2' : ''}`}>
           {/* Skill Panel - Shows when a skill is active */}
           {activeSkill && (
             <div className="bg-gradient-to-b from-navy-900/80 to-navy-900/60 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden order-2 lg:order-1">
@@ -950,6 +1048,7 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
                 </div>
               )}
             </div>
+          </div>
           </div>
         </div>
       </div>
