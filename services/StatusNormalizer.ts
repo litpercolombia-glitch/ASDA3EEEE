@@ -460,6 +460,9 @@ export class StatusNormalizer {
     }
 
     // Default to ISSUE with OTHER reason if no match found
+    // P0-5: Log unknown status for observability (without PII)
+    this.logUnknownStatus(rawStatus, carrierCode, source);
+
     return {
       status: CanonicalStatus.ISSUE,
       reason: ExceptionReason.OTHER,
@@ -467,6 +470,33 @@ export class StatusNormalizer {
       source,
       lastEventAt,
     };
+  }
+
+  /**
+   * P0-5: Observability - Log unknown statuses for monitoring
+   * Logs rawStatus, carrier, source without PII (no guia, phone, etc.)
+   */
+  private static logUnknownStatus(
+    rawStatus: string,
+    carrier: CarrierCode,
+    source: DataSource
+  ): void {
+    // Only log in development/staging, or send to monitoring service in production
+    const logEntry = {
+      type: 'UNKNOWN_STATUS',
+      rawStatus: rawStatus.substring(0, 100), // Truncate to avoid huge logs
+      carrier,
+      source,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Console log for development
+    if (typeof window !== 'undefined' && (window as any).__DEV__) {
+      console.warn('[StatusNormalizer] Unknown status:', logEntry);
+    }
+
+    // In production, this could be sent to a monitoring service
+    // Example: monitoringService.trackEvent('unknown_status', logEntry);
   }
 
   /**
