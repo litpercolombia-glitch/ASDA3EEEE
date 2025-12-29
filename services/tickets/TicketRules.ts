@@ -346,6 +346,100 @@ class TicketRulesImpl {
       .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL_REDACTED]')
       .substring(0, 500); // Limit length
   }
+
+  // =====================================================
+  // SCORING INTEGRATION (PR #6)
+  // =====================================================
+
+  /**
+   * Upgrade ticket priority based on risk score
+   * Call this after creating a ticket to potentially upgrade to 'alta'
+   *
+   * Uses RiskScoringService - does NOT recalculate scoring logic
+   */
+  async upgradePriorityIfHighRisk(
+    ticket: Ticket,
+    guideState: {
+      numero_de_guia: string;
+      estatus: any;
+      ciudad_de_destino?: string;
+      transportadora?: string;
+      novedad?: string;
+      fecha_de_ultimo_movimiento?: Date | string;
+    }
+  ): Promise<Ticket> {
+    // Dynamic import to avoid circular dependency
+    const { RiskScoringService } = await import('../scoring/RiskScoringService');
+
+    const riskResult = RiskScoringService.scoreGuide(guideState);
+
+    // If HIGH risk and current priority is media, upgrade to alta
+    if (riskResult.riskLevel === 'HIGH' && ticket.priority === 'media') {
+      TicketService.updateTicket(ticket.ticketId, {
+        priority: 'alta',
+        addTimelineEntry: {
+          action: 'PRIORITY_UPGRADED',
+          actor: 'system',
+          details: {
+            reason: 'high_risk_score',
+            riskScore: riskResult.score,
+            riskReasons: riskResult.reasons,
+          },
+        },
+      });
+      ticket.priority = 'alta';
+    }
+
+    return ticket;
+  }
+
+  /**
+   * Get open tickets sorted by risk
+   * Uses RiskScoringService for ordering - does NOT recalculate
+   */
+  async getTicketsSortedByRisk(
+    tickets: Ticket[],
+    getGuideState: (guia: string) => Promise<{
+      numero_de_guia: string;
+      estatus: any;
+      ciudad_de_destino?: string;
+      transportadora?: string;
+      novedad?: string;
+      fecha_de_ultimo_movimiento?: Date | string;
+    } | null>
+  ): Promise<Array<Ticket & { riskScore?: number; riskLevel?: string }>> {
+    const { RiskScoringService } = await import('../scoring/RiskScoringService');
+
+    const ticketsWithRisk: Array<Ticket & { riskScore?: number; riskLevel?: string }> = [];
+
+    for (const ticket of tickets) {
+      const guideState = await getGuideState(ticket.guia);
+
+      if (guideState) {
+        const riskResult = RiskScoringService.scoreGuide(guideState);
+        ticketsWithRisk.push({
+          ...ticket,
+          riskScore: riskResult.score,
+          riskLevel: riskResult.riskLevel,
+        });
+      } else {
+        ticketsWithRisk.push(ticket);
+      }
+    }
+
+    // Sort by risk: HIGH first, then MEDIUM, then LOW
+    // Within same level, sort by score descending
+    return ticketsWithRisk.sort((a, b) => {
+      const levelOrder: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+      const aLevel = a.riskLevel || 'LOW';
+      const bLevel = b.riskLevel || 'LOW';
+
+      const levelDiff = (levelOrder[aLevel] || 2) - (levelOrder[bLevel] || 2);
+      if (levelDiff !== 0) return levelDiff;
+
+      return (b.riskScore || 0) - (a.riskScore || 0);
+    });
+  }
 }
 
 // =====================================================
