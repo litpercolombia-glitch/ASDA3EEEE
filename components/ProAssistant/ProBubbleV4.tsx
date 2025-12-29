@@ -170,25 +170,25 @@ const ProBubbleV4: React.FC<ProBubbleV4Props> = ({
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'delivered':
-        return { icon: CheckCircle, color: 'emerald', label: 'Entregado' };
+        return { icon: CheckCircle, bgClass: 'bg-emerald-500/20', textClass: 'text-emerald-400', label: 'Entregado' };
       case 'in_transit':
-        return { icon: Truck, color: 'blue', label: 'En tránsito' };
+        return { icon: Truck, bgClass: 'bg-blue-500/20', textClass: 'text-blue-400', label: 'En tránsito' };
       case 'issue':
-        return { icon: AlertTriangle, color: 'red', label: 'Novedad' };
+        return { icon: AlertTriangle, bgClass: 'bg-red-500/20', textClass: 'text-red-400', label: 'Novedad' };
       case 'in_office':
-        return { icon: Building2, color: 'amber', label: 'En oficina' };
+        return { icon: Building2, bgClass: 'bg-amber-500/20', textClass: 'text-amber-400', label: 'En oficina' };
       default:
-        return { icon: Package, color: 'slate', label: status };
+        return { icon: Package, bgClass: 'bg-slate-500/20', textClass: 'text-slate-400', label: status };
     }
   };
 
   const filterOptions = [
-    { id: 'all' as ListFilter, label: 'Todas', icon: Package, color: 'slate', count: metrics.total },
-    { id: 'critical' as ListFilter, label: 'Críticas', icon: AlertTriangle, color: 'red', count: metrics.critical },
-    { id: 'issue' as ListFilter, label: 'Novedad', icon: AlertTriangle, color: 'orange', count: metrics.issues },
-    { id: 'in_office' as ListFilter, label: 'Oficina', icon: Building2, color: 'amber', count: metrics.inOffice },
-    { id: 'in_transit' as ListFilter, label: 'Tránsito', icon: Truck, color: 'blue', count: metrics.inTransit },
-    { id: 'delivered' as ListFilter, label: 'Entregadas', icon: CheckCircle, color: 'emerald', count: metrics.delivered },
+    { id: 'all' as ListFilter, label: 'Todas', icon: Package, activeClass: 'bg-slate-500 text-white', badgeClass: 'bg-slate-500/20 text-slate-400', count: metrics.total },
+    { id: 'critical' as ListFilter, label: 'Críticas', icon: AlertTriangle, activeClass: 'bg-red-500 text-white', badgeClass: 'bg-red-500/20 text-red-400', count: metrics.critical },
+    { id: 'issue' as ListFilter, label: 'Novedad', icon: AlertTriangle, activeClass: 'bg-orange-500 text-white', badgeClass: 'bg-orange-500/20 text-orange-400', count: metrics.issues },
+    { id: 'in_office' as ListFilter, label: 'Oficina', icon: Building2, activeClass: 'bg-amber-500 text-white', badgeClass: 'bg-amber-500/20 text-amber-400', count: metrics.inOffice },
+    { id: 'in_transit' as ListFilter, label: 'Tránsito', icon: Truck, activeClass: 'bg-blue-500 text-white', badgeClass: 'bg-blue-500/20 text-blue-400', count: metrics.inTransit },
+    { id: 'delivered' as ListFilter, label: 'Entregadas', icon: CheckCircle, activeClass: 'bg-emerald-500 text-white', badgeClass: 'bg-emerald-500/20 text-emerald-400', count: metrics.delivered },
   ];
 
   const openChatWithMode = (chatMode: ChatMode) => {
@@ -291,34 +291,44 @@ const ProBubbleV4: React.FC<ProBubbleV4Props> = ({
           <div className="p-3 border-b border-slate-700/50">
             <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2 px-1">Acciones Rápidas</p>
             <div className="grid grid-cols-4 gap-2">
-              {OPERATIONAL_ACTIONS.map((action) => (
-                <button
-                  key={action.id}
-                  onClick={() => {
-                    if (action.id === 'search') setMode('list');
-                    else if (action.id === 'novelty') { setMode('list'); setListFilter('issue'); }
-                    else if (action.id === 'whatsapp') { setMode('list'); setListFilter('issue'); }
-                    else if (action.id === 'calls') { setMode('list'); setListFilter('critical'); }
-                  }}
-                  className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl transition-all hover:scale-105 bg-${action.color}-500/10 hover:bg-${action.color}-500/20 border border-${action.color}-500/20`}
-                >
-                  <action.icon className={`w-5 h-5 text-${action.color}-400`} />
-                  <span className={`text-[9px] font-medium text-${action.color}-400 text-center`}>{action.label}</span>
-                </button>
-              ))}
+              {OPERATIONAL_ACTIONS.map((action) => {
+                const colorStyles = {
+                  blue: 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20 text-blue-400',
+                  orange: 'bg-orange-500/10 hover:bg-orange-500/20 border-orange-500/20 text-orange-400',
+                  emerald: 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-400',
+                  cyan: 'bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/20 text-cyan-400',
+                };
+                const styles = colorStyles[action.color as keyof typeof colorStyles] || colorStyles.blue;
+
+                return (
+                  <button
+                    key={action.id}
+                    onClick={() => {
+                      if (action.id === 'search') setMode('list');
+                      else if (action.id === 'novelty') { setMode('list'); setListFilter('issue'); }
+                      else if (action.id === 'whatsapp') { setMode('list'); setListFilter('issue'); }
+                      else if (action.id === 'calls') { setMode('list'); setListFilter('critical'); }
+                    }}
+                    className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl transition-all hover:scale-105 border ${styles}`}
+                  >
+                    <action.icon className="w-5 h-5" />
+                    <span className="text-[9px] font-medium text-center">{action.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Métricas rápidas */}
           <div className="p-3 border-b border-slate-700/50 grid grid-cols-4 gap-2">
             {[
-              { label: 'Entrega', value: `${metrics.deliveryRate}%`, color: metrics.deliveryRate >= 80 ? 'emerald' : 'amber' },
-              { label: 'Críticas', value: metrics.critical, color: metrics.critical > 0 ? 'red' : 'emerald' },
-              { label: 'Novedad', value: metrics.issues, color: 'orange' },
-              { label: 'Oficina', value: metrics.inOffice, color: 'amber' },
+              { label: 'Entrega', value: `${metrics.deliveryRate}%`, bgClass: metrics.deliveryRate >= 80 ? 'bg-emerald-500/10' : 'bg-amber-500/10', textClass: metrics.deliveryRate >= 80 ? 'text-emerald-400' : 'text-amber-400' },
+              { label: 'Críticas', value: metrics.critical, bgClass: metrics.critical > 0 ? 'bg-red-500/10' : 'bg-emerald-500/10', textClass: metrics.critical > 0 ? 'text-red-400' : 'text-emerald-400' },
+              { label: 'Novedad', value: metrics.issues, bgClass: 'bg-orange-500/10', textClass: 'text-orange-400' },
+              { label: 'Oficina', value: metrics.inOffice, bgClass: 'bg-amber-500/10', textClass: 'text-amber-400' },
             ].map((stat, i) => (
-              <div key={i} className={`text-center p-2 rounded-lg bg-${stat.color}-500/10`}>
-                <p className={`text-lg font-bold text-${stat.color}-400`}>{stat.value}</p>
+              <div key={i} className={`text-center p-2 rounded-lg ${stat.bgClass}`}>
+                <p className={`text-lg font-bold ${stat.textClass}`}>{stat.value}</p>
                 <p className="text-[10px] text-slate-500">{stat.label}</p>
               </div>
             ))}
@@ -457,13 +467,13 @@ const ProBubbleV4: React.FC<ProBubbleV4Props> = ({
                   onClick={() => setListFilter(filter.id)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
                     listFilter === filter.id
-                      ? `bg-${filter.color}-500 text-white`
-                      : `bg-slate-800 text-slate-400 hover:bg-slate-700`
+                      ? filter.activeClass
+                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
                   }`}
                 >
                   <filter.icon className="w-3.5 h-3.5" />
                   {filter.label}
-                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${listFilter === filter.id ? 'bg-white/20' : `bg-${filter.color}-500/20 text-${filter.color}-400`}`}>
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${listFilter === filter.id ? 'bg-white/20' : filter.badgeClass}`}>
                     {filter.count}
                   </span>
                 </button>
@@ -488,8 +498,8 @@ const ProBubbleV4: React.FC<ProBubbleV4Props> = ({
                   return (
                     <div key={shipment.id} className="p-3 hover:bg-slate-800/50 transition-colors group">
                       <div className="flex items-start gap-3">
-                        <div className={`p-2 rounded-lg bg-${statusConfig.color}-500/20 flex-shrink-0`}>
-                          <StatusIcon className={`w-4 h-4 text-${statusConfig.color}-400`} />
+                        <div className={`p-2 rounded-lg flex-shrink-0 ${statusConfig.bgClass}`}>
+                          <StatusIcon className={`w-4 h-4 ${statusConfig.textClass}`} />
                         </div>
 
                         <div className="flex-1 min-w-0">
@@ -497,7 +507,7 @@ const ProBubbleV4: React.FC<ProBubbleV4Props> = ({
                             <span className="font-mono font-bold text-white text-sm">
                               {shipment.trackingNumber || shipment.id}
                             </span>
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium bg-${statusConfig.color}-500/20 text-${statusConfig.color}-400`}>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${statusConfig.bgClass} ${statusConfig.textClass}`}>
                               {statusConfig.label}
                             </span>
                           </div>
