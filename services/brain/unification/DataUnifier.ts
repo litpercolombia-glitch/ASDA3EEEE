@@ -1,5 +1,6 @@
 // services/brain/unification/DataUnifier.ts
 // Une datos de Tracking + Dropi en un solo objeto unificado
+// MIGRADO: Usa StatusNormalizer como fuente única de verdad
 
 import {
   UnifiedShipment,
@@ -12,30 +13,21 @@ import { shipmentMatcher, TrackingData, DropiData, MatchResult } from './Shipmen
 import { resolveBestValue, getSourceConfidence } from './SourcePriority';
 import { eventBus } from '../core/EventBus';
 import { centralBrain } from '../core/CentralBrain';
+import { StatusNormalizer, detectCarrier } from '../../StatusNormalizer';
+import { CanonicalStatus, ExceptionReason } from '../../../types/canonical.types';
 
-// Mapeo de estados de transportadoras a estados unificados
-const STATUS_MAP: Record<string, ShipmentStatus> = {
-  // Estados comunes de tracking
-  'RECOGIDO': 'picked_up',
-  'EN TRANSITO': 'in_transit',
-  'EN TRÁNSITO': 'in_transit',
-  'IN_TRANSIT': 'in_transit',
-  'EN CAMINO': 'in_transit',
-  'EN REPARTO': 'out_for_delivery',
-  'EN DISTRIBUCIÓN': 'in_distribution',
-  'ENTREGADO': 'delivered',
-  'DELIVERED': 'delivered',
-  'EN OFICINA': 'in_office',
-  'DISPONIBLE EN OFICINA': 'in_office',
-  'NOVEDAD': 'issue',
-  'CON NOVEDAD': 'issue',
-  'ISSUE': 'issue',
-  'DEVUELTO': 'returned',
-  'RETURNED': 'returned',
-  'CANCELADO': 'cancelled',
-  'CANCELLED': 'cancelled',
-  'PENDIENTE': 'pending',
-  'PENDING': 'pending',
+// Mapeo de CanonicalStatus a ShipmentStatus (para compatibilidad con brain.types)
+const CANONICAL_TO_SHIPMENT_STATUS: Record<CanonicalStatus, ShipmentStatus> = {
+  [CanonicalStatus.CREATED]: 'pending',
+  [CanonicalStatus.PROCESSING]: 'picked_up',
+  [CanonicalStatus.SHIPPED]: 'in_transit',
+  [CanonicalStatus.IN_TRANSIT]: 'in_transit',
+  [CanonicalStatus.OUT_FOR_DELIVERY]: 'out_for_delivery',
+  [CanonicalStatus.IN_OFFICE]: 'in_office',
+  [CanonicalStatus.DELIVERED]: 'delivered',
+  [CanonicalStatus.ISSUE]: 'issue',
+  [CanonicalStatus.RETURNED]: 'returned',
+  [CanonicalStatus.CANCELLED]: 'cancelled',
 };
 
 class DataUnifierService {
@@ -317,9 +309,21 @@ class DataUnifierService {
     };
   }
 
-  private normalizeStatus(status: string): ShipmentStatus {
-    const normalized = status.toUpperCase().trim();
-    return STATUS_MAP[normalized] || 'in_transit';
+  /**
+   * Normaliza un estado usando StatusNormalizer (fuente única de verdad)
+   */
+  private normalizeStatus(status: string, carrier?: string): ShipmentStatus {
+    const carrierCode = carrier ? detectCarrier(carrier) : 'UNKNOWN';
+    const normalized = StatusNormalizer.normalize(status, carrierCode);
+    return CANONICAL_TO_SHIPMENT_STATUS[normalized.status] || 'in_transit';
+  }
+
+  /**
+   * Obtiene el estado normalizado completo con razón de excepción
+   */
+  private getNormalizedStatusFull(status: string, carrier?: string) {
+    const carrierCode = carrier ? detectCarrier(carrier) : 'UNKNOWN';
+    return StatusNormalizer.normalize(status, carrierCode);
   }
 
   private resolveOrigin(
@@ -426,13 +430,13 @@ class DataUnifierService {
     return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
   }
 
-  private hasIssue(status: string): boolean {
-    const normalized = status.toUpperCase();
-    return normalized.includes('NOVEDAD') ||
-      normalized.includes('ISSUE') ||
-      normalized.includes('PROBLEMA') ||
-      normalized.includes('DEVUELTO') ||
-      normalized.includes('RETURNED');
+  /**
+   * Verifica si un estado indica un problema usando StatusNormalizer
+   */
+  private hasIssue(status: string, carrier?: string): boolean {
+    const normalized = this.getNormalizedStatusFull(status, carrier);
+    return StatusNormalizer.hasIssue(normalized.status) ||
+      normalized.status === CanonicalStatus.RETURNED;
   }
 
   private isDelayed(tracking: TrackingData, dropi: DropiData | null): boolean {

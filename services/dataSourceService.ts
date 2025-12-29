@@ -1,10 +1,17 @@
 // ============================================
 // SERVICIO DE FUENTES DE DATOS UNIFICADO
 // Gestiona múltiples fuentes: Seguimiento Real vs Dropi
+// MIGRADO: Usa StatusNormalizer como fuente única de verdad
 // ============================================
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { StatusNormalizer, detectCarrier } from './StatusNormalizer';
+import {
+  CanonicalStatus,
+  CanonicalStatusLabels,
+  ExceptionReason,
+} from '../types/canonical.types';
 
 // Tipos de fuente de datos
 export type DataSourceType = 'seguimiento' | 'dropi' | 'combinado' | 'timeline';
@@ -61,33 +68,35 @@ export interface DataSourceConfig {
   preferredSourceForConflicts: 'seguimiento' | 'dropi' | 'most_recent';
 }
 
-// Mapeo de estados para normalización
-const STATUS_MAPPINGS: Record<string, string> = {
-  // Estados de seguimiento
-  'ENTREGADO': 'DELIVERED',
-  'DELIVERED': 'DELIVERED',
-  'EN TRANSITO': 'IN_TRANSIT',
-  'IN_TRANSIT': 'IN_TRANSIT',
-  'EN RUTA': 'IN_TRANSIT',
-  'PENDIENTE': 'PENDING',
-  'PENDING': 'PENDING',
-  'DEVOLUCION': 'RETURNED',
-  'RETURNED': 'RETURNED',
-  'NOVEDAD': 'EXCEPTION',
-  'EXCEPTION': 'EXCEPTION',
-
-  // Estados de Dropi
-  'Entregado': 'DELIVERED',
-  'En camino': 'IN_TRANSIT',
-  'En bodega': 'PENDING',
-  'Devuelto': 'RETURNED',
-  'Con novedad': 'EXCEPTION',
-  'Reprogramado': 'RESCHEDULED',
-  'En reparto': 'OUT_FOR_DELIVERY',
+// Mapeo de CanonicalStatus a string para compatibilidad con sistema existente
+const CANONICAL_TO_STRING: Record<CanonicalStatus, string> = {
+  [CanonicalStatus.CREATED]: 'CREATED',
+  [CanonicalStatus.PROCESSING]: 'PROCESSING',
+  [CanonicalStatus.SHIPPED]: 'SHIPPED',
+  [CanonicalStatus.IN_TRANSIT]: 'IN_TRANSIT',
+  [CanonicalStatus.OUT_FOR_DELIVERY]: 'OUT_FOR_DELIVERY',
+  [CanonicalStatus.IN_OFFICE]: 'IN_OFFICE',
+  [CanonicalStatus.DELIVERED]: 'DELIVERED',
+  [CanonicalStatus.ISSUE]: 'EXCEPTION',
+  [CanonicalStatus.RETURNED]: 'RETURNED',
+  [CanonicalStatus.CANCELLED]: 'CANCELLED',
 };
 
-function normalizeStatus(status: string): string {
-  return STATUS_MAPPINGS[status] || status.toUpperCase().replace(/\s+/g, '_');
+/**
+ * Normaliza un estado usando StatusNormalizer (fuente única de verdad)
+ */
+function normalizeStatus(status: string, carrier?: string): string {
+  const carrierCode = carrier ? detectCarrier(carrier) : 'UNKNOWN';
+  const normalized = StatusNormalizer.normalize(status, carrierCode);
+  return CANONICAL_TO_STRING[normalized.status] || status.toUpperCase().replace(/\s+/g, '_');
+}
+
+/**
+ * Obtiene el estado canónico completo
+ */
+function getCanonicalStatus(status: string, carrier?: string) {
+  const carrierCode = carrier ? detectCarrier(carrier) : 'UNKNOWN';
+  return StatusNormalizer.normalize(status, carrierCode);
 }
 
 // Detectar discrepancias entre fuentes
@@ -117,9 +126,9 @@ function detectDiscrepancy(record: Partial<UnifiedTrackingRecord>): {
     };
   }
 
-  // Ambas fuentes tienen datos - comparar estados
-  const normalizedSeguimiento = normalizeStatus(record.seguimientoStatus!);
-  const normalizedDropi = normalizeStatus(record.dropiStatus!);
+  // Ambas fuentes tienen datos - comparar estados usando StatusNormalizer
+  const normalizedSeguimiento = normalizeStatus(record.seguimientoStatus!, record.carrier);
+  const normalizedDropi = normalizeStatus(record.dropiStatus!, record.carrier);
 
   if (normalizedSeguimiento !== normalizedDropi) {
     // Casos especiales de discrepancia importantes
@@ -256,14 +265,14 @@ export const useDataSourceStore = create<DataSourceState>()(
             existing.ciudad = item.ciudad || item.city || existing.ciudad;
             existing.carrier = item.carrier || item.transportadora || existing.carrier;
 
-            // Agregar evento a timeline
+            // Agregar evento a timeline usando StatusNormalizer
             existing.timeline.push({
               id: `seg-${Date.now()}-${Math.random()}`,
               guia,
               timestamp: existing.seguimientoDate,
               source: 'seguimiento',
               status: existing.seguimientoStatus,
-              statusNormalized: normalizeStatus(existing.seguimientoStatus),
+              statusNormalized: normalizeStatus(existing.seguimientoStatus, existing.carrier),
               details: existing.seguimientoDetails,
               location: existing.ciudad,
               carrier: existing.carrier,
@@ -320,14 +329,14 @@ export const useDataSourceStore = create<DataSourceState>()(
             existing.ciudad = item.ciudad || item.city || item.ciudad_destino || existing.ciudad;
             existing.carrier = item.carrier || item.transportadora || existing.carrier;
 
-            // Agregar evento a timeline
+            // Agregar evento a timeline usando StatusNormalizer
             existing.timeline.push({
               id: `dropi-${Date.now()}-${Math.random()}`,
               guia,
               timestamp: existing.dropiDate,
               source: 'dropi',
               status: existing.dropiStatus,
-              statusNormalized: normalizeStatus(existing.dropiStatus),
+              statusNormalized: normalizeStatus(existing.dropiStatus, existing.carrier),
               details: existing.dropiDetails,
               location: existing.ciudad,
               carrier: existing.carrier,
