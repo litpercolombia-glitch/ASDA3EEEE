@@ -97,6 +97,7 @@ interface AppState {
   getRondasUsuario: (usuarioId: string) => Ronda[];
   getRondasHoy: (usuarioId: string) => Ronda[];
   getTotalHoy: (usuarioId: string) => number;
+  reiniciarRondas: () => void;
 
   // Acciones - UI
   setViewMode: (mode: ViewMode) => void;
@@ -278,6 +279,15 @@ export const useAppStore = create<AppState>()(
         return rondasHoy.reduce((acc, r) => acc + r.pedidosRealizados, 0);
       },
 
+      reiniciarRondas: () => {
+        const { configTimer } = get();
+        set({
+          rondaActual: 1,
+          timerState: 'idle',
+          tiempoRestante: configTimer.duracionMinutos * 60,
+        });
+      },
+
       // ========== UI ==========
 
       setViewMode: (mode) => {
@@ -296,6 +306,7 @@ export const useAppStore = create<AppState>()(
         configTimer: state.configTimer,
         rondas: state.rondas,
         rondaActual: state.rondaActual,
+        isCompact: state.isCompact,
       }),
     }
   )

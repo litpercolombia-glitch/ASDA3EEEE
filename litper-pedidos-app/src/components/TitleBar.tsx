@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Minus, X, Pin, PinOff, Settings } from 'lucide-react';
+import { Minus, X, Pin, PinOff, Settings, Minimize2, Maximize2 } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 
 declare global {
@@ -9,13 +9,14 @@ declare global {
       closeWindow: () => Promise<void>;
       toggleAlwaysOnTop: () => Promise<boolean>;
       getAlwaysOnTop: () => Promise<boolean>;
+      setWindowSize: (width: number, height: number) => Promise<void>;
       isElectron: boolean;
     };
   }
 }
 
 const TitleBar: React.FC = () => {
-  const { modoAdmin, toggleModoAdmin } = useAppStore();
+  const { modoAdmin, toggleModoAdmin, isCompact, toggleCompact } = useAppStore();
   const [alwaysOnTop, setAlwaysOnTop] = useState(true);
   const isElectron = window.electronAPI?.isElectron;
 
@@ -24,6 +25,17 @@ const TitleBar: React.FC = () => {
       window.electronAPI?.getAlwaysOnTop().then(setAlwaysOnTop);
     }
   }, [isElectron]);
+
+  // Ajustar tamaño de ventana según modo compacto
+  useEffect(() => {
+    if (isElectron && window.electronAPI?.setWindowSize) {
+      if (isCompact) {
+        window.electronAPI.setWindowSize(200, 180);
+      } else {
+        window.electronAPI.setWindowSize(420, 600);
+      }
+    }
+  }, [isCompact, isElectron]);
 
   const handleMinimize = () => {
     if (isElectron) {
@@ -44,6 +56,53 @@ const TitleBar: React.FC = () => {
     }
   };
 
+  const handleToggleCompact = () => {
+    toggleCompact();
+  };
+
+  // Modo compacto - TitleBar minimalista
+  if (isCompact) {
+    return (
+      <div className="drag-region flex items-center justify-between px-2 py-1 bg-dark-900/80 border-b border-dark-700/50">
+        {/* Logo pequeño */}
+        <div className="w-5 h-5 rounded gradient-primary flex items-center justify-center">
+          <span className="text-white text-[10px] font-bold">LP</span>
+        </div>
+
+        {/* Controles mínimos */}
+        <div className="flex items-center gap-0.5 no-drag">
+          {/* Expandir */}
+          <button
+            onClick={handleToggleCompact}
+            className="p-1 rounded text-dark-400 hover:text-white hover:bg-dark-700 transition-all"
+            title="Expandir"
+          >
+            <Maximize2 className="w-3 h-3" />
+          </button>
+
+          {/* Minimize */}
+          <button
+            onClick={handleMinimize}
+            className="p-1 rounded text-dark-400 hover:text-white hover:bg-dark-700 transition-all"
+            title="Minimizar"
+          >
+            <Minus className="w-3 h-3" />
+          </button>
+
+          {/* Close */}
+          <button
+            onClick={handleClose}
+            className="p-1 rounded text-dark-400 hover:text-white hover:bg-accent-red transition-all"
+            title="Cerrar"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Modo normal - TitleBar completo
   return (
     <div className="drag-region flex items-center justify-between px-3 py-2 bg-dark-900/80 border-b border-dark-700/50">
       {/* Logo y título */}
@@ -56,6 +115,15 @@ const TitleBar: React.FC = () => {
 
       {/* Controles */}
       <div className="flex items-center gap-1 no-drag">
+        {/* Modo compacto toggle */}
+        <button
+          onClick={handleToggleCompact}
+          className="p-1.5 rounded-md text-dark-400 hover:text-white hover:bg-dark-700 transition-all"
+          title="Modo compacto"
+        >
+          <Minimize2 className="w-3.5 h-3.5" />
+        </button>
+
         {/* Admin toggle */}
         <button
           onClick={toggleModoAdmin}

@@ -7,10 +7,10 @@ let isQuitting = false;
 
 // Configuración de la ventana
 const WINDOW_CONFIG = {
-  width: 380,
-  height: 520,
-  minWidth: 320,
-  minHeight: 400,
+  width: 420,
+  height: 600,
+  minWidth: 180,  // Permite modo compacto
+  minHeight: 160, // Permite modo compacto
   maxWidth: 500,
   maxHeight: 700,
 };
@@ -187,6 +187,18 @@ ipcMain.handle('window-toggle-always-on-top', () => {
 
 ipcMain.handle('get-always-on-top', () => {
   return mainWindow.isAlwaysOnTop();
+});
+
+ipcMain.handle('window-set-size', (event, width, height) => {
+  if (mainWindow) {
+    mainWindow.setSize(width, height, true);
+    // Centrar la ventana después de redimensionar
+    const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+    const [winWidth, winHeight] = mainWindow.getSize();
+    const x = screenWidth - winWidth - 20;
+    const y = screenHeight - winHeight - 20;
+    mainWindow.setPosition(x, y);
+  }
 });
 
 // Inicialización

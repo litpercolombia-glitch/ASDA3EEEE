@@ -2,7 +2,11 @@ import React, { useEffect } from 'react';
 import { Play, Pause, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import { useAppStore, TIEMPOS_PRESET, TimerColor } from '../stores/appStore';
 
-const CountdownTimer: React.FC = () => {
+interface CountdownTimerProps {
+  compact?: boolean;
+}
+
+const CountdownTimer: React.FC<CountdownTimerProps> = ({ compact = false }) => {
   const {
     configTimer,
     timerState,
@@ -16,7 +20,7 @@ const CountdownTimer: React.FC = () => {
     getTimerColor,
   } = useAppStore();
 
-  // Tick cada segundo
+  // Tick cada segundo - funciona incluso cuando está minimizado
   useEffect(() => {
     if (timerState !== 'running') return;
 
@@ -71,6 +75,80 @@ const CountdownTimer: React.FC = () => {
 
   const colors = colorClasses[timerColor];
 
+  // MODO COMPACTO - Vista minimalista
+  if (compact) {
+    return (
+      <div className="flex flex-col items-center py-2">
+        {/* Badge de ronda pequeño */}
+        <span className="text-[10px] text-dark-400 mb-1">R#{rondaActual}</span>
+
+        {/* Timer circular pequeño */}
+        <div className="relative mb-2">
+          <svg className="w-20 h-20 transform -rotate-90">
+            <circle
+              cx="40"
+              cy="40"
+              r="34"
+              stroke="currentColor"
+              strokeWidth="4"
+              fill="none"
+              className="text-dark-700"
+            />
+            <circle
+              cx="40"
+              cy="40"
+              r="34"
+              stroke="currentColor"
+              strokeWidth="4"
+              fill="none"
+              strokeLinecap="round"
+              className={`${colors.text} transition-all duration-1000`}
+              style={{
+                strokeDasharray: `${2 * Math.PI * 34}`,
+                strokeDashoffset: `${2 * Math.PI * 34 * (1 - progress / 100)}`,
+              }}
+            />
+          </svg>
+
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span
+              className={`text-lg font-mono font-bold ${colors.text} tabular-nums`}
+            >
+              {formatTime(tiempoRestante)}
+            </span>
+          </div>
+        </div>
+
+        {/* Controles compactos */}
+        <div className="flex items-center gap-2">
+          {timerState === 'running' ? (
+            <button
+              onClick={pausarTimer}
+              className={`p-2 rounded-full ${colors.bg}/20 ${colors.text} transition-all`}
+            >
+              <Pause className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              onClick={iniciarTimer}
+              className="p-2 rounded-full bg-accent-green/20 text-accent-green transition-all"
+            >
+              <Play className="w-4 h-4" />
+            </button>
+          )}
+
+          <button
+            onClick={resetearTimer}
+            className="p-1.5 rounded-full bg-dark-700 text-dark-400 hover:text-white transition-all"
+          >
+            <RotateCcw className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // MODO NORMAL - Vista completa
   return (
     <div className="flex flex-col items-center py-4">
       {/* Número de ronda */}

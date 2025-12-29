@@ -1,6 +1,5 @@
-import React from 'react';
-import { Timer, BarChart3, Settings } from 'lucide-react';
-import { useAppStore, ViewMode } from './stores/appStore';
+import React, { useState } from 'react';
+import { useAppStore } from './stores/appStore';
 import {
   TitleBar,
   CountdownTimer,
@@ -8,18 +7,23 @@ import {
   AdminPanel,
   RoundForm,
   StatsPanel,
+  Sidebar,
 } from './components';
 
 const App: React.FC = () => {
-  const { modoAdmin, viewMode, setViewMode, usuarioActual } = useAppStore();
+  const { modoAdmin, viewMode, usuarioActual, isCompact } = useAppStore();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
-  const tabs: Array<{ id: ViewMode; label: string; icon: React.ReactNode }> = [
-    { id: 'timer', label: 'Timer', icon: <Timer className="w-4 h-4" /> },
-    { id: 'stats', label: 'Stats', icon: <BarChart3 className="w-4 h-4" /> },
-  ];
-
-  if (modoAdmin) {
-    tabs.push({ id: 'admin', label: 'Admin', icon: <Settings className="w-4 h-4" /> });
+  // Modo compacto - solo muestra lo esencial
+  if (isCompact) {
+    return (
+      <div className="h-screen flex flex-col glass rounded-xl overflow-hidden">
+        <TitleBar />
+        <div className="flex-1 overflow-y-auto p-2">
+          <CountdownTimer compact />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -27,61 +31,53 @@ const App: React.FC = () => {
       {/* Title bar */}
       <TitleBar />
 
-      {/* User selector */}
-      <UserSelector />
+      {/* Main content with sidebar */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar */}
+        <Sidebar
+          isCollapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
 
-      {/* Navigation tabs */}
-      <div className="px-4 pb-2">
-        <div className="flex bg-dark-800/50 rounded-lg p-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setViewMode(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all no-drag ${
-                viewMode === tab.id
-                  ? 'bg-primary-500 text-white'
-                  : 'text-dark-400 hover:text-white'
-              }`}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
+        {/* Content area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* User selector */}
+          <UserSelector />
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        {viewMode === 'timer' && (
-          <div className="animate-fade-in">
-            <CountdownTimer />
-            {usuarioActual && <RoundForm />}
-            {!usuarioActual && (
-              <div className="px-4 text-center text-dark-500 text-sm">
-                Selecciona un usuario para registrar rondas
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto">
+            {viewMode === 'timer' && (
+              <div className="animate-fade-in">
+                <CountdownTimer />
+                {usuarioActual && <RoundForm />}
+                {!usuarioActual && (
+                  <div className="px-4 text-center text-dark-500 text-sm">
+                    Selecciona un usuario para registrar rondas
+                  </div>
+                )}
+              </div>
+            )}
+
+            {viewMode === 'stats' && (
+              <div className="animate-fade-in">
+                <StatsPanel />
+              </div>
+            )}
+
+            {viewMode === 'admin' && modoAdmin && (
+              <div className="animate-fade-in">
+                <AdminPanel />
               </div>
             )}
           </div>
-        )}
 
-        {viewMode === 'stats' && (
-          <div className="animate-fade-in">
-            <StatsPanel />
+          {/* Footer */}
+          <div className="px-4 py-1.5 border-t border-dark-700/50 text-center">
+            <p className="text-[10px] text-dark-500">
+              LITPER PEDIDOS v1.1 | Siempre encima
+            </p>
           </div>
-        )}
-
-        {viewMode === 'admin' && modoAdmin && (
-          <div className="animate-fade-in">
-            <AdminPanel />
-          </div>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div className="px-4 py-2 border-t border-dark-700/50 text-center">
-        <p className="text-[10px] text-dark-500">
-          LITPER PEDIDOS v1.0 | Siempre encima
-        </p>
+        </div>
       </div>
     </div>
   );

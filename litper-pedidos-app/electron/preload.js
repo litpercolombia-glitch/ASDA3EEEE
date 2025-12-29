@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closeWindow: () => ipcRenderer.invoke('window-close'),
   toggleAlwaysOnTop: () => ipcRenderer.invoke('window-toggle-always-on-top'),
   getAlwaysOnTop: () => ipcRenderer.invoke('get-always-on-top'),
+  setWindowSize: (width, height) => ipcRenderer.invoke('window-set-size', width, height),
 
   // Eventos
   onWindowResize: (callback) => {
