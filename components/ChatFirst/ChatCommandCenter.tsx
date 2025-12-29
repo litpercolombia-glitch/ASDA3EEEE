@@ -302,12 +302,15 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
   const [webSearchEnabled, setWebSearchEnabled] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll a nuevos mensajes
+  // Auto-scroll a nuevos mensajes (corregido para no mover toda la página)
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   }, []);
 
   useEffect(() => {
@@ -709,7 +712,10 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
           {/* Chat Area */}
           <div className={`bg-gradient-to-b from-navy-900/80 to-navy-900/60 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden ${activeSkill ? 'order-1 lg:order-2' : ''}`}>
             {/* Messages */}
-            <div className={`${activeSkill ? 'h-[350px]' : 'h-[400px]'} overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent`}>
+            <div
+              ref={messagesContainerRef}
+              className={`${activeSkill ? 'h-[350px]' : 'h-[400px]'} overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent overscroll-contain`}
+            >
               {messages.map((message) => (
                 <MessageBubble
                   key={message.id}

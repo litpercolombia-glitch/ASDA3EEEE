@@ -26,11 +26,29 @@ interface CountrySelectorProps {
   onCountrySelected: (country: Country) => void;
 }
 
-// Banderas de países
+// Banderas de países (URLs de imágenes porque Windows no soporta emojis de banderas)
 const COUNTRY_FLAGS: Record<Country, string> = {
-  COLOMBIA: '🇨🇴',
-  ECUADOR: '🇪🇨',
-  CHILE: '🇨🇱',
+  COLOMBIA: 'https://flagcdn.com/w160/co.png',
+  ECUADOR: 'https://flagcdn.com/w160/ec.png',
+  CHILE: 'https://flagcdn.com/w160/cl.png',
+};
+
+// Componente de bandera
+const CountryFlag: React.FC<{ country: Country; size?: 'sm' | 'md' | 'lg' }> = ({ country, size = 'md' }) => {
+  const sizeClasses = {
+    sm: 'w-8 h-6',
+    md: 'w-16 h-12',
+    lg: 'w-24 h-18',
+  };
+
+  return (
+    <img
+      src={COUNTRY_FLAGS[country]}
+      alt={`Bandera de ${country}`}
+      className={`${sizeClasses[size]} object-cover rounded-md shadow-lg`}
+      loading="lazy"
+    />
+  );
 };
 
 const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) => {
@@ -178,12 +196,20 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
                   <div className="relative z-10 p-8">
                     {/* Bandera grande con efecto */}
                     <div className="relative inline-block mb-6">
-                      <div className="text-8xl filter drop-shadow-2xl transform group-hover:scale-110 transition-transform duration-500">
-                        {COUNTRY_FLAGS[config.code]}
+                      <div className="transform group-hover:scale-110 transition-transform duration-500">
+                        <img
+                          src={COUNTRY_FLAGS[config.code]}
+                          alt={`Bandera de ${config.name}`}
+                          className="w-32 h-24 object-cover rounded-xl shadow-2xl border-2 border-white/20"
+                        />
                       </div>
                       {/* Glow behind flag */}
-                      <div className="absolute inset-0 text-8xl blur-2xl opacity-40 group-hover:opacity-60 transition-opacity">
-                        {COUNTRY_FLAGS[config.code]}
+                      <div className="absolute inset-0 blur-2xl opacity-40 group-hover:opacity-60 transition-opacity">
+                        <img
+                          src={COUNTRY_FLAGS[config.code]}
+                          alt=""
+                          className="w-32 h-24 object-cover rounded-xl"
+                        />
                       </div>
                       {/* Decorative elements */}
                       <div className="absolute -top-2 -right-2 w-4 h-4 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full opacity-0 group-hover:opacity-100 animate-ping transition-opacity" />
@@ -249,7 +275,11 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
             <div className="bg-white/[0.03] backdrop-blur-xl rounded-3xl border border-white/10 p-8 mb-8 animate-fade-in">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-4">
-                  <div className="text-6xl">{COUNTRY_FLAGS[selectedConfig.code]}</div>
+                  <img
+                    src={COUNTRY_FLAGS[selectedConfig.code]}
+                    alt={`Bandera de ${selectedConfig.name}`}
+                    className="w-20 h-14 object-cover rounded-lg shadow-xl border-2 border-white/20"
+                  />
                   <div>
                     <h2 className="text-4xl font-black text-white">{selectedConfig.name}</h2>
                     <p className="text-slate-400 text-lg">
