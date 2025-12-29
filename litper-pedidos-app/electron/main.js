@@ -26,11 +26,11 @@ function createWindow() {
 
     // SIN BORDES - ESTILO FLOTANTE
     frame: false,
-    transparent: true,
+    transparent: false,
 
-    // POSICIÓN INICIAL (esquina inferior derecha)
-    x: screenWidth - WINDOW_CONFIG.width - 20,
-    y: screenHeight - WINDOW_CONFIG.height - 20,
+    // POSICIÓN INICIAL (centrada)
+    x: Math.floor((screenWidth - WINDOW_CONFIG.width) / 2),
+    y: Math.floor((screenHeight - WINDOW_CONFIG.height) / 2),
 
     // OPCIONES DE VENTANA
     skipTaskbar: false,
@@ -41,6 +41,7 @@ function createWindow() {
     closable: true,
     focusable: true,
     hasShadow: true,
+    show: false,
 
     // CONFIGURACIÓN WEB
     webPreferences: {
@@ -51,9 +52,13 @@ function createWindow() {
     },
 
     // ESTILO
-    backgroundColor: '#00000000',
-    titleBarStyle: 'hidden',
-    vibrancy: 'dark',
+    backgroundColor: '#1a1a2e',
+  });
+
+  // Mostrar cuando esté lista
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+    mainWindow.focus();
   });
 
   // Cargar la app
