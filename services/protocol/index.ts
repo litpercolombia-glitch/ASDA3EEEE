@@ -6,6 +6,7 @@
  */
 
 export { ProtocolEngine } from './ProtocolEngine';
+export { DryRunSimulator } from './DryRunSimulator';
 export { NoMovement48HProtocol, AtOffice3DProtocol } from './protocols';
 
 // Re-export types
@@ -19,5 +20,11 @@ export type {
   ActionPriority,
   BatchProtocolResult,
 } from '../../types/protocol.types';
+
+export type {
+  DryRunReport,
+  DryRunGuideResult,
+  DryRunConfig,
+} from '../../types/dryrun.types';
 
 export { buildActionPlanKey } from '../../types/protocol.types';
