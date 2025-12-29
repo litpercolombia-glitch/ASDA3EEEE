@@ -1,0 +1,36 @@
+{
+  "event": "tracking_updated",
+  "event_id": "evt_track_xyz789abc123",
+  "timestamp": "2024-12-29T14:30:00Z",
+  "source": "carrier_webhook",
+  "data": {
+    "order_id": "ORD-2024-12345",
+    "tracking_number": "1234567890",
+    "carrier": "Coordinadora",
+    "status": {
+      "code": "EN_DISTRIBUCION",
+      "description": "En distribución - Centro de distribución Bogotá Norte",
+      "timestamp": "2024-12-29T14:25:00Z"
+    },
+    "previous_status": {
+      "code": "EN_TRANSITO",
+      "description": "En tránsito hacia ciudad destino",
+      "timestamp": "2024-12-29T10:00:00Z"
+    },
+    "location": {
+      "city": "Bogotá",
+      "department": "Cundinamarca",
+      "facility": "Centro de Distribución Norte"
+    },
+    "estimated_delivery": "2024-12-30T18:00:00Z",
+    "delivery_attempts": 0,
+    "notes": null
+  },
+  "raw_carrier_response": {
+    "guia": "1234567890",
+    "estado": "EN DISTRIBUCION",
+    "fecha_estado": "2024-12-29 14:25:00",
+    "ciudad": "BOGOTA",
+    "detalle": "UNIDAD EN CENTRO DE DISTRIBUCION BOGOTA NORTE"
+  }
+}

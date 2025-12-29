@@ -1,0 +1,20 @@
+{
+  "event": "message_received",
+  "timestamp": "2024-12-29T10:30:00Z",
+  "webhook_id": "5423b247e32fc95f089fc0905393cd69",
+  "data": {
+    "message_id": "wamid.HBgLNTczMDAxMjM0NTY3FQIAEhgUM0VCMDVGRjQ2MzI0QTk5MDYxQjQA",
+    "from": "+573001234567",
+    "from_name": "María García",
+    "type": "text",
+    "text": {
+      "body": "Hola, ¿cuál es el estado de mi pedido 12345?"
+    },
+    "timestamp": "2024-12-29T10:29:55Z"
+  },
+  "metadata": {
+    "phone_number_id": "123456789012345",
+    "display_phone_number": "+573009876543",
+    "business_account_id": "987654321098765"
+  }
+}

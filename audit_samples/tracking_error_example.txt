@@ -1,0 +1,102 @@
+# ============================================
+# ERRORES TÍPICOS DE TRACKING - LITPER PRO
+# ============================================
+
+## ERROR 1: Propiedad de objeto nulo
+```
+TypeError: Cannot read properties of undefined (reading 'name')
+    at getCarrierName (statusParserService.ts:45:23)
+    at parseTrackingResponse (statusParserService.ts:112:15)
+    at handleWebhook (webhookService.ts:89:20)
+
+Causa: La transportadora envía un estado sin el campo 'carrier' poblado
+Payload problemático:
+{
+  "guia": "123456",
+  "estado": "ENTREGADO",
+  "carrier": null  // <-- PROBLEMA: null en lugar de objeto
+}
+```
+
+## ERROR 2: Estado no mapeado
+```
+Warning: Unknown status code 'REEXPEDICION' from carrier 'Servientrega'
+    at mapEstado (webhookService.ts:87:5)
+
+Causa: Nuevos estados de transportadora no contemplados en ESTADO_MAP
+Estados faltantes detectados:
+- REEXPEDICION
+- EN_BODEGA_DESTINO
+- ZONA_DIFICIL_ACCESO
+- CLIENTE_RECOGE_EN_OFICINA
+```
+
+## ERROR 3: Guía duplicada
+```
+PostgresError: duplicate key value violates unique constraint "guias_numero_guia_key"
+    at insertGuia (supabaseService.ts:234:12)
+
+Causa: Webhook recibido múltiples veces sin deduplicación
+event_id no está siendo validado antes de procesar
+```
+
+## ERROR 4: Timeout en API Chatea
+```
+Error: Request timeout after 30000ms
+    at sendWhatsAppMessage (chateaService.ts:78:15)
+
+Causa: Chatea API lenta o caída, sin circuit breaker implementado
+Frecuencia: ~5% de los envíos en horario pico (10am-12pm)
+```
+
+## ERROR 5: Inconsistencia de estados
+```
+DataIntegrityWarning: Status mismatch detected
+  - Dropi status: "entregado" (updated: 2024-12-28 10:00)
+  - Carrier status: "en_transito" (updated: 2024-12-28 14:00)
+  - Local status: "en_reparto" (updated: 2024-12-28 08:00)
+
+Causa: No hay reconciliación automática entre fuentes
+La transportadora reporta estado más reciente pero Dropi tiene dato viejo
+```
+
+## ERROR 6: Memoria excesiva en exportación
+```
+JavaScript heap out of memory
+    at ExcelJS.Workbook.xlsx.writeBuffer
+    at exportToExcel (excelService.ts:156:20)
+
+Causa: Intentando exportar 50,000+ guías sin streaming
+Solución requerida: Paginación server-side + streaming de archivo
+```
+
+## ERROR 7: N+1 Query en dashboard
+```
+Performance: 847 queries executed in 12.3s for dashboard load
+    at getDashboardStats (analyticsService.ts:45:10)
+
+Causa: Cada guía hace query individual para obtener última novedad
+Queries detectados:
+- 1 query para lista de guías
+- N queries para estado de cada guía
+- N queries para novedades de cada guía
+```
+
+## ERROR 8: Token expirado sin refresh
+```
+AuthError: JWT expired
+    at verifyToken (authService.ts:89:12)
+
+Causa: Token de 1 hora sin mecanismo de refresh automático
+Usuario pierde sesión durante trabajo largo sin aviso
+```
+
+## RESUMEN DE ERRORES POR FRECUENCIA
+| Error | Frecuencia/día | Impacto | Prioridad |
+|-------|----------------|---------|-----------|
+| Estado no mapeado | ~50 | Medio | P1 |
+| Timeout Chatea | ~30 | Alto | P0 |
+| Guía duplicada | ~20 | Bajo | P2 |
+| Inconsistencia estados | ~100 | Crítico | P0 |
+| N+1 queries | constante | Medio | P1 |
+| Memoria Excel | ~5 | Alto | P1 |
