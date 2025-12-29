@@ -115,6 +115,8 @@ export default async function handler(
   if (req.method === 'GET') {
     const config = RiskFlags.getConfig();
 
+    // Cache OK for read-only GET
+    res.setHeader('Cache-Control', 'private, max-age=30');
     res.status(200).json({
       timestamp: new Date().toISOString(),
       config: {
@@ -152,6 +154,9 @@ export default async function handler(
   const data = validation.data!;
   const now = new Date();
   const changes: string[] = [];
+
+  // CRITICAL: No caching for mutations
+  res.setHeader('Cache-Control', 'no-store');
 
   try {
     // Full replacement if provided

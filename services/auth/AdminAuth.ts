@@ -55,9 +55,17 @@ function constantTimeCompare(a: string, b: string): boolean {
 export function validateAdminAuth(req: VercelRequest): AuthResult {
   const adminSecret = process.env.ADMIN_SECRET;
 
-  // If ADMIN_SECRET not set, fall back to CRON_SECRET for backwards compatibility
-  // but log a warning
+  // ⚠️ SECURITY DEPRECATION WARNING ⚠️
+  // Fallback to CRON_SECRET is for migration only.
+  // DEADLINE: 2025-01-05 (7 days from PR #7 merge)
+  // After this date, remove the fallback and require ADMIN_SECRET.
+  // Risk: If CRON_SECRET leaks, admin endpoints are compromised.
+  // TODO: Remove fallback after rotating secrets in production.
   const secret = adminSecret || process.env.CRON_SECRET;
+
+  if (!adminSecret && process.env.CRON_SECRET) {
+    console.warn('[ADMIN_AUTH] ⚠️ DEPRECATION: Using CRON_SECRET fallback. Set ADMIN_SECRET before 2025-01-05.');
+  }
 
   if (!secret) {
     return {

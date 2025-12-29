@@ -137,6 +137,8 @@ export default async function handler(
       return;
     }
 
+    // Cache OK for read-only GET
+    res.setHeader('Cache-Control', 'private, max-age=30');
     res.status(200).json({
       timestamp: new Date().toISOString(),
       state: getRolloutState(),
@@ -174,6 +176,9 @@ export default async function handler(
 
   const { action, limits, reason } = validation.data!;
   const now = new Date();
+
+  // CRITICAL: No caching for mutations
+  res.setHeader('Cache-Control', 'no-store');
 
   try {
     switch (action) {
