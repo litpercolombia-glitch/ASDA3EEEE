@@ -607,113 +607,44 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
     }
   };
 
+  // Prevenir scroll de página cuando se hace focus en el input
+  const handleInputFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    // Mantener el scroll de la página en su posición actual
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
+
   return (
-    <div className="min-h-[calc(100vh-200px)] bg-gradient-to-br from-navy-950 via-navy-900 to-navy-950 rounded-2xl p-4 md:p-6">
-      <div className="max-w-5xl mx-auto space-y-4">
-        {/* Header minimalista */}
-        <div className="flex items-center justify-between mb-2">
+    <div className="h-[calc(100vh-220px)] bg-gradient-to-br from-navy-950 via-navy-900 to-navy-950 rounded-2xl overflow-hidden flex flex-col">
+      {/* Header compacto - altura fija */}
+      <div className="flex-shrink-0 p-4 border-b border-white/5">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="relative bg-gradient-to-br from-purple-500 to-violet-600 p-2.5 rounded-xl shadow-lg">
+            <div className="relative bg-gradient-to-br from-purple-500 to-violet-600 p-2 rounded-xl">
               <Sparkles className="w-5 h-5 text-white" />
-              <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full border border-navy-950 animate-pulse" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white flex items-center gap-2">
-                Asistente IA
-                <span className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded-full font-normal">Pro</span>
-              </h1>
-              <p className="text-[11px] text-slate-500">
-                {shipments.length > 0 ? `${shipments.length} guías cargadas` : 'Sin guías cargadas'}
+              <h1 className="text-base font-bold text-white">Asistente IA</h1>
+              <p className="text-[10px] text-slate-500">
+                {shipments.length > 0 ? `${shipments.length} guías` : 'Sin guías'}
               </p>
             </div>
           </div>
-
           <div className="flex items-center gap-1">
-            {/* Skills Toggle Compacto */}
-            <div className="hidden md:flex items-center gap-1 mr-2 px-2 py-1 bg-white/5 rounded-lg">
-              {CORE_SKILLS.slice(0, 4).map((skill) => {
-                const Icon = skill.icon;
-                return (
-                  <button
-                    key={skill.id}
-                    onClick={() => handleSkillClick(skill)}
-                    className={`p-1.5 rounded-md transition-all ${
-                      activeSkill === skill.id
-                        ? 'bg-accent-500/20 text-accent-400'
-                        : 'text-slate-500 hover:text-white hover:bg-white/10'
-                    }`}
-                    title={skill.label}
-                  >
-                    <Icon className="w-4 h-4" />
-                  </button>
-                );
-              })}
-            </div>
-            <button
-              onClick={onRefreshData}
-              className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-              title="Actualizar datos"
-            >
+            <button onClick={onRefreshData} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg">
               <RefreshCw className="w-4 h-4" />
             </button>
-            <button
-              onClick={() => onNavigateToTab?.('admin')}
-              className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-              title="Configuración"
-            >
+            <button onClick={() => onNavigateToTab?.('admin')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg">
               <Settings className="w-4 h-4" />
             </button>
           </div>
         </div>
+      </div>
 
-        {/* KPIs Compactos (solo si hay envíos) */}
-        {shipments.length > 0 && (
-          <div className="grid grid-cols-4 md:grid-cols-5 gap-2">
-            {(() => {
-              const total = shipments.length;
-              const delivered = shipments.filter(s => s.status === 'delivered').length;
-              const inTransit = shipments.filter(s => s.status === 'in_transit').length;
-              const issues = shipments.filter(s => s.status === 'issue').length;
-              const rate = total > 0 ? Math.round((delivered / total) * 100) : 0;
-
-              return [
-                { label: 'Total', value: total, color: 'text-white', bg: 'bg-slate-800/50' },
-                { label: 'Entregados', value: delivered, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-                { label: 'Tránsito', value: inTransit, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-                { label: 'Novedades', value: issues, color: 'text-orange-400', bg: 'bg-orange-500/10' },
-                { label: 'Tasa', value: `${rate}%`, color: rate >= 80 ? 'text-emerald-400' : 'text-amber-400', bg: 'bg-white/5', hideOnMobile: true },
-              ].map((stat, i) => (
-                <div
-                  key={i}
-                  className={`${stat.bg} rounded-xl p-3 text-center border border-white/5 ${stat.hideOnMobile ? 'hidden md:block' : ''}`}
-                >
-                  <p className={`text-lg font-bold ${stat.color}`}>{stat.value}</p>
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider">{stat.label}</p>
-                </div>
-              ));
-            })()}
-          </div>
-        )}
-
-        {/* Alerta rápida si hay novedades críticas */}
-        {shipments.filter(s => s.status === 'issue').length > 0 && !activeSkill && (
-          <button
-            onClick={() => handleQuickAction('Muestrame los envios con novedades')}
-            className="w-full flex items-center gap-3 p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl text-left hover:bg-orange-500/20 transition-colors group"
-          >
-            <AlertTriangle className="w-5 h-5 text-orange-400" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-orange-300">
-                {shipments.filter(s => s.status === 'issue').length} envíos requieren atención
-              </p>
-              <p className="text-xs text-slate-500">Click para ver detalles</p>
-            </div>
-            <ArrowRight className="w-4 h-4 text-orange-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </button>
-        )}
-
-        {/* Main Content Area - Split when skill is active */}
-        <div className={`grid gap-6 ${activeSkill ? 'lg:grid-cols-2' : 'grid-cols-1'}`}>
+      {/* Contenido principal - flex-1 para ocupar espacio restante */}
+      <div className="flex-1 flex flex-col overflow-hidden p-4">
+        {/* Grid de contenido */}
+        <div className={`flex-1 flex flex-col overflow-hidden ${activeSkill ? 'lg:grid lg:grid-cols-2 lg:gap-4' : ''}`}>
           {/* Skill Panel - Shows when a skill is active */}
           {activeSkill && (
             <div className="bg-gradient-to-b from-navy-900/80 to-navy-900/60 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden order-2 lg:order-1">
@@ -777,12 +708,12 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
             </div>
           )}
 
-          {/* Chat Area */}
-          <div className={`bg-gradient-to-b from-navy-900/80 to-navy-900/60 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden ${activeSkill ? 'order-1 lg:order-2' : ''}`}>
-            {/* Messages */}
+          {/* Chat Area - usa flex para distribuir espacio */}
+          <div className={`flex-1 flex flex-col bg-gradient-to-b from-navy-900/80 to-navy-900/60 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden ${activeSkill ? 'order-1 lg:order-2' : ''}`}>
+            {/* Messages - flex-1 para ocupar todo el espacio disponible */}
             <div
               ref={chatContainerRef}
-              className={`${activeSkill ? 'h-[400px]' : 'h-[500px]'} overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent`}
+              className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
             >
               {messages.map((message) => (
                 <MessageBubble
@@ -794,8 +725,8 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Area - Simplificado */}
-            <div className="border-t border-white/10 p-4">
+            {/* Input Area - altura fija, no se encoge */}
+            <div className="flex-shrink-0 border-t border-white/10 p-3">
               {/* Preview de imagen adjunta */}
               {attachedImage && (
                 <div className="mb-3 relative inline-block">
@@ -936,8 +867,9 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
+                    onFocus={handleInputFocus}
                     placeholder={activeSkill ? `Pregunta sobre ${CORE_SKILLS.find(s => s.id === activeSkill)?.label.toLowerCase()}...` : "Escribe tu mensaje..."}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all"
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all"
                     disabled={isProcessing}
                   />
                   {activeSkill && (
@@ -977,15 +909,6 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
               )}
             </div>
           </div>
-        </div>
-
-        {/* Skills Bar - Solo en móvil */}
-        <div className="md:hidden">
-          <SkillsBar
-            onSkillClick={handleSkillClick}
-            activeSkill={activeSkill}
-            showExamples={false}
-          />
         </div>
       </div>
     </div>
