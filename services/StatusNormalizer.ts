@@ -13,6 +13,7 @@ import {
   NormalizedStatus,
   CarrierCode,
   StatusMapping,
+  DataSource,
 } from '../types/canonical.types';
 
 /**
@@ -386,16 +387,29 @@ export class StatusNormalizer {
   /**
    * Normalize a carrier status to canonical status
    *
+   * PR#1 Spec: normalizeShipment(input) returns:
+   * - canonicalStatus (status)
+   * - exceptionReason? (reason)
+   * - rawStatus (texto original)
+   * - source (dropi / carrier / excel / manual)
+   * - lastEventAt (timestamp evento)
+   *
    * @param rawStatus - The raw status string from the carrier
    * @param carrier - The carrier code (or tracking number/carrier name for auto-detection)
-   * @param timestamp - Optional timestamp (defaults to now)
-   * @returns NormalizedStatus with status, reason, rawStatus, timestamp
+   * @param options - Optional: source and lastEventAt
+   * @returns NormalizedStatus with status, reason, rawStatus, source, lastEventAt
    */
   static normalize(
     rawStatus: string,
     carrier: CarrierCode | string,
-    timestamp?: Date | string
+    options?: {
+      source?: DataSource;
+      lastEventAt?: Date | string;
+    }
   ): NormalizedStatus {
+    const source = options?.source || 'carrier';
+    const lastEventAt = this.parseTimestamp(options?.lastEventAt);
+
     // Detect carrier if not a valid CarrierCode
     const carrierCode = this.isCarrierCode(carrier) ? carrier : detectCarrier(carrier);
 
@@ -418,7 +432,8 @@ export class StatusNormalizer {
           status: mapping.status,
           reason: mapping.reason || ExceptionReason.NONE,
           rawStatus,
-          timestamp: this.parseTimestamp(timestamp),
+          source,
+          lastEventAt,
         };
       }
     }
@@ -437,7 +452,8 @@ export class StatusNormalizer {
             status: mapping.status,
             reason: mapping.reason || ExceptionReason.NONE,
             rawStatus,
-            timestamp: this.parseTimestamp(timestamp),
+            source,
+            lastEventAt,
           };
         }
       }
@@ -448,7 +464,8 @@ export class StatusNormalizer {
       status: CanonicalStatus.ISSUE,
       reason: ExceptionReason.OTHER,
       rawStatus,
-      timestamp: this.parseTimestamp(timestamp),
+      source,
+      lastEventAt,
     };
   }
 
@@ -456,9 +473,19 @@ export class StatusNormalizer {
    * Batch normalize multiple statuses
    */
   static normalizeBatch(
-    items: Array<{ rawStatus: string; carrier: CarrierCode | string; timestamp?: Date | string }>
+    items: Array<{
+      rawStatus: string;
+      carrier: CarrierCode | string;
+      source?: DataSource;
+      lastEventAt?: Date | string;
+    }>
   ): NormalizedStatus[] {
-    return items.map((item) => this.normalize(item.rawStatus, item.carrier, item.timestamp));
+    return items.map((item) =>
+      this.normalize(item.rawStatus, item.carrier, {
+        source: item.source,
+        lastEventAt: item.lastEventAt,
+      })
+    );
   }
 
   /**

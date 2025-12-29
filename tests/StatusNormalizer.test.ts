@@ -7,6 +7,13 @@
  * - Envía
  * - TCC
  * - Servientrega
+ *
+ * PR#1 Spec Coverage:
+ * - canonicalStatus (status)
+ * - exceptionReason? (reason)
+ * - rawStatus (texto original)
+ * - source (dropi / carrier / excel / manual)
+ * - lastEventAt (timestamp evento)
  */
 
 import { describe, it, expect } from 'vitest';
@@ -15,18 +22,20 @@ import {
   CanonicalStatus,
   ExceptionReason,
   NormalizedStatus,
+  DataSource,
 } from '../types/canonical.types';
 
 describe('StatusNormalizer', () => {
-  describe('normalize() returns correct structure', () => {
-    it('should return status, reason, rawStatus, and timestamp', () => {
+  describe('normalize() returns correct structure (PR#1 spec)', () => {
+    it('should return status, reason, rawStatus, source, and lastEventAt', () => {
       const result = StatusNormalizer.normalize('ENTREGADO', 'COORDINADORA');
 
       expect(result).toHaveProperty('status');
       expect(result).toHaveProperty('reason');
       expect(result).toHaveProperty('rawStatus');
-      expect(result).toHaveProperty('timestamp');
-      expect(result.timestamp).toBeInstanceOf(Date);
+      expect(result).toHaveProperty('source');
+      expect(result).toHaveProperty('lastEventAt');
+      expect(result.lastEventAt).toBeInstanceOf(Date);
     });
 
     it('should preserve the original rawStatus', () => {
@@ -36,18 +45,41 @@ describe('StatusNormalizer', () => {
       expect(result.rawStatus).toBe(rawStatus);
     });
 
-    it('should use provided timestamp', () => {
-      const timestamp = new Date('2024-01-15T10:30:00Z');
-      const result = StatusNormalizer.normalize('ENTREGADO', 'COORDINADORA', timestamp);
-
-      expect(result.timestamp).toEqual(timestamp);
+    it('should default source to carrier', () => {
+      const result = StatusNormalizer.normalize('ENTREGADO', 'COORDINADORA');
+      expect(result.source).toBe('carrier');
     });
 
-    it('should parse string timestamp', () => {
-      const timestampStr = '2024-01-15T10:30:00Z';
-      const result = StatusNormalizer.normalize('ENTREGADO', 'COORDINADORA', timestampStr);
+    it('should use provided source', () => {
+      const result = StatusNormalizer.normalize('ENTREGADO', 'COORDINADORA', {
+        source: 'dropi',
+      });
+      expect(result.source).toBe('dropi');
+    });
 
-      expect(result.timestamp).toEqual(new Date(timestampStr));
+    it('should support all source types', () => {
+      const sources: DataSource[] = ['dropi', 'carrier', 'excel', 'manual', 'webhook', 'system'];
+
+      sources.forEach((source) => {
+        const result = StatusNormalizer.normalize('ENTREGADO', 'COORDINADORA', { source });
+        expect(result.source).toBe(source);
+      });
+    });
+
+    it('should use provided lastEventAt', () => {
+      const lastEventAt = new Date('2024-01-15T10:30:00Z');
+      const result = StatusNormalizer.normalize('ENTREGADO', 'COORDINADORA', { lastEventAt });
+
+      expect(result.lastEventAt).toEqual(lastEventAt);
+    });
+
+    it('should parse string lastEventAt', () => {
+      const lastEventAtStr = '2024-01-15T10:30:00Z';
+      const result = StatusNormalizer.normalize('ENTREGADO', 'COORDINADORA', {
+        lastEventAt: lastEventAtStr,
+      });
+
+      expect(result.lastEventAt).toEqual(new Date(lastEventAtStr));
     });
   });
 
@@ -483,19 +515,31 @@ describe('StatusNormalizer', () => {
       expect(results[2].reason).toBe(ExceptionReason.REJECTED);
     });
 
-    it('should preserve timestamps in batch', () => {
-      const timestamp1 = new Date('2024-01-10');
-      const timestamp2 = new Date('2024-01-11');
+    it('should preserve lastEventAt in batch', () => {
+      const lastEventAt1 = new Date('2024-01-10');
+      const lastEventAt2 = new Date('2024-01-11');
 
       const items = [
-        { rawStatus: 'ENTREGADO', carrier: 'COORDINADORA' as const, timestamp: timestamp1 },
-        { rawStatus: 'EN REPARTO', carrier: 'COORDINADORA' as const, timestamp: timestamp2 },
+        { rawStatus: 'ENTREGADO', carrier: 'COORDINADORA' as const, lastEventAt: lastEventAt1 },
+        { rawStatus: 'EN REPARTO', carrier: 'COORDINADORA' as const, lastEventAt: lastEventAt2 },
       ];
 
       const results = StatusNormalizer.normalizeBatch(items);
 
-      expect(results[0].timestamp).toEqual(timestamp1);
-      expect(results[1].timestamp).toEqual(timestamp2);
+      expect(results[0].lastEventAt).toEqual(lastEventAt1);
+      expect(results[1].lastEventAt).toEqual(lastEventAt2);
+    });
+
+    it('should preserve source in batch', () => {
+      const items = [
+        { rawStatus: 'ENTREGADO', carrier: 'COORDINADORA' as const, source: 'dropi' as const },
+        { rawStatus: 'EN REPARTO', carrier: 'COORDINADORA' as const, source: 'excel' as const },
+      ];
+
+      const results = StatusNormalizer.normalizeBatch(items);
+
+      expect(results[0].source).toBe('dropi');
+      expect(results[1].source).toBe('excel');
     });
   });
 

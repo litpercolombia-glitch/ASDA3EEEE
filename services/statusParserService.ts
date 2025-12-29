@@ -1,119 +1,61 @@
 // services/statusParserService.ts
 // Servicio para extraer el estatus real del último movimiento de las guías
+// MIGRADO: Usa StatusNormalizer como fuente única de verdad
 
 import { EstadoNormalizado } from '../types/carga.types';
+import { StatusNormalizer, detectCarrier } from './StatusNormalizer';
+import {
+  CanonicalStatus,
+  CanonicalStatusLabels,
+  ExceptionReason,
+  ExceptionReasonLabels,
+  NormalizedStatus,
+  CarrierCode,
+} from '../types/canonical.types';
 
-// ==================== MAPEO DE DESCRIPCIONES A ESTADOS ====================
+// ==================== MAPEO CANÓNICO A ESTADO NORMALIZADO LEGACY ====================
+// Este mapeo mantiene compatibilidad con el tipo EstadoNormalizado existente
 
-const MAPEO_INTER_RAPIDISIMO: Record<string, EstadoNormalizado> = {
-  'envío fue entregado': 'Entregado',
-  'envio fue entregado': 'Entregado',
-  'tú envío fue entregado': 'Entregado',
-  'tu envio fue entregado': 'Entregado',
-  'entregado': 'Entregado',
-  'no logramos hacer la entrega': 'Intento Fallido',
-  'no se logro la entrega': 'Intento Fallido',
-  'intento de entrega fallido': 'Intento Fallido',
-  'en centro logístico destino': 'En Destino',
-  'en centro logistico destino': 'En Destino',
-  'viajando a tu destino': 'En Tránsito',
-  'en centro logístico de tránsito': 'En Tránsito',
-  'en centro logistico de transito': 'En Tránsito',
-  'recibimos tú envío': 'Recibido',
-  'recibimos tu envio': 'Recibido',
-  'en reparto': 'En Reparto',
-  'en ruta de entrega': 'En Reparto',
-  'devuelto': 'Devuelto',
-  'devolución': 'Devuelto',
-  'en punto de recogida': 'En Oficina',
-  'disponible para retiro': 'En Oficina',
-  'novedad': 'Novedad',
-  'problema con la dirección': 'Novedad',
-  'dirección incorrecta': 'Novedad',
+const CANONICAL_TO_LEGACY: Record<CanonicalStatus, EstadoNormalizado> = {
+  [CanonicalStatus.CREATED]: 'Creado',
+  [CanonicalStatus.PROCESSING]: 'Recibido',
+  [CanonicalStatus.SHIPPED]: 'En Tránsito',
+  [CanonicalStatus.IN_TRANSIT]: 'En Tránsito',
+  [CanonicalStatus.OUT_FOR_DELIVERY]: 'En Reparto',
+  [CanonicalStatus.IN_OFFICE]: 'En Oficina',
+  [CanonicalStatus.DELIVERED]: 'Entregado',
+  [CanonicalStatus.ISSUE]: 'Novedad',
+  [CanonicalStatus.RETURNED]: 'Devuelto',
+  [CanonicalStatus.CANCELLED]: 'Devuelto', // No hay 'Cancelado' en legacy
 };
 
-const MAPEO_COORDINADORA: Record<string, EstadoNormalizado> = {
-  'entrega exitosa': 'Entregado',
-  'entregado': 'Entregado',
-  'paquete entregado': 'Entregado',
-  'en reparto': 'En Reparto',
-  'salió a reparto': 'En Reparto',
-  'salio a reparto': 'En Reparto',
-  'en terminal destino': 'En Destino',
-  'llegó a terminal destino': 'En Destino',
-  'llego a terminal destino': 'En Destino',
-  'en tránsito': 'En Tránsito',
-  'en transito': 'En Tránsito',
-  'en terminal origen': 'Recibido',
-  'recibido en terminal': 'Recibido',
-  'guía generada': 'Creado',
-  'guia generada': 'Creado',
-  'en punto droop': 'En Oficina',
-  'disponible en punto': 'En Oficina',
-  'intento de entrega': 'Intento Fallido',
-  'no entregado': 'Intento Fallido',
-  'devuelto': 'Devuelto',
-  'en devolución': 'Devuelto',
-  'novedad': 'Novedad',
-  'problema': 'Novedad',
-};
-
-const MAPEO_ENVIA: Record<string, EstadoNormalizado> = {
-  'entregado': 'Entregado',
-  'entrega exitosa': 'Entregado',
-  'paquete entregado': 'Entregado',
-  'en camino': 'En Tránsito',
-  'en tránsito': 'En Tránsito',
-  'en transito': 'En Tránsito',
-  'en reparto': 'En Reparto',
-  'en ruta': 'En Reparto',
-  'llegó a destino': 'En Destino',
-  'llego a destino': 'En Destino',
-  'recibido': 'Recibido',
-  'admitido': 'Recibido',
-  'en oficina': 'En Oficina',
-  'disponible para retiro': 'En Oficina',
-  'intento fallido': 'Intento Fallido',
-  'no entregado': 'Intento Fallido',
-  'devuelto': 'Devuelto',
-  'novedad': 'Novedad',
-};
-
-const MAPEO_TCC: Record<string, EstadoNormalizado> = {
-  'entregado': 'Entregado',
-  'entrega realizada': 'Entregado',
-  'en tránsito': 'En Tránsito',
-  'en transito': 'En Tránsito',
-  'en distribución': 'En Reparto',
-  'en distribucion': 'En Reparto',
-  'en bodega destino': 'En Destino',
-  'recepcionado': 'Recibido',
-  'en agencia': 'En Oficina',
-  'intento de entrega': 'Intento Fallido',
-  'devuelto': 'Devuelto',
-  'novedad': 'Novedad',
-};
-
-const MAPEO_SERVIENTREGA: Record<string, EstadoNormalizado> = {
-  'entregado': 'Entregado',
-  'entrega exitosa': 'Entregado',
-  'en tránsito': 'En Tránsito',
-  'en transito': 'En Tránsito',
-  'en reparto': 'En Reparto',
-  'en centro de distribución': 'En Destino',
-  'en centro de distribucion': 'En Destino',
-  'admitido': 'Recibido',
-  'recibido': 'Recibido',
-  'en punto de entrega': 'En Oficina',
-  'intento fallido': 'Intento Fallido',
-  'devuelto': 'Devuelto',
-  'novedad': 'Novedad',
+// Mapeo especial para razones de novedad que son "Intento Fallido"
+const ISSUE_REASON_TO_LEGACY: Partial<Record<ExceptionReason, EstadoNormalizado>> = {
+  [ExceptionReason.DELIVERY_ATTEMPT_FAILED]: 'Intento Fallido',
+  [ExceptionReason.RECIPIENT_UNAVAILABLE]: 'Intento Fallido',
 };
 
 // ==================== FUNCIÓN PRINCIPAL ====================
 
 /**
+ * Convierte un NormalizedStatus canónico a EstadoNormalizado legacy
+ */
+function canonicalToLegacy(normalized: NormalizedStatus): EstadoNormalizado {
+  // Caso especial: si es ISSUE, verificar si es un intento fallido
+  if (normalized.status === CanonicalStatus.ISSUE) {
+    const legacyFromReason = ISSUE_REASON_TO_LEGACY[normalized.reason];
+    if (legacyFromReason) {
+      return legacyFromReason;
+    }
+  }
+
+  return CANONICAL_TO_LEGACY[normalized.status] || 'Desconocido';
+}
+
+/**
  * Extrae el estado normalizado del último movimiento de una guía
+ * MIGRADO: Usa StatusNormalizer como fuente única de verdad
+ *
  * @param textoReporte - El texto completo del reporte de la guía
  * @param transportadora - La transportadora (opcional, se detecta automáticamente)
  * @returns El estado normalizado y la descripción original
@@ -121,11 +63,12 @@ const MAPEO_SERVIENTREGA: Record<string, EstadoNormalizado> = {
 export function extraerEstadoReal(
   textoReporte: string,
   transportadora?: string
-): { estadoNormalizado: EstadoNormalizado; descripcionOriginal: string } {
+): { estadoNormalizado: EstadoNormalizado; descripcionOriginal: string; canonical?: NormalizedStatus } {
   const lineas = textoReporte.split('\n').map(l => l.trim()).filter(l => l);
 
   // Detectar transportadora si no se proporciona
   const carrierDetectado = transportadora || detectarTransportadora(textoReporte);
+  const carrierCode = detectCarrier(carrierDetectado);
 
   // Buscar el primer movimiento (el más reciente)
   // Los movimientos tienen formato: YYYY-MM-DD HH:MM UBICACION DESCRIPCION
@@ -171,68 +114,28 @@ export function extraerEstadoReal(
     }
   }
 
-  // Normalizar el estado
-  const estadoNormalizado = mapearDescripcionAEstado(primerMovimiento, carrierDetectado);
+  // Usar StatusNormalizer como fuente única de verdad
+  const canonical = StatusNormalizer.normalize(primerMovimiento || 'Desconocido', carrierCode);
+  const estadoNormalizado = canonicalToLegacy(canonical);
 
   return {
     estadoNormalizado,
     descripcionOriginal: primerMovimiento || 'Sin información',
+    canonical, // Incluir datos canónicos para uso futuro
   };
 }
 
 /**
  * Mapea una descripción a un estado normalizado basado en la transportadora
+ * MIGRADO: Usa StatusNormalizer como fuente única de verdad
  */
 function mapearDescripcionAEstado(
   descripcion: string,
   transportadora: string
 ): EstadoNormalizado {
-  const descLower = descripcion.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const carrierLower = transportadora.toLowerCase();
-
-  let mapeo: Record<string, EstadoNormalizado> = {};
-
-  if (carrierLower.includes('inter') || carrierLower.includes('rapidisimo')) {
-    mapeo = MAPEO_INTER_RAPIDISIMO;
-  } else if (carrierLower.includes('coordinadora')) {
-    mapeo = MAPEO_COORDINADORA;
-  } else if (carrierLower.includes('envia') || carrierLower.includes('envía')) {
-    mapeo = MAPEO_ENVIA;
-  } else if (carrierLower.includes('tcc')) {
-    mapeo = MAPEO_TCC;
-  } else if (carrierLower.includes('servientrega')) {
-    mapeo = MAPEO_SERVIENTREGA;
-  } else {
-    // Usar todos los mapeos combinados
-    mapeo = {
-      ...MAPEO_INTER_RAPIDISIMO,
-      ...MAPEO_COORDINADORA,
-      ...MAPEO_ENVIA,
-      ...MAPEO_TCC,
-      ...MAPEO_SERVIENTREGA,
-    };
-  }
-
-  // Buscar coincidencia
-  for (const [patron, estado] of Object.entries(mapeo)) {
-    if (descLower.includes(patron.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''))) {
-      return estado;
-    }
-  }
-
-  // Si no hay coincidencia, intentar detectar por palabras clave genéricas
-  if (descLower.includes('entregad')) return 'Entregado';
-  if (descLower.includes('transito') || descLower.includes('viajando')) return 'En Tránsito';
-  if (descLower.includes('reparto') || descLower.includes('ruta')) return 'En Reparto';
-  if (descLower.includes('destino') || descLower.includes('llegó') || descLower.includes('llego')) return 'En Destino';
-  if (descLower.includes('oficina') || descLower.includes('retiro') || descLower.includes('punto')) return 'En Oficina';
-  if (descLower.includes('fallido') || descLower.includes('no logr') || descLower.includes('intento')) return 'Intento Fallido';
-  if (descLower.includes('devuel') || descLower.includes('retorno')) return 'Devuelto';
-  if (descLower.includes('recib') || descLower.includes('admiti')) return 'Recibido';
-  if (descLower.includes('novedad') || descLower.includes('problema')) return 'Novedad';
-  if (descLower.includes('cread') || descLower.includes('generad')) return 'Creado';
-
-  return 'Desconocido';
+  const carrierCode = detectCarrier(transportadora);
+  const normalized = StatusNormalizer.normalize(descripcion, carrierCode);
+  return canonicalToLegacy(normalized);
 }
 
 /**

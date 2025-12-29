@@ -102,8 +102,20 @@ export enum ExceptionReason {
 }
 
 /**
+ * Source of the shipment data
+ */
+export type DataSource = 'dropi' | 'carrier' | 'excel' | 'manual' | 'webhook' | 'system';
+
+/**
  * Normalized status result from the StatusNormalizer
  * Contains all information needed for consistent status handling
+ *
+ * PR#1 Spec: normalizeShipment(input) returns:
+ * - canonicalStatus
+ * - exceptionReason?
+ * - rawStatus (texto original)
+ * - source (dropi / carrier / excel / manual)
+ * - lastEventAt (timestamp evento)
  */
 export interface NormalizedStatus {
   /** The canonical status */
@@ -115,7 +127,21 @@ export interface NormalizedStatus {
   /** The original raw status from the carrier */
   rawStatus: string;
 
-  /** Timestamp when this status was recorded */
+  /** Source of this data */
+  source: DataSource;
+
+  /** Timestamp when this status event occurred */
+  lastEventAt: Date;
+}
+
+/**
+ * @deprecated Use NormalizedStatus instead
+ * Legacy alias for backward compatibility
+ */
+export interface NormalizedStatusLegacy {
+  status: CanonicalStatus;
+  reason: ExceptionReason;
+  rawStatus: string;
   timestamp: Date;
 }
 
