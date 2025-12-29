@@ -62,13 +62,18 @@ function createWindow() {
   });
 
   // Cargar la app
-  const isDev = process.env.NODE_ENV !== 'production' || !app.isPackaged;
+  const isDev = !app.isPackaged;
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
-    // mainWindow.webContents.openDevTools({ mode: 'detach' });
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    // En producción, cargar desde la carpeta dist
+    const indexPath = path.join(__dirname, '..', 'dist', 'index.html');
+    console.log('Loading:', indexPath);
+    mainWindow.loadFile(indexPath).catch(err => {
+      console.error('Error loading file:', err);
+    });
   }
 
   // Eventos de ventana
