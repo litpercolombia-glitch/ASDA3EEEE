@@ -30,7 +30,6 @@ import { Shipment } from '../../types';
 
 // Importar los tabs existentes
 import { SeguimientoTab } from './SeguimientoTab';
-import { SeguimientoCargasTab } from './SeguimientoCargasTab';
 import { InteligenciaLogisticaTab } from './InteligenciaLogisticaTab';
 import SemaforoTabNew from './SemaforoTabNew';
 import { SmartPrioritizationPanel } from '../intelligence';
@@ -46,7 +45,7 @@ import { AnalisisRondasTab } from './AnalisisRondasTab';
 // =====================================
 // TIPOS
 // =====================================
-type SubView = 'carga' | 'tabla' | 'seguimiento-cargas' | 'timeline' | 'mapa' | 'prioridad' | 'inteligencia' | 'semaforo' | 'cerebro' | 'analisis-rondas';
+type SubView = 'carga' | 'tabla' | 'timeline' | 'mapa' | 'prioridad' | 'inteligencia' | 'semaforo' | 'cerebro' | 'analisis-rondas';
 
 interface OperacionesUnificadoTabProps {
   shipments: Shipment[];
@@ -71,13 +70,6 @@ const subNavItems: { id: SubView; label: string; icon: React.ElementType; descri
     icon: Table,
     description: 'Ver y gestionar',
     color: 'blue'
-  },
-  {
-    id: 'seguimiento-cargas',
-    label: '📋 Seguimiento Cargas',
-    icon: FileSpreadsheet,
-    description: 'Hojas y progreso',
-    color: 'violet'
   },
   {
     id: 'timeline',
@@ -263,15 +255,6 @@ export const OperacionesUnificadoTab: React.FC<OperacionesUnificadoTabProps> = (
             ) : (
               <TablaGuiasRapida shipments={shipments} />
             )}
-          </div>
-        )}
-
-        {activeView === 'seguimiento-cargas' && (
-          <div className="animate-fade-in">
-            <SeguimientoCargasTab
-              shipments={shipments}
-              onRestoreShipments={onShipmentsLoaded}
-            />
           </div>
         )}
 

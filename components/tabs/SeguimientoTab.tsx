@@ -72,6 +72,10 @@ import { SimpleUserSelector } from '../SimpleUserSelector';
 import { SimpleUser, getOCrearUsuarioDefault } from '../../services/simpleUserService';
 import { ChevronLeft, ChevronRight as ChevronRightIcon, Users } from 'lucide-react';
 import { ReviewedBadge, ReviewedCounter } from '../ReviewedBadge';
+import { CargaProgressBar } from '../carga/CargaProgressBar';
+import { CargaSheetsManager } from '../CargaSheetsManager';
+import { useCargaStore } from '../../stores/cargaStore';
+import { GuiaCarga } from '../../types/carga.types';
 
 // ============================================
 // COMPONENTES EXTRAÍDOS - DISPONIBLES PARA MIGRACIÓN
@@ -1292,6 +1296,49 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
   // Estados para NÚMERO DE CARGA del día
   const [numeroCargaHoy, setNumeroCargaHoy] = useState(1);
 
+  // Estados para SHEET MANAGER
+  const [viendoTodas, setViendoTodas] = useState(true);
+
+  // ==========================================
+  // STORE DE CARGA CON BATCH PROCESSING
+  // ==========================================
+  const {
+    cargaActualId,
+    progress,
+    syncStatus,
+    agregarGuiasEnLotes,
+    sincronizarConBackend,
+    cargarCarga,
+    crearNuevaCarga,
+    resetProgress,
+  } = useCargaStore();
+
+  // Determinar si hay procesamiento activo
+  const procesandoActivo = progress.estado === 'procesando' || progress.estado === 'pausado';
+
+  // Convertir shipments a GuiaCarga para procesamiento en lotes
+  const convertirAGuiaCarga = useCallback((shipment: Shipment): GuiaCarga => {
+    const detailedInfo = shipment.detailedInfo;
+    return {
+      id: shipment.id || `guia_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      numeroGuia: shipment.id || '',
+      estado: shipment.status || 'Desconocido',
+      transportadora: shipment.carrier || 'No especificada',
+      ciudadDestino: detailedInfo?.destination || '',
+      telefono: shipment.phone,
+      nombreCliente: undefined,
+      direccion: undefined,
+      diasTransito: detailedInfo?.daysInTransit || 0,
+      tieneNovedad: shipment.status === 'Novedad' || detailedInfo?.hasErrors || false,
+      tipoNovedad: detailedInfo?.hasErrors ? 'Error' : undefined,
+      descripcionNovedad: detailedInfo?.errorDetails?.join(', '),
+      valorDeclarado: detailedInfo?.declaredValue,
+      ultimoMovimiento: detailedInfo?.rawStatus,
+      fuente: 'EXCEL',
+      revisada: false,
+    };
+  }, []);
+
   // ==========================================
   // FUNCIONES PARA GESTIÓN DE GUÍAS REVISADAS
   // ==========================================
@@ -1390,16 +1437,31 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
     }
   };
 
-  // Guardar carga actual como nueva hoja (persistencia global)
+  // Guardar carga actual como nueva hoja (CON batch processing para >20 guías)
   const guardarComoNuevaHoja = async () => {
     if (shipments.length === 0) return;
 
     setGuardandoHoja(true);
     try {
+      // Si hay más de 20 guías, usar batch processing
+      if (shipments.length > 20) {
+        // Crear carga si no existe
+        if (!cargaActualId) {
+          crearNuevaCarga(usuarioActual?.id || 'usuario', usuarioActual?.nombre || 'Usuario');
+        }
+        // Convertir y procesar en lotes
+        const guias = shipments.map(convertirAGuiaCarga);
+        await agregarGuiasEnLotes(guias);
+      }
+
+      // Guardar en el sistema de hojas tradicional también
       const nuevaHoja = await guardarNuevaHoja(shipments);
       setHojas((prev) => [nuevaHoja, ...prev]);
       setHojaActiva(nuevaHoja.id);
-      alert(`Hoja "${nuevaHoja.nombre}" guardada exitosamente para todos los usuarios`);
+
+      // Sync con backend
+      await sincronizarConBackend();
+
     } catch (e) {
       console.error('Error guardando hoja:', e);
       alert('Error al guardar la hoja');
@@ -1743,6 +1805,35 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* ========================================== */}
+      {/* BARRA DE PROGRESO (visible durante batch processing) */}
+      {/* ========================================== */}
+      {(procesandoActivo || (progress.estado !== 'idle' && progress.total > 0)) && (
+        <CargaProgressBar showDetails={true} className="shadow-lg" />
+      )}
+
+      {/* ========================================== */}
+      {/* GESTOR DE HOJAS / TABS */}
+      {/* ========================================== */}
+      {hojas.length > 0 && (
+        <div className="bg-white dark:bg-navy-900 rounded-xl border border-slate-200 dark:border-navy-700 p-3">
+          <CargaSheetsManager
+            cargaActualId={hojaActiva}
+            onCargaChange={(id) => {
+              setHojaActiva(id);
+              setViendoTodas(false);
+              // Restaurar guías de la hoja seleccionada
+              const hoja = hojas.find(h => h.id === id);
+              if (hoja && onRestoreShipments) {
+                onRestoreShipments(hoja.guias);
+              }
+            }}
+            onVerTodas={() => setViendoTodas(true)}
+            viendoTodas={viendoTodas}
+          />
+        </div>
+      )}
+
       {/* ========================================== */}
       {/* BARRA DE INFORMACIÓN DE CARGA */}
       {/* ========================================== */}
