@@ -356,6 +356,10 @@ async def get_ai_status():
         "openai": {
             "available": bool(os.getenv("OPENAI_API_KEY")),
             "model": os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        },
+        "chatea": {
+            "available": bool(os.getenv("CHATEA_API_KEY")),
+            "webhook_configured": bool(os.getenv("CHATEA_WEBHOOK_URL"))
         }
     }
 
@@ -365,5 +369,157 @@ async def get_ai_status():
         "status": "ready" if any(p["available"] for p in status.values()) else "no_keys",
         "providers": status,
         "default_provider": default_provider,
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+# =============================================================================
+# MESSAGING PROXY - WhatsApp via Chatea (API keys seguras)
+# =============================================================================
+
+class SendWhatsAppRequest(BaseModel):
+    """Request para enviar mensaje WhatsApp."""
+    phone: str = Field(..., description="Número con código de país (+573001234567)")
+    message: str = Field(..., description="Mensaje a enviar")
+    template: Optional[str] = Field(None, description="Nombre del template (opcional)")
+    template_params: Optional[List[str]] = Field(None, description="Parámetros del template")
+
+
+class SendWhatsAppResponse(BaseModel):
+    """Respuesta de envío WhatsApp."""
+    success: bool
+    message_id: Optional[str] = None
+    error: Optional[str] = None
+    timestamp: str
+
+
+def get_chatea_config():
+    """Obtiene configuración de Chatea desde variables de entorno."""
+    api_key = os.getenv("CHATEA_API_KEY")
+    webhook_url = os.getenv("CHATEA_WEBHOOK_URL")
+
+    if not api_key:
+        raise HTTPException(
+            status_code=500,
+            detail="CHATEA_API_KEY no configurada en el servidor"
+        )
+
+    return {
+        "api_key": api_key,
+        "webhook_url": webhook_url,
+        "base_url": os.getenv("CHATEA_BASE_URL", "https://chateapro.app/api")
+    }
+
+
+@router.post("/messaging/whatsapp", response_model=SendWhatsAppResponse)
+async def send_whatsapp_message(request: SendWhatsAppRequest):
+    """
+    Envía mensaje de WhatsApp via Chatea.
+    La API key está segura en el servidor, NO en el frontend.
+
+    Headers requeridos del frontend:
+    - Authorization: Bearer <token_usuario>
+
+    El frontend NO necesita la API key de Chatea.
+    """
+    try:
+        config = get_chatea_config()
+
+        # Intentar usar httpx si está disponible
+        try:
+            import httpx
+
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{config['base_url']}/send-message",
+                    headers={
+                        "Authorization": f"Bearer {config['api_key']}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "phone": request.phone,
+                        "message": request.message,
+                        "template": request.template,
+                        "template_params": request.template_params
+                    }
+                )
+
+                if response.status_code == 200:
+                    data = response.json()
+                    return SendWhatsAppResponse(
+                        success=True,
+                        message_id=data.get("message_id"),
+                        timestamp=datetime.now().isoformat()
+                    )
+                else:
+                    return SendWhatsAppResponse(
+                        success=False,
+                        error=f"Chatea API error: {response.status_code}",
+                        timestamp=datetime.now().isoformat()
+                    )
+
+        except ImportError:
+            # Fallback si httpx no está disponible
+            import urllib.request
+            import json
+
+            req = urllib.request.Request(
+                f"{config['base_url']}/send-message",
+                data=json.dumps({
+                    "phone": request.phone,
+                    "message": request.message
+                }).encode(),
+                headers={
+                    "Authorization": f"Bearer {config['api_key']}",
+                    "Content-Type": "application/json"
+                }
+            )
+
+            with urllib.request.urlopen(req, timeout=30) as response:
+                data = json.loads(response.read())
+                return SendWhatsAppResponse(
+                    success=True,
+                    message_id=data.get("message_id"),
+                    timestamp=datetime.now().isoformat()
+                )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        return SendWhatsAppResponse(
+            success=False,
+            error=str(e),
+            timestamp=datetime.now().isoformat()
+        )
+
+
+@router.post("/messaging/whatsapp/bulk")
+async def send_bulk_whatsapp(messages: List[SendWhatsAppRequest]):
+    """
+    Envía múltiples mensajes de WhatsApp.
+    Útil para notificaciones masivas.
+    """
+    results = []
+    for msg in messages:
+        try:
+            result = await send_whatsapp_message(msg)
+            results.append({
+                "phone": msg.phone,
+                "success": result.success,
+                "message_id": result.message_id,
+                "error": result.error
+            })
+        except Exception as e:
+            results.append({
+                "phone": msg.phone,
+                "success": False,
+                "error": str(e)
+            })
+
+    return {
+        "total": len(messages),
+        "successful": sum(1 for r in results if r["success"]),
+        "failed": sum(1 for r in results if not r["success"]),
+        "results": results,
         "timestamp": datetime.now().isoformat()
     }
