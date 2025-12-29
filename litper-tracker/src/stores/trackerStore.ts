@@ -271,7 +271,7 @@ const USUARIOS_LITPER: Usuario[] = [
   { id: 'eva1', nombre: 'EVAN', avatar: '🚀', color: '#10B981', metaDiaria: 60, activo: true },
   { id: 'jim1', nombre: 'JIMMY', avatar: '⚡', color: '#3B82F6', metaDiaria: 60, activo: true },
   { id: 'fel1', nombre: 'FELIPE', avatar: '🎯', color: '#14B8A6', metaDiaria: 60, activo: true },
-  { id: 'nor1', nombre: 'NORMA', avatar: '💎', color: '#A855F7', metaDiaria: 60, activo: true },
+  { id: 'nor1', nombre: 'NORMAN', avatar: '💎', color: '#A855F7', metaDiaria: 60, activo: true },
   { id: 'kar1', nombre: 'KAREN', avatar: '✨', color: '#F43F5E', metaDiaria: 60, activo: true },
 ];
 

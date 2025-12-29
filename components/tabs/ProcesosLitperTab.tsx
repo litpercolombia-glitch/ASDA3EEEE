@@ -120,7 +120,7 @@ const DEFAULT_USERS: Usuario[] = [
   { id: 'eva1', nombre: 'EVAN', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0, rol: 'Especialista', departamento: 'Logística' },
   { id: 'jim1', nombre: 'JIMMY', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0, rol: 'Coordinador', departamento: 'Operaciones' },
   { id: 'fel1', nombre: 'FELIPE', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0, rol: 'Analista', departamento: 'Logística' },
-  { id: 'nor1', nombre: 'NORMA', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0, rol: 'Senior', departamento: 'Operaciones' },
+  { id: 'nor1', nombre: 'NORMAN', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0, rol: 'Senior', departamento: 'Operaciones' },
   { id: 'kar1', nombre: 'KAREN', xp: 0, nivel: 1, racha: 0, medallas: [], guiasTotales: 0, mejorTiempo: 0, combosMaximos: 0, rol: 'Especialista', departamento: 'Logística' },
 ];
 
