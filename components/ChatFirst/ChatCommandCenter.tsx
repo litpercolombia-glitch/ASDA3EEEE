@@ -304,15 +304,29 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const prevMessagesLengthRef = useRef(0);
 
-  // Auto-scroll a nuevos mensajes
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Auto-scroll solo cuando se agregan nuevos mensajes (no al escribir)
+  const scrollToBottom = useCallback((force = false) => {
+    if (!chatContainerRef.current || !messagesEndRef.current) return;
+
+    const container = chatContainerRef.current;
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+
+    // Solo hacer scroll si estamos cerca del fondo o es forzado
+    if (isNearBottom || force) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, []);
 
+  // Solo hacer scroll cuando realmente se agregan mensajes nuevos
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+    if (messages.length > prevMessagesLengthRef.current) {
+      scrollToBottom(true);
+    }
+    prevMessagesLengthRef.current = messages.length;
+  }, [messages.length, scrollToBottom]);
 
   // Inicializar con briefing matutino inteligente
   useEffect(() => {
@@ -361,6 +375,44 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
     window.addEventListener('skill-example-click', handleSkillExample as EventListener);
     return () => {
       window.removeEventListener('skill-example-click', handleSkillExample as EventListener);
+    };
+  }, []);
+
+  // Prevenir scroll automático de la página cuando el input está activo
+  useEffect(() => {
+    let scrollLocked = false;
+    let lastScrollY = 0;
+
+    const preventAutoScroll = () => {
+      // Si el input está enfocado, prevenir que la página haga scroll
+      if (document.activeElement === inputRef.current && scrollLocked) {
+        window.scrollTo({ top: lastScrollY, behavior: 'instant' });
+      }
+    };
+
+    const handleFocusIn = (e: FocusEvent) => {
+      if (e.target === inputRef.current) {
+        lastScrollY = window.scrollY;
+        scrollLocked = true;
+        // Escuchar intentos de scroll
+        window.addEventListener('scroll', preventAutoScroll, { passive: false });
+      }
+    };
+
+    const handleFocusOut = (e: FocusEvent) => {
+      if (e.target === inputRef.current) {
+        scrollLocked = false;
+        window.removeEventListener('scroll', preventAutoScroll);
+      }
+    };
+
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('focusout', handleFocusOut);
+
+    return () => {
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('focusout', handleFocusOut);
+      window.removeEventListener('scroll', preventAutoScroll);
     };
   }, []);
 
@@ -593,56 +645,48 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
     }
   };
 
+  // Prevenir scroll de página cuando se hace focus en el input
+  const handleInputFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    // Guardar la posición actual del scroll
+    const currentScrollY = window.scrollY;
+
+    // Usar requestAnimationFrame para restaurar después del focus
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+    });
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-950 via-navy-900 to-navy-950 p-4 md:p-6 lg:p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header branding */}
+    <div className="h-[calc(100vh-160px)] min-h-[500px] bg-gradient-to-br from-navy-950 via-navy-900 to-navy-950 rounded-2xl overflow-hidden flex flex-col">
+      {/* Header compacto - altura fija */}
+      <div className="flex-shrink-0 p-4 border-b border-white/5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="relative bg-gradient-to-br from-purple-500 to-violet-600 p-3 rounded-xl shadow-lg">
-              <Sparkles className="w-6 h-6 text-white" />
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-navy-950" />
+            <div className="relative bg-gradient-to-br from-purple-500 to-violet-600 p-2 rounded-xl">
+              <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">LITPER PRO</h1>
-              <p className="text-xs text-slate-400">Centro de Comando IA</p>
+              <h1 className="text-base font-bold text-white">Asistente IA</h1>
+              <p className="text-[10px] text-slate-500">
+                {shipments.length > 0 ? `${shipments.length} guías` : 'Sin guías'}
+              </p>
             </div>
           </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onRefreshData}
-              className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-            >
-              <RefreshCw className="w-5 h-5" />
+          <div className="flex items-center gap-1">
+            <button onClick={onRefreshData} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg">
+              <RefreshCw className="w-4 h-4" />
             </button>
-            <button
-              onClick={() => onNavigateToTab?.('admin')}
-              className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-            >
-              <Settings className="w-5 h-5" />
+            <button onClick={() => onNavigateToTab?.('admin')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg">
+              <Settings className="w-4 h-4" />
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Context Panel - KPIs en vivo */}
-        <ContextPanel
-          shipments={shipments}
-          criticalCities={criticalCities}
-          onCityClick={(city) => handleQuickAction(`Muestrame los envios de ${city}`)}
-        />
-
-        {/* Proactive Insights - Alertas y sugerencias inteligentes */}
-        {shipments.length > 0 && !activeSkill && (
-          <ProactiveInsights
-            shipments={shipments}
-            onInsightAction={handleQuickAction}
-            maxVisible={2}
-          />
-        )}
-
-        {/* Main Content Area - Split when skill is active */}
-        <div className={`grid gap-6 ${activeSkill ? 'lg:grid-cols-2' : 'grid-cols-1'}`}>
+      {/* Contenido principal - flex-1 para ocupar espacio restante */}
+      <div className="flex-1 flex flex-col overflow-hidden p-4">
+        {/* Grid de contenido */}
+        <div className={`flex-1 flex flex-col overflow-hidden ${activeSkill ? 'lg:grid lg:grid-cols-2 lg:gap-4' : ''}`}>
           {/* Skill Panel - Shows when a skill is active */}
           {activeSkill && (
             <div className="bg-gradient-to-b from-navy-900/80 to-navy-900/60 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden order-2 lg:order-1">
@@ -706,10 +750,13 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
             </div>
           )}
 
-          {/* Chat Area */}
-          <div className={`bg-gradient-to-b from-navy-900/80 to-navy-900/60 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden ${activeSkill ? 'order-1 lg:order-2' : ''}`}>
-            {/* Messages */}
-            <div className={`${activeSkill ? 'h-[350px]' : 'h-[400px]'} overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent`}>
+          {/* Chat Area - usa flex para distribuir espacio */}
+          <div className={`flex-1 flex flex-col bg-gradient-to-b from-navy-900/80 to-navy-900/60 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden ${activeSkill ? 'order-1 lg:order-2' : ''}`}>
+            {/* Messages - flex-1 para ocupar todo el espacio disponible */}
+            <div
+              ref={chatContainerRef}
+              className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+            >
               {messages.map((message) => (
                 <MessageBubble
                   key={message.id}
@@ -720,16 +767,12 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Area */}
-            <div className="border-t border-white/10 p-4">
-              {/* Image Preview */}
+            {/* Input Area - altura fija, no se encoge */}
+            <div className="flex-shrink-0 border-t border-white/10 p-3">
+              {/* Preview de imagen adjunta */}
               {attachedImage && (
                 <div className="mb-3 relative inline-block">
-                  <img
-                    src={attachedImage}
-                    alt="Preview"
-                    className="max-h-24 rounded-lg border border-white/20"
-                  />
+                  <img src={attachedImage} alt="Preview" className="max-h-20 rounded-lg border border-white/20" />
                   <button
                     onClick={handleRemoveImage}
                     className="absolute -top-2 -right-2 p-1 bg-red-500 rounded-full text-white hover:bg-red-600 transition-colors"
@@ -739,170 +782,126 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
                 </div>
               )}
 
-              {/* Recording Indicator */}
+              {/* Indicador de grabación */}
               {isRecording && (
-                <div className="mb-3 flex items-center gap-2 text-red-400 text-sm">
+                <div className="mb-2 flex items-center gap-2 text-red-400 text-xs">
                   <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                  <span>Grabando audio... Haz clic en el micrófono para detener</span>
+                  <span>Grabando... Click en 🎤 para detener</span>
                 </div>
               )}
 
-              <div className="flex items-center gap-3">
-                {/* Model Selector */}
-                <div className="relative">
-                  <button
-                    onClick={() => setShowModelSelector(!showModelSelector)}
-                    className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm transition-colors"
-                  >
-                    {(() => {
-                      const model = AI_MODELS.find(m => m.id === selectedModel);
-                      if (!model) return null;
-                      const Icon = model.icon;
-                      return (
-                        <>
-                          <Icon className={`w-4 h-4 ${model.color}`} />
-                          <span className="text-white hidden sm:inline">{model.name}</span>
-                          <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showModelSelector ? 'rotate-180' : ''}`} />
-                        </>
-                      );
-                    })()}
-                  </button>
+              {/* Barra de input principal */}
+              <div className="flex items-center gap-2">
+                {/* Input file oculto */}
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
 
-                  {/* Dropdown */}
-                  {showModelSelector && (
-                    <div className="absolute bottom-full left-0 mb-2 w-48 bg-navy-800 border border-white/20 rounded-xl shadow-xl overflow-hidden z-50">
-                      <div className="p-2 border-b border-white/10">
-                        <span className="text-xs text-slate-400 font-medium">Seleccionar Modelo</span>
-                      </div>
-                      {AI_MODELS.map((model) => {
+                {/* Botones de herramientas compactos */}
+                <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1">
+                  {/* Selector de modelo */}
+                  <div className="relative">
+                    <button
+                      onClick={() => { setShowModelSelector(!showModelSelector); setShowModeSelector(false); }}
+                      className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-white/10 rounded-lg text-xs transition-colors"
+                      title="Modelo IA"
+                    >
+                      {(() => {
+                        const model = AI_MODELS.find(m => m.id === selectedModel);
+                        if (!model) return null;
                         const Icon = model.icon;
-                        const isSelected = selectedModel === model.id;
-                        const isConfigured = providers[model.id]?.isConfigured;
-                        return (
-                          <button
-                            key={model.id}
-                            onClick={() => {
-                              if (isConfigured) {
-                                setSelectedModel(model.id);
-                                setShowModelSelector(false);
-                              }
-                            }}
-                            disabled={!isConfigured}
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
-                              isSelected ? 'bg-accent-500/20' : 'hover:bg-white/5'
-                            } ${!isConfigured ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          >
-                            <Icon className={`w-5 h-5 ${model.color}`} />
-                            <div className="flex-1">
-                              <span className={`text-sm ${isSelected ? 'text-white font-medium' : 'text-slate-300'}`}>
-                                {model.name}
-                              </span>
-                              {!isConfigured && (
-                                <span className="block text-xs text-slate-500">Sin configurar</span>
-                              )}
-                            </div>
-                            {isSelected && (
-                              <CheckCircle className="w-4 h-4 text-accent-400" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                        return <Icon className={`w-4 h-4 ${model.color}`} />;
+                      })()}
+                      <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform ${showModelSelector ? 'rotate-180' : ''}`} />
+                    </button>
 
-                {/* Mode Selector */}
-                <div className="relative">
+                    {showModelSelector && (
+                      <div className="absolute bottom-full left-0 mb-2 w-44 bg-navy-800 border border-white/20 rounded-xl shadow-xl overflow-hidden z-50">
+                        <div className="p-2 border-b border-white/10">
+                          <span className="text-[10px] text-slate-400 font-medium uppercase">Modelo IA</span>
+                        </div>
+                        {AI_MODELS.map((model) => {
+                          const Icon = model.icon;
+                          const isSelected = selectedModel === model.id;
+                          const isConfigured = providers[model.id]?.isConfigured;
+                          return (
+                            <button
+                              key={model.id}
+                              onClick={() => { if (isConfigured) { setSelectedModel(model.id); setShowModelSelector(false); } }}
+                              disabled={!isConfigured}
+                              className={`w-full flex items-center gap-2 px-3 py-2 text-left transition-colors ${isSelected ? 'bg-accent-500/20' : 'hover:bg-white/5'} ${!isConfigured ? 'opacity-40 cursor-not-allowed' : ''}`}
+                            >
+                              <Icon className={`w-4 h-4 ${model.color}`} />
+                              <span className={`text-sm ${isSelected ? 'text-white' : 'text-slate-300'}`}>{model.name}</span>
+                              {isSelected && <CheckCircle className="w-3 h-3 text-accent-400 ml-auto" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Selector de modo */}
+                  <div className="relative">
+                    <button
+                      onClick={() => { setShowModeSelector(!showModeSelector); setShowModelSelector(false); }}
+                      className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-white/10 rounded-lg text-xs transition-colors"
+                      title="Modo de respuesta"
+                    >
+                      {(() => {
+                        const mode = CHAT_MODE_OPTIONS.find(m => m.id === selectedMode);
+                        if (!mode) return null;
+                        const Icon = mode.icon;
+                        return <Icon className={`w-4 h-4 ${mode.color}`} />;
+                      })()}
+                    </button>
+
+                    {showModeSelector && (
+                      <div className="absolute bottom-full left-0 mb-2 w-48 bg-navy-800 border border-white/20 rounded-xl shadow-xl overflow-hidden z-50">
+                        <div className="p-2 border-b border-white/10">
+                          <span className="text-[10px] text-slate-400 font-medium uppercase">Modo</span>
+                        </div>
+                        {CHAT_MODE_OPTIONS.map((mode) => {
+                          const Icon = mode.icon;
+                          const isSelected = selectedMode === mode.id;
+                          return (
+                            <button
+                              key={mode.id}
+                              onClick={() => { setSelectedMode(mode.id); setShowModeSelector(false); }}
+                              className={`w-full flex items-center gap-2 px-3 py-2 text-left transition-colors ${isSelected ? 'bg-accent-500/20' : 'hover:bg-white/5'}`}
+                            >
+                              <Icon className={`w-4 h-4 ${mode.color}`} />
+                              <div className="flex-1">
+                                <span className={`text-sm ${isSelected ? 'text-white' : 'text-slate-300'}`}>{mode.name}</span>
+                                <span className="block text-[10px] text-slate-500">{mode.description}</span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="w-px h-4 bg-white/10" />
+
+                  {/* Adjuntar imagen */}
                   <button
-                    onClick={() => setShowModeSelector(!showModeSelector)}
-                    className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`p-1.5 rounded-lg transition-colors ${attachedImage ? 'text-accent-400 bg-accent-500/20' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                    title="Adjuntar imagen"
                   >
-                    {(() => {
-                      const mode = CHAT_MODE_OPTIONS.find(m => m.id === selectedMode);
-                      if (!mode) return null;
-                      const Icon = mode.icon;
-                      return (
-                        <>
-                          <Icon className={`w-4 h-4 ${mode.color}`} />
-                          <span className="text-white hidden sm:inline">{mode.name}</span>
-                          <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showModeSelector ? 'rotate-180' : ''}`} />
-                        </>
-                      );
-                    })()}
+                    <Paperclip className="w-4 h-4" />
                   </button>
 
-                  {/* Mode Dropdown */}
-                  {showModeSelector && (
-                    <div className="absolute bottom-full left-0 mb-2 w-56 bg-navy-800 border border-white/20 rounded-xl shadow-xl overflow-hidden z-50">
-                      <div className="p-2 border-b border-white/10">
-                        <span className="text-xs text-slate-400 font-medium">Modo de Respuesta</span>
-                      </div>
-                      {CHAT_MODE_OPTIONS.map((mode) => {
-                        const Icon = mode.icon;
-                        const isSelected = selectedMode === mode.id;
-                        return (
-                          <button
-                            key={mode.id}
-                            onClick={() => {
-                              setSelectedMode(mode.id);
-                              setShowModeSelector(false);
-                            }}
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
-                              isSelected ? 'bg-accent-500/20' : 'hover:bg-white/5'
-                            }`}
-                          >
-                            <Icon className={`w-5 h-5 ${mode.color}`} />
-                            <div className="flex-1">
-                              <span className={`text-sm ${isSelected ? 'text-white font-medium' : 'text-slate-300'}`}>
-                                {mode.name}
-                              </span>
-                              <span className="block text-xs text-slate-500">{mode.description}</span>
-                            </div>
-                            {isSelected && (
-                              <CheckCircle className="w-4 h-4 text-accent-400" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
+                  {/* Micrófono */}
+                  <button
+                    onClick={toggleRecording}
+                    className={`p-1.5 rounded-lg transition-colors ${isRecording ? 'text-red-400 bg-red-500/20 animate-pulse' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                    title={isRecording ? 'Detener' : 'Grabar voz'}
+                  >
+                    {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  </button>
                 </div>
 
-                {/* File Input Hidden */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageSelect}
-                  className="hidden"
-                />
-
-                {/* Attach Image Button */}
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`p-2 rounded-lg transition-colors ${
-                    attachedImage
-                      ? 'text-accent-400 bg-accent-500/20'
-                      : 'text-slate-400 hover:text-white hover:bg-white/10'
-                  }`}
-                  title="Adjuntar imagen"
-                >
-                  <Paperclip className="w-5 h-5" />
-                </button>
-
-                {/* Web Search Toggle */}
-                <button
-                  onClick={() => setWebSearchEnabled(!webSearchEnabled)}
-                  className={`p-2 rounded-lg transition-colors ${
-                    webSearchEnabled
-                      ? 'text-blue-400 bg-blue-500/20'
-                      : 'text-slate-400 hover:text-white hover:bg-white/10'
-                  }`}
-                  title={webSearchEnabled ? 'Búsqueda web activa' : 'Activar búsqueda web'}
-                >
-                  <Globe className="w-5 h-5" />
-                </button>
-
+                {/* Input de texto */}
                 <div className="flex-1 relative">
                   <input
                     ref={inputRef}
@@ -910,67 +909,40 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder={activeSkill
-                      ? `Pregunta sobre ${CORE_SKILLS.find(s => s.id === activeSkill)?.label.toLowerCase()}...`
-                      : "Escribe un comando o pregunta..."
-                    }
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-accent-500 focus:bg-white/10 transition-all"
+                    onFocus={handleInputFocus}
+                    placeholder={activeSkill ? `Pregunta sobre ${CORE_SKILLS.find(s => s.id === activeSkill)?.label.toLowerCase()}...` : "Escribe tu mensaje..."}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all"
                     disabled={isProcessing}
                   />
                   {activeSkill && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2 py-0.5 bg-accent-500/20 rounded text-xs text-accent-300">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2 py-0.5 bg-purple-500/20 rounded text-[10px] text-purple-300">
                       {CORE_SKILLS.find(s => s.id === activeSkill)?.label}
-                      <button onClick={() => setActiveSkill(null)}>
-                        <X className="w-3 h-3" />
-                      </button>
+                      <button onClick={() => setActiveSkill(null)}><X className="w-3 h-3" /></button>
                     </div>
                   )}
                 </div>
 
-                {/* Mic Button */}
-                <button
-                  onClick={toggleRecording}
-                  className={`p-2 rounded-lg transition-colors ${
-                    isRecording
-                      ? 'text-red-400 bg-red-500/20 animate-pulse'
-                      : 'text-slate-400 hover:text-white hover:bg-white/10'
-                  }`}
-                  title={isRecording ? 'Detener grabación' : 'Grabar audio'}
-                >
-                  {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                </button>
-
+                {/* Botón enviar */}
                 <button
                   onClick={handleSendMessage}
                   disabled={(!inputValue.trim() && !attachedImage) || isProcessing}
-                  className={`
-                    p-3 rounded-xl transition-all
-                    ${(inputValue.trim() || attachedImage) && !isProcessing
-                      ? 'bg-gradient-to-r from-accent-500 to-accent-600 text-white hover:shadow-lg hover:shadow-accent-500/30'
-                      : 'bg-white/5 text-slate-500 cursor-not-allowed'
-                    }
-                  `}
+                  className={`p-3 rounded-xl transition-all ${(inputValue.trim() || attachedImage) && !isProcessing ? 'bg-gradient-to-r from-purple-500 to-violet-600 text-white hover:shadow-lg hover:shadow-purple-500/30' : 'bg-white/5 text-slate-500 cursor-not-allowed'}`}
                 >
-                  {isProcessing ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Send className="w-5 h-5" />
-                  )}
+                  {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                 </button>
               </div>
 
-              {/* Quick suggestions */}
-              {messages.length <= 2 && shipments.length > 0 && !activeSkill && (
+              {/* Sugerencias rápidas - solo al inicio */}
+              {messages.length <= 2 && !activeSkill && (
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {[
-                    'Cual es el resumen de hoy?',
-                    'Que envios necesitan atencion?',
-                    'Genera un reporte rapido',
-                  ].map((suggestion) => (
+                  {(shipments.length > 0
+                    ? ['📊 Resumen del día', '⚠️ Envíos críticos', '📝 Generar reporte']
+                    : ['📤 ¿Cómo cargo guías?', '🔍 ¿Qué puedes hacer?', '💡 Ayuda']
+                  ).map((suggestion) => (
                     <button
                       key={suggestion}
-                      onClick={() => setInputValue(suggestion)}
-                      className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs text-slate-400 hover:text-white transition-colors"
+                      onClick={() => setInputValue(suggestion.replace(/^[^\s]+\s/, ''))}
+                      className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-xs text-slate-400 hover:text-white transition-colors"
                     >
                       {suggestion}
                     </button>
@@ -980,13 +952,6 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
             </div>
           </div>
         </div>
-
-        {/* Skills Bar */}
-        <SkillsBar
-          onSkillClick={handleSkillClick}
-          activeSkill={activeSkill}
-          showExamples={!activeSkill}
-        />
       </div>
     </div>
   );
