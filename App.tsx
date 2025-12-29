@@ -369,9 +369,12 @@ const App: React.FC = () => {
   // Load data on mount
   useEffect(() => {
     const savedCountry = getSelectedCountry();
-    // Usar Colombia por defecto si no hay país guardado
-    setSelectedCountry(savedCountry || 'CO');
-    setShowCountrySelector(false);
+    if (savedCountry) {
+      setSelectedCountry(savedCountry);
+      setShowCountrySelector(false);
+    } else {
+      setShowCountrySelector(true);
+    }
 
     const data = loadShipments();
     if (data.length > 0) {
@@ -532,6 +535,11 @@ const App: React.FC = () => {
   const handleSemaforoDataLoaded = (data: SemaforoExcelData) => {
     setNotification('✅ Datos del semáforo cargados');
   };
+
+  // Mostrar selector de país si no hay país seleccionado
+  if (showCountrySelector || !selectedCountry) {
+    return <CountrySelector onCountrySelected={handleCountrySelected} />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-navy-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
