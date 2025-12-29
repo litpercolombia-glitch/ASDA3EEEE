@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Minus, X, Pin, PinOff, Settings, Minimize2, Maximize2 } from 'lucide-react';
-import { useAppStore } from '../stores/appStore';
+import { Minus, X, Pin, PinOff, Settings, Minimize2, Maximize2, LayoutGrid, PanelRightClose } from 'lucide-react';
+import { useAppStore, DisplayMode } from '../stores/appStore';
 
 declare global {
   interface Window {
@@ -15,8 +15,15 @@ declare global {
   }
 }
 
+// Configuración de tamaños por modo
+const WINDOW_SIZES: Record<DisplayMode, { width: number; height: number }> = {
+  normal: { width: 420, height: 600 },
+  compact: { width: 280, height: 420 },
+  sidebar: { width: 100, height: 500 },
+};
+
 const TitleBar: React.FC = () => {
-  const { modoAdmin, toggleModoAdmin, isCompact, toggleCompact } = useAppStore();
+  const { modoAdmin, toggleModoAdmin, displayMode, cycleDisplayMode } = useAppStore();
   const [alwaysOnTop, setAlwaysOnTop] = useState(true);
   const isElectron = window.electronAPI?.isElectron;
 
@@ -26,16 +33,13 @@ const TitleBar: React.FC = () => {
     }
   }, [isElectron]);
 
-  // Ajustar tamaño de ventana según modo compacto
+  // Ajustar tamaño de ventana según modo
   useEffect(() => {
     if (isElectron && window.electronAPI?.setWindowSize) {
-      if (isCompact) {
-        window.electronAPI.setWindowSize(200, 180);
-      } else {
-        window.electronAPI.setWindowSize(420, 600);
-      }
+      const size = WINDOW_SIZES[displayMode];
+      window.electronAPI.setWindowSize(size.width, size.height);
     }
-  }, [isCompact, isElectron]);
+  }, [displayMode, isElectron]);
 
   const handleMinimize = () => {
     if (isElectron) {
@@ -56,12 +60,59 @@ const TitleBar: React.FC = () => {
     }
   };
 
-  const handleToggleCompact = () => {
-    toggleCompact();
+  const handleCycleMode = () => {
+    cycleDisplayMode();
   };
 
+  // Obtener el icono y tooltip según el modo actual
+  const getModeIcon = () => {
+    switch (displayMode) {
+      case 'compact':
+        return { Icon: LayoutGrid, title: 'Modo compacto - Click para cambiar' };
+      case 'sidebar':
+        return { Icon: PanelRightClose, title: 'Modo barra lateral - Click para cambiar' };
+      default:
+        return { Icon: Maximize2, title: 'Modo normal - Click para cambiar' };
+    }
+  };
+
+  const { Icon: ModeIcon, title: modeTitle } = getModeIcon();
+
+  // Modo sidebar - TitleBar ultra minimalista
+  if (displayMode === 'sidebar') {
+    return (
+      <div className="drag-region flex flex-col items-center gap-1 px-1 py-2 bg-dark-900/80 border-b border-dark-700/50">
+        {/* Logo pequeño */}
+        <div className="w-6 h-6 rounded gradient-primary flex items-center justify-center">
+          <span className="text-white text-[10px] font-bold">LP</span>
+        </div>
+
+        {/* Controles verticales */}
+        <div className="flex flex-col items-center gap-0.5 no-drag">
+          {/* Cambiar modo */}
+          <button
+            onClick={handleCycleMode}
+            className="p-1 rounded text-primary-400 hover:text-white hover:bg-dark-700 transition-all"
+            title={modeTitle}
+          >
+            <ModeIcon className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Close */}
+          <button
+            onClick={handleClose}
+            className="p-1 rounded text-dark-400 hover:text-white hover:bg-accent-red transition-all"
+            title="Cerrar"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Modo compacto - TitleBar minimalista
-  if (isCompact) {
+  if (displayMode === 'compact') {
     return (
       <div className="drag-region flex items-center justify-between px-2 py-1 bg-dark-900/80 border-b border-dark-700/50">
         {/* Logo pequeño */}
@@ -71,13 +122,13 @@ const TitleBar: React.FC = () => {
 
         {/* Controles mínimos */}
         <div className="flex items-center gap-0.5 no-drag">
-          {/* Expandir */}
+          {/* Cambiar modo */}
           <button
-            onClick={handleToggleCompact}
-            className="p-1 rounded text-dark-400 hover:text-white hover:bg-dark-700 transition-all"
-            title="Expandir"
+            onClick={handleCycleMode}
+            className="p-1 rounded text-primary-400 hover:text-white hover:bg-dark-700 transition-all"
+            title={modeTitle}
           >
-            <Maximize2 className="w-3 h-3" />
+            <ModeIcon className="w-3 h-3" />
           </button>
 
           {/* Minimize */}
@@ -115,13 +166,13 @@ const TitleBar: React.FC = () => {
 
       {/* Controles */}
       <div className="flex items-center gap-1 no-drag">
-        {/* Modo compacto toggle */}
+        {/* Ciclar modo de vista */}
         <button
-          onClick={handleToggleCompact}
-          className="p-1.5 rounded-md text-dark-400 hover:text-white hover:bg-dark-700 transition-all"
-          title="Modo compacto"
+          onClick={handleCycleMode}
+          className="p-1.5 rounded-md text-primary-400 hover:text-white hover:bg-dark-700 transition-all"
+          title={modeTitle}
         >
-          <Minimize2 className="w-3.5 h-3.5" />
+          <ModeIcon className="w-3.5 h-3.5" />
         </button>
 
         {/* Admin toggle */}

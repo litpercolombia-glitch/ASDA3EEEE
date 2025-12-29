@@ -5,27 +5,42 @@ import {
   CountdownTimer,
   UserSelector,
   AdminPanel,
-  RoundForm,
   StatsPanel,
   Sidebar,
+  QuickCounters,
 } from './components';
 
 const App: React.FC = () => {
-  const { modoAdmin, viewMode, usuarioActual, isCompact } = useAppStore();
+  const { modoAdmin, viewMode, displayMode } = useAppStore();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
-  // Modo compacto - solo muestra lo esencial
-  if (isCompact) {
+  // ============ MODO COMPACTO ============
+  if (displayMode === 'compact') {
     return (
       <div className="h-screen flex flex-col glass rounded-xl overflow-hidden">
         <TitleBar />
-        <div className="flex-1 overflow-y-auto p-2">
+        <div className="flex-1 overflow-y-auto">
           <CountdownTimer compact />
+          <QuickCounters mode="compact" />
         </div>
       </div>
     );
   }
 
+  // ============ MODO BARRA LATERAL ============
+  if (displayMode === 'sidebar') {
+    return (
+      <div className="h-screen flex flex-col glass rounded-xl overflow-hidden" style={{ width: '80px' }}>
+        <TitleBar />
+        <div className="flex-1 overflow-y-auto">
+          <CountdownTimer compact />
+          <QuickCounters mode="sidebar" />
+        </div>
+      </div>
+    );
+  }
+
+  // ============ MODO NORMAL ============
   return (
     <div className="h-screen flex flex-col glass rounded-xl overflow-hidden">
       {/* Title bar */}
@@ -33,7 +48,7 @@ const App: React.FC = () => {
 
       {/* Main content with sidebar */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
+        {/* Sidebar de navegación */}
         <Sidebar
           isCollapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -49,12 +64,7 @@ const App: React.FC = () => {
             {viewMode === 'timer' && (
               <div className="animate-fade-in">
                 <CountdownTimer />
-                {usuarioActual && <RoundForm />}
-                {!usuarioActual && (
-                  <div className="px-4 text-center text-dark-500 text-sm">
-                    Selecciona un usuario para registrar rondas
-                  </div>
-                )}
+                <QuickCounters mode="normal" />
               </div>
             )}
 
@@ -74,7 +84,7 @@ const App: React.FC = () => {
           {/* Footer */}
           <div className="px-4 py-1.5 border-t border-dark-700/50 text-center">
             <p className="text-[10px] text-dark-500">
-              LITPER PEDIDOS v1.1 | Siempre encima
+              LITPER PEDIDOS v1.2 | Siempre encima
             </p>
           </div>
         </div>

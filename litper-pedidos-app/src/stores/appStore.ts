@@ -14,6 +14,16 @@ export interface Usuario {
   createdAt: string;
 }
 
+// Contadores en tiempo real
+export interface Contadores {
+  realizados: number;
+  cancelados: number;
+  agendados: number;
+  dificiles: number;
+  pendientes: number;
+  revisados: number;
+}
+
 export interface Ronda {
   id: string;
   usuarioId: string;
@@ -22,14 +32,17 @@ export interface Ronda {
   horaInicio: string;
   horaFin: string;
   tiempoUsado: number;
-  pedidosRealizados: number;
-  pedidosCancelados: number;
-  pedidosAgendados: number;
+  realizados: number;
+  cancelados: number;
+  agendados: number;
+  dificiles: number;
+  pendientes: number;
+  revisados: number;
 }
 
 export interface ConfigTimer {
   duracionMinutos: number;
-  alertaAmarilla: number; // % restante
+  alertaAmarilla: number;
   alertaNaranja: number;
   alertaRoja: number;
   sonidoFinal: boolean;
@@ -38,6 +51,19 @@ export interface ConfigTimer {
 export type TimerColor = 'green' | 'yellow' | 'orange' | 'red';
 export type TimerState = 'idle' | 'running' | 'paused' | 'finished';
 export type ViewMode = 'timer' | 'stats' | 'admin';
+export type DisplayMode = 'normal' | 'compact' | 'sidebar';
+
+// Definición de los campos de contadores
+export const CAMPOS_CONTADOR = [
+  { key: 'realizados', label: 'Realizados', inicial: 'R', color: '#10B981', bgColor: 'bg-emerald-500' },
+  { key: 'cancelados', label: 'Cancelados', inicial: 'C', color: '#EF4444', bgColor: 'bg-red-500' },
+  { key: 'agendados', label: 'Agendados', inicial: 'A', color: '#3B82F6', bgColor: 'bg-blue-500' },
+  { key: 'dificiles', label: 'Difíciles', inicial: 'D', color: '#F97316', bgColor: 'bg-orange-500' },
+  { key: 'pendientes', label: 'Pendientes', inicial: 'P', color: '#F59E0B', bgColor: 'bg-amber-500' },
+  { key: 'revisados', label: 'Revisados', inicial: 'V', color: '#8B5CF6', bgColor: 'bg-purple-500' },
+] as const;
+
+export type CampoContador = typeof CAMPOS_CONTADOR[number]['key'];
 
 // ==================== CONSTANTES ====================
 
@@ -69,13 +95,17 @@ interface AppState {
   timerState: TimerState;
   tiempoRestante: number;
   rondaActual: number;
+  horaInicioRonda: string | null;
 
-  // Rondas
+  // Contadores en tiempo real
+  contadores: Contadores;
+
+  // Rondas guardadas
   rondas: Ronda[];
 
   // UI
   viewMode: ViewMode;
-  isCompact: boolean;
+  displayMode: DisplayMode;
 
   // Acciones - Usuarios
   agregarUsuario: (data: Omit<Usuario, 'id' | 'createdAt' | 'activo'>) => void;
@@ -92,8 +122,15 @@ interface AppState {
   tick: () => void;
   getTimerColor: () => TimerColor;
 
+  // Acciones - Contadores
+  incrementar: (campo: CampoContador) => void;
+  decrementar: (campo: CampoContador) => void;
+  setContador: (campo: CampoContador, valor: number) => void;
+  resetContadores: () => void;
+  getTotalContadores: () => number;
+
   // Acciones - Rondas
-  registrarRonda: (data: Omit<Ronda, 'id'>) => void;
+  guardarRonda: () => void;
   getRondasUsuario: (usuarioId: string) => Ronda[];
   getRondasHoy: (usuarioId: string) => Ronda[];
   getTotalHoy: (usuarioId: string) => number;
@@ -101,8 +138,18 @@ interface AppState {
 
   // Acciones - UI
   setViewMode: (mode: ViewMode) => void;
-  toggleCompact: () => void;
+  setDisplayMode: (mode: DisplayMode) => void;
+  cycleDisplayMode: () => void;
 }
+
+const contadoresIniciales: Contadores = {
+  realizados: 0,
+  cancelados: 0,
+  agendados: 0,
+  dificiles: 0,
+  pendientes: 0,
+  revisados: 0,
+};
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -122,11 +169,14 @@ export const useAppStore = create<AppState>()(
       timerState: 'idle',
       tiempoRestante: 25 * 60,
       rondaActual: 1,
+      horaInicioRonda: null,
+
+      contadores: { ...contadoresIniciales },
 
       rondas: [],
 
       viewMode: 'timer',
-      isCompact: false,
+      displayMode: 'normal',
 
       // ========== USUARIOS ==========
 
@@ -188,7 +238,9 @@ export const useAppStore = create<AppState>()(
       },
 
       iniciarTimer: () => {
-        set({ timerState: 'running' });
+        const now = new Date();
+        const hora = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        set({ timerState: 'running', horaInicioRonda: hora });
       },
 
       pausarTimer: () => {
@@ -209,10 +261,8 @@ export const useAppStore = create<AppState>()(
         if (timerState !== 'running') return;
 
         if (tiempoRestante <= 1) {
-          // Timer terminado
           set({ tiempoRestante: 0, timerState: 'finished' });
 
-          // Reproducir sonido
           if (configTimer.sonidoFinal) {
             try {
               const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -251,17 +301,72 @@ export const useAppStore = create<AppState>()(
         return 'green';
       },
 
+      // ========== CONTADORES ==========
+
+      incrementar: (campo) => {
+        set((state) => ({
+          contadores: {
+            ...state.contadores,
+            [campo]: state.contadores[campo] + 1,
+          },
+        }));
+      },
+
+      decrementar: (campo) => {
+        set((state) => ({
+          contadores: {
+            ...state.contadores,
+            [campo]: Math.max(0, state.contadores[campo] - 1),
+          },
+        }));
+      },
+
+      setContador: (campo, valor) => {
+        set((state) => ({
+          contadores: {
+            ...state.contadores,
+            [campo]: Math.max(0, valor),
+          },
+        }));
+      },
+
+      resetContadores: () => {
+        set({ contadores: { ...contadoresIniciales } });
+      },
+
+      getTotalContadores: () => {
+        const { contadores } = get();
+        return Object.values(contadores).reduce((acc, val) => acc + val, 0);
+      },
+
       // ========== RONDAS ==========
 
-      registrarRonda: (data) => {
+      guardarRonda: () => {
+        const { usuarioActual, rondaActual, contadores, horaInicioRonda, configTimer } = get();
+
+        if (!usuarioActual) return;
+
+        const now = new Date();
+        const horaFin = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
         const nuevaRonda: Ronda = {
-          ...data,
           id: `round_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          usuarioId: usuarioActual.id,
+          numero: rondaActual,
+          fecha: now.toISOString().split('T')[0],
+          horaInicio: horaInicioRonda || horaFin,
+          horaFin,
+          tiempoUsado: configTimer.duracionMinutos * 60,
+          ...contadores,
         };
 
         set((state) => ({
           rondas: [...state.rondas, nuevaRonda],
           rondaActual: state.rondaActual + 1,
+          contadores: { ...contadoresIniciales },
+          timerState: 'idle',
+          tiempoRestante: configTimer.duracionMinutos * 60,
+          horaInicioRonda: null,
         }));
       },
 
@@ -276,7 +381,7 @@ export const useAppStore = create<AppState>()(
 
       getTotalHoy: (usuarioId) => {
         const rondasHoy = get().getRondasHoy(usuarioId);
-        return rondasHoy.reduce((acc, r) => acc + r.pedidosRealizados, 0);
+        return rondasHoy.reduce((acc, r) => acc + r.realizados, 0);
       },
 
       reiniciarRondas: () => {
@@ -285,6 +390,8 @@ export const useAppStore = create<AppState>()(
           rondaActual: 1,
           timerState: 'idle',
           tiempoRestante: configTimer.duracionMinutos * 60,
+          contadores: { ...contadoresIniciales },
+          horaInicioRonda: null,
         });
       },
 
@@ -294,8 +401,17 @@ export const useAppStore = create<AppState>()(
         set({ viewMode: mode });
       },
 
-      toggleCompact: () => {
-        set((state) => ({ isCompact: !state.isCompact }));
+      setDisplayMode: (mode) => {
+        set({ displayMode: mode });
+      },
+
+      cycleDisplayMode: () => {
+        set((state) => {
+          const modes: DisplayMode[] = ['normal', 'compact', 'sidebar'];
+          const currentIndex = modes.indexOf(state.displayMode);
+          const nextIndex = (currentIndex + 1) % modes.length;
+          return { displayMode: modes[nextIndex] };
+        });
       },
     }),
     {
@@ -306,7 +422,8 @@ export const useAppStore = create<AppState>()(
         configTimer: state.configTimer,
         rondas: state.rondas,
         rondaActual: state.rondaActual,
-        isCompact: state.isCompact,
+        displayMode: state.displayMode,
+        contadores: state.contadores,
       }),
     }
   )
