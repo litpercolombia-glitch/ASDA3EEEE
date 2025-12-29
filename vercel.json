@@ -22,7 +22,7 @@
   "crons": [
     {
       "path": "/api/cron/run-executor",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 8 * * *"
     }
   ]
 }
