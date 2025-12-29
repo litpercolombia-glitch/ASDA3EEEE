@@ -5,6 +5,8 @@
 
 import { guiasService, alertasService, actividadService } from './supabaseService';
 import { chateaService } from './chateaService';
+import { StatusNormalizer, detectCarrier } from './StatusNormalizer';
+import { CanonicalStatus, CanonicalStatusLabels, ExceptionReason, ExceptionReasonLabels } from '../types/canonical.types';
 
 // ============================================
 // TIPOS
@@ -49,44 +51,25 @@ export interface DropiWebhook {
 }
 
 // ============================================
-// MAPEO DE ESTADOS
+// MAPEO DE ESTADOS - Usa StatusNormalizer (fuente única de verdad)
 // ============================================
 
-const ESTADO_MAP: Record<string, string> = {
-  // Estados genéricos
-  'pending': 'Pendiente',
-  'shipped': 'En Tránsito',
-  'in_transit': 'En Tránsito',
-  'out_for_delivery': 'En Reparto',
-  'delivered': 'Entregado',
-  'returned': 'Devuelto',
-  'cancelled': 'Cancelado',
-
-  // Estados Coordinadora
-  'ADMITIDO': 'En Tránsito',
-  'EN DISTRIBUCION': 'En Reparto',
-  'ENTREGADO': 'Entregado',
-  'DEVUELTO': 'Devuelto',
-  'NOVEDAD': 'Con Novedad',
-
-  // Estados Servientrega
-  'RECIBIDO': 'Pendiente',
-  'EN CAMINO': 'En Tránsito',
-  'EN CIUDAD DESTINO': 'En Reparto',
-  'ENTREGA EXITOSA': 'Entregado',
-  'NO ENTREGADO': 'Con Novedad',
-
-  // Estados Interrapidísimo
-  'RECEPCION': 'Pendiente',
-  'TRANSITO': 'En Tránsito',
-  'REPARTO': 'En Reparto',
-  'OK': 'Entregado',
-  'DEV': 'Devuelto',
+/**
+ * Mapea un estado de transportadora a un estado legible en español
+ * usando el sistema canónico unificado
+ */
+const mapEstado = (estado: string, transportadora?: string): string => {
+  const carrier = transportadora ? detectCarrier(transportadora) : 'UNKNOWN';
+  const normalized = StatusNormalizer.normalize(estado, carrier);
+  return CanonicalStatusLabels[normalized.status];
 };
 
-const mapEstado = (estado: string): string => {
-  const upperEstado = estado.toUpperCase();
-  return ESTADO_MAP[upperEstado] || ESTADO_MAP[estado] || estado;
+/**
+ * Obtiene información completa del estado normalizado
+ */
+const getNormalizedStatus = (estado: string, transportadora?: string) => {
+  const carrier = transportadora ? detectCarrier(transportadora) : 'UNKNOWN';
+  return StatusNormalizer.normalize(estado, carrier);
 };
 
 // ============================================
@@ -108,18 +91,27 @@ export const webhookHandlers = {
         return { success: false, message: 'Guía no encontrada' };
       }
 
-      const nuevoEstado = mapEstado(payload.estado);
-      const tieneNovedad = payload.novedad !== undefined;
+      // Usar el normalizador canónico para obtener estado + razón
+      const normalized = getNormalizedStatus(payload.estado, payload.transportadora);
+      const nuevoEstado = CanonicalStatusLabels[normalized.status];
+      const tieneNovedad = normalized.status === CanonicalStatus.ISSUE || payload.novedad !== undefined;
+      const tipoNovedad = normalized.reason !== ExceptionReason.NONE
+        ? ExceptionReasonLabels[normalized.reason]
+        : payload.novedad?.tipo;
 
-      // Actualizar la guía
+      // Actualizar la guía con datos canónicos
       await guiasService.update(guia.id, {
         estado: nuevoEstado,
         estado_detalle: payload.detalle,
         tiene_novedad: tieneNovedad,
-        tipo_novedad: payload.novedad?.tipo,
+        tipo_novedad: tipoNovedad,
         descripcion_novedad: payload.novedad?.descripcion,
         fecha_actualizacion: new Date().toISOString(),
-        ...(nuevoEstado === 'Entregado' && { fecha_entrega: new Date().toISOString() }),
+        // Datos canónicos adicionales
+        canonical_status: normalized.status,
+        canonical_reason: normalized.reason,
+        raw_status: normalized.rawStatus,
+        ...(normalized.status === CanonicalStatus.DELIVERED && { fecha_entrega: new Date().toISOString() }),
       });
 
       // Registrar actividad
@@ -164,12 +156,17 @@ export const webhookHandlers = {
    */
   async handleDropi(payload: DropiWebhook): Promise<{ success: boolean; message: string; guiaId?: string }> {
     try {
+      // Normalizar estado usando sistema canónico
+      const normalized = getNormalizedStatus(payload.status, payload.carrier);
+
       // Crear nueva guía desde Dropi
       const nuevaGuia = await guiasService.create({
         numero_guia: payload.tracking_number,
         transportadora: payload.carrier,
         ciudad_destino: payload.customer.city,
-        estado: mapEstado(payload.status),
+        estado: CanonicalStatusLabels[normalized.status],
+        canonical_status: normalized.status,
+        canonical_reason: normalized.reason,
         nombre_cliente: payload.customer.name,
         telefono: payload.customer.phone,
         direccion: payload.customer.address,

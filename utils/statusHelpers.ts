@@ -1,6 +1,18 @@
 import { Shipment, ShipmentStatus, ShipmentEvent } from '../types';
+import { StatusNormalizer, detectCarrier } from '../services/StatusNormalizer';
+import {
+  CanonicalStatus,
+  CanonicalStatusLabels,
+  CanonicalStatusColors,
+  ExceptionReason,
+  ExceptionReasonLabels,
+} from '../types/canonical.types';
 
-// Normalized status types
+// ============================================
+// MIGRADO: Usa StatusNormalizer como fuente única de verdad
+// ============================================
+
+// Normalized status types - mapped from CanonicalStatus for backward compatibility
 export type NormalizedStatus =
   | 'ENTREGADO'
   | 'EN_REPARTO'
@@ -9,6 +21,20 @@ export type NormalizedStatus =
   | 'NOVEDAD'
   | 'PENDIENTE'
   | 'DESCONOCIDO';
+
+// Mapping from CanonicalStatus to NormalizedStatus (backward compat)
+const CANONICAL_TO_NORMALIZED: Record<CanonicalStatus, NormalizedStatus> = {
+  [CanonicalStatus.CREATED]: 'PENDIENTE',
+  [CanonicalStatus.PROCESSING]: 'PENDIENTE',
+  [CanonicalStatus.SHIPPED]: 'EN_TRANSITO',
+  [CanonicalStatus.IN_TRANSIT]: 'EN_TRANSITO',
+  [CanonicalStatus.OUT_FOR_DELIVERY]: 'EN_REPARTO',
+  [CanonicalStatus.IN_OFFICE]: 'EN_OFICINA',
+  [CanonicalStatus.DELIVERED]: 'ENTREGADO',
+  [CanonicalStatus.ISSUE]: 'NOVEDAD',
+  [CanonicalStatus.RETURNED]: 'NOVEDAD',
+  [CanonicalStatus.CANCELLED]: 'NOVEDAD',
+};
 
 /**
  * Parses a date string in multiple formats to a Date object
@@ -144,106 +170,51 @@ export const STATUS_CONFIG: Record<
   },
 };
 
-// Status mapping for normalization
-const STATUS_MAP: Record<string, NormalizedStatus> = {
-  // Entregado
-  ENTREGADO: 'ENTREGADO',
-  DELIVERED: 'ENTREGADO',
-  'ENTREGA EXITOSA': 'ENTREGADO',
-  RECOGIDO: 'ENTREGADO',
-  ENTREGADA: 'ENTREGADO',
+/**
+ * Normalizes a raw status string to a NormalizedStatus
+ * MIGRADO: Usa StatusNormalizer como fuente única de verdad
+ *
+ * @param rawStatus - The raw status string
+ * @param carrier - Optional carrier for more accurate normalization
+ */
+export const normalizeStatus = (rawStatus: string, carrier?: string): NormalizedStatus => {
+  const carrierCode = carrier ? detectCarrier(carrier) : 'UNKNOWN';
+  const canonical = StatusNormalizer.normalize(rawStatus, carrierCode);
 
-  // En reparto
-  'EN REPARTO': 'EN_REPARTO',
-  REPARTO: 'EN_REPARTO',
-  'OUT FOR DELIVERY': 'EN_REPARTO',
-  'MENSAJERO ASIGNADO': 'EN_REPARTO',
-  'ASIGNADO A MENSAJERO': 'EN_REPARTO',
-  'EN DISTRIBUCION': 'EN_REPARTO',
-  'PROGRAMADO PARA ENTREGA': 'EN_REPARTO',
-
-  // En oficina
-  'EN OFICINA': 'EN_OFICINA',
-  'DISPONIBLE EN OFICINA': 'EN_OFICINA',
-  'RECLAMAR EN OFICINA': 'EN_OFICINA',
-  BODEGA: 'EN_OFICINA',
-  RETENCION: 'EN_OFICINA',
-  RETENCIÓN: 'EN_OFICINA',
-  ALMACENADO: 'EN_OFICINA',
-  'DISPONIBLE PARA RETIRO': 'EN_OFICINA',
-
-  // En tránsito
-  'EN TRANSITO': 'EN_TRANSITO',
-  'EN CAMINO': 'EN_TRANSITO',
-  'IN TRANSIT': 'EN_TRANSITO',
-  DESPACHADO: 'EN_TRANSITO',
-  VIAJANDO: 'EN_TRANSITO',
-  'EN RUTA': 'EN_TRANSITO',
-  'CENTRO LOGISTICO': 'EN_TRANSITO',
-  'EN CENTRO LOGÍSTICO': 'EN_TRANSITO',
-  'RECIBIDO EN CENTRO': 'EN_TRANSITO',
-
-  // Novedades
-  NOVEDAD: 'NOVEDAD',
-  DEVOLUCION: 'NOVEDAD',
-  DEVOLUCIÓN: 'NOVEDAD',
-  RECHAZADO: 'NOVEDAD',
-  'NO ENTREGADO': 'NOVEDAD',
-  'DIRECCION ERRADA': 'NOVEDAD',
-  'DIRECCIÓN ERRÓNEA': 'NOVEDAD',
-  'NO SE ENCONTRO': 'NOVEDAD',
-  CERRADO: 'NOVEDAD',
-  FALLIDO: 'NOVEDAD',
-  RETORNO: 'NOVEDAD',
-  'NO CONTESTA': 'NOVEDAD',
-  'NO RECIBE': 'NOVEDAD',
-
-  // Pendiente
-  PENDIENTE: 'PENDIENTE',
-  CREADO: 'PENDIENTE',
-  RECIBIDO: 'PENDIENTE',
-  REGISTRADO: 'PENDIENTE',
+  return CANONICAL_TO_NORMALIZED[canonical.status] || 'DESCONOCIDO';
 };
 
 /**
- * Normalizes a raw status string to a NormalizedStatus
+ * Get full canonical status information
+ * Use this when you need the complete normalized data including reason
  */
-export const normalizeStatus = (rawStatus: string): NormalizedStatus => {
-  const status = rawStatus.toUpperCase().trim();
+export const getCanonicalStatusInfo = (rawStatus: string, carrier?: string) => {
+  const carrierCode = carrier ? detectCarrier(carrier) : 'UNKNOWN';
+  return StatusNormalizer.normalize(rawStatus, carrierCode);
+};
 
-  // Try exact match first
-  if (STATUS_MAP[status]) {
-    return STATUS_MAP[status];
+/**
+ * Get the human-readable label for a status
+ * Use this in UI instead of hardcoded strings
+ */
+export const getStatusLabel = (rawStatus: string, carrier?: string): string => {
+  const carrierCode = carrier ? detectCarrier(carrier) : 'UNKNOWN';
+  const canonical = StatusNormalizer.normalize(rawStatus, carrierCode);
+  return CanonicalStatusLabels[canonical.status];
+};
+
+/**
+ * Get the exception reason label if status is ISSUE
+ */
+export const getExceptionReasonLabel = (rawStatus: string, carrier?: string): string | null => {
+  const carrierCode = carrier ? detectCarrier(carrier) : 'UNKNOWN';
+  const canonical = StatusNormalizer.normalize(rawStatus, carrierCode);
+
+  if (canonical.status === CanonicalStatus.ISSUE && canonical.reason !== ExceptionReason.NONE) {
+    return ExceptionReasonLabels[canonical.reason];
   }
 
-  // Try partial match
-  for (const [key, value] of Object.entries(STATUS_MAP)) {
-    if (status.includes(key)) {
-      return value;
-    }
-  }
-
-  // Additional heuristics
-  if (status.includes('ENTREG')) return 'ENTREGADO';
-  if (status.includes('OFICINA')) return 'EN_OFICINA';
-  if (
-    status.includes('NOVEDAD') ||
-    status.includes('FALL') ||
-    status.includes('RECHAZ') ||
-    status.includes('DEVOL')
-  )
-    return 'NOVEDAD';
-  if (
-    status.includes('TRANSIT') ||
-    status.includes('CAMINO') ||
-    status.includes('VIAJA') ||
-    status.includes('RUTA')
-  )
-    return 'EN_TRANSITO';
-  if (status.includes('REPARTO') || status.includes('MENSAJERO') || status.includes('DISTRIBU'))
-    return 'EN_REPARTO';
-
-  return 'DESCONOCIDO';
+  return null;
 };
 
 /**

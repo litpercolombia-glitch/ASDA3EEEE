@@ -1,0 +1,26 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "outDir": "../.vercel/output/functions",
+    "rootDir": "..",
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "noEmit": false
+  },
+  "include": [
+    "./**/*.ts",
+    "../services/**/*.ts",
+    "../types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

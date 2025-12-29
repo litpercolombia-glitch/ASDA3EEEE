@@ -1,26 +1,22 @@
 // components/carga/CargaProgressBar.tsx
-// Componente de barra de progreso para carga de guías
+// Barra de progreso profesional para carga de guías
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { CargaProgress } from '../../types/carga.types';
 import { useCargaStore } from '../../stores/cargaStore';
 
 interface CargaProgressBarProps {
   progress?: CargaProgress;
   showDetails?: boolean;
-  onPause?: () => void;
-  onResume?: () => void;
-  onRetry?: () => void;
-  onReset?: () => void;
+  compact?: boolean;
+  className?: string;
 }
 
 export const CargaProgressBar: React.FC<CargaProgressBarProps> = ({
   progress: externalProgress,
   showDetails = true,
-  onPause,
-  onResume,
-  onRetry,
-  onReset,
+  compact = false,
+  className = '',
 }) => {
   const storeProgress = useCargaStore((state) => state.progress);
   const pausarProcesamiento = useCargaStore((state) => state.pausarProcesamiento);
@@ -29,251 +25,305 @@ export const CargaProgressBar: React.FC<CargaProgressBarProps> = ({
   const resetProgress = useCargaStore((state) => state.resetProgress);
 
   const progress = externalProgress || storeProgress;
+  const [showErrors, setShowErrors] = useState(false);
 
   // No mostrar si está idle y no hay datos
   if (progress.estado === 'idle' && progress.total === 0) {
     return null;
   }
 
-  const getStatusColor = () => {
+  const getStatusConfig = () => {
     switch (progress.estado) {
       case 'procesando':
-        return 'bg-blue-500';
+        return {
+          color: 'from-blue-500 to-indigo-600',
+          bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+          borderColor: 'border-blue-200 dark:border-blue-800',
+          textColor: 'text-blue-700 dark:text-blue-300',
+          icon: '⚡',
+          label: 'Procesando',
+          pulse: true,
+        };
       case 'completado':
-        return 'bg-green-500';
+        return {
+          color: 'from-emerald-500 to-green-600',
+          bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
+          borderColor: 'border-emerald-200 dark:border-emerald-800',
+          textColor: 'text-emerald-700 dark:text-emerald-300',
+          icon: '✓',
+          label: 'Completado',
+          pulse: false,
+        };
       case 'error':
-        return 'bg-red-500';
+        return {
+          color: 'from-red-500 to-rose-600',
+          bgColor: 'bg-red-50 dark:bg-red-900/20',
+          borderColor: 'border-red-200 dark:border-red-800',
+          textColor: 'text-red-700 dark:text-red-300',
+          icon: '⚠',
+          label: `${progress.fallidos} errores`,
+          pulse: false,
+        };
       case 'pausado':
-        return 'bg-yellow-500';
+        return {
+          color: 'from-amber-500 to-yellow-600',
+          bgColor: 'bg-amber-50 dark:bg-amber-900/20',
+          borderColor: 'border-amber-200 dark:border-amber-800',
+          textColor: 'text-amber-700 dark:text-amber-300',
+          icon: '⏸',
+          label: 'Pausado',
+          pulse: false,
+        };
       default:
-        return 'bg-gray-500';
+        return {
+          color: 'from-slate-400 to-slate-500',
+          bgColor: 'bg-slate-50 dark:bg-slate-900/20',
+          borderColor: 'border-slate-200 dark:border-slate-700',
+          textColor: 'text-slate-600 dark:text-slate-400',
+          icon: '○',
+          label: 'Esperando',
+          pulse: false,
+        };
     }
   };
 
-  const getStatusText = () => {
-    switch (progress.estado) {
-      case 'procesando':
-        return 'Procesando...';
-      case 'completado':
-        return 'Completado';
-      case 'error':
-        return `Completado con ${progress.fallidos} errores`;
-      case 'pausado':
-        return 'Pausado';
-      default:
-        return 'Esperando';
-    }
-  };
+  const config = getStatusConfig();
 
-  const handlePause = () => {
-    onPause ? onPause() : pausarProcesamiento();
-  };
-
-  const handleResume = () => {
-    onResume ? onResume() : reanudarProcesamiento();
-  };
-
-  const handleRetry = () => {
-    onRetry ? onRetry() : reintentarGuiasFallidas();
-  };
-
-  const handleReset = () => {
-    onReset ? onReset() : resetProgress();
-  };
+  // Versión compacta para headers
+  if (compact) {
+    return (
+      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${config.bgColor} ${config.borderColor} border ${className}`}>
+        <span className={`text-sm ${config.pulse ? 'animate-pulse' : ''}`}>{config.icon}</span>
+        <span className={`text-sm font-bold ${config.textColor}`}>
+          {progress.procesados}/{progress.total}
+        </span>
+        <div className="w-20 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+          <div
+            className={`h-full bg-gradient-to-r ${config.color} transition-all duration-300 ease-out ${config.pulse ? 'animate-pulse' : ''}`}
+            style={{ width: `${progress.porcentaje}%` }}
+          />
+        </div>
+        <span className={`text-xs font-medium ${config.textColor}`}>{progress.porcentaje}%</span>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700">
-      {/* Header con contador X/Y */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor()} text-white`}>
-            {getStatusText()}
-          </span>
-          <span className="text-2xl font-bold text-gray-900 dark:text-white">
-            {progress.procesados}/{progress.total}
-          </span>
-          <span className="text-lg text-gray-500 dark:text-gray-400">
-            {progress.porcentaje}%
-          </span>
+    <div className={`rounded-xl border ${config.borderColor} ${config.bgColor} overflow-hidden ${className}`}>
+      {/* Header principal */}
+      <div className="p-4 pb-3">
+        <div className="flex items-center justify-between mb-3">
+          {/* Status y contador */}
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${config.color} flex items-center justify-center shadow-lg ${config.pulse ? 'animate-pulse' : ''}`}>
+              <span className="text-white text-lg">{config.icon}</span>
+            </div>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-slate-800 dark:text-white">
+                  {progress.procesados}
+                </span>
+                <span className="text-xl text-slate-400 dark:text-slate-500">/</span>
+                <span className="text-xl font-semibold text-slate-600 dark:text-slate-400">
+                  {progress.total}
+                </span>
+              </div>
+              <p className={`text-sm font-medium ${config.textColor}`}>{config.label}</p>
+            </div>
+          </div>
+
+          {/* Porcentaje grande */}
+          <div className="text-right">
+            <span className={`text-4xl font-black bg-gradient-to-r ${config.color} bg-clip-text text-transparent`}>
+              {progress.porcentaje}%
+            </span>
+            {progress.guiaActual && progress.estado === 'procesando' && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-32">
+                {progress.guiaActual}
+              </p>
+            )}
+          </div>
         </div>
 
-        {/* Controles */}
-        <div className="flex gap-2">
-          {progress.estado === 'procesando' && (
-            <button
-              onClick={handlePause}
-              className="px-3 py-1 text-sm bg-yellow-100 text-yellow-800 rounded-md hover:bg-yellow-200 transition-colors"
-            >
-              Pausar
-            </button>
-          )}
-          {progress.estado === 'pausado' && (
-            <button
-              onClick={handleResume}
-              className="px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-md hover:bg-blue-200 transition-colors"
-            >
-              Reanudar
-            </button>
-          )}
-          {progress.estado === 'error' && progress.errores.length > 0 && (
-            <button
-              onClick={handleRetry}
-              className="px-3 py-1 text-sm bg-orange-100 text-orange-800 rounded-md hover:bg-orange-200 transition-colors"
-            >
-              Reintentar ({progress.errores.filter(e => !e.resuelta).length})
-            </button>
-          )}
-          {(progress.estado === 'completado' || progress.estado === 'error') && (
-            <button
-              onClick={handleReset}
-              className="px-3 py-1 text-sm bg-gray-100 text-gray-800 rounded-md hover:bg-gray-200 transition-colors"
-            >
-              Limpiar
-            </button>
-          )}
-        </div>
-      </div>
+        {/* Barra de progreso principal */}
+        <div className="relative h-4 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden shadow-inner">
+          <div
+            className={`absolute inset-y-0 left-0 bg-gradient-to-r ${config.color} transition-all duration-500 ease-out rounded-full`}
+            style={{ width: `${progress.porcentaje}%` }}
+          >
+            {/* Efecto de brillo animado */}
+            {progress.estado === 'procesando' && (
+              <div className="absolute inset-0 overflow-hidden rounded-full">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+              </div>
+            )}
+          </div>
 
-      {/* Barra de progreso */}
-      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 mb-3 overflow-hidden">
-        <div
-          className={`h-4 rounded-full transition-all duration-300 ${getStatusColor()}`}
-          style={{ width: `${progress.porcentaje}%` }}
-        >
-          {progress.porcentaje > 10 && (
-            <span className="flex items-center justify-center text-xs text-white font-medium h-full">
+          {/* Texto dentro de la barra */}
+          {progress.porcentaje > 15 && (
+            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow">
               {progress.porcentaje}%
             </span>
           )}
         </div>
+
+        {/* Controles */}
+        <div className="flex items-center justify-between mt-3">
+          <div className="flex items-center gap-2">
+            {progress.estado === 'procesando' && (
+              <button
+                onClick={pausarProcesamiento}
+                className="px-3 py-1.5 text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors flex items-center gap-1"
+              >
+                <span>⏸</span> Pausar
+              </button>
+            )}
+            {progress.estado === 'pausado' && (
+              <button
+                onClick={reanudarProcesamiento}
+                className="px-3 py-1.5 text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors flex items-center gap-1"
+              >
+                <span>▶</span> Reanudar
+              </button>
+            )}
+            {progress.errores.length > 0 && (
+              <button
+                onClick={() => setShowErrors(!showErrors)}
+                className="px-3 py-1.5 text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors flex items-center gap-1"
+              >
+                <span>⚠</span> {progress.errores.filter(e => !e.resuelta).length} errores
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {progress.estado === 'error' && progress.errores.some(e => !e.resuelta) && (
+              <button
+                onClick={reintentarGuiasFallidas}
+                className="px-3 py-1.5 text-xs font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-lg hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors flex items-center gap-1"
+              >
+                <span>🔄</span> Reintentar
+              </button>
+            )}
+            {(progress.estado === 'completado' || progress.estado === 'error') && (
+              <button
+                onClick={resetProgress}
+                className="px-3 py-1.5 text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              >
+                Cerrar
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Detalles */}
+      {/* Detalles expandibles */}
       {showDetails && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div className="bg-gray-50 dark:bg-gray-700 rounded-md p-2 text-center">
-            <div className="text-gray-500 dark:text-gray-400 text-xs">Lote</div>
-            <div className="font-semibold text-gray-900 dark:text-white">
-              {progress.batchActual}/{progress.totalBatches}
-            </div>
-          </div>
-          <div className="bg-green-50 dark:bg-green-900/20 rounded-md p-2 text-center">
-            <div className="text-green-600 dark:text-green-400 text-xs">Exitosas</div>
-            <div className="font-semibold text-green-700 dark:text-green-300">
-              {progress.exitosos}
-            </div>
-          </div>
-          <div className="bg-red-50 dark:bg-red-900/20 rounded-md p-2 text-center">
-            <div className="text-red-600 dark:text-red-400 text-xs">Fallidas</div>
-            <div className="font-semibold text-red-700 dark:text-red-300">
-              {progress.fallidos}
-            </div>
-          </div>
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-md p-2 text-center">
-            <div className="text-blue-600 dark:text-blue-400 text-xs">Procesando</div>
-            <div className="font-semibold text-blue-700 dark:text-blue-300 truncate">
-              {progress.guiaActual || '-'}
-            </div>
+        <div className="px-4 pb-4 pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
+          <div className="grid grid-cols-4 gap-2">
+            <StatBox
+              label="Lote"
+              value={`${progress.batchActual}/${progress.totalBatches}`}
+              color="slate"
+            />
+            <StatBox
+              label="Exitosas"
+              value={progress.exitosos.toString()}
+              color="emerald"
+            />
+            <StatBox
+              label="Fallidas"
+              value={progress.fallidos.toString()}
+              color="red"
+            />
+            <StatBox
+              label="Pendientes"
+              value={(progress.total - progress.procesados).toString()}
+              color="blue"
+            />
           </div>
         </div>
       )}
 
-      {/* Lista de errores (si hay) */}
-      {progress.errores.length > 0 && showDetails && (
-        <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-3">
-          <h4 className="text-sm font-medium text-red-600 dark:text-red-400 mb-2">
-            Errores ({progress.errores.filter(e => !e.resuelta).length} pendientes)
+      {/* Lista de errores */}
+      {showErrors && progress.errores.length > 0 && (
+        <div className="px-4 pb-4 border-t border-slate-200/50 dark:border-slate-700/50">
+          <h4 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2 flex items-center gap-1">
+            <span>⚠</span> Errores ({progress.errores.filter(e => !e.resuelta).length} pendientes)
           </h4>
           <div className="max-h-32 overflow-y-auto space-y-1">
-            {progress.errores.slice(0, 10).map((error, index) => (
+            {progress.errores.map((error, index) => (
               <div
                 key={`${error.guiaId}-${index}`}
-                className={`text-xs p-2 rounded ${
+                className={`text-xs p-2 rounded-lg flex items-center justify-between ${
                   error.resuelta
-                    ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 line-through'
+                    ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
                     : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
                 }`}
               >
-                <span className="font-mono">{error.numeroGuia}</span>: {error.mensaje}
+                <div className="flex items-center gap-2">
+                  <span>{error.resuelta ? '✓' : '✗'}</span>
+                  <span className="font-mono font-medium">{error.numeroGuia}</span>
+                  <span className="text-slate-500 truncate max-w-48">{error.mensaje}</span>
+                </div>
                 {error.reintentos > 0 && (
-                  <span className="ml-2 text-gray-500">
-                    (Reintentos: {error.reintentos})
+                  <span className="text-slate-400 text-[10px]">
+                    {error.reintentos}x
                   </span>
                 )}
               </div>
             ))}
-            {progress.errores.length > 10 && (
-              <div className="text-xs text-gray-500 text-center">
-                ... y {progress.errores.length - 10} más
-              </div>
-            )}
           </div>
         </div>
       )}
+
+      {/* Estilos para la animación de brillo */}
+      <style>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        .animate-shimmer {
+          animation: shimmer 1.5s infinite;
+        }
+      `}</style>
     </div>
   );
 };
 
-// Versión compacta para header/status bar
-export const CargaProgressCompact: React.FC<{ className?: string }> = ({ className = '' }) => {
+// Componente auxiliar para las estadísticas
+const StatBox: React.FC<{
+  label: string;
+  value: string;
+  color: 'slate' | 'emerald' | 'red' | 'blue' | 'amber';
+}> = ({ label, value, color }) => {
+  const colors = {
+    slate: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400',
+    emerald: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300',
+    red: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+    blue: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+    amber: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
+  };
+
+  return (
+    <div className={`rounded-lg p-2 text-center ${colors[color]}`}>
+      <div className="text-[10px] font-medium opacity-75">{label}</div>
+      <div className="text-sm font-bold">{value}</div>
+    </div>
+  );
+};
+
+// Versión flotante fija en la esquina
+export const CargaProgressFloating: React.FC = () => {
   const progress = useCargaStore((state) => state.progress);
 
   if (progress.estado === 'idle' && progress.total === 0) {
     return null;
   }
 
-  const getStatusIcon = () => {
-    switch (progress.estado) {
-      case 'procesando':
-        return (
-          <svg className="animate-spin h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
-        );
-      case 'completado':
-        return (
-          <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        );
-      case 'error':
-        return (
-          <svg className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        );
-      case 'pausado':
-        return (
-          <svg className="h-4 w-4 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        );
-      default:
-        return null;
-    }
-  };
-
   return (
-    <div className={`flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-full ${className}`}>
-      {getStatusIcon()}
-      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-        {progress.procesados}/{progress.total}
-      </span>
-      <span className="text-sm text-gray-500 dark:text-gray-400">
-        {progress.porcentaje}%
-      </span>
-      {/* Mini barra de progreso */}
-      <div className="w-16 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full overflow-hidden">
-        <div
-          className={`h-full transition-all duration-300 ${
-            progress.estado === 'completado' ? 'bg-green-500' :
-            progress.estado === 'error' ? 'bg-red-500' :
-            progress.estado === 'pausado' ? 'bg-yellow-500' : 'bg-blue-500'
-          }`}
-          style={{ width: `${progress.porcentaje}%` }}
-        />
-      </div>
+    <div className="fixed bottom-4 right-4 z-50 w-80 shadow-2xl rounded-xl">
+      <CargaProgressBar showDetails={false} />
     </div>
   );
 };

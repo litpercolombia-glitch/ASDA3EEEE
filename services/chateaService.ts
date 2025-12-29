@@ -7,9 +7,23 @@
 // CONFIGURACIÓN
 // ============================================
 
-const CHATEA_API_KEY = import.meta.env.VITE_CHATEA_API_KEY || 'HSbSQoOYa6kfnRxZ6YekDcVj85u85oInCGsP6CRJtnPCKBtEfsWvLe0TiN0W';
-const CHATEA_WEBHOOK_URL = import.meta.env.VITE_CHATEA_WEBHOOK_URL || 'https://chateapro.app/api/iwh/5423b247e32fc95f089fc0905393cd69';
+// ⚠️ IMPORTANTE: Configurar en Vercel → Settings → Environment Variables:
+// - VITE_CHATEA_API_KEY
+// - VITE_CHATEA_WEBHOOK_URL
+const CHATEA_API_KEY = import.meta.env.VITE_CHATEA_API_KEY || '';
+const CHATEA_WEBHOOK_URL = import.meta.env.VITE_CHATEA_WEBHOOK_URL || '';
 const CHATEA_API_BASE = 'https://chateapro.app/api';
+
+/**
+ * Valida que las credenciales de Chatea estén configuradas
+ */
+function isChateaConfigured(): boolean {
+  if (!CHATEA_API_KEY) {
+    console.warn('[CHATEA] ⚠️ VITE_CHATEA_API_KEY no configurada');
+    return false;
+  }
+  return true;
+}
 
 // ============================================
 // TIPOS
@@ -164,6 +178,14 @@ export const chateaService = {
    * Enviar mensaje de WhatsApp
    */
   async sendMessage(message: WhatsAppMessage): Promise<ChateaResponse> {
+    // Validar configuración
+    if (!isChateaConfigured()) {
+      return {
+        success: false,
+        error: 'Chatea no configurado. Configurar VITE_CHATEA_API_KEY en Vercel.',
+      };
+    }
+
     try {
       const formattedPhone = formatPhoneNumber(message.to);
 
