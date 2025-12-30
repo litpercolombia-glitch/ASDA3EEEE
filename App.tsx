@@ -371,6 +371,7 @@ const App: React.FC = () => {
     const savedCountry = getSelectedCountry();
     if (savedCountry) {
       setSelectedCountry(savedCountry);
+      setShowCountrySelector(false);
     } else {
       setShowCountrySelector(true);
     }
@@ -535,6 +536,7 @@ const App: React.FC = () => {
     setNotification('✅ Datos del semáforo cargados');
   };
 
+  // Mostrar selector de país si no hay país seleccionado
   if (showCountrySelector || !selectedCountry) {
     return <CountrySelector onCountrySelected={handleCountrySelected} />;
   }
@@ -907,7 +909,7 @@ const App: React.FC = () => {
         )}
 
         {/* Tab Content */}
-        <div className="min-h-[600px]">
+        <div className={currentTab === 'home' ? '' : 'min-h-[600px]'}>
           {/* ====================================== */}
           {/* CHAT-FIRST COMMAND CENTER (NEW) */}
           {/* ====================================== */}
