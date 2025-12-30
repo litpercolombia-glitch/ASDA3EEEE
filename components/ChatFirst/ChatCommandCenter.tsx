@@ -310,14 +310,15 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
 
   // Auto-scroll solo cuando se agregan nuevos mensajes (no al escribir)
   const scrollToBottom = useCallback((force = false) => {
-    if (!chatContainerRef.current || !messagesEndRef.current) return;
+    if (!chatContainerRef.current) return;
 
     const container = chatContainerRef.current;
     const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
 
     // Solo hacer scroll si estamos cerca del fondo o es forzado
+    // Usamos scrollTop en vez de scrollIntoView para evitar mover toda la página
     if (isNearBottom || force) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      container.scrollTop = container.scrollHeight;
     }
   }, []);
 
@@ -854,6 +855,7 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
             <div
               ref={chatContainerRef}
               className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+              style={{ overscrollBehavior: 'contain' }}
             >
               {messages.map((message) => (
                 <MessageBubble
