@@ -26,7 +26,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
     {
       code: 'COLOMBIA' as Country,
       name: 'Colombia',
-      flag: '🇨🇴',
+      flagUrl: 'https://flagcdn.com/w80/co.png',
       abbr: 'CO',
       gradient: 'from-yellow-500 via-blue-500 to-red-500',
       bgGlow: 'bg-yellow-500/20',
@@ -35,7 +35,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
     {
       code: 'ECUADOR' as Country,
       name: 'Ecuador',
-      flag: '🇪🇨',
+      flagUrl: 'https://flagcdn.com/w80/ec.png',
       abbr: 'EC',
       gradient: 'from-yellow-400 via-blue-600 to-red-600',
       bgGlow: 'bg-blue-500/20',
@@ -44,7 +44,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
     {
       code: 'CHILE' as Country,
       name: 'Chile',
-      flag: '🇨🇱',
+      flagUrl: 'https://flagcdn.com/w80/cl.png',
       abbr: 'CL',
       gradient: 'from-blue-600 via-white to-red-600',
       bgGlow: 'bg-red-500/20',
@@ -163,6 +163,15 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ onCountrySelected }) 
 
                   {/* Content */}
                   <div className="relative z-10">
+                    {/* Flag image */}
+                    <div className="mb-4 flex justify-center">
+                      <img
+                        src={country.flagUrl}
+                        alt={`Bandera de ${country.name}`}
+                        className="w-16 h-12 object-cover rounded-lg shadow-lg"
+                      />
+                    </div>
+
                     {/* Country code badge */}
                     <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 transition-colors ${
                       isSelected
