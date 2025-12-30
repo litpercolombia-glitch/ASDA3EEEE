@@ -1101,42 +1101,53 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
 
   // Load saved data on mount
   useEffect(() => {
-    const saved = loadTabData<{
-      data: SemaforoExcelData;
-      uploadDate: string;
-      fileName: string;
-    } | null>(STORAGE_KEYS.SEMAFORO, null);
+    try {
+      const saved = loadTabData<{
+        data: SemaforoExcelData;
+        uploadDate: string;
+        fileName: string;
+      } | null>(STORAGE_KEYS.SEMAFORO, null);
 
-    if (saved) {
-      setExcelData(saved.data);
-      setLastUpload(new Date(saved.uploadDate));
-      setFileName(saved.fileName);
+      if (saved) {
+        setExcelData(saved.data);
+        setLastUpload(new Date(saved.uploadDate));
+        setFileName(saved.fileName);
 
-      const processed = procesarExcelConScore(saved.data);
-      setCiudades(processed);
+        const processed = procesarExcelConScore(saved.data);
+        setCiudades(processed);
+      }
+    } catch (error) {
+      console.error('Error cargando datos guardados:', error);
+      // Limpiar datos corruptos del localStorage
+      localStorage.removeItem(STORAGE_KEYS.SEMAFORO);
     }
   }, []);
 
   // Handle Excel data loaded
   const handleDataLoaded = (data: SemaforoExcelData) => {
-    setExcelData(data);
-    setLastUpload(new Date());
-    setFileName('datos_cargados.xlsx');
+    try {
+      setExcelData(data);
+      setLastUpload(new Date());
+      setFileName('datos_cargados.xlsx');
 
-    // Process data with score calculation
-    const processed = procesarExcelConScore(data);
-    setCiudades(processed);
+      // Process data with score calculation
+      const processed = procesarExcelConScore(data);
+      setCiudades(processed);
 
-    // Save to localStorage
-    saveTabData(STORAGE_KEYS.SEMAFORO, {
-      data,
-      uploadDate: new Date().toISOString(),
-      fileName: 'datos_cargados.xlsx',
-    });
+      // Save to localStorage
+      saveTabData(STORAGE_KEYS.SEMAFORO, {
+        data,
+        uploadDate: new Date().toISOString(),
+        fileName: 'datos_cargados.xlsx',
+      });
 
-    // Notify parent
-    if (onDataLoaded) {
-      onDataLoaded(data);
+      // Notify parent
+      if (onDataLoaded) {
+        onDataLoaded(data);
+      }
+    } catch (error) {
+      console.error('Error procesando datos del Excel:', error);
+      alert('Hubo un error procesando los datos. Por favor verifica el formato del archivo.');
     }
   };
 
