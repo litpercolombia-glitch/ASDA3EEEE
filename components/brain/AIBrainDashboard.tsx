@@ -22,7 +22,7 @@ import {
   Send, AlertTriangle, CheckCircle, XCircle, Clock,
   TrendingUp, Users, Package, Wifi, WifiOff, Sparkles,
   ChevronRight, BarChart3, Settings, Bot, Loader2,
-  Phone, MessageSquare, Eye, Filter
+  Phone, MessageSquare, Eye, Filter, Target
 } from 'lucide-react';
 
 // ============================================================================
