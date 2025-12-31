@@ -3,206 +3,285 @@
 ## Resumen Ejecutivo
 
 Rediseño completo de la app para hacerla más funcional con:
+- **2 Procesos**: Generación de Guías y Novedad
 - 3 modos de vista (Widget, Barra Lateral, Compacto)
 - Sistema de bloques con estadísticas
-- Contadores siempre visibles (+/-)
+- **TODOS los contadores siempre visibles** (+/-)
 - Exportación a Excel
 - Animaciones fluidas
 
 ---
 
-## 1. NUEVAS ESTRUCTURAS DE DATOS
+## 1. LOS 2 PROCESOS
 
-### 1.1 Bloque (nuevo concepto)
+### 1.1 Proceso: GENERACIÓN DE GUÍAS (6 campos)
+| Campo | Icono | Color |
+|-------|-------|-------|
+| Realizado | ✓ | Verde #10B981 |
+| Cancelados | ✗ | Rojo #EF4444 |
+| Agendados | 📅 | Azul #3B82F6 |
+| Difíciles | ⚠️ | Naranja #F97316 |
+| Pedido Pendiente | ⏳ | Amarillo #F59E0B |
+| Revisado | 👁️ | Morado #8B5CF6 |
+
+### 1.2 Proceso: NOVEDAD (9 campos)
+| Campo | Icono | Color |
+|-------|-------|-------|
+| Novedades iniciales | 📋 | Azul #3B82F6 |
+| Novedades solucionadas | ✅ | Verde #10B981 |
+| Novedades revisadas | 👁️ | Morado #8B5CF6 |
+| Novedades finales pendientes | ⏳ | Amarillo #F59E0B |
+| Devolución x LITPER | 🔄 | Naranja #F97316 |
+| Devolución 3 intentos | 🔁 | Rojo #EF4444 |
+| Devolución error transportadora | 🚚 | Gris #6B7280 |
+| Devolución x proveedor | 📦 | Cyan #06B6D4 |
+| TOT Devoluciones | 📊 | Rosa #EC4899 |
+
+### 1.3 Selector de Proceso
+```
+┌─────────────────────────────────────┐
+│  [📦 Generación Guías] [📋 Novedad] │
+└─────────────────────────────────────┘
+```
+- Tabs para cambiar entre procesos
+- Cada proceso guarda sus propios datos
+- El bloque guarda qué proceso se usó
+
+---
+
+## 2. ESTRUCTURAS DE DATOS
+
+### 2.1 Tipos de Proceso
+```typescript
+type TipoProceso = 'guias' | 'novedad';
+
+// Campos para Generación de Guías
+interface ContadoresGuias {
+  realizado: number;
+  cancelados: number;
+  agendados: number;
+  dificiles: number;
+  pedidoPendiente: number;
+  revisado: number;
+}
+
+// Campos para Novedad
+interface ContadoresNovedad {
+  novedadesIniciales: number;
+  novedadesSolucionadas: number;
+  novedadesRevisadas: number;
+  novedadesFinalePendientes: number;
+  devolucionLitper: number;
+  devolucion3Intentos: number;
+  devolucionErrorTransportadora: number;
+  devolucionProveedor: number;
+  totDevoluciones: number;
+}
+```
+
+### 2.2 Bloque (actualizado)
 ```typescript
 interface Bloque {
   id: string;
   usuarioId: string;
+  tipoProceso: TipoProceso;           // 'guias' | 'novedad'
   fecha: string;
   horaInicio: string;
   horaFin: string;
-  tiempoTotal: number;          // segundos
+  tiempoTotal: number;
 
-  // Contadores finales
-  pedidosRealizados: number;
-  pedidosCancelados: number;
-  pedidosAgendados: number;
+  // Contadores según el proceso
+  contadoresGuias?: ContadoresGuias;
+  contadoresNovedad?: ContadoresNovedad;
 
-  // Estadísticas calculadas
-  promedioMinuto: number;       // pedidos por minuto
-  eficiencia: number;           // % realizados vs total
+  // Estadísticas
+  totalOperaciones: number;
+  promedioMinuto: number;
 }
 ```
 
-### 1.2 Día (para el nuevo día)
+### 2.3 Día
 ```typescript
 interface Dia {
   id: string;
   fecha: string;
-  bloques: string[];            // IDs de bloques
-  totales: {
-    realizados: number;
-    cancelados: number;
-    agendados: number;
-  };
+  bloques: string[];
+  totalesGuias: ContadoresGuias;
+  totalesNovedad: ContadoresNovedad;
   horaInicio: string;
   horaFin: string;
 }
 ```
 
-### 1.3 Modo Vista
-```typescript
-type ViewLayout = 'widget' | 'sidebar' | 'compact';
+---
+
+## 3. LAS 3 VISTAS (TODOS LOS CONTADORES VISIBLES)
+
+### Vista 1: WIDGET - Generación de Guías
+```
+┌───────────────────────────────┐
+│ LITPER PEDIDOS         ─ □ × │
+├───────────────────────────────┤
+│ [📦 Guías] [📋 Novedad]       │
+├───────────────────────────────┤
+│     [Usuario ▼]    05:32     │
+├───────────────────────────────┤
+│ ┌───────────────────────────┐ │
+│ │ ✓ Realizado      45 [+][-]│ │
+│ ├───────────────────────────┤ │
+│ │ ✗ Cancelados      3 [+][-]│ │
+│ ├───────────────────────────┤ │
+│ │ 📅 Agendados      7 [+][-]│ │
+│ ├───────────────────────────┤ │
+│ │ ⚠️ Difíciles      2 [+][-]│ │
+│ ├───────────────────────────┤ │
+│ │ ⏳ Pendiente      4 [+][-]│ │
+│ ├───────────────────────────┤ │
+│ │ 👁️ Revisado       8 [+][-]│ │
+│ └───────────────────────────┘ │
+│                               │
+│     [🔄 REINICIAR BLOQUE]     │
+├───────────────────────────────┤
+│  Stats │ Bloques │ ⚙️        │
+└───────────────────────────────┘
+```
+
+### Vista 1: WIDGET - Novedad
+```
+┌───────────────────────────────┐
+│ LITPER PEDIDOS         ─ □ × │
+├───────────────────────────────┤
+│ [📦 Guías] [📋 Novedad]       │
+├───────────────────────────────┤
+│     [Usuario ▼]    05:32     │
+├───────────────────────────────┤
+│ ┌───────────────────────────┐ │
+│ │ 📋 Nov. Iniciales  12[+][-]│ │
+│ ├───────────────────────────┤ │
+│ │ ✅ Nov. Solucion.   8[+][-]│ │
+│ ├───────────────────────────┤ │
+│ │ 👁️ Nov. Revisadas  5[+][-]│ │
+│ ├───────────────────────────┤ │
+│ │ ⏳ Nov. Pendientes 3[+][-]│ │
+│ ├───────────────────────────┤ │
+│ │ 🔄 Dev. LITPER     2[+][-]│ │
+│ ├───────────────────────────┤ │
+│ │ 🔁 Dev. 3 Intentos 1[+][-]│ │
+│ ├───────────────────────────┤ │
+│ │ 🚚 Dev. Transport. 0[+][-]│ │
+│ ├───────────────────────────┤ │
+│ │ 📦 Dev. Proveedor  1[+][-]│ │
+│ ├───────────────────────────┤ │
+│ │ 📊 TOT Devolución  4[+][-]│ │
+│ └───────────────────────────┘ │
+│                               │
+│     [🔄 REINICIAR BLOQUE]     │
+├───────────────────────────────┤
+│  Stats │ Bloques │ ⚙️        │
+└───────────────────────────────┘
+```
+
+### Vista 2: BARRA LATERAL - Guías
+```
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│ LITPER [📦 Guías][📋 Nov]  👤Juan  05:32                              ─ □ ×    │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│ ✓45[+][-] │ ✗3[+][-] │ 📅7[+][-] │ ⚠️2[+][-] │ ⏳4[+][-] │ 👁️8[+][-] │ [🔄]   │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│ Bloque #3 │ Total día: 127 realizados                                           │
+└──────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Vista 2: BARRA LATERAL - Novedad
+```
+┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ LITPER [📦][📋 Novedad]  👤Juan  05:32                                                  ─ □ ×    │
+├────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 📋12[+][-] │ ✅8[+][-] │ 👁️5[+][-] │ ⏳3[+][-] │ 🔄2[+][-] │ 🔁1[+][-] │ 🚚0[+][-] │ 📦1[+][-] │ 📊4 │ [🔄] │
+├────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ Bloque #3 │ Total devoluciones: 4                                                                  │
+└────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Vista 3: COMPACTO - Guías
+```
+┌─────────────────────────────────────────────────┐
+│ 📦 05:32  ✓45 ✗3 📅7 ⚠️2 ⏳4 👁️8              │
+│ [+✓][-✓] [+✗][-✗] [+📅][-📅] [+⚠️][-⚠️] ... [🔄]│
+└─────────────────────────────────────────────────┘
+```
+
+### Vista 3: COMPACTO - Novedad
+```
+┌───────────────────────────────────────────────────────────┐
+│ 📋 05:32  📋12 ✅8 👁️5 ⏳3 🔄2 🔁1 🚚0 📦1 📊4          │
+│ [+📋][-] [+✅][-] [+👁️][-] [+⏳][-] ... [🔄]             │
+└───────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. LAS 3 VISTAS
+## 4. SISTEMA DE BLOQUES
 
-### Vista 1: WIDGET (actual mejorado)
+### 4.1 Flujo de trabajo
 ```
-┌─────────────────────────┐
-│  LITPER PEDIDOS    ─ □ ×│
-├─────────────────────────┤
-│    [Usuario ▼]          │
-├─────────────────────────┤
-│      ┌──────────┐       │
-│      │  05:32   │       │
-│      │ ●●●●○○○○ │       │
-│      └──────────┘       │
-│                         │
-│  ┌───────────────────┐  │
-│  │ ✓ Realizados  [+][-] │  │ ← SIEMPRE VISIBLE
-│  │     45              │  │
-│  ├───────────────────┤  │
-│  │ ✗ Cancelados  [+][-] │  │
-│  │     3               │  │
-│  ├───────────────────┤  │
-│  │ 📅 Agendados  [+][-] │  │
-│  │     7               │  │
-│  └───────────────────┘  │
-│                         │
-│  [🔄 REINICIAR BLOQUE]  │
-│                         │
-│  Timer | Stats | Bloques│
-└─────────────────────────┘
-```
-
-### Vista 2: BARRA LATERAL (nueva)
-```
-┌────────────────────────────────────────┐
-│ LITPER ─ □ ×                           │
-├────────────────────────────────────────┤
-│ 👤 Juan    05:32    ✓45  ✗3  📅7      │
-│                                        │
-│ [+] Realizados [-]  [+] Cancel [-]     │
-│ [+] Agendados  [-]  [🔄 REINICIAR]     │
-│                                        │
-│ Bloque #3 | Día: 127 pedidos          │
-└────────────────────────────────────────┘
-```
-- Orientación horizontal
-- Todo visible en una línea
-- Ideal para anclar arriba/abajo de pantalla
-
-### Vista 3: COMPACTO (mini)
-```
-┌──────────────────┐
-│ 05:32  ✓45 ✗3 📅7│
-│ [+R] [+C] [+A] 🔄│
-└──────────────────┘
-```
-- Súper minimalista
-- Solo contadores y timer
-- Botones de incremento rápido
-
----
-
-## 3. SISTEMA DE BLOQUES
-
-### 3.1 Flujo de trabajo
-```
-[Usuario inicia día]
+[Selecciona proceso: Guías o Novedad]
         ↓
-[Inicia Timer] → Contadores en 0
+[Inicia o continúa bloque]
         ↓
-[Usuario suma/resta pedidos durante el bloque]
+[Suma/resta contadores según proceso]
         ↓
 [Presiona REINICIAR]
         ↓
-[Se crea BLOQUE con estadísticas]
+[Se guarda BLOQUE con todos los contadores]
         ↓
-[Timer y contadores se reinician]
+[Contadores se reinician a 0]
         ↓
 [Nuevo bloque comienza]
 ```
 
-### 3.2 Al crear bloque se calcula:
-- Tiempo total usado
-- Total de cada tipo de pedido
-- Promedio de pedidos por minuto
-- Eficiencia (realizados / total * 100)
-- Hora de inicio y fin
+### 4.2 Al crear bloque se guarda:
+- Tipo de proceso usado
+- Todos los contadores del proceso
+- Tiempo total
+- Total de operaciones
+- Promedio por minuto
 
-### 3.3 Botón "Nuevo Día"
-- Archiva todos los bloques del día actual
-- Reinicia contador de bloques a 1
-- Limpia estadísticas del día
-- Guarda resumen del día anterior
-
----
-
-## 4. CONTADORES SIEMPRE VISIBLES
-
-### 4.1 Componente QuickCounters
-```tsx
-<QuickCounters>
-  ┌─────────────────────────────┐
-  │ ✓ Realizados          45   │
-  │ [−]              [+]       │
-  ├─────────────────────────────┤
-  │ ✗ Cancelados           3   │
-  │ [−]              [+]       │
-  ├─────────────────────────────┤
-  │ 📅 Agendados           7   │
-  │ [−]              [+]       │
-  └─────────────────────────────┘
-</QuickCounters>
-```
-
-### 4.2 Interacciones
-- Click en [+]: Incrementa +1 con animación
-- Click en [-]: Decrementa -1 (mínimo 0)
-- Long press [+]: Incrementa +5
-- Long press [-]: Decrementa -5
-- Animación de número al cambiar (rebote)
+### 4.3 Botón "Nuevo Día"
+- Archiva todos los bloques
+- Reinicia contadores de ambos procesos
+- Guarda resumen del día
 
 ---
 
 ## 5. EXPORTACIÓN A EXCEL
 
-### 5.1 Opciones de exportación
-1. **Exportar bloque individual** - Un bloque específico
-2. **Exportar todos los bloques del día** - Día completo
-3. **Exportar historial completo** - Todos los días
+### 5.1 Excel para Generación de Guías
+**Hoja: Resumen Día**
+| Fecha | Bloques | Realizado | Cancelados | Agendados | Difíciles | Pendiente | Revisado |
+|-------|---------|-----------|------------|-----------|-----------|-----------|----------|
+| 2025-12-31 | 5 | 127 | 8 | 15 | 6 | 12 | 45 |
 
-### 5.2 Formato del Excel
+**Hoja: Detalle Bloques**
+| Bloque | Hora | Realizado | Cancelados | Agendados | Difíciles | Pendiente | Revisado | Prom/min |
+|--------|------|-----------|------------|-----------|-----------|-----------|----------|----------|
+| 1 | 08:00-08:25 | 32 | 2 | 3 | 1 | 2 | 8 | 1.28 |
 
-**Hoja 1: Resumen**
-| Fecha | Bloques | Realizados | Cancelados | Agendados | Eficiencia |
-|-------|---------|------------|------------|-----------|------------|
-| 2025-12-31 | 5 | 127 | 8 | 15 | 84.7% |
+### 5.2 Excel para Novedad
+**Hoja: Resumen Día**
+| Fecha | Bloques | Iniciales | Solucionadas | Revisadas | Pendientes | Dev.LITPER | Dev.3Int | Dev.Transp | Dev.Prov | TOT Dev |
+|-------|---------|-----------|--------------|-----------|------------|------------|----------|------------|----------|---------|
+| 2025-12-31 | 3 | 45 | 38 | 42 | 7 | 5 | 3 | 2 | 4 | 14 |
 
-**Hoja 2: Detalle por Bloque**
-| Bloque | Hora Inicio | Hora Fin | Duración | Realizados | Cancelados | Agendados | Prom/min |
-|--------|-------------|----------|----------|------------|------------|-----------|----------|
-| 1 | 08:00 | 08:25 | 25min | 32 | 2 | 3 | 1.28 |
-| 2 | 08:30 | 08:55 | 25min | 28 | 1 | 4 | 1.12 |
+**Hoja: Detalle Bloques**
+| Bloque | Hora | Iniciales | Solucionadas | Revisadas | Pendientes | DevLITPER | Dev3Int | DevTransp | DevProv | TOTDev |
+|--------|------|-----------|--------------|-----------|------------|-----------|---------|-----------|---------|--------|
+| 1 | 08:00 | 15 | 12 | 14 | 3 | 2 | 1 | 0 | 1 | 4 |
 
-### 5.3 Implementación
-- Usar librería `xlsx` para generar Excel
-- Botón de descarga en panel de Stats
-- Menú dropdown con opciones de exportación
+### 5.3 Opciones de descarga
+- Exportar bloque individual
+- Exportar día (Guías, Novedad, o ambos)
+- Exportar historial completo
 
 ---
 
@@ -210,40 +289,44 @@ type ViewLayout = 'widget' | 'sidebar' | 'compact';
 
 ### 6.1 Animaciones de contadores
 ```css
-/* Incremento */
+/* Incremento - rebote verde */
 @keyframes bump-up {
   0% { transform: scale(1); }
   50% { transform: scale(1.3); color: #10B981; }
   100% { transform: scale(1); }
 }
 
-/* Decremento */
+/* Decremento - rebote rojo */
 @keyframes bump-down {
   0% { transform: scale(1); }
   50% { transform: scale(0.8); color: #EF4444; }
   100% { transform: scale(1); }
 }
+
+/* Glow en hover */
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 5px currentColor; }
+  50% { box-shadow: 0 0 20px currentColor; }
+}
 ```
 
-### 6.2 Animaciones de bloques
-- Slide-in al crear nuevo bloque
-- Fade-out al archivar día
-- Confetti al cumplir meta diaria
-
-### 6.3 Animaciones de transición
-- Morph entre vistas (widget ↔ sidebar ↔ compact)
-- Timer pulsante cuando está activo
-- Glow en botones al hover
+### 6.2 Animaciones de UI
+- Slide-in al crear bloque
+- Fade entre procesos
+- Transición suave entre vistas
+- Pulse en timer activo
+- Confetti al cumplir meta
 
 ---
 
 ## 7. ARQUITECTURA DE ARCHIVOS
 
-### 7.1 Nuevos archivos a crear
 ```
 src/
 ├── components/
-│   ├── QuickCounters.tsx      ← NUEVO: Contadores +/-
+│   ├── ProcessSelector.tsx    ← NUEVO: Selector Guías/Novedad
+│   ├── QuickCounters.tsx      ← NUEVO: Contadores dinámicos
+│   ├── CounterButton.tsx      ← NUEVO: Botón +/- individual
 │   ├── BlockCard.tsx          ← NUEVO: Tarjeta de bloque
 │   ├── BlocksPanel.tsx        ← NUEVO: Lista de bloques
 │   ├── ExportMenu.tsx         ← NUEVO: Menú de exportación
@@ -255,188 +338,173 @@ src/
 │   │   └── CompactLayout.tsx  ← NUEVO: Vista compacta
 │   └── ... (existentes)
 ├── stores/
-│   └── appStore.ts            ← MODIFICAR: Agregar bloques
+│   └── appStore.ts            ← MODIFICAR: 2 procesos, bloques
+├── config/
+│   └── processConfig.ts       ← NUEVO: Config de campos por proceso
 ├── utils/
-│   └── excelExport.ts         ← NUEVO: Generador de Excel
+│   └── excelExport.ts         ← NUEVO: Generador Excel
 ├── hooks/
-│   └── useCounterAnimation.ts ← NUEVO: Hook para animaciones
+│   └── useCounterAnimation.ts ← NUEVO: Hook animaciones
 └── styles/
-    └── animations.css         ← NUEVO: Animaciones CSS
-```
-
-### 7.2 Dependencias nuevas
-```json
-{
-  "dependencies": {
-    "xlsx": "^0.18.5",           // Exportación Excel
-    "file-saver": "^2.0.5",      // Descarga de archivos
-    "framer-motion": "^11.0.0"   // Animaciones avanzadas
-  }
-}
+    └── animations.css         ← NUEVO: CSS animaciones
 ```
 
 ---
 
-## 8. MODIFICACIONES AL STORE
+## 8. CONFIGURACIÓN DE PROCESOS
 
-### 8.1 Nuevo estado
+```typescript
+// config/processConfig.ts
+
+export const PROCESO_GUIAS = {
+  id: 'guias',
+  nombre: 'Generación de Guías',
+  icono: '📦',
+  campos: [
+    { id: 'realizado', label: 'Realizado', icono: '✓', color: '#10B981' },
+    { id: 'cancelados', label: 'Cancelados', icono: '✗', color: '#EF4444' },
+    { id: 'agendados', label: 'Agendados', icono: '📅', color: '#3B82F6' },
+    { id: 'dificiles', label: 'Difíciles', icono: '⚠️', color: '#F97316' },
+    { id: 'pedidoPendiente', label: 'Pedido Pendiente', icono: '⏳', color: '#F59E0B' },
+    { id: 'revisado', label: 'Revisado', icono: '👁️', color: '#8B5CF6' },
+  ],
+};
+
+export const PROCESO_NOVEDAD = {
+  id: 'novedad',
+  nombre: 'Novedad',
+  icono: '📋',
+  campos: [
+    { id: 'novedadesIniciales', label: 'Novedades iniciales', icono: '📋', color: '#3B82F6' },
+    { id: 'novedadesSolucionadas', label: 'Novedades solucionadas', icono: '✅', color: '#10B981' },
+    { id: 'novedadesRevisadas', label: 'Novedades revisadas', icono: '👁️', color: '#8B5CF6' },
+    { id: 'novedadesFinalePendientes', label: 'Novedades finales pendientes', icono: '⏳', color: '#F59E0B' },
+    { id: 'devolucionLitper', label: 'Devolución x LITPER', icono: '🔄', color: '#F97316' },
+    { id: 'devolucion3Intentos', label: 'Devolución 3 intentos', icono: '🔁', color: '#EF4444' },
+    { id: 'devolucionErrorTransportadora', label: 'Devolución error transportadora', icono: '🚚', color: '#6B7280' },
+    { id: 'devolucionProveedor', label: 'Devolución x proveedor', icono: '📦', color: '#06B6D4' },
+    { id: 'totDevoluciones', label: 'TOT Devoluciones', icono: '📊', color: '#EC4899' },
+  ],
+};
+```
+
+---
+
+## 9. STORE ACTUALIZADO
+
 ```typescript
 interface AppState {
-  // ... existente ...
+  // Proceso activo
+  procesoActivo: TipoProceso;  // 'guias' | 'novedad'
 
-  // NUEVO: Bloques
+  // Contadores actuales (del bloque en curso)
+  contadoresGuias: ContadoresGuias;
+  contadoresNovedad: ContadoresNovedad;
+
+  // Bloques guardados
   bloques: Bloque[];
-  bloqueActual: {
-    iniciadoEn: string | null;
-    realizados: number;
-    cancelados: number;
-    agendados: number;
-  };
   numeroBloqueHoy: number;
 
-  // NUEVO: Días
+  // Días
   dias: Dia[];
-  diaActual: string;  // fecha YYYY-MM-DD
+  diaActual: string;
 
-  // NUEVO: Layout
-  viewLayout: ViewLayout;
+  // Layout
+  viewLayout: ViewLayout;  // 'widget' | 'sidebar' | 'compact'
 
-  // NUEVO: Acciones
-  incrementarContador: (tipo: 'realizados' | 'cancelados' | 'agendados', cantidad?: number) => void;
-  decrementarContador: (tipo: 'realizados' | 'cancelados' | 'agendados', cantidad?: number) => void;
+  // Timer
+  timerActivo: boolean;
+  tiempoTranscurrido: number;
+
+  // Acciones
+  setProcesoActivo: (proceso: TipoProceso) => void;
+  incrementarContador: (campo: string, cantidad?: number) => void;
+  decrementarContador: (campo: string, cantidad?: number) => void;
   finalizarBloque: () => Bloque;
   iniciarNuevoDia: () => void;
-  exportarBloque: (bloqueId: string) => void;
-  exportarDia: (fecha: string) => void;
-  exportarTodo: () => void;
   setViewLayout: (layout: ViewLayout) => void;
 }
 ```
 
 ---
 
-## 9. FLUJO DE LA INTERFAZ
-
-### 9.1 Panel principal (cualquier vista)
-```
-┌─────────────────────────────────────────┐
-│                                         │
-│         [CONTADORES SIEMPRE]            │
-│    ✓ Realizados: 45  [+] [-]           │
-│    ✗ Cancelados:  3  [+] [-]           │
-│    📅 Agendados:  7  [+] [-]           │
-│                                         │
-│         [TIMER OPCIONAL]                │
-│           05:32                         │
-│                                         │
-│    [🔄 REINICIAR = GUARDAR BLOQUE]     │
-│                                         │
-├─────────────────────────────────────────┤
-│  Timer │ Stats │ Bloques │ ⚙️          │
-└─────────────────────────────────────────┘
-```
-
-### 9.2 Panel de Bloques (nueva pestaña)
-```
-┌─────────────────────────────────────────┐
-│ 📦 Bloques del día         [📥 Excel]  │
-├─────────────────────────────────────────┤
-│ ┌─────────────────────────────────────┐ │
-│ │ Bloque #3          08:45 - 09:10   │ │
-│ │ ✓ 32  ✗ 2  📅 4   │ 1.28/min      │ │
-│ │                    [📥]            │ │
-│ └─────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────┐ │
-│ │ Bloque #2          08:15 - 08:40   │ │
-│ │ ✓ 28  ✗ 1  📅 3   │ 1.12/min      │ │
-│ │                    [📥]            │ │
-│ └─────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────┐ │
-│ │ Bloque #1          08:00 - 08:15   │ │
-│ │ ✓ 15  ✗ 0  📅 2   │ 1.00/min      │ │
-│ │                    [📥]            │ │
-│ └─────────────────────────────────────┘ │
-├─────────────────────────────────────────┤
-│  [🌅 INICIAR NUEVO DÍA]                │
-└─────────────────────────────────────────┘
-```
-
----
-
 ## 10. PLAN DE IMPLEMENTACIÓN
 
-### Fase 1: Infraestructura (Core)
-1. [ ] Agregar nuevos tipos al store (Bloque, Dia, ViewLayout)
-2. [ ] Implementar acciones de contadores (+/-)
-3. [ ] Implementar lógica de bloques (crear, finalizar)
-4. [ ] Implementar lógica de nuevo día
+### Fase 1: Core (Tipos y Store)
+1. [ ] Crear tipos para ambos procesos
+2. [ ] Crear config/processConfig.ts
+3. [ ] Actualizar appStore.ts con 2 procesos
+4. [ ] Implementar lógica de bloques
+5. [ ] Implementar lógica de nuevo día
 
-### Fase 2: Componentes Base
-5. [ ] Crear QuickCounters.tsx con animaciones
-6. [ ] Crear BlockCard.tsx
-7. [ ] Crear BlocksPanel.tsx
-8. [ ] Crear NewDayButton.tsx
+### Fase 2: Componentes Contadores
+6. [ ] Crear CounterButton.tsx (botón +/- animado)
+7. [ ] Crear QuickCounters.tsx (renderiza campos dinámicos)
+8. [ ] Crear ProcessSelector.tsx (tabs Guías/Novedad)
 
-### Fase 3: Layouts
-9. [ ] Crear WidgetLayout.tsx (mejora del actual)
-10. [ ] Crear SidebarLayout.tsx
-11. [ ] Crear CompactLayout.tsx
-12. [ ] Crear ViewSwitcher.tsx
+### Fase 3: Componentes Bloques
+9. [ ] Crear BlockCard.tsx
+10. [ ] Crear BlocksPanel.tsx
+11. [ ] Crear NewDayButton.tsx
 
-### Fase 4: Exportación
-13. [ ] Instalar dependencias (xlsx, file-saver)
-14. [ ] Crear excelExport.ts
-15. [ ] Crear ExportMenu.tsx
-16. [ ] Integrar botones de descarga
+### Fase 4: Layouts
+12. [ ] Crear WidgetLayout.tsx
+13. [ ] Crear SidebarLayout.tsx
+14. [ ] Crear CompactLayout.tsx
+15. [ ] Crear ViewSwitcher.tsx
 
-### Fase 5: Animaciones y Polish
-17. [ ] Agregar animaciones CSS
-18. [ ] Implementar framer-motion en contadores
-19. [ ] Animación de confetti al cumplir meta
-20. [ ] Transiciones entre vistas
+### Fase 5: Exportación Excel
+16. [ ] Instalar xlsx y file-saver
+17. [ ] Crear excelExport.ts
+18. [ ] Crear ExportMenu.tsx
 
-### Fase 6: Electron
-21. [ ] Modificar main.js para soportar resize dinámico
-22. [ ] Agregar shortcuts para cambio de vista
-23. [ ] Actualizar menú de tray
+### Fase 6: Animaciones
+19. [ ] Crear animations.css
+20. [ ] Implementar animaciones en contadores
+21. [ ] Transiciones entre vistas
+
+### Fase 7: Electron
+22. [ ] Actualizar main.js para resize dinámico
+23. [ ] Shortcuts de teclado
+24. [ ] Menú de tray actualizado
 
 ---
 
-## 11. RESUMEN VISUAL FINAL
+## 11. RESUMEN VISUAL
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    LITPER PEDIDOS v2.0                      │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│   3 VISTAS           CONTADORES         BLOQUES            │
-│   ┌────────┐         ┌─────────┐        ┌─────────┐        │
-│   │ Widget │         │ +/- 24/7│        │ Auto    │        │
-│   │ Sidebar│         │ Siempre │        │ Stats   │        │
-│   │ Compact│         │ Visibles│        │ + Excel │        │
-│   └────────┘         └─────────┘        └─────────┘        │
-│                                                             │
-│   NUEVO DÍA          ANIMACIONES        EXPORTAR           │
-│   ┌─────────┐        ┌─────────┐        ┌─────────┐        │
-│   │ Reset   │        │ Fluidas │        │ .xlsx   │        │
-│   │ Todo    │        │ Feedback│        │ Bloques │        │
-│   │ 0 rondas│        │ Visual  │        │ o Todo  │        │
-│   └─────────┘        └─────────┘        └─────────┘        │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    LITPER PEDIDOS v2.0                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   2 PROCESOS                 3 VISTAS                           │
+│   ┌─────────────────┐        ┌───────────────┐                  │
+│   │ 📦 Guías (6)    │        │ Widget        │                  │
+│   │ 📋 Novedad (9)  │        │ Sidebar       │                  │
+│   └─────────────────┘        │ Compacto      │                  │
+│                              └───────────────┘                  │
+│                                                                 │
+│   GUÍAS                      NOVEDAD                            │
+│   ├─ Realizado               ├─ Novedades iniciales             │
+│   ├─ Cancelados              ├─ Novedades solucionadas          │
+│   ├─ Agendados               ├─ Novedades revisadas             │
+│   ├─ Difíciles               ├─ Novedades finales pend.         │
+│   ├─ Pedido Pendiente        ├─ Devolución x LITPER             │
+│   └─ Revisado                ├─ Devolución 3 intentos           │
+│                              ├─ Devolución error transp.        │
+│                              ├─ Devolución x proveedor          │
+│                              └─ TOT Devoluciones                │
+│                                                                 │
+│   BLOQUES          EXCEL           NUEVO DÍA                    │
+│   ┌────────┐       ┌────────┐      ┌────────┐                   │
+│   │ Auto   │       │ .xlsx  │      │ Reset  │                   │
+│   │ Stats  │       │ x proc │      │ Todo   │                   │
+│   └────────┘       └────────┘      └────────┘                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 12. PREGUNTAS PARA CONFIRMAR
-
-1. **Timer opcional**: ¿El timer sigue siendo necesario o los contadores son suficientes?
-2. **Duración de bloques**: ¿Tiempo fijo (25min) o hasta que el usuario presione reiniciar?
-3. **Usuarios múltiples**: ¿Cada usuario tiene sus propios bloques independientes?
-4. **Historial**: ¿Cuántos días de historial guardar? (7, 30, ilimitado)
-5. **Formato Excel**: ¿Alguna columna adicional que necesites?
-
----
-
-*Plan creado: 2025-12-31*
+*Plan actualizado: 2025-12-31*
 *Versión objetivo: LITPER PEDIDOS v2.0*
