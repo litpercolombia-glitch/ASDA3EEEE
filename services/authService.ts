@@ -52,6 +52,90 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 // Cache del usuario actual (solo datos, no tokens)
 let _currentUser: User | null = null;
 let _authChecked = false;
+let _offlineMode = false;
+
+// =====================================
+// MODO OFFLINE/DEMO (cuando backend no está disponible)
+// =====================================
+
+const DEMO_USERS: Array<{ email: string; password: string; user: User }> = [
+  {
+    email: 'admin@litper.com',
+    password: 'LitperAdmin2025!',
+    user: {
+      id: 'demo_admin_001',
+      email: 'admin@litper.com',
+      nombre: 'Admin Demo',
+      rol: 'admin',
+      activo: true,
+    },
+  },
+  {
+    email: 'demo@litper.com',
+    password: 'LitperDemo2025!',
+    user: {
+      id: 'demo_user_001',
+      email: 'demo@litper.com',
+      nombre: 'Usuario Demo',
+      rol: 'operador',
+      activo: true,
+    },
+  },
+];
+
+/**
+ * Intenta login en modo demo cuando el backend no está disponible
+ */
+function tryDemoLogin(email: string, password: string): AuthResponse | null {
+  const demoUser = DEMO_USERS.find(
+    (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+  );
+
+  if (demoUser) {
+    _offlineMode = true;
+    _currentUser = demoUser.user;
+    _authChecked = true;
+
+    // Guardar en localStorage para persistir sesión demo
+    localStorage.setItem('litper_demo_user', JSON.stringify(demoUser.user));
+
+    console.warn('⚠️ MODO DEMO: Backend no disponible. Usando autenticación local.');
+
+    return {
+      success: true,
+      user: demoUser.user,
+      message: '⚠️ Modo Demo - Backend no conectado',
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Verifica si hay sesión demo guardada
+ */
+function checkDemoSession(): User | null {
+  const saved = localStorage.getItem('litper_demo_user');
+  if (saved) {
+    try {
+      const user = JSON.parse(saved);
+      _offlineMode = true;
+      _currentUser = user;
+      _authChecked = true;
+      return user;
+    } catch {
+      localStorage.removeItem('litper_demo_user');
+    }
+  }
+  return null;
+}
+
+/**
+ * Verifica si estamos en modo offline/demo
+ */
+export function isOfflineMode(): boolean {
+  return _offlineMode;
+}
 
 // =====================================
 // HELPERS
@@ -103,6 +187,12 @@ async function authFetch(
  * Llama al backend que lee las cookies httpOnly
  */
 export async function checkAuthStatus(): Promise<AuthStatus> {
+  // Primero verificar si hay sesión demo guardada
+  const demoUser = checkDemoSession();
+  if (demoUser) {
+    return { authenticated: true, user: demoUser };
+  }
+
   try {
     const response = await authFetch('/api/auth/status');
 
@@ -167,9 +257,16 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
     };
   } catch (error) {
     console.error('Error en login:', error);
+
+    // FALLBACK: Intentar modo demo si el backend no está disponible
+    const demoResult = tryDemoLogin(email, password);
+    if (demoResult) {
+      return demoResult;
+    }
+
     return {
       success: false,
-      message: 'Error de conexión con el servidor',
+      message: 'Error de conexión con el servidor. Usa admin@litper.com / LitperAdmin2025! para modo demo.',
     };
   }
 }
@@ -255,14 +352,21 @@ export async function refreshTokens(): Promise<boolean> {
  */
 export async function logout(): Promise<void> {
   try {
-    await authFetch('/api/auth/logout', {
-      method: 'POST',
-    });
+    // Solo llamar al backend si no estamos en modo demo
+    if (!_offlineMode) {
+      await authFetch('/api/auth/logout', {
+        method: 'POST',
+      });
+    }
   } catch (error) {
     console.error('Error en logout:', error);
   } finally {
     _currentUser = null;
     _authChecked = false;
+    _offlineMode = false;
+
+    // Limpiar sesión demo
+    localStorage.removeItem('litper_demo_user');
 
     // Limpiar cualquier dato legacy de localStorage
     localStorage.removeItem('litper_auth_token');
@@ -622,6 +726,7 @@ export default {
   getCurrentUserAsync,
   isAuthenticated,
   isAuthenticatedAsync,
+  isOfflineMode,
   changePassword,
   getMe,
   getAllUsers,
