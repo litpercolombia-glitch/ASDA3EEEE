@@ -31,6 +31,7 @@ import {
   Users,
   Brain,
   Target,
+  Truck,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { AlertDashboard } from '../AlertDashboard';
