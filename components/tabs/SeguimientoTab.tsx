@@ -30,6 +30,7 @@ import {
   ChevronRight as ChevronRightIcon,
   Users,
   Brain,
+  Target,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { AlertDashboard } from '../AlertDashboard';
