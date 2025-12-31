@@ -32,6 +32,17 @@ import {
   Brain,
   Target,
   Truck,
+  AlertTriangle,
+  Zap,
+  AlertCircle,
+  Clock,
+  Check,
+  Copy,
+  Phone,
+  MessageCircle,
+  ChevronUp,
+  Calendar,
+  MapPin,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { AlertDashboard } from '../AlertDashboard';
