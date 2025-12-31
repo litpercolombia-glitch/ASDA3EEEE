@@ -1,38 +1,54 @@
-const { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage, globalShortcut } = require('electron');
 const path = require('path');
 
 let mainWindow;
 let tray;
 let isQuitting = false;
+let currentLayout = 'sidebar'; // 'widget' | 'sidebar' | 'compact'
 
-// Configuración de la ventana
-const WINDOW_CONFIG = {
-  width: 380,
-  height: 520,
-  minWidth: 320,
-  minHeight: 400,
-  maxWidth: 500,
-  maxHeight: 700,
+// Configuración de ventanas por layout
+const LAYOUTS = {
+  widget: {
+    width: 380,
+    height: 700,
+    minWidth: 320,
+    minHeight: 500,
+    maxWidth: 450,
+    maxHeight: 800,
+  },
+  sidebar: {
+    width: 900,
+    height: 140,
+    minWidth: 700,
+    minHeight: 100,
+    maxWidth: 1200,
+    maxHeight: 160,
+  },
+  compact: {
+    width: 500,
+    height: 80,
+    minWidth: 400,
+    minHeight: 60,
+    maxWidth: 700,
+    maxHeight: 100,
+  },
 };
 
 function createWindow() {
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+  const config = LAYOUTS[currentLayout];
 
   mainWindow = new BrowserWindow({
-    ...WINDOW_CONFIG,
-
-    // SIEMPRE ENCIMA DE TODO
+    ...config,
     alwaysOnTop: true,
-
-    // SIN BORDES - ESTILO FLOTANTE
     frame: false,
     transparent: true,
-
-    // POSICIÓN INICIAL (esquina inferior derecha)
-    x: screenWidth - WINDOW_CONFIG.width - 20,
-    y: screenHeight - WINDOW_CONFIG.height - 20,
-
-    // OPCIONES DE VENTANA
+    x: currentLayout === 'sidebar'
+      ? Math.floor((screenWidth - config.width) / 2)
+      : screenWidth - config.width - 20,
+    y: currentLayout === 'sidebar'
+      ? 10
+      : screenHeight - config.height - 20,
     skipTaskbar: false,
     resizable: true,
     movable: true,
@@ -41,32 +57,25 @@ function createWindow() {
     closable: true,
     focusable: true,
     hasShadow: true,
-
-    // CONFIGURACIÓN WEB
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
       devTools: true,
     },
-
-    // ESTILO
     backgroundColor: '#00000000',
     titleBarStyle: 'hidden',
     vibrancy: 'dark',
   });
 
-  // Cargar la app
   const isDev = process.env.NODE_ENV !== 'production' || !app.isPackaged;
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
-    // mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
-  // Eventos de ventana
   mainWindow.on('close', (event) => {
     if (!isQuitting) {
       event.preventDefault();
@@ -78,7 +87,6 @@ function createWindow() {
     mainWindow = null;
   });
 
-  // Manejar redimensionamiento
   mainWindow.on('resize', () => {
     const [width, height] = mainWindow.getSize();
     mainWindow.webContents.send('window-resize', { width, height });
@@ -86,11 +94,9 @@ function createWindow() {
 }
 
 function createTray() {
-  // Crear icono para la bandeja
   const iconPath = path.join(__dirname, '../assets/icon.png');
-
-  // Icono por defecto si no existe
   let trayIcon;
+
   try {
     trayIcon = nativeImage.createFromPath(iconPath);
     if (trayIcon.isEmpty()) {
@@ -101,11 +107,24 @@ function createTray() {
   }
 
   tray = new Tray(trayIcon.resize({ width: 16, height: 16 }));
-  tray.setToolTip('LITPER PEDIDOS');
+  tray.setToolTip('LITPER PEDIDOS v2.0');
 
+  updateTrayMenu();
+
+  tray.on('click', () => {
+    if (mainWindow.isVisible()) {
+      mainWindow.hide();
+    } else {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
+function updateTrayMenu() {
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: '📦 LITPER PEDIDOS',
+      label: '📦 LITPER PEDIDOS v2.0',
       enabled: false,
     },
     { type: 'separator' },
@@ -119,6 +138,30 @@ function createTray() {
     {
       label: 'Ocultar ventana',
       click: () => mainWindow.hide(),
+    },
+    { type: 'separator' },
+    {
+      label: 'Vista',
+      submenu: [
+        {
+          label: '📊 Sidebar (horizontal)',
+          type: 'radio',
+          checked: currentLayout === 'sidebar',
+          click: () => changeLayout('sidebar'),
+        },
+        {
+          label: '📦 Widget (vertical)',
+          type: 'radio',
+          checked: currentLayout === 'widget',
+          click: () => changeLayout('widget'),
+        },
+        {
+          label: '📏 Compacto (mini)',
+          type: 'radio',
+          checked: currentLayout === 'compact',
+          click: () => changeLayout('compact'),
+        },
+      ],
     },
     { type: 'separator' },
     {
@@ -142,10 +185,7 @@ function createTray() {
     { type: 'separator' },
     {
       label: 'Reiniciar posición',
-      click: () => {
-        const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
-        mainWindow.setPosition(screenWidth - WINDOW_CONFIG.width - 20, screenHeight - WINDOW_CONFIG.height - 20);
-      },
+      click: () => resetPosition(),
     },
     { type: 'separator' },
     {
@@ -158,16 +198,43 @@ function createTray() {
   ]);
 
   tray.setContextMenu(contextMenu);
+}
 
-  // Click en el icono muestra/oculta
-  tray.on('click', () => {
-    if (mainWindow.isVisible()) {
-      mainWindow.hide();
-    } else {
-      mainWindow.show();
-      mainWindow.focus();
-    }
-  });
+function changeLayout(layout) {
+  if (currentLayout === layout) return;
+
+  currentLayout = layout;
+  const config = LAYOUTS[layout];
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+
+  mainWindow.setMinimumSize(config.minWidth, config.minHeight);
+  mainWindow.setMaximumSize(config.maxWidth, config.maxHeight);
+  mainWindow.setSize(config.width, config.height);
+
+  // Posicionar según layout
+  if (layout === 'sidebar') {
+    mainWindow.setPosition(Math.floor((screenWidth - config.width) / 2), 10);
+  } else if (layout === 'compact') {
+    mainWindow.setPosition(Math.floor((screenWidth - config.width) / 2), screenHeight - config.height - 10);
+  } else {
+    mainWindow.setPosition(screenWidth - config.width - 20, screenHeight - config.height - 20);
+  }
+
+  mainWindow.webContents.send('layout-changed', layout);
+  updateTrayMenu();
+}
+
+function resetPosition() {
+  const config = LAYOUTS[currentLayout];
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+
+  if (currentLayout === 'sidebar') {
+    mainWindow.setPosition(Math.floor((screenWidth - config.width) / 2), 10);
+  } else if (currentLayout === 'compact') {
+    mainWindow.setPosition(Math.floor((screenWidth - config.width) / 2), screenHeight - config.height - 10);
+  } else {
+    mainWindow.setPosition(screenWidth - config.width - 20, screenHeight - config.height - 20);
+  }
 }
 
 // IPC Handlers
@@ -189,10 +256,48 @@ ipcMain.handle('get-always-on-top', () => {
   return mainWindow.isAlwaysOnTop();
 });
 
+ipcMain.handle('change-layout', (event, layout) => {
+  changeLayout(layout);
+});
+
+ipcMain.handle('get-current-layout', () => {
+  return currentLayout;
+});
+
+// Registrar atajos globales
+function registerShortcuts() {
+  // F1-F3 para cambiar vista
+  globalShortcut.register('F1', () => {
+    changeLayout('widget');
+    mainWindow.webContents.send('layout-changed', 'widget');
+  });
+
+  globalShortcut.register('F2', () => {
+    changeLayout('sidebar');
+    mainWindow.webContents.send('layout-changed', 'sidebar');
+  });
+
+  globalShortcut.register('F3', () => {
+    changeLayout('compact');
+    mainWindow.webContents.send('layout-changed', 'compact');
+  });
+
+  // Ctrl+Shift+L para mostrar/ocultar
+  globalShortcut.register('CommandOrControl+Shift+L', () => {
+    if (mainWindow.isVisible()) {
+      mainWindow.hide();
+    } else {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
 // Inicialización
 app.whenReady().then(() => {
   createWindow();
   createTray();
+  registerShortcuts();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -211,6 +316,10 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   isQuitting = true;
+});
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
 });
 
 // Prevenir múltiples instancias

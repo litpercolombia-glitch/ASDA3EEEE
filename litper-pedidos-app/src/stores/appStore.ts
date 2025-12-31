@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { TipoProceso, ViewLayout, TIEMPOS_PRESET } from '../config/processConfig';
 
 // ==================== TIPOS ====================
 
@@ -14,30 +15,52 @@ export interface Usuario {
   createdAt: string;
 }
 
-export interface Ronda {
+export interface ContadoresGuias {
+  realizado: number;
+  cancelados: number;
+  agendados: number;
+  dificiles: number;
+  pedidoPendiente: number;
+  revisado: number;
+}
+
+export interface ContadoresNovedad {
+  novedadesIniciales: number;
+  novedadesSolucionadas: number;
+  novedadesRevisadas: number;
+  novedadesFinalePendientes: number;
+  devolucionLitper: number;
+  devolucion3Intentos: number;
+  devolucionErrorTransportadora: number;
+  devolucionProveedor: number;
+}
+
+export interface Bloque {
   id: string;
   usuarioId: string;
-  numero: number;
+  tipoProceso: TipoProceso;
   fecha: string;
   horaInicio: string;
   horaFin: string;
-  tiempoUsado: number;
-  pedidosRealizados: number;
-  pedidosCancelados: number;
-  pedidosAgendados: number;
+  tiempoTotal: number;
+  contadoresGuias?: ContadoresGuias;
+  contadoresNovedad?: ContadoresNovedad;
+  totalOperaciones: number;
+  promedioMinuto: number;
+  porcentajeExito?: number;
 }
 
 export interface ConfigTimer {
   duracionMinutos: number;
-  alertaAmarilla: number; // % restante
+  alertaAmarilla: number;
   alertaNaranja: number;
   alertaRoja: number;
   sonidoFinal: boolean;
 }
 
-export type TimerColor = 'green' | 'yellow' | 'orange' | 'red';
 export type TimerState = 'idle' | 'running' | 'paused' | 'finished';
-export type ViewMode = 'timer' | 'stats' | 'admin';
+export type TimerColor = 'green' | 'yellow' | 'orange' | 'red';
+export type ViewMode = 'timer' | 'stats' | 'bloques' | 'admin';
 
 // ==================== CONSTANTES ====================
 
@@ -54,7 +77,56 @@ export const COLORES_USUARIO = [
 
 export const AVATARES = ['😊', '😎', '🚀', '⭐', '🔥', '💪', '🎯', '📦', '🏆', '💎', '🦊', '🐱', '🐶', '🦁', '🐼'];
 
-export const TIEMPOS_PRESET = [15, 20, 25, 30, 45, 60];
+// ==================== FUNCIONES HELPER ====================
+
+const crearContadoresGuiasVacios = (): ContadoresGuias => ({
+  realizado: 0,
+  cancelados: 0,
+  agendados: 0,
+  dificiles: 0,
+  pedidoPendiente: 0,
+  revisado: 0,
+});
+
+const crearContadoresNovedadVacios = (): ContadoresNovedad => ({
+  novedadesIniciales: 0,
+  novedadesSolucionadas: 0,
+  novedadesRevisadas: 0,
+  novedadesFinalePendientes: 0,
+  devolucionLitper: 0,
+  devolucion3Intentos: 0,
+  devolucionErrorTransportadora: 0,
+  devolucionProveedor: 0,
+});
+
+export const calcularTotDevoluciones = (c: ContadoresNovedad): number =>
+  c.devolucionLitper +
+  c.devolucion3Intentos +
+  c.devolucionErrorTransportadora +
+  c.devolucionProveedor;
+
+const calcularTotalGuias = (c: ContadoresGuias): number =>
+  c.realizado + c.cancelados + c.agendados + c.dificiles + c.pedidoPendiente + c.revisado;
+
+const calcularTotalNovedad = (c: ContadoresNovedad): number =>
+  c.novedadesIniciales +
+  c.novedadesSolucionadas +
+  c.novedadesRevisadas +
+  c.novedadesFinalePendientes +
+  calcularTotDevoluciones(c);
+
+const calcularPorcentajeExito = (c: ContadoresGuias): number => {
+  const total = c.realizado + c.cancelados;
+  return total > 0 ? Math.round((c.realizado / total) * 1000) / 10 : 0;
+};
+
+const getHoraActual = (): string => {
+  return new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false });
+};
+
+const getFechaActual = (): string => {
+  return new Date().toISOString().split('T')[0];
+};
 
 // ==================== STORE ====================
 
@@ -64,18 +136,33 @@ interface AppState {
   usuarioActual: Usuario | null;
   modoAdmin: boolean;
 
+  // Proceso
+  procesoActivo: TipoProceso;
+
+  // Contadores actuales (bloque en curso)
+  contadoresGuias: ContadoresGuias;
+  contadoresNovedad: ContadoresNovedad;
+  bloqueIniciadoEn: string | null;
+
   // Timer
   configTimer: ConfigTimer;
   timerState: TimerState;
   tiempoRestante: number;
-  rondaActual: number;
 
-  // Rondas
-  rondas: Ronda[];
+  // Bloques
+  bloques: Bloque[];
+  numeroBloqueHoy: number;
 
   // UI
   viewMode: ViewMode;
-  isCompact: boolean;
+  viewLayout: ViewLayout;
+
+  // Auto-guardado
+  ultimoAutoGuardado: string | null;
+  autoGuardadoActivo: boolean;
+
+  // Modal de exportación
+  mostrarModalExportar: boolean;
 
   // Acciones - Usuarios
   agregarUsuario: (data: Omit<Usuario, 'id' | 'createdAt' | 'activo'>) => void;
@@ -83,6 +170,14 @@ interface AppState {
   eliminarUsuario: (id: string) => void;
   seleccionarUsuario: (id: string | null) => void;
   toggleModoAdmin: () => void;
+
+  // Acciones - Proceso
+  setProcesoActivo: (proceso: TipoProceso) => void;
+
+  // Acciones - Contadores
+  incrementarContador: (campo: string, cantidad?: number) => void;
+  decrementarContador: (campo: string, cantidad?: number) => void;
+  resetearContadores: () => void;
 
   // Acciones - Timer
   setConfigTimer: (config: Partial<ConfigTimer>) => void;
@@ -92,15 +187,20 @@ interface AppState {
   tick: () => void;
   getTimerColor: () => TimerColor;
 
-  // Acciones - Rondas
-  registrarRonda: (data: Omit<Ronda, 'id'>) => void;
-  getRondasUsuario: (usuarioId: string) => Ronda[];
-  getRondasHoy: (usuarioId: string) => Ronda[];
-  getTotalHoy: (usuarioId: string) => number;
+  // Acciones - Bloques
+  finalizarBloque: () => Bloque | null;
+  iniciarNuevoDia: () => void;
+  getBloquesHoy: () => Bloque[];
+  getBloquesPorProceso: (proceso: TipoProceso) => Bloque[];
 
   // Acciones - UI
   setViewMode: (mode: ViewMode) => void;
-  toggleCompact: () => void;
+  setViewLayout: (layout: ViewLayout) => void;
+  setMostrarModalExportar: (mostrar: boolean) => void;
+
+  // Acciones - Auto-guardado
+  guardarProgreso: () => void;
+  restaurarProgreso: () => boolean;
 }
 
 export const useAppStore = create<AppState>()(
@@ -111,6 +211,12 @@ export const useAppStore = create<AppState>()(
       usuarioActual: null,
       modoAdmin: false,
 
+      procesoActivo: 'guias',
+
+      contadoresGuias: crearContadoresGuiasVacios(),
+      contadoresNovedad: crearContadoresNovedadVacios(),
+      bloqueIniciadoEn: null,
+
       configTimer: {
         duracionMinutos: 25,
         alertaAmarilla: 50,
@@ -120,12 +226,17 @@ export const useAppStore = create<AppState>()(
       },
       timerState: 'idle',
       tiempoRestante: 25 * 60,
-      rondaActual: 1,
 
-      rondas: [],
+      bloques: [],
+      numeroBloqueHoy: 1,
 
       viewMode: 'timer',
-      isCompact: false,
+      viewLayout: 'sidebar',
+
+      ultimoAutoGuardado: null,
+      autoGuardadoActivo: true,
+
+      mostrarModalExportar: false,
 
       // ========== USUARIOS ==========
 
@@ -171,6 +282,73 @@ export const useAppStore = create<AppState>()(
         set((state) => ({ modoAdmin: !state.modoAdmin }));
       },
 
+      // ========== PROCESO ==========
+
+      setProcesoActivo: (proceso) => {
+        set({ procesoActivo: proceso });
+      },
+
+      // ========== CONTADORES ==========
+
+      incrementarContador: (campo, cantidad = 1) => {
+        const { procesoActivo, bloqueIniciadoEn } = get();
+
+        // Iniciar bloque si no está iniciado
+        if (!bloqueIniciadoEn) {
+          set({ bloqueIniciadoEn: new Date().toISOString() });
+        }
+
+        if (procesoActivo === 'guias') {
+          set((state) => ({
+            contadoresGuias: {
+              ...state.contadoresGuias,
+              [campo]: Math.max(0, (state.contadoresGuias as any)[campo] + cantidad),
+            },
+          }));
+        } else {
+          // No permitir incrementar TOT Devoluciones (es calculado)
+          if (campo === 'totDevoluciones') return;
+
+          set((state) => ({
+            contadoresNovedad: {
+              ...state.contadoresNovedad,
+              [campo]: Math.max(0, (state.contadoresNovedad as any)[campo] + cantidad),
+            },
+          }));
+        }
+      },
+
+      decrementarContador: (campo, cantidad = 1) => {
+        const { procesoActivo } = get();
+
+        if (procesoActivo === 'guias') {
+          set((state) => ({
+            contadoresGuias: {
+              ...state.contadoresGuias,
+              [campo]: Math.max(0, (state.contadoresGuias as any)[campo] - cantidad),
+            },
+          }));
+        } else {
+          // No permitir decrementar TOT Devoluciones (es calculado)
+          if (campo === 'totDevoluciones') return;
+
+          set((state) => ({
+            contadoresNovedad: {
+              ...state.contadoresNovedad,
+              [campo]: Math.max(0, (state.contadoresNovedad as any)[campo] - cantidad),
+            },
+          }));
+        }
+      },
+
+      resetearContadores: () => {
+        set({
+          contadoresGuias: crearContadoresGuiasVacios(),
+          contadoresNovedad: crearContadoresNovedadVacios(),
+          bloqueIniciadoEn: null,
+        });
+      },
+
       // ========== TIMER ==========
 
       setConfigTimer: (config) => {
@@ -187,6 +365,10 @@ export const useAppStore = create<AppState>()(
       },
 
       iniciarTimer: () => {
+        const { bloqueIniciadoEn } = get();
+        if (!bloqueIniciadoEn) {
+          set({ bloqueIniciadoEn: new Date().toISOString() });
+        }
         set({ timerState: 'running' });
       },
 
@@ -208,10 +390,8 @@ export const useAppStore = create<AppState>()(
         if (timerState !== 'running') return;
 
         if (tiempoRestante <= 1) {
-          // Timer terminado
           set({ tiempoRestante: 0, timerState: 'finished' });
 
-          // Reproducir sonido
           if (configTimer.sonidoFinal) {
             try {
               const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -250,32 +430,89 @@ export const useAppStore = create<AppState>()(
         return 'green';
       },
 
-      // ========== RONDAS ==========
+      // ========== BLOQUES ==========
 
-      registrarRonda: (data) => {
-        const nuevaRonda: Ronda = {
-          ...data,
-          id: `round_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      finalizarBloque: () => {
+        const {
+          usuarioActual,
+          procesoActivo,
+          contadoresGuias,
+          contadoresNovedad,
+          bloqueIniciadoEn,
+          configTimer,
+          tiempoRestante,
+          numeroBloqueHoy,
+        } = get();
+
+        if (!usuarioActual || !bloqueIniciadoEn) return null;
+
+        const ahora = new Date();
+        const inicio = new Date(bloqueIniciadoEn);
+        const tiempoTotal = Math.floor((ahora.getTime() - inicio.getTime()) / 1000);
+
+        let totalOperaciones = 0;
+        let porcentajeExito: number | undefined;
+
+        if (procesoActivo === 'guias') {
+          totalOperaciones = calcularTotalGuias(contadoresGuias);
+          porcentajeExito = calcularPorcentajeExito(contadoresGuias);
+        } else {
+          totalOperaciones = calcularTotalNovedad(contadoresNovedad);
+        }
+
+        const minutos = tiempoTotal / 60;
+        const promedioMinuto = minutos > 0 ? Math.round((totalOperaciones / minutos) * 100) / 100 : 0;
+
+        const nuevoBloque: Bloque = {
+          id: `bloque_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          usuarioId: usuarioActual.id,
+          tipoProceso: procesoActivo,
+          fecha: getFechaActual(),
+          horaInicio: inicio.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          horaFin: getHoraActual(),
+          tiempoTotal,
+          contadoresGuias: procesoActivo === 'guias' ? { ...contadoresGuias } : undefined,
+          contadoresNovedad: procesoActivo === 'novedad' ? { ...contadoresNovedad } : undefined,
+          totalOperaciones,
+          promedioMinuto,
+          porcentajeExito,
         };
 
         set((state) => ({
-          rondas: [...state.rondas, nuevaRonda],
-          rondaActual: state.rondaActual + 1,
+          bloques: [...state.bloques, nuevoBloque],
+          numeroBloqueHoy: state.numeroBloqueHoy + 1,
+          contadoresGuias: crearContadoresGuiasVacios(),
+          contadoresNovedad: crearContadoresNovedadVacios(),
+          bloqueIniciadoEn: null,
+          timerState: 'idle',
+          tiempoRestante: configTimer.duracionMinutos * 60,
         }));
+
+        return nuevoBloque;
       },
 
-      getRondasUsuario: (usuarioId) => {
-        return get().rondas.filter((r) => r.usuarioId === usuarioId);
+      iniciarNuevoDia: () => {
+        const { configTimer } = get();
+        set({
+          numeroBloqueHoy: 1,
+          contadoresGuias: crearContadoresGuiasVacios(),
+          contadoresNovedad: crearContadoresNovedadVacios(),
+          bloqueIniciadoEn: null,
+          timerState: 'idle',
+          tiempoRestante: configTimer.duracionMinutos * 60,
+        });
       },
 
-      getRondasHoy: (usuarioId) => {
-        const hoy = new Date().toISOString().split('T')[0];
-        return get().rondas.filter((r) => r.usuarioId === usuarioId && r.fecha === hoy);
+      getBloquesHoy: () => {
+        const { bloques } = get();
+        const hoy = getFechaActual();
+        return bloques.filter((b) => b.fecha === hoy);
       },
 
-      getTotalHoy: (usuarioId) => {
-        const rondasHoy = get().getRondasHoy(usuarioId);
-        return rondasHoy.reduce((acc, r) => acc + r.pedidosRealizados, 0);
+      getBloquesPorProceso: (proceso) => {
+        const { bloques } = get();
+        const hoy = getFechaActual();
+        return bloques.filter((b) => b.fecha === hoy && b.tipoProceso === proceso);
       },
 
       // ========== UI ==========
@@ -284,19 +521,51 @@ export const useAppStore = create<AppState>()(
         set({ viewMode: mode });
       },
 
-      toggleCompact: () => {
-        set((state) => ({ isCompact: !state.isCompact }));
+      setViewLayout: (layout) => {
+        set({ viewLayout: layout });
+      },
+
+      setMostrarModalExportar: (mostrar) => {
+        set({ mostrarModalExportar: mostrar });
+      },
+
+      // ========== AUTO-GUARDADO ==========
+
+      guardarProgreso: () => {
+        set({ ultimoAutoGuardado: new Date().toISOString() });
+      },
+
+      restaurarProgreso: () => {
+        const { bloqueIniciadoEn, contadoresGuias, contadoresNovedad } = get();
+
+        // Si hay un bloque en progreso
+        if (bloqueIniciadoEn) {
+          const totalGuias = calcularTotalGuias(contadoresGuias);
+          const totalNovedad = calcularTotalNovedad(contadoresNovedad);
+          return totalGuias > 0 || totalNovedad > 0;
+        }
+
+        return false;
       },
     }),
     {
-      name: 'litper-pedidos-store',
+      name: 'litper-pedidos-store-v2',
       partialize: (state) => ({
         usuarios: state.usuarios,
         usuarioActual: state.usuarioActual,
+        procesoActivo: state.procesoActivo,
+        contadoresGuias: state.contadoresGuias,
+        contadoresNovedad: state.contadoresNovedad,
+        bloqueIniciadoEn: state.bloqueIniciadoEn,
         configTimer: state.configTimer,
-        rondas: state.rondas,
-        rondaActual: state.rondaActual,
+        bloques: state.bloques,
+        numeroBloqueHoy: state.numeroBloqueHoy,
+        viewLayout: state.viewLayout,
+        ultimoAutoGuardado: state.ultimoAutoGuardado,
       }),
     }
   )
 );
+
+// Exportar para uso en otros componentes
+export { TIEMPOS_PRESET };

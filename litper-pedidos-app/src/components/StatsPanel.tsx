@@ -1,29 +1,61 @@
 import React from 'react';
-import { BarChart3, TrendingUp, Clock, Target, Package } from 'lucide-react';
-import { useAppStore, COLORES_USUARIO } from '../stores/appStore';
+import { BarChart3, TrendingUp, Clock, Target, Package, CheckCircle } from 'lucide-react';
+import { useAppStore, COLORES_USUARIO, calcularTotDevoluciones } from '../stores/appStore';
 
 const StatsPanel: React.FC = () => {
-  const { usuarios, rondas, getTotalHoy, getRondasHoy } = useAppStore();
+  const { usuarios, getBloquesHoy, procesoActivo } = useAppStore();
 
-  const hoy = new Date().toISOString().split('T')[0];
+  const bloquesHoy = getBloquesHoy();
+  const bloquesProceso = bloquesHoy.filter(b => b.tipoProceso === procesoActivo);
 
-  // Stats generales
-  const rondasHoy = rondas.filter((r) => r.fecha === hoy);
-  const totalPedidosHoy = rondasHoy.reduce((acc, r) => acc + r.pedidosRealizados, 0);
-  const totalCancelados = rondasHoy.reduce((acc, r) => acc + r.pedidosCancelados, 0);
-  const totalAgendados = rondasHoy.reduce((acc, r) => acc + r.pedidosAgendados, 0);
+  // Stats para Guías
+  const statsGuias = bloquesHoy
+    .filter(b => b.tipoProceso === 'guias')
+    .reduce((acc, b) => {
+      const c = b.contadoresGuias!;
+      return {
+        realizado: acc.realizado + c.realizado,
+        cancelados: acc.cancelados + c.cancelados,
+        agendados: acc.agendados + c.agendados,
+        dificiles: acc.dificiles + c.dificiles,
+        pedidoPendiente: acc.pedidoPendiente + c.pedidoPendiente,
+        revisado: acc.revisado + c.revisado,
+      };
+    }, { realizado: 0, cancelados: 0, agendados: 0, dificiles: 0, pedidoPendiente: 0, revisado: 0 });
 
-  // Ranking de usuarios
-  const ranking = usuarios
-    .map((u) => ({
-      ...u,
-      totalHoy: getTotalHoy(u.id),
-      rondasHoy: getRondasHoy(u.id).length,
-    }))
-    .sort((a, b) => b.totalHoy - a.totalHoy);
+  // Stats para Novedad
+  const statsNovedad = bloquesHoy
+    .filter(b => b.tipoProceso === 'novedad')
+    .reduce((acc, b) => {
+      const c = b.contadoresNovedad!;
+      return {
+        novedadesIniciales: acc.novedadesIniciales + c.novedadesIniciales,
+        novedadesSolucionadas: acc.novedadesSolucionadas + c.novedadesSolucionadas,
+        novedadesRevisadas: acc.novedadesRevisadas + c.novedadesRevisadas,
+        novedadesFinalePendientes: acc.novedadesFinalePendientes + c.novedadesFinalePendientes,
+        devolucionLitper: acc.devolucionLitper + c.devolucionLitper,
+        devolucion3Intentos: acc.devolucion3Intentos + c.devolucion3Intentos,
+        devolucionErrorTransportadora: acc.devolucionErrorTransportadora + c.devolucionErrorTransportadora,
+        devolucionProveedor: acc.devolucionProveedor + c.devolucionProveedor,
+      };
+    }, {
+      novedadesIniciales: 0,
+      novedadesSolucionadas: 0,
+      novedadesRevisadas: 0,
+      novedadesFinalePendientes: 0,
+      devolucionLitper: 0,
+      devolucion3Intentos: 0,
+      devolucionErrorTransportadora: 0,
+      devolucionProveedor: 0,
+    });
 
-  const getColorHex = (colorId: string) =>
-    COLORES_USUARIO.find((c) => c.id === colorId)?.hex || '#F97316';
+  const totDevoluciones = calcularTotDevoluciones(statsNovedad);
+  const porcentajeExito = statsGuias.realizado + statsGuias.cancelados > 0
+    ? Math.round((statsGuias.realizado / (statsGuias.realizado + statsGuias.cancelados)) * 100)
+    : 0;
+  const porcentajeSolucionado = statsNovedad.novedadesIniciales > 0
+    ? Math.round((statsNovedad.novedadesSolucionadas / statsNovedad.novedadesIniciales) * 100)
+    : 0;
 
   return (
     <div className="px-4 py-3 space-y-4">
@@ -33,90 +65,104 @@ const StatsPanel: React.FC = () => {
         Estadísticas del día
       </h3>
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="card text-center py-3">
-          <Package className="w-5 h-5 text-accent-green mx-auto mb-1" />
-          <p className="text-xl font-bold text-white">{totalPedidosHoy}</p>
-          <p className="text-[10px] text-dark-400">Realizados</p>
-        </div>
-        <div className="card text-center py-3">
-          <Target className="w-5 h-5 text-primary-400 mx-auto mb-1" />
-          <p className="text-xl font-bold text-white">{rondasHoy.length}</p>
-          <p className="text-[10px] text-dark-400">Rondas</p>
-        </div>
-        <div className="card text-center py-3">
-          <TrendingUp className="w-5 h-5 text-accent-red mx-auto mb-1" />
-          <p className="text-xl font-bold text-white">{totalCancelados}</p>
-          <p className="text-[10px] text-dark-400">Cancelados</p>
-        </div>
-        <div className="card text-center py-3">
-          <Clock className="w-5 h-5 text-accent-blue mx-auto mb-1" />
-          <p className="text-xl font-bold text-white">{totalAgendados}</p>
-          <p className="text-[10px] text-dark-400">Agendados</p>
-        </div>
-      </div>
-
-      {/* Ranking */}
-      {ranking.length > 0 && (
-        <div className="card">
-          <h4 className="text-xs font-semibold text-dark-400 mb-2">RANKING</h4>
-          <div className="space-y-2">
-            {ranking.map((usuario, index) => {
-              const colorHex = getColorHex(usuario.color);
-              const progreso = (usuario.totalHoy / usuario.metaDiaria) * 100;
-
-              return (
-                <div key={usuario.id} className="flex items-center gap-2">
-                  {/* Position */}
-                  <div
-                    className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                      index === 0
-                        ? 'bg-accent-yellow text-dark-900'
-                        : index === 1
-                        ? 'bg-dark-400 text-dark-900'
-                        : index === 2
-                        ? 'bg-primary-700 text-white'
-                        : 'bg-dark-700 text-dark-400'
-                    }`}
-                  >
-                    {index + 1}
-                  </div>
-
-                  {/* Avatar */}
-                  <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-sm"
-                    style={{ backgroundColor: `${colorHex}30` }}
-                  >
-                    {usuario.avatar}
-                  </div>
-
-                  {/* Name and progress */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-white truncate">{usuario.nombre}</p>
-                      <p className="text-[10px] text-dark-400">
-                        {usuario.totalHoy}/{usuario.metaDiaria}
-                      </p>
-                    </div>
-                    <div className="h-1 bg-dark-700 rounded-full overflow-hidden mt-0.5">
-                      <div
-                        className="h-full transition-all"
-                        style={{
-                          width: `${Math.min(100, progreso)}%`,
-                          backgroundColor: progreso >= 100 ? '#10B981' : colorHex,
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+      {/* Stats Guías */}
+      {bloquesHoy.some(b => b.tipoProceso === 'guias') && (
+        <div className="space-y-2">
+          <h4 className="text-xs font-medium text-dark-400 flex items-center gap-1">
+            📦 Generación de Guías
+          </h4>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-dark-700/50 rounded-lg p-2 text-center">
+              <p className="text-lg font-bold text-green-400">{statsGuias.realizado}</p>
+              <p className="text-[10px] text-dark-400">Realizados</p>
+            </div>
+            <div className="bg-dark-700/50 rounded-lg p-2 text-center">
+              <p className="text-lg font-bold text-red-400">{statsGuias.cancelados}</p>
+              <p className="text-[10px] text-dark-400">Cancelados</p>
+            </div>
+            <div className="bg-dark-700/50 rounded-lg p-2 text-center">
+              <p className="text-lg font-bold text-blue-400">{statsGuias.agendados}</p>
+              <p className="text-[10px] text-dark-400">Agendados</p>
+            </div>
+            <div className="bg-dark-700/50 rounded-lg p-2 text-center">
+              <p className="text-lg font-bold text-orange-400">{statsGuias.dificiles}</p>
+              <p className="text-[10px] text-dark-400">Difíciles</p>
+            </div>
+            <div className="bg-dark-700/50 rounded-lg p-2 text-center">
+              <p className="text-lg font-bold text-yellow-400">{statsGuias.pedidoPendiente}</p>
+              <p className="text-[10px] text-dark-400">Pendientes</p>
+            </div>
+            <div className="bg-dark-700/50 rounded-lg p-2 text-center">
+              <p className="text-lg font-bold text-purple-400">{statsGuias.revisado}</p>
+              <p className="text-[10px] text-dark-400">Revisados</p>
+            </div>
+          </div>
+          <div className="bg-green-500/10 rounded-lg p-2 flex items-center justify-between">
+            <span className="text-xs text-green-400">% Éxito</span>
+            <span className="text-lg font-bold text-green-400">{porcentajeExito}%</span>
           </div>
         </div>
       )}
 
-      {ranking.length === 0 && (
+      {/* Stats Novedad */}
+      {bloquesHoy.some(b => b.tipoProceso === 'novedad') && (
+        <div className="space-y-2">
+          <h4 className="text-xs font-medium text-dark-400 flex items-center gap-1">
+            📋 Novedad
+          </h4>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-dark-700/50 rounded-lg p-2 text-center">
+              <p className="text-lg font-bold text-blue-400">{statsNovedad.novedadesIniciales}</p>
+              <p className="text-[10px] text-dark-400">Iniciales</p>
+            </div>
+            <div className="bg-dark-700/50 rounded-lg p-2 text-center">
+              <p className="text-lg font-bold text-green-400">{statsNovedad.novedadesSolucionadas}</p>
+              <p className="text-[10px] text-dark-400">Solucionadas</p>
+            </div>
+            <div className="bg-dark-700/50 rounded-lg p-2 text-center">
+              <p className="text-lg font-bold text-purple-400">{statsNovedad.novedadesRevisadas}</p>
+              <p className="text-[10px] text-dark-400">Revisadas</p>
+            </div>
+            <div className="bg-dark-700/50 rounded-lg p-2 text-center">
+              <p className="text-lg font-bold text-yellow-400">{statsNovedad.novedadesFinalePendientes}</p>
+              <p className="text-[10px] text-dark-400">Pendientes</p>
+            </div>
+          </div>
+          <div className="bg-pink-500/10 rounded-lg p-2 flex items-center justify-between">
+            <span className="text-xs text-pink-400">TOT Devoluciones</span>
+            <span className="text-lg font-bold text-pink-400">{totDevoluciones}</span>
+          </div>
+          <div className="bg-green-500/10 rounded-lg p-2 flex items-center justify-between">
+            <span className="text-xs text-green-400">% Solucionado</span>
+            <span className="text-lg font-bold text-green-400">{porcentajeSolucionado}%</span>
+          </div>
+        </div>
+      )}
+
+      {/* Resumen general */}
+      <div className="bg-dark-800 rounded-lg p-3">
+        <h4 className="text-xs font-medium text-dark-400 mb-2">Resumen</h4>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex items-center gap-2">
+            <Package className="w-4 h-4 text-primary-400" />
+            <div>
+              <p className="text-sm font-bold text-white">{bloquesHoy.length}</p>
+              <p className="text-[10px] text-dark-400">Bloques hoy</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-blue-400" />
+            <div>
+              <p className="text-sm font-bold text-white">
+                {Math.round(bloquesHoy.reduce((acc, b) => acc + b.tiempoTotal, 0) / 60)} min
+              </p>
+              <p className="text-[10px] text-dark-400">Tiempo total</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {bloquesHoy.length === 0 && (
         <div className="text-center py-6 text-dark-500">
           <BarChart3 className="w-10 h-10 mx-auto mb-2 opacity-50" />
           <p className="text-sm">Sin datos aún</p>
