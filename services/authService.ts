@@ -453,7 +453,7 @@ export async function adminCreateUser(userData: {
 // =====================================
 // Mantenemos logs de actividad locales para el frontend
 
-interface ActivityLog {
+export interface ActivityLog {
   id: string;
   userId: string;
   userEmail: string;
@@ -526,6 +526,69 @@ export function getUserActivityLogs(userId?: string): ActivityLog[] {
 }
 
 // =====================================
+// SESSION LOGS (compatibilidad)
+// =====================================
+
+export interface SessionLog {
+  id: string;
+  userId: string;
+  loginTime: string;
+  logoutTime?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  isActive: boolean;
+}
+
+/**
+ * Obtener logs de sesiones del usuario
+ * En el sistema de cookies httpOnly, las sesiones se manejan en el backend
+ */
+export function getUserSessionLogs(userId?: string): SessionLog[] {
+  // Las sesiones ahora se manejan en el backend con cookies httpOnly
+  // Retornamos un array vacío ya que el frontend no tiene acceso a los tokens
+  return [];
+}
+
+// =====================================
+// UPDATE PROFILE
+// =====================================
+
+/**
+ * Actualizar perfil del usuario
+ */
+export async function updateProfile(data: {
+  nombre?: string;
+  avatar?: string;
+}): Promise<AuthResponse> {
+  try {
+    const response = await authFetch('/api/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { success: false, message: result.detail || 'Error al actualizar perfil' };
+    }
+
+    // Actualizar cache local
+    if (_currentUser && result.user) {
+      _currentUser = { ..._currentUser, ...result.user };
+    }
+
+    return {
+      success: true,
+      user: result.user,
+      message: 'Perfil actualizado',
+    };
+  } catch (error) {
+    console.error('Error actualizando perfil:', error);
+    return { success: false, message: 'Error de conexión' };
+  }
+}
+
+// =====================================
 // INICIALIZACIÓN
 // =====================================
 
@@ -570,4 +633,6 @@ export default {
   logActivity,
   logCurrentUserActivity,
   getUserActivityLogs,
+  getUserSessionLogs,
+  updateProfile,
 };
