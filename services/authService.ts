@@ -1,5 +1,12 @@
 // services/authService.ts
-// Sistema de Autenticación y Registro de Actividad
+// Sistema de Autenticación SEGURO
+// ===============================
+//
+// IMPORTANTE: Este servicio usa el backend para autenticación.
+// - NO almacena passwords en el cliente
+// - NO hace hash de passwords en el cliente
+// - Solo almacena JWT tokens (corta duración)
+// - Refresh tokens rotados automáticamente
 
 // =====================================
 // TIPOS
@@ -11,9 +18,8 @@ export interface User {
   nombre: string;
   rol: 'admin' | 'operador' | 'viewer';
   avatar?: string;
-  createdAt: string;
-  lastLogin?: string;
   activo: boolean;
+  must_change_password?: boolean;
 }
 
 export interface LoginCredentials {
@@ -30,7 +36,7 @@ export interface RegisterData {
 
 export interface SessionLog {
   id: string;
-  odigo: string;
+  userId: string;
   action: 'login' | 'logout' | 'register' | 'password_reset';
   timestamp: string;
   ip?: string;
@@ -47,7 +53,7 @@ export interface ActivityLog {
   details: string;
   module: string;
   timestamp: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface AuthResponse {
@@ -57,121 +63,25 @@ export interface AuthResponse {
   message?: string;
 }
 
+interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  user: User;
+}
+
 // =====================================
 // CONSTANTES
 // =====================================
 
-const USERS_KEY = 'litper_users';
-const CURRENT_USER_KEY = 'litper_current_user';
-const SESSION_LOGS_KEY = 'litper_session_logs';
-const ACTIVITY_LOGS_KEY = 'litper_activity_logs';
 const AUTH_TOKEN_KEY = 'litper_auth_token';
+const REFRESH_TOKEN_KEY = 'litper_refresh_token';
+const CURRENT_USER_KEY = 'litper_current_user';
+const TOKEN_EXPIRY_KEY = 'litper_token_expiry';
 
-// Usuarios productivos de Litper
-const LITPER_USERS: Array<{ user: User; password: string }> = [
-  // Chat & Atención
-  {
-    user: {
-      id: 'litper_karen_001',
-      email: 'karenlitper@gmail.com',
-      nombre: 'Karen',
-      rol: 'operador',
-      createdAt: '2024-12-01T00:00:00.000Z',
-      activo: true,
-    },
-    password: 'LP.CAROLINA_2024?Jm',
-  },
-  {
-    user: {
-      id: 'litper_dayana_002',
-      email: 'litperdayana@gmail.com',
-      nombre: 'Dayana',
-      rol: 'operador',
-      createdAt: '2024-12-01T00:00:00.000Z',
-      activo: true,
-    },
-    password: 'tELLEZ_LITper2025Angie?',
-  },
-  {
-    user: {
-      id: 'litper_david_003',
-      email: 'litperdavid@gmail.com',
-      nombre: 'David',
-      rol: 'operador',
-      createdAt: '2024-12-01T00:00:00.000Z',
-      activo: true,
-    },
-    password: '2025NORMAN_?litper',
-  },
-  // Tracking & Envíos
-  {
-    user: {
-      id: 'litper_felipe_004',
-      email: 'felipelitper@gmail.com',
-      nombre: 'Felipe',
-      rol: 'operador',
-      createdAt: '2024-12-01T00:00:00.000Z',
-      activo: true,
-    },
-    password: '2025?LITper.FELIPE',
-  },
-  {
-    user: {
-      id: 'litper_jimmy_005',
-      email: 'jimmylitper@gmail.com',
-      nombre: 'Jimmy',
-      rol: 'operador',
-      createdAt: '2024-12-01T00:00:00.000Z',
-      activo: true,
-    },
-    password: '20.25_JIMMY.LITper?',
-  },
-  {
-    user: {
-      id: 'litper_jhonnatan_006',
-      email: 'jhonnatanlitper@gmail.com',
-      nombre: 'Jhonnatan',
-      rol: 'operador',
-      createdAt: '2024-12-01T00:00:00.000Z',
-      activo: true,
-    },
-    password: '2025_EVAN10?LITper.?',
-  },
-  // Administración
-  {
-    user: {
-      id: 'litper_daniel_007',
-      email: 'daniellitper@gmail.com',
-      nombre: 'Daniel',
-      rol: 'admin',
-      createdAt: '2024-12-01T00:00:00.000Z',
-      activo: true,
-    },
-    password: 'ALEJANDRA_?2025Litper',
-  },
-  {
-    user: {
-      id: 'litper_maletas_008',
-      email: 'maletaslitper@gmail.com',
-      nombre: 'Maletas',
-      rol: 'admin',
-      createdAt: '2024-12-01T00:00:00.000Z',
-      activo: true,
-    },
-    password: '2025_KAREN.litper10?',
-  },
-  {
-    user: {
-      id: 'litper_colombia_009',
-      email: 'litpercolombia@gmail.com',
-      nombre: 'Litper Colombia',
-      rol: 'admin',
-      createdAt: '2024-12-01T00:00:00.000Z',
-      activo: true,
-    },
-    password: '?2024LP.JEferMoreno?',
-  },
-];
+// URL del backend API
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // =====================================
 // FUNCIONES DE UTILIDAD
@@ -181,19 +91,6 @@ const generateId = (): string => {
   return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
-const generateToken = (): string => {
-  return `token_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
-};
-
-// Simular hash de password (en producción usar bcrypt)
-const hashPassword = (password: string): string => {
-  return btoa(password + '_litper_salt_2024');
-};
-
-const verifyPassword = (password: string, hash: string): boolean => {
-  return hashPassword(password) === hash;
-};
-
 const getDeviceInfo = (): string => {
   const ua = navigator.userAgent;
   if (ua.includes('Mobile')) return 'Móvil';
@@ -201,53 +98,57 @@ const getDeviceInfo = (): string => {
   return 'Desktop';
 };
 
-const getBrowserInfo = (): string => {
-  const ua = navigator.userAgent;
-  if (ua.includes('Chrome')) return 'Chrome';
-  if (ua.includes('Firefox')) return 'Firefox';
-  if (ua.includes('Safari')) return 'Safari';
-  if (ua.includes('Edge')) return 'Edge';
-  return 'Otro';
+// Obtener headers con token
+const getAuthHeaders = (): HeadersInit => {
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
 };
 
 // =====================================
-// FUNCIONES DE ALMACENAMIENTO
+// MANEJO DE TOKENS
 // =====================================
 
-const getUsers = (): Map<string, { user: User; passwordHash: string }> => {
-  const saved = localStorage.getItem(USERS_KEY);
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      return new Map(Object.entries(parsed));
-    } catch (e) {
-      console.error('Error parsing users:', e);
-    }
-  }
+const saveTokens = (response: TokenResponse): void => {
+  localStorage.setItem(AUTH_TOKEN_KEY, response.access_token);
+  localStorage.setItem(REFRESH_TOKEN_KEY, response.refresh_token);
+  localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(response.user));
 
-  // Crear usuarios productivos de Litper
-  const productionUsers = new Map<string, { user: User; passwordHash: string }>();
-  for (const userData of LITPER_USERS) {
-    productionUsers.set(userData.user.email.toLowerCase(), {
-      user: userData.user,
-      passwordHash: hashPassword(userData.password),
-    });
-  }
-  saveUsers(productionUsers);
-  return productionUsers;
+  // Guardar tiempo de expiración
+  const expiryTime = Date.now() + response.expires_in * 1000;
+  localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
 };
 
-const saveUsers = (users: Map<string, { user: User; passwordHash: string }>): void => {
-  const obj = Object.fromEntries(users);
-  localStorage.setItem(USERS_KEY, JSON.stringify(obj));
+const clearTokens = (): void => {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(CURRENT_USER_KEY);
+  localStorage.removeItem(TOKEN_EXPIRY_KEY);
 };
+
+const isTokenExpired = (): boolean => {
+  const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
+  if (!expiry) return true;
+
+  // Refrescar 1 minuto antes de que expire
+  return Date.now() > parseInt(expiry) - 60000;
+};
+
+// =====================================
+// LOGS LOCALES (para actividad en frontend)
+// =====================================
+
+const SESSION_LOGS_KEY = 'litper_session_logs';
+const ACTIVITY_LOGS_KEY = 'litper_activity_logs';
 
 const getSessionLogs = (): SessionLog[] => {
   const saved = localStorage.getItem(SESSION_LOGS_KEY);
   if (saved) {
     try {
       return JSON.parse(saved);
-    } catch (e) {
+    } catch {
       return [];
     }
   }
@@ -257,8 +158,7 @@ const getSessionLogs = (): SessionLog[] => {
 const saveSessionLog = (log: SessionLog): void => {
   const logs = getSessionLogs();
   logs.unshift(log);
-  // Mantener solo los últimos 500 registros
-  const limited = logs.slice(0, 500);
+  const limited = logs.slice(0, 100);
   localStorage.setItem(SESSION_LOGS_KEY, JSON.stringify(limited));
 };
 
@@ -267,7 +167,7 @@ const getActivityLogs = (): ActivityLog[] => {
   if (saved) {
     try {
       return JSON.parse(saved);
-    } catch (e) {
+    } catch {
       return [];
     }
   }
@@ -277,8 +177,7 @@ const getActivityLogs = (): ActivityLog[] => {
 const saveActivityLog = (log: ActivityLog): void => {
   const logs = getActivityLogs();
   logs.unshift(log);
-  // Mantener solo los últimos 1000 registros
-  const limited = logs.slice(0, 1000);
+  const limited = logs.slice(0, 200);
   localStorage.setItem(ACTIVITY_LOGS_KEY, JSON.stringify(limited));
 };
 
@@ -288,59 +187,58 @@ const saveActivityLog = (log: ActivityLog): void => {
 
 /**
  * Iniciar sesión
+ * Envía credenciales al backend, recibe JWT tokens
  */
 export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
   const { email, password } = credentials;
 
-  // Validar campos
   if (!email || !password) {
     return { success: false, message: 'Email y contraseña son requeridos' };
   }
 
-  const users = getUsers();
-  const userData = users.get(email.toLowerCase());
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
 
-  if (!userData) {
-    return { success: false, message: 'Usuario no encontrado' };
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Error de conexión' }));
+      return {
+        success: false,
+        message: error.detail || 'Credenciales inválidas',
+      };
+    }
+
+    const data: TokenResponse = await response.json();
+
+    // Guardar tokens
+    saveTokens(data);
+
+    // Registrar sesión local
+    saveSessionLog({
+      id: generateId(),
+      userId: data.user.id,
+      action: 'login',
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      device: getDeviceInfo(),
+    });
+
+    return {
+      success: true,
+      user: data.user,
+      token: data.access_token,
+      message: 'Inicio de sesión exitoso',
+    };
+  } catch (error) {
+    console.error('Error en login:', error);
+    return {
+      success: false,
+      message: 'Error de conexión con el servidor',
+    };
   }
-
-  if (!verifyPassword(password, userData.passwordHash)) {
-    return { success: false, message: 'Contraseña incorrecta' };
-  }
-
-  if (!userData.user.activo) {
-    return { success: false, message: 'Usuario desactivado. Contacte al administrador.' };
-  }
-
-  // Actualizar último login
-  userData.user.lastLogin = new Date().toISOString();
-  users.set(email.toLowerCase(), userData);
-  saveUsers(users);
-
-  // Generar token
-  const token = generateToken();
-  localStorage.setItem(AUTH_TOKEN_KEY, token);
-  localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData.user));
-
-  // Registrar sesión
-  saveSessionLog({
-    id: generateId(),
-    odigo: userData.user.id,
-    action: 'login',
-    timestamp: new Date().toISOString(),
-    userAgent: navigator.userAgent,
-    device: getDeviceInfo(),
-  });
-
-  // Registrar actividad
-  logActivity(userData.user.id, userData.user.email, 'Inicio de sesión', 'Usuario inició sesión exitosamente', 'auth');
-
-  return {
-    success: true,
-    user: userData.user,
-    token,
-    message: 'Inicio de sesión exitoso',
-  };
 };
 
 /**
@@ -349,91 +247,119 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
 export const register = async (data: RegisterData): Promise<AuthResponse> => {
   const { email, password, nombre, rol = 'operador' } = data;
 
-  // Validar campos
   if (!email || !password || !nombre) {
     return { success: false, message: 'Todos los campos son requeridos' };
   }
 
-  if (password.length < 6) {
-    return { success: false, message: 'La contraseña debe tener al menos 6 caracteres' };
+  if (password.length < 8) {
+    return { success: false, message: 'La contraseña debe tener al menos 8 caracteres' };
   }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return { success: false, message: 'Email inválido' };
-  }
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, nombre, rol }),
+    });
 
-  const users = getUsers();
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Error de registro' }));
+      return {
+        success: false,
+        message: error.detail || 'Error al registrar usuario',
+      };
+    }
 
-  if (users.has(email.toLowerCase())) {
-    return { success: false, message: 'El email ya está registrado' };
-  }
+    const tokenResponse: TokenResponse = await response.json();
 
-  // Crear nuevo usuario
-  const newUser: User = {
-    id: generateId(),
-    email: email.toLowerCase(),
-    nombre,
-    rol,
-    createdAt: new Date().toISOString(),
-    activo: true,
-  };
+    // Guardar tokens
+    saveTokens(tokenResponse);
 
-  users.set(email.toLowerCase(), {
-    user: newUser,
-    passwordHash: hashPassword(password),
-  });
-  saveUsers(users);
-
-  // Registrar sesión
-  saveSessionLog({
-    id: generateId(),
-    odigo: newUser.id,
-    action: 'register',
-    timestamp: new Date().toISOString(),
-    userAgent: navigator.userAgent,
-    device: getDeviceInfo(),
-  });
-
-  // Auto-login después de registro
-  const token = generateToken();
-  localStorage.setItem(AUTH_TOKEN_KEY, token);
-  localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
-
-  // Registrar actividad
-  logActivity(newUser.id, newUser.email, 'Registro', 'Nuevo usuario registrado', 'auth');
-
-  return {
-    success: true,
-    user: newUser,
-    token,
-    message: 'Registro exitoso',
-  };
-};
-
-/**
- * Cerrar sesión
- */
-export const logout = (): void => {
-  const user = getCurrentUser();
-
-  if (user) {
     // Registrar sesión
     saveSessionLog({
       id: generateId(),
-      odigo: user.id,
-      action: 'logout',
+      userId: tokenResponse.user.id,
+      action: 'register',
       timestamp: new Date().toISOString(),
       userAgent: navigator.userAgent,
       device: getDeviceInfo(),
     });
 
-    // Registrar actividad
-    logActivity(user.id, user.email, 'Cierre de sesión', 'Usuario cerró sesión', 'auth');
+    return {
+      success: true,
+      user: tokenResponse.user,
+      token: tokenResponse.access_token,
+      message: 'Registro exitoso',
+    };
+  } catch (error) {
+    console.error('Error en registro:', error);
+    return {
+      success: false,
+      message: 'Error de conexión con el servidor',
+    };
+  }
+};
+
+/**
+ * Refrescar tokens
+ */
+export const refreshTokens = async (): Promise<boolean> => {
+  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+
+  if (!refreshToken) {
+    return false;
   }
 
-  localStorage.removeItem(AUTH_TOKEN_KEY);
-  localStorage.removeItem(CURRENT_USER_KEY);
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+
+    if (!response.ok) {
+      // Refresh token inválido o expirado
+      clearTokens();
+      return false;
+    }
+
+    const data: TokenResponse = await response.json();
+    saveTokens(data);
+    return true;
+  } catch (error) {
+    console.error('Error refrescando tokens:', error);
+    return false;
+  }
+};
+
+/**
+ * Cerrar sesión
+ */
+export const logout = async (): Promise<void> => {
+  const user = getCurrentUser();
+
+  try {
+    // Notificar al backend
+    await fetch(`${API_BASE_URL}/api/auth/logout`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+  } catch {
+    // Continuar con logout local aunque falle el backend
+  }
+
+  if (user) {
+    saveSessionLog({
+      id: generateId(),
+      userId: user.id,
+      action: 'logout',
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      device: getDeviceInfo(),
+    });
+  }
+
+  clearTokens();
 };
 
 /**
@@ -444,7 +370,7 @@ export const getCurrentUser = (): User | null => {
   if (saved) {
     try {
       return JSON.parse(saved);
-    } catch (e) {
+    } catch {
       return null;
     }
   }
@@ -457,7 +383,22 @@ export const getCurrentUser = (): User | null => {
 export const isAuthenticated = (): boolean => {
   const token = localStorage.getItem(AUTH_TOKEN_KEY);
   const user = getCurrentUser();
-  return !!token && !!user;
+
+  if (!token || !user) {
+    return false;
+  }
+
+  // Si el token está por expirar, intentar refrescar
+  if (isTokenExpired()) {
+    // Hacer refresh en background
+    refreshTokens().then((success) => {
+      if (!success) {
+        clearTokens();
+      }
+    });
+  }
+
+  return true;
 };
 
 /**
@@ -468,77 +409,78 @@ export const getToken = (): string | null => {
 };
 
 /**
- * Actualizar perfil de usuario
+ * Cambiar contraseña
  */
-export const updateProfile = (updates: Partial<User>): AuthResponse => {
-  const currentUser = getCurrentUser();
-  if (!currentUser) {
-    return { success: false, message: 'No hay sesión activa' };
+export const changePassword = async (
+  currentPassword: string,
+  newPassword: string
+): Promise<AuthResponse> => {
+  if (newPassword.length < 8) {
+    return { success: false, message: 'La nueva contraseña debe tener al menos 8 caracteres' };
   }
 
-  const users = getUsers();
-  const userData = users.get(currentUser.email);
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    });
 
-  if (!userData) {
-    return { success: false, message: 'Usuario no encontrado' };
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Error' }));
+      return {
+        success: false,
+        message: error.detail || 'Error al cambiar contraseña',
+      };
+    }
+
+    // Limpiar tokens para forzar re-login
+    clearTokens();
+
+    return {
+      success: true,
+      message: 'Contraseña actualizada. Por favor inicie sesión nuevamente.',
+    };
+  } catch (error) {
+    console.error('Error cambiando contraseña:', error);
+    return {
+      success: false,
+      message: 'Error de conexión con el servidor',
+    };
   }
-
-  // Actualizar datos
-  const updatedUser = { ...userData.user, ...updates };
-  users.set(currentUser.email, { ...userData, user: updatedUser });
-  saveUsers(users);
-
-  // Actualizar sesión actual
-  localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
-
-  // Registrar actividad
-  logActivity(updatedUser.id, updatedUser.email, 'Actualización de perfil', 'Usuario actualizó su perfil', 'auth');
-
-  return {
-    success: true,
-    user: updatedUser,
-    message: 'Perfil actualizado',
-  };
 };
 
 /**
- * Cambiar contraseña
+ * Actualizar perfil de usuario
  */
-export const changePassword = (currentPassword: string, newPassword: string): AuthResponse => {
+export const updateProfile = async (updates: Partial<User>): Promise<AuthResponse> => {
   const currentUser = getCurrentUser();
   if (!currentUser) {
     return { success: false, message: 'No hay sesión activa' };
   }
 
-  if (newPassword.length < 6) {
-    return { success: false, message: 'La nueva contraseña debe tener al menos 6 caracteres' };
+  try {
+    // Por ahora actualizamos solo localmente
+    // TODO: Agregar endpoint backend para actualizar perfil
+    const updatedUser = { ...currentUser, ...updates };
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+
+    logCurrentUserActivity('Actualización de perfil', 'Usuario actualizó su perfil', 'auth');
+
+    return {
+      success: true,
+      user: updatedUser,
+      message: 'Perfil actualizado',
+    };
+  } catch {
+    return {
+      success: false,
+      message: 'Error actualizando perfil',
+    };
   }
-
-  const users = getUsers();
-  const userData = users.get(currentUser.email);
-
-  if (!userData) {
-    return { success: false, message: 'Usuario no encontrado' };
-  }
-
-  if (!verifyPassword(currentPassword, userData.passwordHash)) {
-    return { success: false, message: 'Contraseña actual incorrecta' };
-  }
-
-  // Actualizar contraseña
-  users.set(currentUser.email, {
-    ...userData,
-    passwordHash: hashPassword(newPassword),
-  });
-  saveUsers(users);
-
-  // Registrar actividad
-  logActivity(currentUser.id, currentUser.email, 'Cambio de contraseña', 'Usuario cambió su contraseña', 'auth');
-
-  return {
-    success: true,
-    message: 'Contraseña actualizada',
-  };
 };
 
 // =====================================
@@ -554,7 +496,7 @@ export const logActivity = (
   action: string,
   details: string,
   module: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): void => {
   const log: ActivityLog = {
     id: generateId(),
@@ -576,7 +518,7 @@ export const logCurrentUserActivity = (
   action: string,
   details: string,
   module: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): void => {
   const user = getCurrentUser();
   if (user) {
@@ -590,7 +532,7 @@ export const logCurrentUserActivity = (
 export const getUserSessionLogs = (userId?: string): SessionLog[] => {
   const logs = getSessionLogs();
   if (userId) {
-    return logs.filter(l => l.odigo === userId);
+    return logs.filter((l) => l.userId === userId);
   }
   return logs;
 };
@@ -601,56 +543,75 @@ export const getUserSessionLogs = (userId?: string): SessionLog[] => {
 export const getUserActivityLogs = (userId?: string): ActivityLog[] => {
   const logs = getActivityLogs();
   if (userId) {
-    return logs.filter(l => l.userId === userId);
+    return logs.filter((l) => l.userId === userId);
   }
   return logs;
 };
 
 /**
- * Obtener todos los usuarios (solo admin)
+ * Obtener todos los usuarios (solo admin, desde backend)
  */
-export const getAllUsers = (): User[] => {
+export const getAllUsers = async (): Promise<User[]> => {
   const currentUser = getCurrentUser();
   if (!currentUser || currentUser.rol !== 'admin') {
     return [];
   }
 
-  const users = getUsers();
-  return Array.from(users.values()).map(u => u.user);
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/users`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    return await response.json();
+  } catch {
+    return [];
+  }
 };
 
 /**
  * Activar/desactivar usuario (solo admin)
  */
-export const toggleUserStatus = (email: string): AuthResponse => {
+export const toggleUserStatus = async (email: string): Promise<AuthResponse> => {
   const currentUser = getCurrentUser();
   if (!currentUser || currentUser.rol !== 'admin') {
     return { success: false, message: 'No tienes permisos para esta acción' };
   }
 
-  const users = getUsers();
-  const userData = users.get(email.toLowerCase());
+  try {
+    // Primero obtener el user_id del email
+    const users = await getAllUsers();
+    const targetUser = users.find((u) => u.email === email);
 
-  if (!userData) {
-    return { success: false, message: 'Usuario no encontrado' };
+    if (!targetUser) {
+      return { success: false, message: 'Usuario no encontrado' };
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/auth/users/${targetUser.id}/toggle-active`,
+      {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Error' }));
+      return { success: false, message: error.detail || 'Error' };
+    }
+
+    const result = await response.json();
+    return {
+      success: true,
+      message: result.message,
+    };
+  } catch {
+    return { success: false, message: 'Error de conexión' };
   }
-
-  userData.user.activo = !userData.user.activo;
-  users.set(email.toLowerCase(), userData);
-  saveUsers(users);
-
-  logActivity(
-    currentUser.id,
-    currentUser.email,
-    userData.user.activo ? 'Activar usuario' : 'Desactivar usuario',
-    `Usuario ${email} ${userData.user.activo ? 'activado' : 'desactivado'}`,
-    'admin'
-  );
-
-  return {
-    success: true,
-    message: `Usuario ${userData.user.activo ? 'activado' : 'desactivado'}`,
-  };
 };
 
 export default {
@@ -668,4 +629,5 @@ export default {
   getUserActivityLogs,
   getAllUsers,
   toggleUserStatus,
+  refreshTokens,
 };
