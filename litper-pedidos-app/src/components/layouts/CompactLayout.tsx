@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Download, RotateCcw, Play, Pause, Settings, RotateCw, Save, Sunrise } from 'lucide-react';
+import { Download, RotateCcw, Play, Pause, Settings, RotateCw, Save } from 'lucide-react';
 import { useAppStore, calcularTotDevoluciones } from '../../stores/appStore';
 import { PROCESO_GUIAS, PROCESO_NOVEDAD } from '../../config/processConfig';
 import ViewSwitcher from '../ViewSwitcher';
 import SettingsModal from '../SettingsModal';
 import BlocksModal from '../BlocksModal';
 
-// Barra Lateral Vertical (Compact) - FUNCIONAL con TODOS los estatus
+// Barra Lateral Vertical DELGADA - FUNCIONAL con TODOS los estatus
 const CompactLayout: React.FC = () => {
   const {
     procesoActivo,
@@ -90,113 +90,92 @@ const CompactLayout: React.FC = () => {
 
   return (
     <div className="h-screen w-full flex flex-col bg-dark-900 select-none">
-      {/* Header con Usuario */}
-      <div className="px-2 py-2 bg-dark-800 border-b border-dark-700 drag-region">
+      {/* Header compacto */}
+      <div className="px-1 py-1.5 bg-dark-800 border-b border-dark-700 drag-region">
         <div className="flex items-center justify-between no-drag">
           {usuarioActual ? (
-            <div className="flex items-center gap-2">
-              <span className="text-xl" style={{ color: usuarioActual.color }}>{usuarioActual.avatar}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-white truncate">{usuarioActual.nombre}</p>
-                <p className="text-[10px] text-dark-400">Ronda #{numeroBloqueHoy}</p>
-              </div>
+            <div className="flex items-center gap-1">
+              <span className="text-base" style={{ color: usuarioActual.color }}>{usuarioActual.avatar}</span>
+              <span className="text-[9px] text-dark-400">#{numeroBloqueHoy}</span>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <span className="text-lg">👤</span>
-              <span className="text-[10px] text-dark-400">Sin usuario</span>
-            </div>
+            <span className="text-sm">👤</span>
           )}
           <ViewSwitcher compact />
         </div>
       </div>
 
-      {/* Timer Grande */}
-      <div className="px-2 py-3 bg-dark-800/50 border-b border-dark-700">
-        <div className="text-center">
-          <span className={`font-mono text-2xl font-bold ${colorClass}`}>
-            {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
-          </span>
-        </div>
-        <div className="flex items-center justify-center gap-2 mt-2">
+      {/* Timer */}
+      <div className="px-1 py-2 bg-dark-800/50 border-b border-dark-700 text-center">
+        <span className={`font-mono text-xl font-bold ${colorClass}`}>
+          {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+        </span>
+        <div className="flex items-center justify-center gap-1 mt-1">
           <button
             onClick={timerState === 'running' ? pausarTimer : iniciarTimer}
-            className={`p-1.5 rounded-lg transition-all ${
-              timerState === 'running'
-                ? 'bg-yellow-500/20 text-yellow-400'
-                : 'bg-green-500/20 text-green-400'
+            className={`p-1 rounded transition-all ${
+              timerState === 'running' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'
             }`}
           >
-            {timerState === 'running' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            {timerState === 'running' ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
           </button>
-          <button
-            onClick={resetearTimer}
-            className="p-1.5 rounded-lg bg-dark-700 text-dark-400 hover:text-white transition-all"
-          >
-            <RotateCw className="w-4 h-4" />
+          <button onClick={resetearTimer} className="p-1 rounded bg-dark-700 text-dark-400 hover:text-white">
+            <RotateCw className="w-3 h-3" />
           </button>
         </div>
       </div>
 
-      {/* Selector de Proceso */}
-      <div className="px-2 py-1.5 bg-dark-800/30 border-b border-dark-700">
-        <div className="flex bg-dark-700 rounded-lg p-0.5">
+      {/* Selector Proceso */}
+      <div className="px-1 py-1 bg-dark-800/30 border-b border-dark-700">
+        <div className="flex bg-dark-700 rounded p-0.5">
           <button
             onClick={() => setProcesoActivo('guias')}
-            className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-all ${
+            className={`flex-1 py-0.5 rounded text-[9px] font-bold ${
               procesoActivo === 'guias' ? 'bg-primary-500 text-white' : 'text-dark-400'
             }`}
           >
-            📦 G
+            G
           </button>
           <button
             onClick={() => setProcesoActivo('novedad')}
-            className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-all ${
+            className={`flex-1 py-0.5 rounded text-[9px] font-bold ${
               procesoActivo === 'novedad' ? 'bg-blue-500 text-white' : 'text-dark-400'
             }`}
           >
-            📋 N
+            N
           </button>
         </div>
       </div>
 
-      {/* TODOS los Contadores - SIEMPRE VISIBLES */}
-      <div className="flex-1 overflow-y-auto px-2 py-1.5">
-        <div className="space-y-1">
+      {/* TODOS los Contadores */}
+      <div className="flex-1 overflow-y-auto px-1 py-1">
+        <div className="space-y-0.5">
           {proceso.campos.map((campo) => (
             <div
               key={campo.id}
-              className="flex items-center justify-between py-1.5 px-2 bg-dark-800/50 rounded-lg"
-              style={{ borderLeft: `3px solid ${campo.color}` }}
+              className="flex items-center justify-between py-1 px-1 bg-dark-800/50 rounded"
+              style={{ borderLeft: `2px solid ${campo.color}` }}
             >
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-[10px] font-bold text-dark-500 w-3">{getLetra(campo.id)}</span>
-                <span className="text-sm">{campo.icono}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                {/* Botón - SIEMPRE VISIBLE */}
+              <span className="text-xs">{campo.icono}</span>
+              <div className="flex items-center gap-0.5">
                 {!campo.esCalculado && (
                   <button
                     onClick={() => decrementarContador(campo.id)}
-                    className="w-6 h-6 rounded bg-red-500/30 hover:bg-red-500/50 text-red-400 text-sm font-bold flex items-center justify-center transition-all active:scale-95"
+                    className="w-5 h-5 rounded bg-red-500/30 text-red-400 text-xs font-bold flex items-center justify-center active:scale-95"
                   >
                     −
                   </button>
                 )}
-                <span className={`min-w-[28px] text-center text-base font-bold tabular-nums ${campo.esCalculado ? 'text-pink-400' : 'text-white'}`}>
+                <span className={`min-w-[22px] text-center text-sm font-bold ${campo.esCalculado ? 'text-pink-400' : 'text-white'}`}>
                   {getValor(campo.id)}
                 </span>
-                {/* Botón + SIEMPRE VISIBLE */}
                 {!campo.esCalculado && (
                   <button
                     onClick={() => incrementarContador(campo.id)}
-                    className="w-6 h-6 rounded bg-green-500/30 hover:bg-green-500/50 text-green-400 text-sm font-bold flex items-center justify-center transition-all active:scale-95"
+                    className="w-5 h-5 rounded bg-green-500/30 text-green-400 text-xs font-bold flex items-center justify-center active:scale-95"
                   >
                     +
                   </button>
-                )}
-                {campo.esCalculado && (
-                  <span className="text-[8px] text-dark-500 w-[52px]">auto</span>
                 )}
               </div>
             </div>
@@ -204,61 +183,52 @@ const CompactLayout: React.FC = () => {
         </div>
       </div>
 
-      {/* Botones de Acción */}
-      <div className="px-2 py-2 bg-dark-800/50 border-t border-dark-700 space-y-1.5">
-        {/* GUARDAR RONDA - Azul */}
+      {/* Botones Acción */}
+      <div className="px-1 py-1.5 bg-dark-800/50 border-t border-dark-700 space-y-1">
         <button
           onClick={() => guardarRonda()}
-          className="w-full flex items-center justify-center gap-1.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-all active:scale-98"
+          className="w-full py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-bold flex items-center justify-center gap-1"
         >
-          <Save className="w-4 h-4" />
+          <Save className="w-3 h-3" />
           GUARDAR
         </button>
-
-        <div className="grid grid-cols-2 gap-1.5">
-          {/* REINICIAR - Naranja */}
+        <div className="grid grid-cols-2 gap-1">
           <button
             onClick={() => finalizarBloque()}
-            className="py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition-all flex items-center justify-center gap-1"
-            title="Reiniciar"
+            className="py-1 bg-orange-600 text-white rounded flex items-center justify-center"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-3 h-3" />
           </button>
-          {/* EXPORTAR - Verde */}
           <button
             onClick={() => setMostrarModalExportar(true)}
-            className="py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-lg transition-all flex items-center justify-center gap-1"
-            title="Exportar"
+            className="py-1 bg-green-600 text-white rounded flex items-center justify-center"
           >
-            <Download className="w-3.5 h-3.5" />
+            <Download className="w-3 h-3" />
           </button>
         </div>
       </div>
 
-      {/* Footer con Bloques y Nuevo Día */}
-      <div className="px-2 py-1.5 bg-dark-800 border-t border-dark-700">
-        <div className="grid grid-cols-2 gap-1.5">
+      {/* Footer */}
+      <div className="px-1 py-1 bg-dark-800 border-t border-dark-700 space-y-1">
+        <div className="grid grid-cols-2 gap-1">
           <button
             onClick={() => setShowBloques(true)}
-            className="py-1 bg-dark-700 hover:bg-dark-600 text-dark-300 rounded text-[10px] transition-all"
+            className="py-0.5 bg-dark-700 text-dark-300 rounded text-[9px]"
           >
-            📦 {bloquesHoy.length}
+            📦{bloquesHoy.length}
           </button>
           <button
             onClick={handleNuevoDia}
-            className={`py-1 rounded text-[10px] transition-all ${
-              confirmNuevoDia ? 'bg-red-600 text-white' : 'bg-dark-700 text-dark-400 hover:text-white'
-            }`}
+            className={`py-0.5 rounded text-[9px] ${confirmNuevoDia ? 'bg-red-600 text-white' : 'bg-dark-700 text-dark-400'}`}
           >
-            {confirmNuevoDia ? '¿OK?' : '🌅'}
+            {confirmNuevoDia ? '¿?' : '🌅'}
           </button>
         </div>
         <button
           onClick={() => setShowSettings(true)}
-          className="w-full mt-1.5 py-1 bg-dark-700 hover:bg-dark-600 text-dark-400 hover:text-white rounded text-[10px] transition-all flex items-center justify-center gap-1"
+          className="w-full py-0.5 bg-dark-700 text-dark-400 rounded text-[9px] flex items-center justify-center gap-1"
         >
-          <Settings className="w-3 h-3" />
-          Config
+          <Settings className="w-2.5 h-2.5" />
         </button>
       </div>
 

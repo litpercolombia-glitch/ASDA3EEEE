@@ -25,12 +25,12 @@ const LAYOUTS = {
     maxHeight: 180,
   },
   compact: {
-    // Barra lateral vertical - más alta para todos los estatus
-    width: 160,
-    height: 700,
-    minWidth: 140,
-    minHeight: 500,
-    maxWidth: 220,
+    // Barra lateral vertical DELGADA - más alta para todos los estatus
+    width: 120,
+    height: 750,
+    minWidth: 100,
+    minHeight: 600,
+    maxWidth: 160,
     maxHeight: 900,
   },
 };
