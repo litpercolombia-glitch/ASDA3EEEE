@@ -415,7 +415,15 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    saveShipments(shipments);
+    try {
+      saveShipments(shipments);
+    } catch (error) {
+      console.error('Error guardando shipments:', error);
+      // Si el almacenamiento está lleno, mostrar notificación
+      if (error instanceof Error && error.message.includes('lleno')) {
+        setNotification('⚠️ Almacenamiento lleno. Exporta tus datos para liberar espacio.');
+      }
+    }
   }, [shipments]);
 
   useEffect(() => {
@@ -501,19 +509,36 @@ const App: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const result = await parseExcelFile(file, phoneRegistry);
+    try {
+      const result = await parseExcelFile(file, phoneRegistry);
 
-    if (result.success && result.shipments.length > 0) {
-      setShipments((prev) => {
-        const ids = new Set(result.shipments.map((s) => s.id));
-        return [...prev.filter((s) => !ids.has(s.id)), ...result.shipments];
-      });
-      setNotification(`✅ ${result.shipments.length} guías cargadas desde Excel`);
-      setShowDataInput(false);
-    } else if (result.error) {
-      setNotification(`❌ Error: ${result.error}`);
+      if (result.success && result.shipments.length > 0) {
+        // Limitar la cantidad de guías para evitar problemas de memoria
+        const maxGuias = 5000;
+        const guiasToAdd = result.shipments.slice(0, maxGuias);
+
+        if (result.shipments.length > maxGuias) {
+          setNotification(`⚠️ Se cargaron las primeras ${maxGuias} guías de ${result.shipments.length}. Exporta los datos antes de cargar más.`);
+        }
+
+        setShipments((prev) => {
+          const ids = new Set(guiasToAdd.map((s) => s.id));
+          return [...prev.filter((s) => !ids.has(s.id)), ...guiasToAdd];
+        });
+
+        if (result.shipments.length <= maxGuias) {
+          setNotification(`✅ ${guiasToAdd.length} guías cargadas desde Excel`);
+        }
+        setShowDataInput(false);
+      } else if (result.error) {
+        setNotification(`❌ Error: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error cargando Excel:', error);
+      setNotification('❌ Error inesperado al procesar el archivo. Intenta con un archivo más pequeño.');
+    } finally {
+      e.target.value = '';
     }
-    e.target.value = '';
   };
 
   const handleDownloadExcel = () => exportToExcel(shipments);
