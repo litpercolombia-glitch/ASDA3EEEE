@@ -11,6 +11,7 @@ export { default as QuickCounters } from './QuickCounters';
 export { default as CounterButton } from './CounterButton';
 export { default as ExportModal } from './ExportModal';
 export { default as ViewSwitcher } from './ViewSwitcher';
+export { default as BlocksModal } from './BlocksModal';
 
 // Layouts
 export { default as WidgetLayout } from './layouts/WidgetLayout';

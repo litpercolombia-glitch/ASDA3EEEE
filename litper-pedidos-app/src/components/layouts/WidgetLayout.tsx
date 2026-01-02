@@ -1,18 +1,13 @@
 import React, { useState } from 'react';
-import { Download, BarChart3, Package, Settings, Minimize2, X, RotateCcw, Sunrise, Clock } from 'lucide-react';
+import { Download, RotateCcw, Sunrise, Play, Pause, RotateCw, Package, X, Settings } from 'lucide-react';
 import { useAppStore, calcularTotDevoluciones } from '../../stores/appStore';
 import { PROCESO_GUIAS, PROCESO_NOVEDAD } from '../../config/processConfig';
-import ProcessSelector from '../ProcessSelector';
-import Timer from '../Timer';
-import CounterButton from '../CounterButton';
-import BlocksPanel from '../BlocksPanel';
-import ViewSwitcher from '../ViewSwitcher';
-
-type TabView = 'contadores' | 'bloques' | 'stats';
+import BlocksModal from '../BlocksModal';
 
 const WidgetLayout: React.FC = () => {
   const {
     procesoActivo,
+    setProcesoActivo,
     contadoresGuias,
     contadoresNovedad,
     incrementarContador,
@@ -20,12 +15,17 @@ const WidgetLayout: React.FC = () => {
     finalizarBloque,
     setMostrarModalExportar,
     numeroBloqueHoy,
-    ultimoAutoGuardado,
+    timerState,
+    tiempoRestante,
+    iniciarTimer,
+    pausarTimer,
+    resetearTimer,
+    getTimerColor,
     iniciarNuevoDia,
     getBloquesHoy,
   } = useAppStore();
 
-  const [activeTab, setActiveTab] = useState<TabView>('contadores');
+  const [showBloques, setShowBloques] = useState(false);
   const [confirmNuevoDia, setConfirmNuevoDia] = useState(false);
 
   const proceso = procesoActivo === 'guias' ? PROCESO_GUIAS : PROCESO_NOVEDAD;
@@ -38,7 +38,18 @@ const WidgetLayout: React.FC = () => {
     return (contadores as any)[campoId] || 0;
   };
 
-  // Calcular totales
+  // Timer
+  const minutes = Math.floor(tiempoRestante / 60);
+  const seconds = tiempoRestante % 60;
+  const timerColor = getTimerColor();
+  const colorClass = {
+    green: 'text-green-400',
+    yellow: 'text-yellow-400',
+    orange: 'text-orange-400',
+    red: 'text-red-400 animate-pulse',
+  }[timerColor];
+
+  // Totales
   const totalHoy = procesoActivo === 'guias'
     ? contadoresGuias.realizado
     : contadoresNovedad.novedadesSolucionadas;
@@ -55,241 +66,204 @@ const WidgetLayout: React.FC = () => {
     }
   };
 
-  const tabs: Array<{ id: TabView; label: string; icon: React.ReactNode }> = [
-    { id: 'contadores', label: 'Contadores', icon: <Package className="w-4 h-4" /> },
-    { id: 'bloques', label: `Bloques (${bloquesHoy.length})`, icon: <Clock className="w-4 h-4" /> },
-    { id: 'stats', label: 'Stats', icon: <BarChart3 className="w-4 h-4" /> },
-  ];
-
-  // Renderizar contadores por grupo
-  const renderContadores = () => {
-    if (proceso.grupos) {
-      return (
-        <div className="space-y-4">
-          {proceso.grupos.map((grupo) => (
-            <div key={grupo}>
-              <h4 className="text-xs font-semibold text-dark-400 uppercase mb-2 px-1">{grupo}</h4>
-              <div className="grid grid-cols-2 gap-2">
-                {proceso.campos
-                  .filter((c) => c.grupo === grupo)
-                  .map((campo) => (
-                    <CounterButton
-                      key={campo.id}
-                      id={campo.id}
-                      label={campo.label}
-                      labelCorto={campo.labelCorto}
-                      icono={campo.icono}
-                      color={campo.color}
-                      valor={getValor(campo.id)}
-                      esCalculado={campo.esCalculado}
-                      compact={false}
-                      onIncrement={incrementarContador}
-                      onDecrement={decrementarContador}
-                    />
-                  ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    return (
-      <div className="grid grid-cols-2 gap-2">
-        {proceso.campos.map((campo) => (
-          <CounterButton
-            key={campo.id}
-            id={campo.id}
-            label={campo.label}
-            labelCorto={campo.labelCorto}
-            icono={campo.icono}
-            color={campo.color}
-            valor={getValor(campo.id)}
-            esCalculado={campo.esCalculado}
-            compact={false}
-            onIncrement={incrementarContador}
-            onDecrement={decrementarContador}
-          />
-        ))}
-      </div>
-    );
+  const handleIncrement = (id: string) => {
+    incrementarContador(id);
   };
 
-  // Renderizar estadísticas
-  const renderStats = () => {
-    const totalOperaciones = procesoActivo === 'guias'
-      ? Object.values(contadoresGuias).reduce((a, b) => a + b, 0)
-      : Object.values(contadoresNovedad).reduce((a, b) => a + b, 0);
-
-    const porcentajeExito = procesoActivo === 'guias'
-      ? contadoresGuias.realizado + contadoresGuias.cancelados > 0
-        ? Math.round((contadoresGuias.realizado / (contadoresGuias.realizado + contadoresGuias.cancelados)) * 100)
-        : 0
-      : 0;
-
-    return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-dark-700/50 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-white">{totalOperaciones}</p>
-            <p className="text-xs text-dark-400">Total bloque</p>
-          </div>
-          <div className="bg-dark-700/50 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-primary-400">{bloquesHoy.length}</p>
-            <p className="text-xs text-dark-400">Bloques hoy</p>
-          </div>
-          {procesoActivo === 'guias' && (
-            <>
-              <div className="bg-dark-700/50 rounded-lg p-3 text-center">
-                <p className="text-2xl font-bold text-green-400">{porcentajeExito}%</p>
-                <p className="text-xs text-dark-400">% Éxito</p>
-              </div>
-              <div className="bg-dark-700/50 rounded-lg p-3 text-center">
-                <p className="text-2xl font-bold text-blue-400">{totalHoy}</p>
-                <p className="text-xs text-dark-400">Realizados hoy</p>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Resumen de contadores */}
-        <div className="bg-dark-700/30 rounded-lg p-3">
-          <h4 className="text-sm font-semibold text-white mb-2">Resumen actual</h4>
-          <div className="space-y-1">
-            {proceso.campos.map((campo) => (
-              <div key={campo.id} className="flex items-center justify-between text-sm">
-                <span className="text-dark-400 flex items-center gap-2">
-                  <span>{campo.icono}</span>
-                  {campo.labelCorto}
-                </span>
-                <span className="text-white font-medium">{getValor(campo.id)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+  const handleDecrement = (id: string) => {
+    decrementarContador(id);
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-b from-dark-900 to-dark-950 overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-dark-800/80 border-b border-dark-700 drag-region">
-        <div className="flex items-center gap-3 no-drag">
-          <span className="text-lg font-bold text-primary-400">📦 LITPER</span>
-          <span className="text-xs text-dark-500">v2.0</span>
-        </div>
+    <div className="h-screen flex flex-col bg-dark-900 select-none">
+      {/* Header compacto */}
+      <div className="flex items-center justify-between px-3 py-2 bg-dark-800 border-b border-dark-700 drag-region">
         <div className="flex items-center gap-2 no-drag">
-          <button
-            onClick={() => setMostrarModalExportar(true)}
-            className="p-2 rounded-lg bg-green-600/20 text-green-400 hover:bg-green-600/30 transition-all"
-            title="Exportar Excel (E)"
-          >
-            <Download className="w-4 h-4" />
-          </button>
-          <div className="flex items-center gap-1 ml-2">
-            <button className="p-1.5 rounded hover:bg-dark-700 text-dark-400">
-              <Minimize2 className="w-4 h-4" />
-            </button>
-            <button className="p-1.5 rounded hover:bg-red-600/50 text-dark-400 hover:text-white">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
+          <span className="text-sm font-bold text-primary-400">📦 LITPER</span>
 
-      {/* View Switcher */}
-      <div className="px-4 py-2">
-        <ViewSwitcher />
-      </div>
-
-      {/* Process Selector */}
-      <div className="px-4 py-2">
-        <ProcessSelector />
-      </div>
-
-      {/* Timer */}
-      <div className="px-4 py-2">
-        <Timer />
-      </div>
-
-      {/* Tabs */}
-      <div className="px-4 pb-2">
-        <div className="flex bg-dark-800/50 rounded-lg p-1">
-          {tabs.map((tab) => (
+          {/* Selector de proceso */}
+          <div className="flex bg-dark-700 rounded-md p-0.5">
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-medium transition-all ${
-                activeTab === tab.id
+              onClick={() => setProcesoActivo('guias')}
+              className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                procesoActivo === 'guias'
                   ? 'bg-primary-500 text-white'
-                  : 'text-dark-400 hover:text-white hover:bg-dark-700/50'
+                  : 'text-dark-400 hover:text-white'
               }`}
             >
-              {tab.icon}
-              {tab.label}
+              Guías
             </button>
-          ))}
+            <button
+              onClick={() => setProcesoActivo('novedad')}
+              className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                procesoActivo === 'novedad'
+                  ? 'bg-blue-500 text-white'
+                  : 'text-dark-400 hover:text-white'
+              }`}
+            >
+              Novedad
+            </button>
+          </div>
+        </div>
+
+        {/* Timer + controles */}
+        <div className="flex items-center gap-2 no-drag">
+          <div className="flex items-center gap-1 bg-dark-700/50 rounded-md px-2 py-1">
+            <button
+              onClick={timerState === 'running' ? pausarTimer : iniciarTimer}
+              className="p-1 rounded hover:bg-dark-600 text-dark-400 hover:text-white"
+            >
+              {timerState === 'running' ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+            </button>
+            <span className={`font-mono text-sm font-bold ${colorClass}`}>
+              {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+            </span>
+            <button
+              onClick={resetearTimer}
+              className="p-1 rounded hover:bg-dark-600 text-dark-400 hover:text-white"
+            >
+              <RotateCw className="w-3 h-3" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
-        {activeTab === 'contadores' && (
-          <div className="animate-fade-in space-y-4">
-            {renderContadores()}
-
-            {/* Botón Reiniciar */}
-            <button
-              onClick={() => finalizarBloque()}
-              className="w-full py-3 bg-primary-600 hover:bg-primary-500 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-glow"
-            >
-              <RotateCcw className="w-5 h-5" />
-              Reiniciar Bloque (R)
-            </button>
+      {/* Contadores */}
+      <div className="flex-1 overflow-y-auto px-3 py-2">
+        {proceso.grupos ? (
+          // Novedad con grupos
+          <div className="space-y-3">
+            {proceso.grupos.map((grupo) => (
+              <div key={grupo}>
+                <div className="text-[10px] font-bold text-dark-500 uppercase tracking-wider mb-1">{grupo}</div>
+                <div className="space-y-1">
+                  {proceso.campos
+                    .filter((c) => c.grupo === grupo)
+                    .map((campo) => (
+                      <div
+                        key={campo.id}
+                        className="flex items-center justify-between py-2 px-3 bg-dark-800/50 rounded-lg"
+                        style={{ borderLeft: `3px solid ${campo.color}` }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{campo.icono}</span>
+                          <span className="text-sm text-dark-300">{campo.labelCorto}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {!campo.esCalculado && (
+                            <button
+                              onClick={() => handleDecrement(campo.id)}
+                              className="w-9 h-9 rounded-lg bg-red-500/20 hover:bg-red-500/40 text-red-400 font-bold text-lg flex items-center justify-center transition-all active:scale-95"
+                            >
+                              −
+                            </button>
+                          )}
+                          <span className={`min-w-[3rem] text-center text-xl font-bold tabular-nums ${campo.esCalculado ? 'text-pink-400' : 'text-white'}`}>
+                            {getValor(campo.id)}
+                          </span>
+                          {!campo.esCalculado && (
+                            <button
+                              onClick={() => handleIncrement(campo.id)}
+                              className="w-9 h-9 rounded-lg bg-green-500/20 hover:bg-green-500/40 text-green-400 font-bold text-lg flex items-center justify-center transition-all active:scale-95"
+                            >
+                              +
+                            </button>
+                          )}
+                          {campo.esCalculado && (
+                            <span className="text-[10px] text-dark-500 w-[76px] text-center">(auto)</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          // Guías sin grupos
+          <div className="space-y-1">
+            {proceso.campos.map((campo) => (
+              <div
+                key={campo.id}
+                className="flex items-center justify-between py-2 px-3 bg-dark-800/50 rounded-lg"
+                style={{ borderLeft: `3px solid ${campo.color}` }}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{campo.icono}</span>
+                  <span className="text-sm text-dark-300">{campo.labelCorto}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleDecrement(campo.id)}
+                    className="w-9 h-9 rounded-lg bg-red-500/20 hover:bg-red-500/40 text-red-400 font-bold text-lg flex items-center justify-center transition-all active:scale-95"
+                  >
+                    −
+                  </button>
+                  <span className="min-w-[3rem] text-center text-xl font-bold text-white tabular-nums">
+                    {getValor(campo.id)}
+                  </span>
+                  <button
+                    onClick={() => handleIncrement(campo.id)}
+                    className="w-9 h-9 rounded-lg bg-green-500/20 hover:bg-green-500/40 text-green-400 font-bold text-lg flex items-center justify-center transition-all active:scale-95"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
+      </div>
 
-        {activeTab === 'bloques' && (
-          <div className="animate-fade-in">
-            <BlocksPanel />
-          </div>
-        )}
-
-        {activeTab === 'stats' && (
-          <div className="animate-fade-in">
-            {renderStats()}
-          </div>
-        )}
+      {/* Botones de acción */}
+      <div className="px-3 py-2 space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => finalizarBloque()}
+            className="flex items-center justify-center gap-2 py-3 bg-primary-600 hover:bg-primary-500 text-white font-semibold rounded-lg transition-all active:scale-98"
+          >
+            <RotateCcw className="w-5 h-5" />
+            REINICIAR
+          </button>
+          <button
+            onClick={() => setMostrarModalExportar(true)}
+            className="flex items-center justify-center gap-2 py-3 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg transition-all active:scale-98"
+          >
+            <Download className="w-5 h-5" />
+            EXPORTAR
+          </button>
+        </div>
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2 bg-dark-800/50 border-t border-dark-700/50">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-dark-400">
-            Bloque #{numeroBloqueHoy} • Hoy: {totalHoy} {procesoActivo === 'guias' ? 'realizados' : 'solucionadas'}
-          </span>
-          <div className="flex items-center gap-3">
-            {ultimoAutoGuardado && (
-              <span className="text-dark-500 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-                Guardado
-              </span>
-            )}
-            <button
-              onClick={handleNuevoDia}
-              className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-all ${
-                confirmNuevoDia
-                  ? 'bg-red-600 text-white'
-                  : 'bg-dark-700 text-dark-400 hover:text-white'
-              }`}
-            >
-              <Sunrise className="w-3 h-3" />
-              {confirmNuevoDia ? 'Confirmar' : 'Nuevo día'}
-            </button>
-          </div>
+      <div className="flex items-center justify-between px-3 py-2 bg-dark-800 border-t border-dark-700 text-xs">
+        <span className="text-dark-400">
+          #{numeroBloqueHoy} • Hoy: <span className="text-white font-medium">{totalHoy}</span>
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowBloques(true)}
+            className="flex items-center gap-1 px-2 py-1 bg-dark-700 hover:bg-dark-600 text-dark-300 rounded transition-all"
+          >
+            <Package className="w-3 h-3" />
+            Bloques ({bloquesHoy.length})
+          </button>
+          <button
+            onClick={handleNuevoDia}
+            className={`flex items-center gap-1 px-2 py-1 rounded transition-all ${
+              confirmNuevoDia
+                ? 'bg-red-600 text-white'
+                : 'bg-dark-700 text-dark-400 hover:text-white'
+            }`}
+          >
+            <Sunrise className="w-3 h-3" />
+            {confirmNuevoDia ? 'Confirmar' : 'Nuevo día'}
+          </button>
         </div>
       </div>
+
+      {/* Modal de bloques */}
+      {showBloques && <BlocksModal onClose={() => setShowBloques(false)} />}
     </div>
   );
 };

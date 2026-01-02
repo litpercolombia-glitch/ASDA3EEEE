@@ -9,12 +9,12 @@ let currentLayout = 'widget'; // 'widget' | 'sidebar' | 'compact'
 // Configuración de ventanas por layout
 const LAYOUTS = {
   widget: {
-    width: 380,
-    height: 700,
-    minWidth: 320,
-    minHeight: 500,
-    maxWidth: 450,
-    maxHeight: 800,
+    width: 340,
+    height: 480,
+    minWidth: 300,
+    minHeight: 400,
+    maxWidth: 400,
+    maxHeight: 600,
   },
   sidebar: {
     width: 900,
