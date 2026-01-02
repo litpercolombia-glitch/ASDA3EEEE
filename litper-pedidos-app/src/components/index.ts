@@ -10,6 +10,7 @@ export { default as ProcessSelector } from './ProcessSelector';
 export { default as QuickCounters } from './QuickCounters';
 export { default as CounterButton } from './CounterButton';
 export { default as ExportModal } from './ExportModal';
+export { default as ViewSwitcher } from './ViewSwitcher';
 
 // Layouts
 export { default as WidgetLayout } from './layouts/WidgetLayout';

@@ -4,7 +4,7 @@ const path = require('path');
 let mainWindow;
 let tray;
 let isQuitting = false;
-let currentLayout = 'sidebar'; // 'widget' | 'sidebar' | 'compact'
+let currentLayout = 'widget'; // 'widget' | 'sidebar' | 'compact'
 
 // Configuración de ventanas por layout
 const LAYOUTS = {

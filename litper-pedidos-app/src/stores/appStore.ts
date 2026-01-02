@@ -231,7 +231,7 @@ export const useAppStore = create<AppState>()(
       numeroBloqueHoy: 1,
 
       viewMode: 'timer',
-      viewLayout: 'sidebar',
+      viewLayout: 'widget',
 
       ultimoAutoGuardado: null,
       autoGuardadoActivo: true,
