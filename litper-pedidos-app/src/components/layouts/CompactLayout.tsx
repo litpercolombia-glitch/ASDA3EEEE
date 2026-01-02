@@ -1,8 +1,9 @@
-import React from 'react';
-import { Download, RotateCcw, Play, Pause } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Download, RotateCcw, Play, Pause, Settings, RotateCw } from 'lucide-react';
 import { useAppStore, calcularTotDevoluciones } from '../../stores/appStore';
 import { PROCESO_GUIAS, PROCESO_NOVEDAD } from '../../config/processConfig';
 import ViewSwitcher from '../ViewSwitcher';
+import SettingsModal from '../SettingsModal';
 
 const CompactLayout: React.FC = () => {
   const {
@@ -18,9 +19,22 @@ const CompactLayout: React.FC = () => {
     tiempoRestante,
     iniciarTimer,
     pausarTimer,
+    resetearTimer,
     getTimerColor,
     numeroBloqueHoy,
+    tick,
   } = useAppStore();
+
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Timer tick cada segundo
+  useEffect(() => {
+    if (timerState !== 'running') return;
+    const interval = setInterval(() => {
+      tick();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timerState, tick]);
 
   const proceso = procesoActivo === 'guias' ? PROCESO_GUIAS : PROCESO_NOVEDAD;
   const contadores = procesoActivo === 'guias' ? contadoresGuias : contadoresNovedad;
@@ -88,6 +102,12 @@ const CompactLayout: React.FC = () => {
           <span className={`font-mono text-xs font-bold ${colorClass}`}>
             {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
           </span>
+          <button
+            onClick={resetearTimer}
+            className="text-dark-400 hover:text-white"
+          >
+            <RotateCw className="w-3 h-3" />
+          </button>
         </div>
 
         {/* Contadores mini */}
@@ -140,9 +160,21 @@ const CompactLayout: React.FC = () => {
           <Download className="w-3 h-3" />
         </button>
 
+        {/* Settings */}
+        <button
+          onClick={() => setShowSettings(true)}
+          className="p-1 bg-dark-700 text-dark-400 hover:text-white rounded transition-all"
+          title="Configuración"
+        >
+          <Settings className="w-3 h-3" />
+        </button>
+
         {/* View switcher mini */}
         <ViewSwitcher compact />
       </div>
+
+      {/* Settings Modal */}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </div>
   );
 };

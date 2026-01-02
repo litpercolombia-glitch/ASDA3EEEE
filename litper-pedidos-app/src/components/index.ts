@@ -12,6 +12,7 @@ export { default as CounterButton } from './CounterButton';
 export { default as ExportModal } from './ExportModal';
 export { default as ViewSwitcher } from './ViewSwitcher';
 export { default as BlocksModal } from './BlocksModal';
+export { default as SettingsModal } from './SettingsModal';
 
 // Layouts
 export { default as WidgetLayout } from './layouts/WidgetLayout';
