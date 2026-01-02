@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, RotateCcw, Sunrise, Play, Pause, RotateCw, Settings, User } from 'lucide-react';
+import { Download, RotateCcw, Sunrise, Play, Pause, RotateCw, Settings, User, Save } from 'lucide-react';
 import { useAppStore, calcularTotDevoluciones } from '../../stores/appStore';
 import { PROCESO_GUIAS, PROCESO_NOVEDAD } from '../../config/processConfig';
 import CounterButton from '../CounterButton';
@@ -15,6 +15,7 @@ const SidebarLayout: React.FC = () => {
     incrementarContador,
     decrementarContador,
     finalizarBloque,
+    guardarRonda,
     setMostrarModalExportar,
     numeroBloqueHoy,
     timerState,
@@ -62,11 +63,6 @@ const SidebarLayout: React.FC = () => {
     red: 'text-red-400 animate-pulse',
   }[timerColor];
 
-  // Totales
-  const totalHoy = procesoActivo === 'guias'
-    ? contadoresGuias.realizado
-    : contadoresNovedad.novedadesSolucionadas;
-
   const bloquesHoy = getBloquesHoy();
 
   const handleNuevoDia = () => {
@@ -87,9 +83,19 @@ const SidebarLayout: React.FC = () => {
           <span className="text-sm font-bold text-primary-400">📦 LITPER</span>
 
           {/* Usuario */}
-          <div className="flex items-center gap-1 text-[10px] text-dark-400">
-            <User className="w-3 h-3" />
-            <span>{usuarioActual?.nombre || 'Sin usuario'}</span>
+          <div className="flex items-center gap-2 px-2 py-1 bg-dark-700/50 rounded-lg">
+            {usuarioActual ? (
+              <>
+                <span className="text-lg" style={{ color: usuarioActual.color }}>{usuarioActual.avatar}</span>
+                <span className="text-xs font-medium text-white">{usuarioActual.nombre}</span>
+                <span className="text-[10px] text-dark-400">Ronda #{numeroBloqueHoy}</span>
+              </>
+            ) : (
+              <>
+                <User className="w-4 h-4 text-dark-400" />
+                <span className="text-xs text-dark-400">Sin usuario</span>
+              </>
+            )}
           </div>
 
           {/* Selector de proceso */}
@@ -122,34 +128,33 @@ const SidebarLayout: React.FC = () => {
 
         <div className="flex items-center gap-3 no-drag">
           {/* Timer compacto con controles */}
-          <div className="flex items-center gap-2 bg-dark-700/50 rounded-lg px-2 py-1">
+          <div className="flex items-center gap-2 bg-dark-700/50 rounded-lg px-3 py-1.5">
             <button
               onClick={timerState === 'running' ? pausarTimer : iniciarTimer}
-              className="p-1 rounded hover:bg-dark-600 text-dark-400 hover:text-white transition-all"
+              className={`p-1 rounded transition-all ${
+                timerState === 'running'
+                  ? 'bg-yellow-500/20 text-yellow-400'
+                  : 'bg-green-500/20 text-green-400'
+              }`}
             >
               {timerState === 'running' ? (
-                <Pause className="w-3 h-3" />
+                <Pause className="w-4 h-4" />
               ) : (
-                <Play className="w-3 h-3" />
+                <Play className="w-4 h-4" />
               )}
             </button>
-            <span className={`font-mono text-sm font-bold ${colorClass}`}>
+            <span className={`font-mono text-lg font-bold ${colorClass}`}>
               {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
             </span>
             <button
               onClick={resetearTimer}
               className="p-1 rounded hover:bg-dark-600 text-dark-400 hover:text-white transition-all"
             >
-              <RotateCw className="w-3 h-3" />
+              <RotateCw className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Info */}
-          <span className="text-xs text-dark-400">
-            Bloque #{numeroBloqueHoy} • {bloquesHoy.length} hoy
-          </span>
-
-          {/* Exportar */}
+          {/* Exportar - Verde */}
           <button
             onClick={() => setMostrarModalExportar(true)}
             className="p-1.5 rounded-lg bg-green-600/20 text-green-400 hover:bg-green-600/30 transition-all"
@@ -158,7 +163,7 @@ const SidebarLayout: React.FC = () => {
             <Download className="w-4 h-4" />
           </button>
 
-          {/* Nuevo día */}
+          {/* Nuevo día - Rojo */}
           <button
             onClick={handleNuevoDia}
             className={`p-1.5 rounded-lg transition-all ${
@@ -203,13 +208,22 @@ const SidebarLayout: React.FC = () => {
         {/* Separador */}
         <div className="w-px h-8 bg-dark-600 mx-1" />
 
-        {/* Botón reiniciar */}
+        {/* GUARDAR RONDA - Azul (principal) */}
+        <button
+          onClick={() => guardarRonda()}
+          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium text-sm transition-all shadow-glow whitespace-nowrap"
+        >
+          <Save className="w-4 h-4" />
+          Guardar
+        </button>
+
+        {/* REINICIAR - Naranja */}
         <button
           onClick={() => finalizarBloque()}
-          className="flex items-center gap-1.5 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg font-medium text-sm transition-all shadow-glow whitespace-nowrap"
+          className="flex items-center gap-1.5 px-3 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg font-medium text-sm transition-all whitespace-nowrap"
         >
           <RotateCcw className="w-4 h-4" />
-          Reiniciar (R)
+          Reiniciar
         </button>
       </div>
 
@@ -217,7 +231,7 @@ const SidebarLayout: React.FC = () => {
       <div className="flex items-center justify-between px-3 py-1.5 bg-dark-800 border-t border-dark-700 text-xs text-dark-400">
         <span>
           {procesoActivo === 'guias' ? '📦 Generación de Guías' : '📋 Novedad'} •
-          Hoy: <span className="text-white font-medium">{totalHoy}</span> {procesoActivo === 'guias' ? 'realizados' : 'solucionadas'}
+          Bloques hoy: <span className="text-white font-medium">{bloquesHoy.length}</span>
         </span>
         <span className="flex items-center gap-2">
           <span className="text-dark-500">Atajos: 1-{proceso.campos.length} sumar • Shift+# restar • G/N proceso • E exportar</span>

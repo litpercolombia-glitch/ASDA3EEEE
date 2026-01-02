@@ -9,28 +9,29 @@ let currentLayout = 'widget'; // 'widget' | 'sidebar' | 'compact'
 // Configuración de ventanas por layout
 const LAYOUTS = {
   widget: {
-    width: 340,
-    height: 480,
-    minWidth: 300,
-    minHeight: 400,
-    maxWidth: 400,
-    maxHeight: 600,
+    width: 360,
+    height: 650,
+    minWidth: 320,
+    minHeight: 500,
+    maxWidth: 450,
+    maxHeight: 800,
   },
   sidebar: {
-    width: 900,
+    width: 1000,
     height: 140,
-    minWidth: 700,
-    minHeight: 100,
-    maxWidth: 1200,
-    maxHeight: 160,
+    minWidth: 800,
+    minHeight: 120,
+    maxWidth: 1400,
+    maxHeight: 180,
   },
   compact: {
-    width: 500,
-    height: 80,
-    minWidth: 400,
-    minHeight: 60,
-    maxWidth: 700,
-    maxHeight: 100,
+    // Barra lateral vertical
+    width: 140,
+    height: 500,
+    minWidth: 120,
+    minHeight: 400,
+    maxWidth: 200,
+    maxHeight: 700,
   },
 };
 
@@ -156,7 +157,7 @@ function updateTrayMenu() {
           click: () => changeLayout('widget'),
         },
         {
-          label: '📏 Compacto (mini)',
+          label: '📏 Lateral (barra vertical)',
           type: 'radio',
           checked: currentLayout === 'compact',
           click: () => changeLayout('compact'),
@@ -213,10 +214,13 @@ function changeLayout(layout) {
 
   // Posicionar según layout
   if (layout === 'sidebar') {
+    // Horizontal arriba centrado
     mainWindow.setPosition(Math.floor((screenWidth - config.width) / 2), 10);
   } else if (layout === 'compact') {
-    mainWindow.setPosition(Math.floor((screenWidth - config.width) / 2), screenHeight - config.height - 10);
+    // Barra lateral vertical a la derecha
+    mainWindow.setPosition(screenWidth - config.width - 10, Math.floor((screenHeight - config.height) / 2));
   } else {
+    // Widget abajo derecha
     mainWindow.setPosition(screenWidth - config.width - 20, screenHeight - config.height - 20);
   }
 
@@ -229,10 +233,13 @@ function resetPosition() {
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
 
   if (currentLayout === 'sidebar') {
+    // Horizontal arriba centrado
     mainWindow.setPosition(Math.floor((screenWidth - config.width) / 2), 10);
   } else if (currentLayout === 'compact') {
-    mainWindow.setPosition(Math.floor((screenWidth - config.width) / 2), screenHeight - config.height - 10);
+    // Barra lateral vertical a la derecha
+    mainWindow.setPosition(screenWidth - config.width - 10, Math.floor((screenHeight - config.height) / 2));
   } else {
+    // Widget abajo derecha
     mainWindow.setPosition(screenWidth - config.width - 20, screenHeight - config.height - 20);
   }
 }

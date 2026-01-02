@@ -189,6 +189,7 @@ interface AppState {
 
   // Acciones - Bloques
   finalizarBloque: () => Bloque | null;
+  guardarRonda: () => Bloque | null;
   iniciarNuevoDia: () => void;
   getBloquesHoy: () => Bloque[];
   getBloquesPorProceso: (proceso: TipoProceso) => Bloque[];
@@ -486,6 +487,63 @@ export const useAppStore = create<AppState>()(
           bloqueIniciadoEn: null,
           timerState: 'idle',
           tiempoRestante: configTimer.duracionMinutos * 60,
+        }));
+
+        return nuevoBloque;
+      },
+
+      // Guardar ronda: guarda stats pero NO reinicia el timer
+      guardarRonda: () => {
+        const {
+          usuarioActual,
+          procesoActivo,
+          contadoresGuias,
+          contadoresNovedad,
+          bloqueIniciadoEn,
+          numeroBloqueHoy,
+        } = get();
+
+        // Permitir guardar incluso sin usuario (para pruebas)
+        const ahora = new Date();
+        const inicio = bloqueIniciadoEn ? new Date(bloqueIniciadoEn) : ahora;
+        const tiempoTotal = Math.floor((ahora.getTime() - inicio.getTime()) / 1000);
+
+        let totalOperaciones = 0;
+        let porcentajeExito: number | undefined;
+
+        if (procesoActivo === 'guias') {
+          totalOperaciones = calcularTotalGuias(contadoresGuias);
+          porcentajeExito = calcularPorcentajeExito(contadoresGuias);
+        } else {
+          totalOperaciones = calcularTotalNovedad(contadoresNovedad);
+        }
+
+        const minutos = tiempoTotal / 60;
+        const promedioMinuto = minutos > 0 ? Math.round((totalOperaciones / minutos) * 100) / 100 : 0;
+
+        const nuevoBloque: Bloque = {
+          id: `ronda_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          usuarioId: usuarioActual?.id || 'anonimo',
+          tipoProceso: procesoActivo,
+          fecha: getFechaActual(),
+          horaInicio: inicio.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          horaFin: getHoraActual(),
+          tiempoTotal,
+          contadoresGuias: procesoActivo === 'guias' ? { ...contadoresGuias } : undefined,
+          contadoresNovedad: procesoActivo === 'novedad' ? { ...contadoresNovedad } : undefined,
+          totalOperaciones,
+          promedioMinuto,
+          porcentajeExito,
+        };
+
+        // Guardar bloque, incrementar ronda, resetear contadores, PERO NO tocar el timer
+        set((state) => ({
+          bloques: [...state.bloques, nuevoBloque],
+          numeroBloqueHoy: state.numeroBloqueHoy + 1,
+          contadoresGuias: crearContadoresGuiasVacios(),
+          contadoresNovedad: crearContadoresNovedadVacios(),
+          bloqueIniciadoEn: new Date().toISOString(), // Iniciar nuevo bloque inmediatamente
+          // NO tocamos timerState ni tiempoRestante - el timer sigue corriendo
         }));
 
         return nuevoBloque;
