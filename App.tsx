@@ -666,6 +666,7 @@ const App: React.FC = () => {
       onImportSession={handleImportSession}
       onExportExcel={handleDownloadExcel}
       shipmentsCount={shipments.length}
+      shipments={shipments}
       onLogout={handleLogout}
       onOpenChat={handleOpenChat}
       onOpenHelp={handleOpenHelp}
