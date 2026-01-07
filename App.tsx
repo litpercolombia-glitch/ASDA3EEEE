@@ -902,6 +902,8 @@ const App: React.FC = () => {
         shipments={shipments}
         onNavigateToTab={(tab) => setCurrentTab(tab as MainTabNew)}
         onExportData={handleDownloadExcel}
+        forceOpen={showProBubble}
+        onForceOpenHandled={() => setShowProBubble(false)}
       />
     </AppLayout>
   );

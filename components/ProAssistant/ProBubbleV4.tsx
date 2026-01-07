@@ -44,6 +44,8 @@ interface ProBubbleV4Props {
   onNavigateToTab?: (tab: string) => void;
   onRefreshData?: () => void;
   onExportData?: () => void;
+  forceOpen?: boolean;
+  onForceOpenHandled?: () => void;
 }
 
 // ============================================
@@ -66,6 +68,8 @@ const ProBubbleV4: React.FC<ProBubbleV4Props> = ({
   onNavigateToTab,
   onRefreshData,
   onExportData,
+  forceOpen = false,
+  onForceOpenHandled,
 }) => {
   const { notifications } = useProAssistantStore();
 
@@ -76,6 +80,14 @@ const ProBubbleV4: React.FC<ProBubbleV4Props> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [chatInitialMode, setChatInitialMode] = useState<ChatMode>('chat');
+
+  // Efecto para abrir el chat cuando se solicita desde fuera
+  useEffect(() => {
+    if (forceOpen && mode === 'bubble') {
+      setMode('chat');
+      onForceOpenHandled?.();
+    }
+  }, [forceOpen, mode, onForceOpenHandled]);
 
   // ============================================
   // MÉTRICAS CALCULADAS

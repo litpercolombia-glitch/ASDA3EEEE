@@ -13,7 +13,6 @@ import {
   HelpCircle,
   ChevronLeft,
   ChevronRight,
-  Bell,
   BarChart3,
   Facebook,
   Chrome,
@@ -27,6 +26,8 @@ import {
   ExternalLink,
   Mail,
   Phone,
+  X,
+  Crown,
 } from 'lucide-react';
 import { useLayoutStore, MainSection, MarketingTab } from '../../stores/layoutStore';
 
@@ -82,7 +83,7 @@ function SidebarItem({
         transition-all duration-200 group relative
         ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         ${isActive
-          ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/25'
+          ? 'bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-lg shadow-orange-500/25'
           : 'text-gray-400 hover:text-white hover:bg-gray-800/80'
         }
       `}
@@ -154,16 +155,16 @@ function HelpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
       <div className="bg-gray-900 rounded-2xl max-w-md w-full border border-gray-700 shadow-2xl">
         <div className="p-6 border-b border-gray-700">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <HelpCircle className="w-6 h-6 text-blue-400" />
+              <HelpCircle className="w-6 h-6 text-amber-400" />
               Centro de Ayuda
             </h2>
             <button onClick={onClose} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">
-              <ChevronRight className="w-5 h-5" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -172,7 +173,7 @@ function HelpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
           <div className="bg-gray-800/50 rounded-xl p-4">
             <h3 className="font-medium text-white mb-2">📚 Documentación</h3>
             <p className="text-sm text-gray-400 mb-3">Aprende a usar todas las funciones de LITPER PRO</p>
-            <button className="text-blue-400 text-sm hover:text-blue-300 flex items-center gap-1">
+            <button className="text-amber-400 text-sm hover:text-amber-300 flex items-center gap-1">
               Ver documentación <ExternalLink className="w-3 h-3" />
             </button>
           </div>
@@ -181,21 +182,59 @@ function HelpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
             <h3 className="font-medium text-white mb-2">💬 Soporte</h3>
             <p className="text-sm text-gray-400 mb-3">¿Necesitas ayuda? Contáctanos</p>
             <div className="space-y-2">
-              <a href="mailto:soporte@litper.co" className="text-blue-400 text-sm hover:text-blue-300 flex items-center gap-2">
-                <Mail className="w-4 h-4" /> soporte@litper.co
+              <a href="mailto:litpercolombia@gmail.com" className="text-amber-400 text-sm hover:text-amber-300 flex items-center gap-2">
+                <Mail className="w-4 h-4" /> litpercolombia@gmail.com
               </a>
-              <a href="https://wa.me/573001234567" className="text-green-400 text-sm hover:text-green-300 flex items-center gap-2">
-                <Phone className="w-4 h-4" /> WhatsApp
+              <a href="https://wa.me/573144754115" target="_blank" rel="noopener noreferrer" className="text-green-400 text-sm hover:text-green-300 flex items-center gap-2">
+                <Phone className="w-4 h-4" /> +57 314 475 4115
               </a>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-xl p-4 border border-blue-500/30">
-            <h3 className="font-medium text-white mb-2">🚀 LITPER PRO v5.0</h3>
-            <p className="text-sm text-gray-400">Plataforma Enterprise de Logística con IA</p>
+          <div className="bg-gradient-to-r from-amber-600/20 to-orange-600/20 rounded-xl p-4 border border-amber-500/30">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-red-600 rounded-xl flex items-center justify-center">
+                <Crown className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="font-bold text-white">LITPER OFICIAL</h3>
+                <p className="text-sm text-gray-400">Calidad en cada detalle</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ============================================
+// LOGO LP CON CORONA
+// ============================================
+
+function LitperLogo({ isCollapsed }: { isCollapsed: boolean }) {
+  return (
+    <div className="flex items-center gap-3">
+      {/* Logo con corona */}
+      <div className="relative">
+        <div className="w-10 h-10 bg-gradient-to-br from-amber-500 via-yellow-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/30 relative overflow-hidden">
+          {/* Corona pequeña arriba */}
+          <div className="absolute -top-1 left-1/2 -translate-x-1/2">
+            <Crown className="w-4 h-4 text-yellow-300 drop-shadow-lg" />
+          </div>
+          {/* LP */}
+          <span className="text-white font-black text-lg tracking-tighter mt-1">LP</span>
+        </div>
+        {/* Brillo */}
+        <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-yellow-300 rounded-full animate-pulse" />
+      </div>
+
+      {!isCollapsed && (
+        <div>
+          <h1 className="text-lg font-black text-white tracking-tight">LITPER</h1>
+          <p className="text-[9px] text-amber-400 font-bold -mt-1 tracking-widest">OFICIAL</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -259,7 +298,14 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
 
   const handleHelpClick = () => {
     setShowHelpModal(true);
-    onOpenHelp();
+  };
+
+  const handleChatClick = () => {
+    onOpenChat();
+  };
+
+  const handleToggleSidebar = () => {
+    toggleSidebar();
   };
 
   return (
@@ -267,7 +313,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
       <aside
         className={`
           flex flex-col h-full bg-gray-900 border-r border-gray-800
-          transition-all duration-300 ease-in-out
+          transition-all duration-300 ease-in-out relative
           ${isExpanded ? 'w-64' : 'w-16'}
         `}
         onMouseEnter={() => sidebarCollapsed && setHovered(true)}
@@ -275,35 +321,27 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
       >
         {/* Header */}
         <div className={`
-          flex items-center h-16 px-4 border-b border-gray-800
+          flex items-center h-16 px-3 border-b border-gray-800
           ${isExpanded ? 'justify-between' : 'justify-center'}
         `}>
           {isExpanded ? (
             <>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/25">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold text-white tracking-tight">LITPER</h1>
-                  <p className="text-[10px] text-amber-400 font-semibold -mt-1">PRO</p>
-                </div>
-              </div>
+              <LitperLogo isCollapsed={false} />
               <button
-                onClick={toggleSidebar}
-                className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+                onClick={handleToggleSidebar}
+                className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all"
                 title="Colapsar sidebar"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-5 h-5" />
               </button>
             </>
           ) : (
             <button
-              onClick={toggleSidebar}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+              onClick={handleToggleSidebar}
+              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all"
               title="Expandir sidebar"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-5 h-5" />
             </button>
           )}
         </div>
@@ -339,7 +377,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
 
             {/* Marketing Submenu */}
             {isExpanded && activeSection === 'marketing' && marketingExpanded && (
-              <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-700 pl-2">
+              <div className="ml-4 mt-1 space-y-1 border-l-2 border-amber-500/30 pl-2">
                 {marketingSubItems.map((item) => (
                   <button
                     key={item.id}
@@ -348,7 +386,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
                       w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm
                       transition-colors
                       ${activeMarketingTab === item.id
-                        ? 'bg-blue-500/20 text-blue-400'
+                        ? 'bg-amber-500/20 text-amber-400'
                         : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
                       }
                     `}
@@ -368,7 +406,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
             icon={MessageCircle}
             label="Chat IA"
             isCollapsed={!isExpanded}
-            onClick={onOpenChat}
+            onClick={handleChatClick}
           />
           <SidebarItem
             icon={HelpCircle}
@@ -414,7 +452,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
 
       {/* Logout Confirmation */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-gray-900 rounded-2xl max-w-sm w-full border border-gray-700 shadow-2xl p-6">
             <div className="text-center">
               <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
