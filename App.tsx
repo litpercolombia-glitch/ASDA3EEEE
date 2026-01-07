@@ -52,6 +52,8 @@ import { AppLayout } from './components/layout';
 import { useLayoutStore } from './stores/layoutStore';
 // Marketing Tracking System
 import { MarketingView } from './components/marketing';
+// Auth service for logout
+import { logout as authLogout, getCurrentUser } from './services/authService';
 import {
   Crown,
   Search,
@@ -355,6 +357,13 @@ const App: React.FC = () => {
   // Nuevo sistema de navegación con Sidebar
   const { activeSection, setActiveSection } = useLayoutStore();
 
+  // Estado para mostrar/ocultar el chat IA (ProBubble)
+  const [showProBubble, setShowProBubble] = useState(false);
+  const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
+
+  // Obtener usuario actual
+  const currentUser = getCurrentUser();
+
   // Input state
   const [activeInputTab, setActiveInputTab] = useState<'PHONES' | 'REPORT' | 'SUMMARY' | 'EXCEL'>('PHONES');
   const [inputCarrier, setInputCarrier] = useState<CarrierName | 'AUTO'>('AUTO');
@@ -569,6 +578,28 @@ const App: React.FC = () => {
     setNotification('✅ Datos del semáforo cargados');
   };
 
+  // Handler para logout
+  const handleLogout = () => {
+    authLogout();
+    window.location.reload();
+  };
+
+  // Handler para abrir chat IA
+  const handleOpenChat = () => {
+    setShowProBubble(true);
+  };
+
+  // Handler para abrir ayuda
+  const handleOpenHelp = () => {
+    // El modal de ayuda se maneja dentro del Sidebar
+  };
+
+  // Handler para notificaciones
+  const handleNotificationsClick = () => {
+    setShowNotificationsPanel(!showNotificationsPanel);
+    setNotification('📬 Panel de notificaciones');
+  };
+
   // Mostrar selector de país si no hay país seleccionado
   if (showCountrySelector || !selectedCountry) {
     return <CountrySelector onCountrySelected={handleCountrySelected} />;
@@ -622,7 +653,25 @@ const App: React.FC = () => {
   };
 
   return (
-    <AppLayout>
+    <AppLayout
+      selectedCountry={selectedCountry}
+      onCountryChange={() => setShowCountrySelector(true)}
+      darkMode={darkMode}
+      onDarkModeToggle={() => setDarkMode(!darkMode)}
+      onLoadData={() => setShowDataInput(!showDataInput)}
+      showLoadData={showDataInput}
+      notificationCount={alertasCriticas}
+      onNotificationsClick={handleNotificationsClick}
+      onExportSession={handleExportSession}
+      onImportSession={handleImportSession}
+      onExportExcel={handleDownloadExcel}
+      shipmentsCount={shipments.length}
+      onLogout={handleLogout}
+      onOpenChat={handleOpenChat}
+      onOpenHelp={handleOpenHelp}
+      userName={currentUser?.nombre || 'Usuario'}
+      userEmail={currentUser?.email || 'user@litper.co'}
+    >
       {/* Notification Toast */}
       {notification && (
         <div className="fixed top-4 right-4 z-50 max-w-sm animate-slide-up">
@@ -653,8 +702,159 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {/* Data Input Modal */}
+      {showDataInput && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 rounded-2xl max-w-2xl w-full border border-gray-700 shadow-2xl max-h-[90vh] overflow-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+              <div>
+                <h2 className="font-bold text-lg text-white">📥 Cargar Guías</h2>
+                <p className="text-sm text-gray-400">Importa tus guías desde múltiples fuentes</p>
+              </div>
+              <button
+                onClick={() => setShowDataInput(false)}
+                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            {/* Input tabs */}
+            <div className="flex border-b border-gray-700">
+              {[
+                { id: 'PHONES', icon: Smartphone, label: '1. Celulares', color: 'emerald' },
+                { id: 'REPORT', icon: FileText, label: '2. Reporte', color: 'orange' },
+                { id: 'SUMMARY', icon: LayoutList, label: '3. Resumen', color: 'blue' },
+                { id: 'EXCEL', icon: FileSpreadsheet, label: '4. Excel', color: 'purple' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveInputTab(tab.id as any)}
+                  className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-all border-b-2 ${
+                    activeInputTab === tab.id
+                      ? `text-${tab.color}-400 border-${tab.color}-500 bg-${tab.color}-500/10`
+                      : 'text-gray-400 border-transparent hover:text-white hover:bg-gray-800'
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {activeInputTab === 'EXCEL' ? (
+              <div className="p-8">
+                <div className="max-w-lg mx-auto text-center">
+                  <div className="bg-gradient-to-br from-purple-500 to-blue-600 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-xl">
+                    <FileUp className="w-10 h-10 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">
+                    📊 Importar desde Excel
+                  </h3>
+                  <p className="text-gray-400 mb-6">
+                    Sube un archivo Excel (.xlsx, .xls) con tus guías
+                  </p>
+                  <label className={`inline-flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-lg cursor-pointer transition-all transform hover:scale-105 shadow-xl ${
+                    isExcelLoading
+                      ? 'bg-gray-600 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
+                  }`}>
+                    {isExcelLoading ? (
+                      <>
+                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Procesando...
+                      </>
+                    ) : (
+                      <>
+                        <FileUp className="w-6 h-6" />
+                        Seleccionar Archivo
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls"
+                      onChange={handleExcelUpload}
+                      disabled={isExcelLoading}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+            ) : (
+              <div className="p-6">
+                {(activeInputTab === 'REPORT' || activeInputTab === 'SUMMARY') && (
+                  <div className="mb-4 flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-bold text-gray-500 uppercase">Transportadora:</span>
+                    <button
+                      onClick={() => setInputCarrier('AUTO')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        inputCarrier === 'AUTO'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                      }`}
+                    >
+                      🔄 AUTO
+                    </button>
+                    {Object.values(CarrierName)
+                      .filter((c) => c !== CarrierName.UNKNOWN)
+                      .map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => setInputCarrier(c)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                            inputCarrier === c
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                          }`}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-4">
+                  <textarea
+                    className="w-full h-48 border border-gray-700 rounded-xl p-4 font-mono text-sm text-white bg-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-none"
+                    placeholder={
+                      activeInputTab === 'PHONES'
+                        ? '📱 Pegue aquí las columnas: [Guía] [Celular]...'
+                        : activeInputTab === 'REPORT'
+                          ? '📄 Pegue aquí el texto del reporte detallado...'
+                          : '📋 Pegue aquí el resumen de 17TRACK...'
+                    }
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                  />
+
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={handleProcessInput}
+                      className={`flex-1 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 ${
+                        activeInputTab === 'REPORT'
+                          ? 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700'
+                          : activeInputTab === 'PHONES'
+                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700'
+                            : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
+                      }`}
+                    >
+                      {activeInputTab === 'PHONES' ? '📱 Guardar Celulares' : activeInputTab === 'REPORT' ? '📄 Cargar Reporte' : '📋 Procesar Resumen'}
+                    </button>
+                    {activeInputTab === 'PHONES' && (
+                      <div className="text-sm text-gray-400">
+                        📊 Registrados: <span className="text-white font-bold">{Object.keys(phoneRegistry).length}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Main Content - Controlado por Sidebar */}
-      <main className="min-h-[600px]">
+      <main className="min-h-[600px] p-6">
         {renderSidebarContent()}
       </main>
 
