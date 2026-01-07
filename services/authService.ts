@@ -175,7 +175,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
   {
     user: {
       id: 'marketing_admin_001',
-      email: '@',
+      email: 'admin@marketing.com',
       nombre: 'Marketing Admin',
       rol: 'admin',
       createdAt: '2026-01-07T00:00:00.000Z',
