@@ -1,7 +1,7 @@
 import React from 'react';
-import { Home, BarChart3, Target, Activity, Settings } from 'lucide-react';
+import { Home, BarChart3, Target, Activity, Settings, TrendingUp } from 'lucide-react';
 
-export type MainTab = 'home' | 'report' | 'predict' | 'semaforo';
+export type MainTab = 'home' | 'report' | 'predict' | 'semaforo' | 'marketing';
 
 interface TabNavigationProps {
   currentTab: MainTab;
@@ -75,6 +75,12 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
           label="Semáforo"
           onClick={() => onTabChange('semaforo')}
           disabled={!hasShipments}
+        />
+        <TabButton
+          active={currentTab === 'marketing'}
+          icon={TrendingUp}
+          label="Marketing"
+          onClick={() => onTabChange('marketing')}
         />
       </div>
     </div>
