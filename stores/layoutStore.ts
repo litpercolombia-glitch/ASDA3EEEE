@@ -28,7 +28,7 @@ export type OperacionesTab = 'envios' | 'tracking' | 'historial' | 'rutas';
 export type InteligenciaTab = 'analisis' | 'reportes' | 'predicciones' | 'insights';
 export type CerebroIATab = 'asistente' | 'configuracion-ia' | 'historial-chat';
 export type NegocioTab = 'metricas' | 'clientes' | 'ventas' | 'rendimiento';
-export type ConfigTab = 'general' | 'perfil' | 'api-keys' | 'integraciones' | 'admin';
+export type ConfigTab = 'general' | 'api-keys' | 'integraciones' | 'usuarios' | 'admin';
 
 interface LayoutState {
   // Sidebar
