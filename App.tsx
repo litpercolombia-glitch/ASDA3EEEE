@@ -145,13 +145,24 @@ const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, cou
 
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <span className="text-4xl">👑</span>
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-orange-500 rounded-2xl blur-xl opacity-60" />
+                <div className="relative bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-600 p-4 rounded-2xl shadow-2xl border border-yellow-300/30">
+                  <div className="flex items-center justify-center w-10 h-10">
+                    <span className="text-2xl font-black text-white drop-shadow-lg">L</span>
+                    <span className="text-lg font-black text-yellow-100 -ml-1">P</span>
+                  </div>
+                  <Crown className="absolute -top-2 -right-2 w-5 h-5 text-yellow-200 drop-shadow-lg" />
+                </div>
+              </div>
               <div>
-                <h1 className="text-3xl lg:text-4xl font-bold">
-                  Bienvenido a <span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent">LITPER PRO</span>
+                <h1 className="text-3xl lg:text-4xl font-black flex items-center gap-2">
+                  <span className="text-white">Bienvenido a</span>
+                  <span className="bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-400 bg-clip-text text-transparent">LITPER</span>
+                  <span className="px-3 py-1 text-lg font-bold bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg shadow-lg">PRO</span>
                 </h1>
-                <p className="text-slate-300 text-lg">Plataforma Enterprise de Logística con IA</p>
+                <p className="text-slate-300 text-lg mt-1">Plataforma Enterprise de Logística con IA</p>
               </div>
             </div>
             <div className="flex items-center gap-4 mt-4">
@@ -555,26 +566,40 @@ const App: React.FC = () => {
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => setCurrentTab('home')}
-                  className="flex items-center gap-3 hover:opacity-90 transition-opacity group"
+                  className="flex items-center gap-3 hover:opacity-90 transition-all duration-300 group"
                 >
                   <div className="relative">
-                    <div className="bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 p-2.5 rounded-xl shadow-lg shadow-yellow-500/30 group-hover:shadow-yellow-500/50 transition-all">
-                      <Crown className="w-6 h-6 text-white drop-shadow-lg" />
-                      {/* Destellos del logo */}
-                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-white rounded-full animate-ping opacity-75" />
-                      <div className="absolute -top-0.5 -left-0.5 w-1.5 h-1.5 bg-yellow-200 rounded-full animate-pulse" />
-                      <div className="absolute -bottom-0.5 -right-0.5 w-1 h-1 bg-yellow-300 rounded-full animate-pulse delay-150" />
+                    {/* Glow effect behind logo */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-500 rounded-2xl blur-lg opacity-50 group-hover:opacity-70 transition-opacity scale-110" />
+                    {/* Main logo container */}
+                    <div className="relative bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-600 p-3 rounded-2xl shadow-2xl shadow-amber-500/40 group-hover:shadow-amber-500/60 transition-all transform group-hover:scale-105 border border-yellow-300/30">
+                      {/* Inner glow ring */}
+                      <div className="absolute inset-0.5 bg-gradient-to-br from-white/20 to-transparent rounded-xl" />
+                      {/* Logo letters */}
+                      <div className="relative flex items-center justify-center w-8 h-8">
+                        <span className="text-xl font-black text-white drop-shadow-lg tracking-tighter" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>L</span>
+                        <span className="text-sm font-black text-yellow-100 -ml-0.5 drop-shadow" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>P</span>
+                      </div>
+                      {/* Crown accent */}
+                      <Crown className="absolute -top-2 -right-2 w-4 h-4 text-yellow-200 drop-shadow-lg" />
+                      {/* Sparkle effects */}
+                      <div className="absolute -top-1 -left-1 w-2 h-2 bg-white rounded-full animate-ping opacity-60" />
+                      <div className="absolute -bottom-1 right-0 w-1.5 h-1.5 bg-yellow-200 rounded-full animate-pulse" />
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-navy-900 animate-pulse" />
-                    {/* Brillos adicionales */}
-                    <div className="absolute top-0 left-1/2 w-8 h-8 bg-gradient-to-b from-yellow-300/30 to-transparent rounded-full blur-sm -translate-x-1/2 -translate-y-1/2" />
+                    {/* Status indicator */}
+                    <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full border-2 border-navy-900 shadow-lg shadow-emerald-500/50">
+                      <div className="absolute inset-0.5 bg-emerald-300 rounded-full animate-pulse opacity-50" />
+                    </div>
                   </div>
                   <div className="hidden sm:block">
-                    <h1 className="text-xl font-bold tracking-tight">
-                      LITPER<span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent"> PRO</span>
+                    <h1 className="text-2xl font-black tracking-tight flex items-center gap-1">
+                      <span className="text-white">LIT</span>
+                      <span className="bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-400 bg-clip-text text-transparent">PER</span>
+                      <span className="ml-1 px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-md shadow-lg">PRO</span>
                     </h1>
-                    <p className="text-[10px] text-slate-400 font-medium tracking-widest uppercase -mt-0.5">
-                      👑 Enterprise Logistics
+                    <p className="text-[10px] text-slate-400 font-semibold tracking-[0.2em] uppercase -mt-0.5 flex items-center gap-1">
+                      <span className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />
+                      Enterprise Logistics Platform
                     </p>
                   </div>
                 </button>
@@ -998,13 +1023,26 @@ const App: React.FC = () => {
             {/* Brand */}
             <div className="md:col-span-1">
               <div className="flex items-center gap-3 mb-4">
-                <div className="relative bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 p-2.5 rounded-xl shadow-lg shadow-yellow-500/20">
-                  <Crown className="w-6 h-6 text-white drop-shadow" />
-                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-white rounded-full animate-pulse" />
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-orange-500 rounded-xl blur-md opacity-40" />
+                  <div className="relative bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-600 p-2.5 rounded-xl shadow-lg shadow-amber-500/30 border border-yellow-300/20">
+                    <div className="flex items-center justify-center w-6 h-6">
+                      <span className="text-lg font-black text-white drop-shadow-lg">L</span>
+                      <span className="text-xs font-black text-yellow-100 -ml-0.5">P</span>
+                    </div>
+                    <Crown className="absolute -top-1.5 -right-1.5 w-3 h-3 text-yellow-200 drop-shadow" />
+                  </div>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold">LITPER<span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent"> PRO</span></h3>
-                  <p className="text-xs text-slate-400">👑 Enterprise Logistics</p>
+                  <h3 className="text-xl font-black flex items-center gap-1">
+                    <span className="text-white">LIT</span>
+                    <span className="bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-400 bg-clip-text text-transparent">PER</span>
+                    <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded">PRO</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 flex items-center gap-1">
+                    <span className="w-1 h-1 bg-emerald-400 rounded-full" />
+                    Enterprise Logistics
+                  </p>
                 </div>
               </div>
               <p className="text-sm text-slate-400 mb-4">
