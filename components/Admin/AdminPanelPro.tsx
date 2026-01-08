@@ -470,15 +470,9 @@ export const AdminPanelPro: React.FC = () => {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-navy-950 to-slate-900 flex items-center justify-center p-4">
-        {/* Background effects */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
-        </div>
-
+      <div className="flex items-center justify-center p-4 min-h-[600px]">
         <div className="relative z-10 w-full max-w-md">
-          <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/10">
+          <div className="bg-gray-800/90 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-gray-700">
             {/* Logo */}
             <div className="text-center mb-8">
               <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-orange-400 via-orange-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl shadow-orange-500/30 transform rotate-3">
@@ -487,13 +481,13 @@ export const AdminPanelPro: React.FC = () => {
               <h1 className="text-3xl font-black text-white mb-2">
                 LITPER <span className="text-orange-400">PRO</span>
               </h1>
-              <p className="text-slate-400">Panel de Administración</p>
+              <p className="text-gray-400">Panel de Administración</p>
             </div>
 
             {/* Form */}
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   Contraseña de Acceso
                 </label>
                 <div className="relative">
@@ -503,9 +497,9 @@ export const AdminPanelPro: React.FC = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
                     placeholder="••••••••••••"
-                    className="w-full px-4 py-4 pl-12 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-4 pl-12 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                   />
-                  <Lock className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <Lock className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                 </div>
               </div>
 
@@ -525,7 +519,7 @@ export const AdminPanelPro: React.FC = () => {
               </button>
             </div>
 
-            <p className="text-center text-xs text-slate-500 mt-6">
+            <p className="text-center text-xs text-gray-500 mt-6">
               Acceso exclusivo para administradores
             </p>
           </div>

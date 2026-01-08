@@ -159,6 +159,8 @@ export const GuiasDetailModal: React.FC<GuiasDetailModalProps> = ({
     link.href = url;
     link.download = `guias_${filterStatus || 'todas'}_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
+    // Liberar memoria del URL object
+    setTimeout(() => URL.revokeObjectURL(url), 100);
   };
 
   const handleWhatsAppMasivo = () => {

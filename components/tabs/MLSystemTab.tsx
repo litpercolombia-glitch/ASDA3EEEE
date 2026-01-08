@@ -248,6 +248,8 @@ export function MLSystemTab({ className = '' }: MLSystemTabProps) {
     link.href = url;
     link.download = `predicciones_masivas_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
+    // Liberar memoria del URL object
+    setTimeout(() => URL.revokeObjectURL(url), 100);
   };
 
   // Renderizar contenido de predicción masiva

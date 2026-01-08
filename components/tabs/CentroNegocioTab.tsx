@@ -3,7 +3,7 @@
 // Acceso directo para el equipo logístico
 // ============================================
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Users,
   Package,
@@ -25,6 +25,9 @@ import {
   PieChart,
 } from 'lucide-react';
 
+// Tipo para las sub-pestañas del sidebar
+type SidebarSubTab = 'metricas' | 'clientes' | 'ventas' | 'rendimiento';
+
 // Importar los dashboards
 import { CRMDashboard } from '../Admin/CRMCenter';
 import { OrdersDashboard } from '../Admin/OrdersCenter';
@@ -36,9 +39,35 @@ import { ReportsDashboard } from '../Admin/ReportsCenter';
 
 type BusinessModule = 'inicio' | 'crm' | 'pedidos' | 'soporte' | 'marketing' | 'notificaciones' | 'finanzas' | 'reportes';
 
-export const CentroNegocioTab: React.FC = () => {
-  const [activeModule, setActiveModule] = useState<BusinessModule>('inicio');
+// Mapeo de sub-tabs del sidebar a módulos internos
+const SIDEBAR_TAB_VIEWS: Record<SidebarSubTab, { views: BusinessModule[]; default: BusinessModule }> = {
+  metricas: { views: ['inicio', 'finanzas'], default: 'inicio' },
+  clientes: { views: ['crm', 'soporte'], default: 'crm' },
+  ventas: { views: ['pedidos', 'marketing'], default: 'pedidos' },
+  rendimiento: { views: ['reportes', 'notificaciones'], default: 'reportes' },
+};
+
+interface CentroNegocioTabProps {
+  activeSubTab?: SidebarSubTab;
+  onSubTabChange?: (tab: SidebarSubTab) => void;
+}
+
+export const CentroNegocioTab: React.FC<CentroNegocioTabProps> = ({
+  activeSubTab = 'metricas',
+  onSubTabChange,
+}) => {
+  // Determinar el módulo activo basado en el sub-tab del sidebar
+  const sidebarConfig = SIDEBAR_TAB_VIEWS[activeSubTab];
+  const [activeModule, setActiveModule] = useState<BusinessModule>(sidebarConfig.default);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Cuando cambia el sub-tab del sidebar, cambiar al módulo por defecto de esa sección
+  useEffect(() => {
+    const config = SIDEBAR_TAB_VIEWS[activeSubTab];
+    if (config && !config.views.includes(activeModule)) {
+      setActiveModule(config.default);
+    }
+  }, [activeSubTab]);
 
   const modules = [
     {
@@ -113,6 +142,11 @@ export const CentroNegocioTab: React.FC = () => {
     },
   ];
 
+  // Filtrar los módulos disponibles según el sub-tab del sidebar
+  const availableModules = useMemo(() => {
+    return modules.filter(module => sidebarConfig.views.includes(module.id));
+  }, [activeSubTab]);
+
   // Pantalla de inicio con acceso rápido
   if (activeModule === 'inicio') {
     return (
@@ -157,7 +191,7 @@ export const CentroNegocioTab: React.FC = () => {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {modules.map((module) => (
+            {availableModules.map((module) => (
               <button
                 key={module.id}
                 onClick={() => setActiveModule(module.id)}

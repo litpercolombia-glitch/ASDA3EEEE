@@ -26,36 +26,54 @@ export function useShipmentExcelParser() {
   const [xlsxLoaded, setXlsxLoaded] = useState(false);
   const [parseResult, setParseResult] = useState<ShipmentExcelResult | null>(null);
 
-  // Load XLSX from CDN
+  // Load XLSX from CDN - con cleanup apropiado para evitar memory leaks
   useEffect(() => {
+    let isMounted = true;
+
     // Check if XLSX is already loaded
     if (window.XLSX) {
       setXlsxLoaded(true);
       return;
     }
 
+    // Handler para cuando el script cargue
+    const handleScriptLoad = () => {
+      if (isMounted) {
+        console.log('XLSX library loaded successfully');
+        setXlsxLoaded(true);
+      }
+    };
+
     // Check if script is already being loaded
-    const existingScript = document.querySelector('script[src*="sheetjs"]');
+    const existingScript = document.querySelector('script[src*="sheetjs"]') as HTMLScriptElement;
     if (existingScript) {
-      existingScript.addEventListener('load', () => setXlsxLoaded(true));
-      return;
+      if (window.XLSX) {
+        setXlsxLoaded(true);
+      } else {
+        existingScript.addEventListener('load', handleScriptLoad);
+      }
+      return () => {
+        isMounted = false;
+        existingScript.removeEventListener('load', handleScriptLoad);
+      };
     }
 
     // Load the script
     const script = document.createElement('script');
     script.src = 'https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js';
     script.async = true;
-    script.onload = () => {
-      console.log('XLSX library loaded successfully');
-      setXlsxLoaded(true);
-    };
+    script.onload = handleScriptLoad;
     script.onerror = () => {
       console.error('Failed to load XLSX library');
     };
     document.body.appendChild(script);
 
     return () => {
-      // Cleanup if needed
+      isMounted = false;
+      // No removemos el script del DOM porque otros componentes pueden usarlo
+      // Solo limpiamos los handlers
+      script.onload = null;
+      script.onerror = null;
     };
   }, []);
 
