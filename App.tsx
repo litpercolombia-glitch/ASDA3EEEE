@@ -366,6 +366,8 @@ const App: React.FC = () => {
     setOperacionesTab,
     activeInteligenciaTab,
     setInteligenciaTab,
+    activeCerebroIATab,
+    setCerebroIATab,
     activeNegocioTab,
     setNegocioTab,
     activeInicioTab,
@@ -664,12 +666,24 @@ const App: React.FC = () => {
           <InteligenciaIAUnificadoTab
             shipments={shipments}
             selectedCountry={selectedCountry}
+            activeSubTab={activeInteligenciaTab}
+            onSubTabChange={setInteligenciaTab}
           />
         );
       case 'cerebro-ia':
-        return <AIBrainDashboard />;
+        return (
+          <AIBrainDashboard
+            activeSubTab={activeCerebroIATab}
+            onSubTabChange={setCerebroIATab}
+          />
+        );
       case 'negocio':
-        return <CentroNegocioTab />;
+        return (
+          <CentroNegocioTab
+            activeSubTab={activeNegocioTab}
+            onSubTabChange={setNegocioTab}
+          />
+        );
       case 'marketing':
         return <MarketingView />;
       case 'config':
