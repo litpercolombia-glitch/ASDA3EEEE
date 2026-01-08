@@ -24,7 +24,6 @@ import {
   BookOpen,
   Activity,
   ListOrdered,
-  Zap,
 } from 'lucide-react';
 import { Shipment } from '../../types';
 

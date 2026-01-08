@@ -123,10 +123,10 @@ const SUB_MENUS: Record<MainSection, SubMenuItem[]> = {
   ],
   'config': [
     { id: 'general', icon: Cog, label: 'General' },
-    { id: 'perfil', icon: User, label: 'Perfil' },
     { id: 'api-keys', icon: Key, label: 'API Keys' },
     { id: 'integraciones', icon: Layers, label: 'Integraciones' },
-    { id: 'admin', icon: Shield, label: 'Modo Admin' },
+    { id: 'usuarios', icon: Users, label: 'Usuarios' },
+    { id: 'admin', icon: Shield, label: 'Seguridad' },
   ],
   'marketing': [
     { id: 'dashboard', icon: BarChart3, label: 'Dashboard' },
@@ -420,7 +420,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
     { id: 'inteligencia', icon: Sparkles, label: 'Inteligencia', subItems: SUB_MENUS['inteligencia'] },
     { id: 'cerebro-ia', icon: Brain, label: 'Cerebro IA', isNew: true, subItems: SUB_MENUS['cerebro-ia'] },
     { id: 'negocio', icon: Briefcase, label: 'Negocio', subItems: SUB_MENUS['negocio'] },
-    { id: 'config', icon: Settings, label: 'Configuracion', subItems: SUB_MENUS['config'] },
+    { id: 'config', icon: Shield, label: 'Modo Admin', subItems: SUB_MENUS['config'] },
   ];
 
   // Obtener el sub-item activo segun la seccion

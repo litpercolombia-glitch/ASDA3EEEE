@@ -27,10 +27,19 @@ import {
   User,
   Crown,
   Sparkles,
+  Settings,
+  LogOut,
+  Camera,
+  Palette,
+  Globe,
+  BellRing,
+  Shield,
+  HelpCircle,
 } from 'lucide-react';
 import { useUserProfileStore, AVATAR_COLORS } from '../../services/userProfileService';
 import { Sidebar } from './Sidebar';
 import { useLayoutStore } from '../../stores/layoutStore';
+import { UserProfileSettings } from '../settings/UserProfileSettings';
 import { Country } from '../../types/country';
 import { Shipment } from '../../types';
 import {
@@ -58,6 +67,8 @@ interface TopBarProps {
   onExportExcel: () => void;
   shipmentsCount: number;
   onMarkNotificationRead: (id: string) => void;
+  onLogout: () => void;
+  onOpenSettings: () => void;
 }
 
 interface AppLayoutProps {
@@ -318,6 +329,105 @@ function NotificationsPanel({
 }
 
 // ============================================
+// MENÚ DE CONFIGURACIÓN DE USUARIO
+// ============================================
+
+interface UserSettingsMenuProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onOpenSettings: () => void;
+  onLogout: () => void;
+  darkMode: boolean;
+  onDarkModeToggle: () => void;
+}
+
+function UserSettingsMenu({
+  isOpen,
+  onClose,
+  onOpenSettings,
+  onLogout,
+  darkMode,
+  onDarkModeToggle,
+}: UserSettingsMenuProps) {
+  const { profile, getInitials } = useUserProfileStore();
+  const selectedColor = AVATAR_COLORS.find(c => c.id === profile?.avatarColor) || AVATAR_COLORS[0];
+
+  if (!isOpen) return null;
+
+  const menuItems = [
+    { icon: User, label: 'Mi Perfil', action: onOpenSettings, description: 'Editar información personal' },
+    { icon: Camera, label: 'Foto de Perfil', action: onOpenSettings, description: 'Cambiar imagen' },
+    { icon: Palette, label: 'Apariencia', action: onDarkModeToggle, description: darkMode ? 'Modo oscuro activo' : 'Modo claro activo' },
+    { icon: Globe, label: 'Idioma', action: () => {}, description: 'Español (Colombia)' },
+    { icon: BellRing, label: 'Notificaciones', action: onOpenSettings, description: 'Configurar alertas' },
+    { icon: Shield, label: 'Seguridad', action: onOpenSettings, description: 'Contraseña y acceso' },
+    { icon: HelpCircle, label: 'Ayuda', action: () => {}, description: 'Centro de soporte' },
+  ];
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div className="absolute right-0 top-full mt-2 w-80 bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-slide-down">
+        {/* Header con perfil */}
+        <div className="p-4 bg-gradient-to-r from-amber-600/20 to-orange-600/20 border-b border-gray-700">
+          <div className="flex items-center gap-3">
+            <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${selectedColor.bg} flex items-center justify-center shadow-lg`}>
+              <span className="text-xl font-bold text-white">{getInitials()}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-white truncate">{profile?.nombre || 'Usuario'}</h3>
+              <p className="text-sm text-gray-400 truncate">{profile?.email || 'usuario@litper.co'}</p>
+              <div className="flex items-center gap-1 mt-1">
+                <Crown className="w-3 h-3 text-amber-400" />
+                <span className="text-xs text-amber-400 font-medium">LITPER PRO</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Opciones del menú */}
+        <div className="p-2 max-h-[350px] overflow-y-auto">
+          {menuItems.map((item, index) => (
+            <button
+              key={index}
+              onClick={() => {
+                item.action();
+                if (item.label !== 'Apariencia') onClose();
+              }}
+              className="w-full flex items-center gap-3 p-3 rounded-xl text-left hover:bg-gray-800/70 transition-colors group"
+            >
+              <div className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
+                <item.icon className="w-5 h-5 text-gray-400 group-hover:text-amber-400 transition-colors" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white">{item.label}</p>
+                <p className="text-xs text-gray-500 truncate">{item.description}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Footer con logout */}
+        <div className="p-2 border-t border-gray-700">
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center gap-3 p-3 rounded-xl text-left hover:bg-red-500/10 transition-colors group"
+          >
+            <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+              <LogOut className="w-5 h-5 text-red-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-400">Cerrar Sesión</p>
+              <p className="text-xs text-gray-500">Salir de tu cuenta</p>
+            </div>
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ============================================
 // TOP BAR
 // ============================================
 
@@ -334,8 +444,13 @@ function TopBar({
   onExportExcel,
   shipmentsCount,
   onMarkNotificationRead,
+  onLogout,
+  onOpenSettings,
 }: TopBarProps) {
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const { profile, getInitials } = useUserProfileStore();
+  const selectedColor = AVATAR_COLORS.find(c => c.id === profile?.avatarColor) || AVATAR_COLORS[0];
 
   const countryFlags: Record<string, string> = {
     'Colombia': '🇨🇴',
@@ -449,6 +564,28 @@ function TopBar({
         >
           {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>
+
+        {/* User Avatar & Settings */}
+        <div className="relative">
+          <button
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-gray-800 transition-colors"
+            title="Configuración"
+          >
+            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${selectedColor.bg} flex items-center justify-center shadow-lg`}>
+              <span className="text-xs font-bold text-white">{getInitials()}</span>
+            </div>
+            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+          </button>
+          <UserSettingsMenu
+            isOpen={showUserMenu}
+            onClose={() => setShowUserMenu(false)}
+            onOpenSettings={onOpenSettings}
+            onLogout={onLogout}
+            darkMode={darkMode}
+            onDarkModeToggle={onDarkModeToggle}
+          />
+        </div>
       </div>
     </header>
   );
@@ -480,6 +617,7 @@ export function AppLayout({
 }: AppLayoutProps) {
   // Generar notificaciones inteligentes basadas en los shipments
   const [readNotifications, setReadNotifications] = useState<Set<string>>(new Set());
+  const [showSettings, setShowSettings] = useState(false);
 
   const notifications = useMemo(() => {
     const generated = generateSmartNotifications(shipments);
@@ -491,6 +629,10 @@ export function AppLayout({
 
   const handleMarkNotificationRead = (id: string) => {
     setReadNotifications(prev => new Set([...prev, id]));
+  };
+
+  const handleOpenSettings = () => {
+    setShowSettings(true);
   };
 
   return (
@@ -520,6 +662,8 @@ export function AppLayout({
           onExportExcel={onExportExcel}
           shipmentsCount={shipmentsCount}
           onMarkNotificationRead={handleMarkNotificationRead}
+          onLogout={onLogout}
+          onOpenSettings={handleOpenSettings}
         />
 
         {/* Content Area */}
@@ -527,6 +671,11 @@ export function AppLayout({
           {children}
         </main>
       </div>
+
+      {/* User Profile Settings Modal */}
+      {showSettings && (
+        <UserProfileSettings onClose={() => setShowSettings(false)} />
+      )}
 
       {/* CSS para animaciones */}
       <style>{`
