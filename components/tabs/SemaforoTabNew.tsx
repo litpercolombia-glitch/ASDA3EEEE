@@ -54,6 +54,15 @@ import {
 } from '../../types/logistics';
 import { saveTabData, loadTabData } from '../../utils/tabStorage';
 import { CiudadColombia, buscarCiudades, CIUDADES_COLOMBIA } from '../../data/ciudadesColombia';
+import { storageApi, healthApi } from '../../services/unifiedApiService';
+
+// Función para normalizar texto (quitar acentos) para búsqueda
+const normalizeText = (text: string): string => {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+};
 
 interface SemaforoTabNewProps {
   onDataLoaded?: (data: SemaforoExcelData) => void;
@@ -1099,9 +1108,36 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
     setShowSugerencias(false);
   };
 
-  // Load saved data on mount
+  // Load saved data on mount - primero intenta backend (global), luego localStorage (local)
   useEffect(() => {
-    try {
+    const loadData = async () => {
+      try {
+        // Intentar cargar desde el backend (persistencia global)
+        const isBackendAvailable = await healthApi.isAvailable();
+
+        if (isBackendAvailable) {
+          const globalData = await storageApi.getItem<{
+            data: SemaforoExcelData;
+            uploadDate: string;
+            fileName: string;
+          }>('semaforo_data');
+
+          if (globalData) {
+            setExcelData(globalData.data);
+            setLastUpload(new Date(globalData.uploadDate));
+            setFileName(globalData.fileName);
+            const processed = procesarExcelConScore(globalData.data);
+            setCiudades(processed);
+            // Sincronizar con localStorage como respaldo
+            saveTabData(STORAGE_KEYS.SEMAFORO, globalData);
+            return;
+          }
+        }
+      } catch (error) {
+        console.warn('No se pudo cargar datos globales del semáforo:', error);
+      }
+
+      // Fallback: cargar desde localStorage
       const saved = loadTabData<{
         data: SemaforoExcelData;
         uploadDate: string;
@@ -1112,42 +1148,47 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
         setExcelData(saved.data);
         setLastUpload(new Date(saved.uploadDate));
         setFileName(saved.fileName);
-
         const processed = procesarExcelConScore(saved.data);
         setCiudades(processed);
       }
-    } catch (error) {
-      console.error('Error cargando datos guardados:', error);
-      // Limpiar datos corruptos del localStorage
-      localStorage.removeItem(STORAGE_KEYS.SEMAFORO);
-    }
+    };
+
+    loadData();
   }, []);
 
   // Handle Excel data loaded
-  const handleDataLoaded = (data: SemaforoExcelData) => {
+  const handleDataLoaded = async (data: SemaforoExcelData) => {
+    setExcelData(data);
+    setLastUpload(new Date());
+    setFileName('datos_cargados.xlsx');
+
+    // Process data with score calculation
+    const processed = procesarExcelConScore(data);
+    setCiudades(processed);
+
+    const savePayload = {
+      data,
+      uploadDate: new Date().toISOString(),
+      fileName: 'datos_cargados.xlsx',
+    };
+
+    // Save to localStorage como respaldo
+    saveTabData(STORAGE_KEYS.SEMAFORO, savePayload);
+
+    // Guardar en backend para persistencia global (todos los usuarios)
     try {
-      setExcelData(data);
-      setLastUpload(new Date());
-      setFileName('datos_cargados.xlsx');
-
-      // Process data with score calculation
-      const processed = procesarExcelConScore(data);
-      setCiudades(processed);
-
-      // Save to localStorage
-      saveTabData(STORAGE_KEYS.SEMAFORO, {
-        data,
-        uploadDate: new Date().toISOString(),
-        fileName: 'datos_cargados.xlsx',
-      });
-
-      // Notify parent
-      if (onDataLoaded) {
-        onDataLoaded(data);
+      const isBackendAvailable = await healthApi.isAvailable();
+      if (isBackendAvailable) {
+        await storageApi.syncItem('semaforo_data', savePayload);
+        console.log('✅ Datos del semáforo guardados globalmente');
       }
     } catch (error) {
-      console.error('Error procesando datos del Excel:', error);
-      alert('Hubo un error procesando los datos. Por favor verifica el formato del archivo.');
+      console.warn('⚠️ No se pudo guardar en backend, datos guardados localmente:', error);
+    }
+
+    // Notify parent
+    if (onDataLoaded) {
+      onDataLoaded(data);
     }
   };
 
@@ -1165,11 +1206,10 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
   const filteredCiudades = useMemo(() => {
     const result = ciudades.filter((c) => {
       if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        if (
-          !c.ciudad.toLowerCase().includes(query) &&
-          !c.transportadora.toLowerCase().includes(query)
-        ) {
+        const query = normalizeText(searchQuery);
+        const ciudadNorm = normalizeText(c.ciudad || '');
+        const transportadoraNorm = normalizeText(c.transportadora || '');
+        if (!ciudadNorm.includes(query) && !transportadoraNorm.includes(query)) {
           return false;
         }
       }
@@ -1210,13 +1250,23 @@ export const SemaforoTabNew: React.FC<SemaforoTabNewProps> = ({ onDataLoaded }) 
   }, [ciudades, searchQuery, filterSemaforo, sortBy, sortOrder]);
 
   // Clear data
-  const handleClearData = () => {
+  const handleClearData = async () => {
     if (confirm('¿Estás seguro de que deseas borrar los datos cargados?')) {
       setExcelData(null);
       setCiudades([]);
       setLastUpload(null);
       setFileName(null);
       localStorage.removeItem(STORAGE_KEYS.SEMAFORO);
+
+      // También borrar del backend
+      try {
+        const isBackendAvailable = await healthApi.isAvailable();
+        if (isBackendAvailable) {
+          await storageApi.syncItem('semaforo_data', null);
+        }
+      } catch (error) {
+        console.warn('No se pudo borrar del backend:', error);
+      }
     }
   };
 

@@ -75,7 +75,8 @@ import { LearningDashboard } from './LearningCenter';
 import { ReportsDashboard } from './ReportsCenter';
 import { CRMDashboard } from './CRMCenter';
 import { OrdersDashboard } from './OrdersCenter';
-import { MarketingDashboard } from './MarketingCenter';
+import { MarketingDashboard as OldMarketingDashboard } from './MarketingCenter';
+import { MarketingModule } from '../marketing';
 import { SupportDashboard } from './SupportCenter';
 import { NotificationsDashboard } from './NotificationsCenter';
 import { SecurityDashboard } from './SecurityCenter';
@@ -1164,11 +1165,11 @@ export const AdminPanelPro: React.FC = () => {
           )}
 
           {/* ============================================ */}
-          {/* TAB: MARKETING */}
+          {/* TAB: MARKETING TRACKING */}
           {/* ============================================ */}
           {activeTab === 'marketing' && (
-            <div className="p-6">
-              <MarketingDashboard />
+            <div className="h-[calc(100vh-200px)]">
+              <MarketingModule />
             </div>
           )}
 

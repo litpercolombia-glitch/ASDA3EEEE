@@ -1,0 +1,45 @@
+# =====================================
+# LITPER - Docker Compose Override (Desarrollo)
+# =====================================
+# SOLO PARA DESARROLLO LOCAL
+# Copia este archivo a docker-compose.override.yml
+# NUNCA uses estos valores en producción
+# =====================================
+
+version: '3.8'
+
+services:
+  db:
+    environment:
+      # Valores solo para desarrollo local
+      POSTGRES_USER: litper_dev
+      POSTGRES_PASSWORD: dev_password_123
+      POSTGRES_DB: litper_dev
+
+  redis:
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    # Sin password para desarrollo
+
+  backend:
+    environment:
+      DATABASE_URL: postgresql://litper_dev:dev_password_123@db:5432/litper_dev
+      DB_USER: litper_dev
+      DB_PASSWORD: dev_password_123
+      DB_NAME: litper_dev
+      DEBUG: "true"
+      LOG_LEVEL: DEBUG
+    # Montar código para hot-reload
+    volumes:
+      - ./backend:/app
+      - ./backend/logs:/app/logs
+      - ./backend/uploads:/app/uploads
+      - ./backend/ml_models/saved:/app/ml_models/saved
+
+  frontend:
+    environment:
+      VITE_API_URL: http://localhost:8000
+      VITE_WS_URL: ws://localhost:8000/ws
+    # Montar código para hot-reload
+    volumes:
+      - .:/app
+      - /app/node_modules

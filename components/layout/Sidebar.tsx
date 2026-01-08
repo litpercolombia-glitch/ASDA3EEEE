@@ -351,30 +351,47 @@ function HelpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
 }
 
 // ============================================
-// LOGO LP CON CORONA
+// LOGO LP CON CORONA - DISEÑO PROFESIONAL
 // ============================================
 
 function LitperLogo({ isCollapsed }: { isCollapsed: boolean }) {
   return (
-    <div className="flex items-center gap-3">
-      {/* Logo con corona */}
+    <div className="flex items-center gap-3 group">
+      {/* Logo con efectos premium */}
       <div className="relative">
-        <div className="w-10 h-10 bg-gradient-to-br from-amber-500 via-yellow-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/30 relative overflow-hidden">
-          {/* Corona pequena arriba */}
-          <div className="absolute -top-1 left-1/2 -translate-x-1/2">
-            <Crown className="w-4 h-4 text-yellow-300 drop-shadow-lg" />
+        {/* Glow effect behind logo */}
+        <div className="absolute inset-0 bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-500 rounded-xl blur-lg opacity-40 group-hover:opacity-60 transition-opacity scale-110" />
+        {/* Main logo container */}
+        <div className="relative w-11 h-11 bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-600 rounded-xl shadow-2xl shadow-amber-500/40 group-hover:shadow-amber-500/60 transition-all transform group-hover:scale-105 border border-yellow-300/30 flex items-center justify-center overflow-visible">
+          {/* Inner glow ring */}
+          <div className="absolute inset-0.5 bg-gradient-to-br from-white/20 to-transparent rounded-lg" />
+          {/* Logo letters */}
+          <div className="relative flex items-center justify-center">
+            <span className="text-xl font-black text-white drop-shadow-lg tracking-tighter" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>L</span>
+            <span className="text-sm font-black text-yellow-100 -ml-0.5 drop-shadow" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>P</span>
           </div>
-          {/* LP */}
-          <span className="text-white font-black text-lg tracking-tighter mt-1">LP</span>
+          {/* Crown accent */}
+          <Crown className="absolute -top-2 -right-2 w-4 h-4 text-yellow-200 drop-shadow-lg" />
+          {/* Sparkle effects */}
+          <div className="absolute -top-1 -left-1 w-2 h-2 bg-white rounded-full animate-ping opacity-60" />
+          <div className="absolute -bottom-0.5 right-0 w-1.5 h-1.5 bg-yellow-200 rounded-full animate-pulse" />
         </div>
-        {/* Brillo */}
-        <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-yellow-300 rounded-full animate-pulse" />
+        {/* Status indicator */}
+        <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full border-2 border-gray-900 shadow-lg shadow-emerald-500/50">
+          <div className="absolute inset-0.5 bg-emerald-300 rounded-full animate-pulse opacity-50" />
+        </div>
       </div>
 
       {!isCollapsed && (
         <div>
-          <h1 className="text-lg font-black text-white tracking-tight">LITPER</h1>
-          <p className="text-[9px] text-amber-400 font-bold -mt-1 tracking-widest">OFICIAL</p>
+          <h1 className="text-xl font-black tracking-tight flex items-center gap-1">
+            <span className="text-white">LIT</span>
+            <span className="bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-400 bg-clip-text text-transparent">PER</span>
+          </h1>
+          <p className="text-[9px] text-slate-400 font-semibold tracking-[0.15em] uppercase -mt-0.5 flex items-center gap-1">
+            <span className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />
+            PRO ENTERPRISE
+          </p>
         </div>
       )}
     </div>

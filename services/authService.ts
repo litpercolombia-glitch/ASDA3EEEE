@@ -171,6 +171,18 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
     },
     password: '?2024LP.JEferMoreno?',
   },
+  // Usuario de Marketing
+  {
+    user: {
+      id: 'marketing_admin_001',
+      email: 'admin@marketing.com',
+      nombre: 'Marketing Admin',
+      rol: 'admin',
+      createdAt: '2026-01-07T00:00:00.000Z',
+      activo: true,
+    },
+    password: '1234',
+  },
 ];
 
 // =====================================
