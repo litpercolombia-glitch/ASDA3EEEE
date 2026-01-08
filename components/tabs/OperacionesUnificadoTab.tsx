@@ -1,6 +1,6 @@
 // components/tabs/OperacionesUnificadoTab.tsx
 // Tab unificado que combina: Seguimiento + Cargas + Timeline + Mapa + Cerebro
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Package,
   BarChart3,
@@ -51,11 +51,24 @@ import RutasTab from './RutasTab';
 // =====================================
 type SubView = 'carga' | 'tabla' | 'timeline' | 'mapa' | 'prioridad' | 'inteligencia' | 'semaforo' | 'cerebro' | 'analisis-rondas' | 'rutas';
 
+// Tipo para las sub-pestañas del sidebar
+type SidebarSubTab = 'envios' | 'tracking' | 'historial' | 'rutas';
+
 interface OperacionesUnificadoTabProps {
   shipments: Shipment[];
   onShipmentsLoaded?: (shipments: Shipment[]) => void;
   onSemaforoDataLoaded?: (data: any) => void;
+  activeSubTab?: SidebarSubTab;
+  onSubTabChange?: (tab: SidebarSubTab) => void;
 }
+
+// Mapeo de sub-tabs del sidebar a vistas internas
+const SIDEBAR_TAB_VIEWS: Record<SidebarSubTab, { views: SubView[]; default: SubView }> = {
+  envios: { views: ['carga', 'tabla', 'prioridad'], default: 'carga' },
+  tracking: { views: ['timeline', 'mapa', 'cerebro'], default: 'timeline' },
+  historial: { views: ['semaforo', 'analisis-rondas', 'inteligencia'], default: 'semaforo' },
+  rutas: { views: ['rutas'], default: 'rutas' },
+};
 
 // =====================================
 // SUB-NAVEGACIÓN
@@ -140,8 +153,25 @@ export const OperacionesUnificadoTab: React.FC<OperacionesUnificadoTabProps> = (
   shipments,
   onShipmentsLoaded,
   onSemaforoDataLoaded,
+  activeSubTab = 'envios',
+  onSubTabChange,
 }) => {
-  const [activeView, setActiveView] = useState<SubView>('carga');
+  // Determinar la vista activa basada en el sub-tab del sidebar
+  const sidebarConfig = SIDEBAR_TAB_VIEWS[activeSubTab];
+  const [activeView, setActiveView] = useState<SubView>(sidebarConfig.default);
+
+  // Cuando cambia el sub-tab del sidebar, cambiar a la vista por defecto de esa sección
+  useEffect(() => {
+    const config = SIDEBAR_TAB_VIEWS[activeSubTab];
+    if (config && !config.views.includes(activeView)) {
+      setActiveView(config.default);
+    }
+  }, [activeSubTab]);
+
+  // Filtrar las vistas disponibles según el sub-tab del sidebar
+  const availableViews = useMemo(() => {
+    return subNavItems.filter(item => sidebarConfig.views.includes(item.id));
+  }, [activeSubTab]);
 
   // Métricas rápidas
   const metrics = useMemo(() => {
@@ -207,10 +237,10 @@ export const OperacionesUnificadoTab: React.FC<OperacionesUnificadoTabProps> = (
           </div>
         </div>
 
-        {/* Sub-navegación */}
+        {/* Sub-navegación - Solo muestra las vistas disponibles para el sub-tab activo del sidebar */}
         <div className="px-4 py-3 bg-slate-50 dark:bg-navy-950 border-b border-slate-200 dark:border-navy-700">
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            {subNavItems.map((item) => {
+            {availableViews.map((item) => {
               const isActive = activeView === item.id;
               const Icon = item.icon;
 

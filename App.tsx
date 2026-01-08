@@ -359,7 +359,18 @@ const App: React.FC = () => {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   // Nuevo sistema de navegación con Sidebar
-  const { activeSection, setActiveSection } = useLayoutStore();
+  const {
+    activeSection,
+    setActiveSection,
+    activeOperacionesTab,
+    setOperacionesTab,
+    activeInteligenciaTab,
+    setInteligenciaTab,
+    activeNegocioTab,
+    setNegocioTab,
+    activeInicioTab,
+    setInicioTab,
+  } = useLayoutStore();
 
   // Estado para mostrar/ocultar el chat IA (ProBubble)
   const [showProBubble, setShowProBubble] = useState(false);
@@ -644,6 +655,8 @@ const App: React.FC = () => {
             shipments={shipments}
             onShipmentsLoaded={(newShipments) => setShipments(newShipments)}
             onSemaforoDataLoaded={handleSemaforoDataLoaded}
+            activeSubTab={activeOperacionesTab}
+            onSubTabChange={setOperacionesTab}
           />
         );
       case 'inteligencia':
