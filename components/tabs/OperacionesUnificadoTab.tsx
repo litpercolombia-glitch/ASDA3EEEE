@@ -45,7 +45,7 @@ import { AnalisisRondasTab } from './AnalisisRondasTab';
 // =====================================
 // TIPOS
 // =====================================
-type SubView = 'carga' | 'tabla' | 'timeline' | 'mapa' | 'prioridad' | 'inteligencia' | 'semaforo' | 'cerebro' | 'analisis-rondas';
+type SubView = 'carga' | 'mapa' | 'prioridad' | 'inteligencia' | 'semaforo' | 'cerebro' | 'analisis-rondas';
 
 interface OperacionesUnificadoTabProps {
   shipments: Shipment[];
@@ -54,7 +54,7 @@ interface OperacionesUnificadoTabProps {
 }
 
 // =====================================
-// SUB-NAVEGACIÓN
+// SUB-NAVEGACIÓN (Simplificado - Sin tabla y timeline)
 // =====================================
 const subNavItems: { id: SubView; label: string; icon: React.ElementType; description: string; color: string }[] = [
   {
@@ -63,20 +63,6 @@ const subNavItems: { id: SubView; label: string; icon: React.ElementType; descri
     icon: Upload,
     description: 'Importar y gestionar',
     color: 'cyan'
-  },
-  {
-    id: 'tabla',
-    label: 'Tabla de Guías',
-    icon: Table,
-    description: 'Ver y gestionar',
-    color: 'blue'
-  },
-  {
-    id: 'timeline',
-    label: '📍 Timeline',
-    icon: GitBranch,
-    description: 'Historia visual',
-    color: 'indigo'
   },
   {
     id: 'mapa',
@@ -243,21 +229,6 @@ export const OperacionesUnificadoTab: React.FC<OperacionesUnificadoTabProps> = (
           </div>
         )}
 
-        {activeView === 'tabla' && (
-          <div className="animate-fade-in">
-            {shipments.length === 0 ? (
-              <EmptyState
-                title="No hay guías cargadas"
-                description="Ve a 'Carga de Datos' para importar tus guías"
-                action={() => setActiveView('carga')}
-                actionLabel="Ir a Carga de Datos"
-              />
-            ) : (
-              <TablaGuiasRapida shipments={shipments} />
-            )}
-          </div>
-        )}
-
         {activeView === 'prioridad' && (
           <div className="animate-fade-in">
             {shipments.length === 0 ? (
@@ -301,15 +272,8 @@ export const OperacionesUnificadoTab: React.FC<OperacionesUnificadoTabProps> = (
         )}
 
         {/* ====================================== */}
-        {/* NUEVOS TABS INTEGRADOS */}
+        {/* OTROS TABS */}
         {/* ====================================== */}
-
-        {/* Tab: Timeline Visual */}
-        {activeView === 'timeline' && (
-          <div className="animate-fade-in">
-            <TimelineView shipments={shipments} />
-          </div>
-        )}
 
         {/* Tab: Mapa de Recorrido */}
         {activeView === 'mapa' && (

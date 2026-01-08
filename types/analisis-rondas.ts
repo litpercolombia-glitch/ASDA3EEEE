@@ -13,6 +13,8 @@ export interface AuthState {
 export interface UsuarioOperador {
   id: string;
   nombre: string;
+  icono?: string;
+  color?: string;
 }
 
 // ===== DATOS CSV =====
