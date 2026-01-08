@@ -2,6 +2,9 @@
 # LITPER - Docker Compose
 # Stack completo: Frontend + Backend + DB + Redis
 # =====================================
+# IMPORTANTE: Configura las variables en .env antes de usar
+# Ejecuta: ./scripts/setup-env.sh para generar credenciales seguras
+# =====================================
 
 version: '3.8'
 
@@ -14,16 +17,18 @@ services:
     container_name: litper-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USER:-litper}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-litper_secure_pass_2024}
-      POSTGRES_DB: ${DB_NAME:-litper_ml}
+      # IMPORTANTE: Estas variables DEBEN estar en .env
+      # NO usar valores por defecto en producción
+      POSTGRES_USER: ${DB_USER:?Error: DB_USER no configurado. Ejecuta ./scripts/setup-env.sh}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Error: DB_PASSWORD no configurado. Ejecuta ./scripts/setup-env.sh}
+      POSTGRES_DB: ${DB_NAME:-litper_prod}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-litper} -d ${DB_NAME:-litper_ml}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -37,7 +42,12 @@ services:
     image: redis:7-alpine
     container_name: litper-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      ${REDIS_PASSWORD:+--requirepass ${REDIS_PASSWORD}}
     volumes:
       - redis_data:/data
     ports:
@@ -60,13 +70,13 @@ services:
     container_name: litper-backend
     restart: unless-stopped
     environment:
-      # Database
-      DATABASE_URL: postgresql://${DB_USER:-litper}:${DB_PASSWORD:-litper_secure_pass_2024}@db:5432/${DB_NAME:-litper_ml}
+      # Database - Construido desde variables individuales
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME:-litper_prod}
       DB_HOST: db
       DB_PORT: 5432
-      DB_USER: ${DB_USER:-litper}
-      DB_PASSWORD: ${DB_PASSWORD:-litper_secure_pass_2024}
-      DB_NAME: ${DB_NAME:-litper_ml}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME:-litper_prod}
 
       # Redis
       REDIS_URL: redis://redis:6379/0
