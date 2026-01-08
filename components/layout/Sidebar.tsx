@@ -1,5 +1,5 @@
 // components/layout/Sidebar.tsx
-// Sidebar profesional estilo ChatGPT - Versión funcional
+// Sidebar profesional estilo ChatGPT - Con sub-menús desplegables
 
 import React, { useState } from 'react';
 import {
@@ -13,6 +13,7 @@ import {
   HelpCircle,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   BarChart3,
   Facebook,
   Chrome,
@@ -28,8 +29,37 @@ import {
   Phone,
   X,
   Crown,
+  Activity,
+  Clock,
+  Truck,
+  MapPin,
+  History,
+  Route,
+  LineChart,
+  FileText,
+  Lightbulb,
+  Target,
+  Users,
+  DollarSign,
+  Cog,
+  Key,
+  Shield,
+  Layers,
+  LayoutDashboard,
+  Bot,
+  MessageSquare,
 } from 'lucide-react';
-import { useLayoutStore, MainSection, MarketingTab } from '../../stores/layoutStore';
+import {
+  useLayoutStore,
+  MainSection,
+  MarketingTab,
+  InicioTab,
+  OperacionesTab,
+  InteligenciaTab,
+  CerebroIATab,
+  NegocioTab,
+  ConfigTab,
+} from '../../stores/layoutStore';
 
 // ============================================
 // TIPOS
@@ -43,95 +73,204 @@ interface SidebarProps {
   userEmail?: string;
 }
 
-interface SidebarItemProps {
+interface SubMenuItem {
+  id: string;
   icon: React.ElementType;
   label: string;
-  isActive?: boolean;
-  isCollapsed?: boolean;
+}
+
+interface MenuItem {
+  id: MainSection;
+  icon: React.ElementType;
+  label: string;
   badge?: number;
-  onClick?: () => void;
   isNew?: boolean;
-  disabled?: boolean;
-}
-
-interface SidebarSectionProps {
-  title?: string;
-  isCollapsed?: boolean;
-  children: React.ReactNode;
+  subItems?: SubMenuItem[];
 }
 
 // ============================================
-// COMPONENTE SIDEBAR ITEM
+// DEFINICIÓN DE SUB-MENÚS
 // ============================================
 
-function SidebarItem({
+const SUB_MENUS: Record<MainSection, SubMenuItem[]> = {
+  'inicio': [
+    { id: 'resumen', icon: LayoutDashboard, label: 'Resumen' },
+    { id: 'actividad', icon: Activity, label: 'Actividad' },
+    { id: 'estadisticas', icon: BarChart3, label: 'Estadísticas' },
+  ],
+  'operaciones': [
+    { id: 'envios', icon: Truck, label: 'Envíos' },
+    { id: 'tracking', icon: MapPin, label: 'Tracking' },
+    { id: 'historial', icon: History, label: 'Historial' },
+    { id: 'rutas', icon: Route, label: 'Rutas' },
+  ],
+  'inteligencia': [
+    { id: 'analisis', icon: LineChart, label: 'Análisis' },
+    { id: 'reportes', icon: FileText, label: 'Reportes' },
+    { id: 'predicciones', icon: Target, label: 'Predicciones' },
+    { id: 'insights', icon: Lightbulb, label: 'Insights' },
+  ],
+  'cerebro-ia': [
+    { id: 'asistente', icon: Bot, label: 'Asistente IA' },
+    { id: 'configuracion-ia', icon: Cog, label: 'Config. IA' },
+    { id: 'historial-chat', icon: MessageSquare, label: 'Historial' },
+  ],
+  'negocio': [
+    { id: 'metricas', icon: BarChart3, label: 'Métricas' },
+    { id: 'clientes', icon: Users, label: 'Clientes' },
+    { id: 'ventas', icon: DollarSign, label: 'Ventas' },
+    { id: 'rendimiento', icon: TrendingUp, label: 'Rendimiento' },
+  ],
+  'config': [
+    { id: 'general', icon: Cog, label: 'General' },
+    { id: 'perfil', icon: User, label: 'Perfil' },
+    { id: 'api-keys', icon: Key, label: 'API Keys' },
+    { id: 'integraciones', icon: Layers, label: 'Integraciones' },
+    { id: 'admin', icon: Shield, label: 'Modo Admin' },
+  ],
+  'marketing': [
+    { id: 'dashboard', icon: BarChart3, label: 'Dashboard' },
+    { id: 'meta', icon: Facebook, label: 'Meta Ads' },
+    { id: 'google', icon: Chrome, label: 'Google Ads' },
+    { id: 'tiktok', icon: Music2, label: 'TikTok Ads' },
+    { id: 'utm', icon: Link2, label: 'UTMs' },
+    { id: 'integraciones', icon: Webhook, label: 'Integraciones' },
+    { id: 'reglas', icon: Zap, label: 'Reglas' },
+  ],
+};
+
+// ============================================
+// COMPONENTE SIDEBAR EXPANDIBLE ITEM
+// ============================================
+
+interface ExpandableSidebarItemProps {
+  icon: React.ElementType;
+  label: string;
+  isActive: boolean;
+  isExpanded: boolean;
+  isCollapsed: boolean;
+  hasSubItems: boolean;
+  isNew?: boolean;
+  onClick: () => void;
+  onToggleExpand: () => void;
+  subItems?: SubMenuItem[];
+  activeSubItem?: string;
+  onSubItemClick?: (id: string) => void;
+}
+
+function ExpandableSidebarItem({
   icon: Icon,
   label,
-  isActive = false,
-  isCollapsed = false,
-  badge,
+  isActive,
+  isExpanded,
+  isCollapsed,
+  hasSubItems,
+  isNew,
   onClick,
-  isNew = false,
-  disabled = false,
-}: SidebarItemProps) {
+  onToggleExpand,
+  subItems = [],
+  activeSubItem,
+  onSubItemClick,
+}: ExpandableSidebarItemProps) {
+  const handleClick = () => {
+    onClick();
+    if (hasSubItems && !isExpanded) {
+      onToggleExpand();
+    }
+  };
+
+  const handleChevronClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggleExpand();
+  };
+
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`
-        w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
-        transition-all duration-200 group relative
-        ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-        ${isActive
-          ? 'bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-lg shadow-orange-500/25'
-          : 'text-gray-400 hover:text-white hover:bg-gray-800/80'
-        }
-      `}
-      title={isCollapsed ? label : undefined}
-    >
-      <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'}`} />
+    <div className="space-y-1">
+      <button
+        onClick={handleClick}
+        className={`
+          w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
+          transition-all duration-200 group relative
+          ${isActive
+            ? 'bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-lg shadow-orange-500/25'
+            : 'text-gray-400 hover:text-white hover:bg-gray-800/80'
+          }
+        `}
+        title={isCollapsed ? label : undefined}
+      >
+        <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'}`} />
 
-      {!isCollapsed && (
-        <>
-          <span className="flex-1 text-left text-sm font-medium truncate">{label}</span>
+        {!isCollapsed && (
+          <>
+            <span className="flex-1 text-left text-sm font-medium truncate">{label}</span>
 
-          {badge !== undefined && badge > 0 && (
-            <span className={`
-              px-2 py-0.5 text-xs font-bold rounded-full
-              ${isActive ? 'bg-white/20 text-white' : 'bg-red-500 text-white'}
-            `}>
-              {badge > 99 ? '99+' : badge}
-            </span>
-          )}
+            {isNew && (
+              <span className="px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded">
+                NEW
+              </span>
+            )}
 
-          {isNew && (
-            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded">
-              NEW
-            </span>
-          )}
-        </>
-      )}
+            {hasSubItems && (
+              <button
+                onClick={handleChevronClick}
+                className={`p-0.5 rounded transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+              >
+                <ChevronDown className="w-4 h-4" />
+              </button>
+            )}
+          </>
+        )}
 
-      {/* Tooltip when collapsed */}
-      {isCollapsed && (
-        <div className="
-          absolute left-full ml-2 px-3 py-1.5
-          bg-gray-800 text-white text-sm rounded-lg
-          opacity-0 group-hover:opacity-100 pointer-events-none
-          transition-opacity whitespace-nowrap z-50
-          shadow-xl border border-gray-700
-        ">
-          {label}
-          {isNew && <span className="ml-2 text-green-400 text-xs">NEW</span>}
+        {/* Tooltip when collapsed */}
+        {isCollapsed && (
+          <div className="
+            absolute left-full ml-2 px-3 py-1.5
+            bg-gray-800 text-white text-sm rounded-lg
+            opacity-0 group-hover:opacity-100 pointer-events-none
+            transition-opacity whitespace-nowrap z-50
+            shadow-xl border border-gray-700
+          ">
+            {label}
+            {isNew && <span className="ml-2 text-green-400 text-xs">NEW</span>}
+          </div>
+        )}
+      </button>
+
+      {/* Sub-menú desplegable */}
+      {!isCollapsed && isExpanded && hasSubItems && subItems.length > 0 && (
+        <div className="ml-4 space-y-0.5 border-l-2 border-amber-500/30 pl-2 animate-slide-down">
+          {subItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => onSubItemClick?.(item.id)}
+              className={`
+                w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm
+                transition-all duration-150
+                ${activeSubItem === item.id
+                  ? 'bg-amber-500/20 text-amber-400 font-medium'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                }
+              `}
+            >
+              <item.icon className="w-4 h-4" />
+              {item.label}
+            </button>
+          ))}
         </div>
       )}
-    </button>
+    </div>
   );
 }
 
 // ============================================
 // COMPONENTE SIDEBAR SECTION
 // ============================================
+
+interface SidebarSectionProps {
+  title?: string;
+  isCollapsed?: boolean;
+  children: React.ReactNode;
+}
 
 function SidebarSection({ title, isCollapsed, children }: SidebarSectionProps) {
   return (
@@ -156,7 +295,7 @@ function HelpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className="bg-gray-900 rounded-2xl max-w-md w-full border border-gray-700 shadow-2xl">
+      <div className="bg-gray-900 rounded-2xl max-w-md w-full border border-gray-700 shadow-2xl animate-fade-in-scale">
         <div className="p-6 border-b border-gray-700">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -171,16 +310,16 @@ function HelpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
 
         <div className="p-6 space-y-4">
           <div className="bg-gray-800/50 rounded-xl p-4">
-            <h3 className="font-medium text-white mb-2">📚 Documentación</h3>
+            <h3 className="font-medium text-white mb-2">Documentacion</h3>
             <p className="text-sm text-gray-400 mb-3">Aprende a usar todas las funciones de LITPER PRO</p>
             <button className="text-amber-400 text-sm hover:text-amber-300 flex items-center gap-1">
-              Ver documentación <ExternalLink className="w-3 h-3" />
+              Ver documentacion <ExternalLink className="w-3 h-3" />
             </button>
           </div>
 
           <div className="bg-gray-800/50 rounded-xl p-4">
-            <h3 className="font-medium text-white mb-2">💬 Soporte</h3>
-            <p className="text-sm text-gray-400 mb-3">¿Necesitas ayuda? Contáctanos</p>
+            <h3 className="font-medium text-white mb-2">Soporte</h3>
+            <p className="text-sm text-gray-400 mb-3">Necesitas ayuda? Contactanos</p>
             <div className="space-y-2">
               <a href="mailto:litpercolombia@gmail.com" className="text-amber-400 text-sm hover:text-amber-300 flex items-center gap-2">
                 <Mail className="w-4 h-4" /> litpercolombia@gmail.com
@@ -218,7 +357,7 @@ function LitperLogo({ isCollapsed }: { isCollapsed: boolean }) {
       {/* Logo con corona */}
       <div className="relative">
         <div className="w-10 h-10 bg-gradient-to-br from-amber-500 via-yellow-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/30 relative overflow-hidden">
-          {/* Corona pequeña arriba */}
+          {/* Corona pequena arriba */}
           <div className="absolute -top-1 left-1/2 -translate-x-1/2">
             <Crown className="w-4 h-4 text-yellow-300 drop-shadow-lg" />
           </div>
@@ -249,63 +388,71 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
     sidebarHovered,
     activeSection,
     activeMarketingTab,
+    activeInicioTab,
+    activeOperacionesTab,
+    activeInteligenciaTab,
+    activeCerebroIATab,
+    activeNegocioTab,
+    activeConfigTab,
+    expandedSections,
     toggleSidebar,
     setHovered,
     setActiveSection,
     setMarketingTab,
+    setInicioTab,
+    setOperacionesTab,
+    setInteligenciaTab,
+    setCerebroIATab,
+    setNegocioTab,
+    setConfigTab,
+    toggleSectionExpanded,
   } = useLayoutStore();
 
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const isExpanded = !sidebarCollapsed || sidebarHovered;
-  const [marketingExpanded, setMarketingExpanded] = React.useState(activeSection === 'marketing');
 
-  // Menú principal
-  const mainMenuItems: { id: MainSection; icon: React.ElementType; label: string; badge?: number; isNew?: boolean }[] = [
-    { id: 'inicio', icon: Home, label: 'Inicio' },
-    { id: 'operaciones', icon: Package, label: 'Operaciones' },
-    { id: 'inteligencia', icon: Sparkles, label: 'Inteligencia' },
-    { id: 'cerebro-ia', icon: Brain, label: 'Cerebro IA', isNew: true },
-    { id: 'negocio', icon: Briefcase, label: 'Negocio' },
-    { id: 'config', icon: Settings, label: 'Configuración' },
+  // Menu principal
+  const mainMenuItems: MenuItem[] = [
+    { id: 'inicio', icon: Home, label: 'Inicio', subItems: SUB_MENUS['inicio'] },
+    { id: 'operaciones', icon: Package, label: 'Operaciones', subItems: SUB_MENUS['operaciones'] },
+    { id: 'inteligencia', icon: Sparkles, label: 'Inteligencia', subItems: SUB_MENUS['inteligencia'] },
+    { id: 'cerebro-ia', icon: Brain, label: 'Cerebro IA', isNew: true, subItems: SUB_MENUS['cerebro-ia'] },
+    { id: 'negocio', icon: Briefcase, label: 'Negocio', subItems: SUB_MENUS['negocio'] },
+    { id: 'config', icon: Settings, label: 'Configuracion', subItems: SUB_MENUS['config'] },
   ];
 
-  // Submenú de Marketing
-  const marketingSubItems: { id: MarketingTab; icon: React.ElementType; label: string }[] = [
-    { id: 'dashboard', icon: BarChart3, label: 'Dashboard' },
-    { id: 'meta', icon: Facebook, label: 'Meta Ads' },
-    { id: 'google', icon: Chrome, label: 'Google Ads' },
-    { id: 'tiktok', icon: Music2, label: 'TikTok Ads' },
-    { id: 'utm', icon: Link2, label: 'UTMs' },
-    { id: 'integraciones', icon: Webhook, label: 'Integraciones' },
-    { id: 'reglas', icon: Zap, label: 'Reglas' },
-  ];
+  // Obtener el sub-item activo segun la seccion
+  const getActiveSubItem = (section: MainSection): string | undefined => {
+    switch (section) {
+      case 'inicio': return activeInicioTab;
+      case 'operaciones': return activeOperacionesTab;
+      case 'inteligencia': return activeInteligenciaTab;
+      case 'cerebro-ia': return activeCerebroIATab;
+      case 'negocio': return activeNegocioTab;
+      case 'config': return activeConfigTab;
+      case 'marketing': return activeMarketingTab;
+      default: return undefined;
+    }
+  };
 
-  const handleMarketingClick = () => {
-    if (activeSection !== 'marketing') {
-      setActiveSection('marketing');
-      setMarketingExpanded(true);
-    } else {
-      setMarketingExpanded(!marketingExpanded);
+  // Handler para sub-items
+  const handleSubItemClick = (section: MainSection, subItemId: string) => {
+    switch (section) {
+      case 'inicio': setInicioTab(subItemId as InicioTab); break;
+      case 'operaciones': setOperacionesTab(subItemId as OperacionesTab); break;
+      case 'inteligencia': setInteligenciaTab(subItemId as InteligenciaTab); break;
+      case 'cerebro-ia': setCerebroIATab(subItemId as CerebroIATab); break;
+      case 'negocio': setNegocioTab(subItemId as NegocioTab); break;
+      case 'config': setConfigTab(subItemId as ConfigTab); break;
+      case 'marketing': setMarketingTab(subItemId as MarketingTab); break;
     }
   };
 
   const handleLogout = () => {
     setShowLogoutConfirm(false);
     onLogout();
-  };
-
-  const handleHelpClick = () => {
-    setShowHelpModal(true);
-  };
-
-  const handleChatClick = () => {
-    onOpenChat();
-  };
-
-  const handleToggleSidebar = () => {
-    toggleSidebar();
   };
 
   return (
@@ -328,7 +475,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
             <>
               <LitperLogo isCollapsed={false} />
               <button
-                onClick={handleToggleSidebar}
+                onClick={toggleSidebar}
                 className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all"
                 title="Colapsar sidebar"
               >
@@ -337,7 +484,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
             </>
           ) : (
             <button
-              onClick={handleToggleSidebar}
+              onClick={toggleSidebar}
               className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all"
               title="Expandir sidebar"
             >
@@ -347,73 +494,64 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-6">
+        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
           {/* Main Menu */}
-          <SidebarSection isCollapsed={!isExpanded}>
-            {mainMenuItems.map((item) => (
-              <SidebarItem
-                key={item.id}
-                icon={item.icon}
-                label={item.label}
-                isActive={activeSection === item.id}
-                isCollapsed={!isExpanded}
-                badge={item.badge}
-                isNew={item.isNew}
-                onClick={() => setActiveSection(item.id)}
-              />
-            ))}
-          </SidebarSection>
+          {mainMenuItems.map((item) => (
+            <ExpandableSidebarItem
+              key={item.id}
+              icon={item.icon}
+              label={item.label}
+              isActive={activeSection === item.id}
+              isExpanded={expandedSections.includes(item.id)}
+              isCollapsed={!isExpanded}
+              hasSubItems={!!item.subItems && item.subItems.length > 0}
+              isNew={item.isNew}
+              onClick={() => setActiveSection(item.id)}
+              onToggleExpand={() => toggleSectionExpanded(item.id)}
+              subItems={item.subItems}
+              activeSubItem={getActiveSubItem(item.id)}
+              onSubItemClick={(subId) => handleSubItemClick(item.id, subId)}
+            />
+          ))}
 
           {/* Marketing Section */}
           <SidebarSection title="Marketing" isCollapsed={!isExpanded}>
-            <SidebarItem
+            <ExpandableSidebarItem
               icon={TrendingUp}
               label="Marketing"
               isActive={activeSection === 'marketing'}
+              isExpanded={expandedSections.includes('marketing')}
               isCollapsed={!isExpanded}
+              hasSubItems={true}
               isNew
-              onClick={handleMarketingClick}
+              onClick={() => setActiveSection('marketing')}
+              onToggleExpand={() => toggleSectionExpanded('marketing')}
+              subItems={SUB_MENUS['marketing']}
+              activeSubItem={activeMarketingTab}
+              onSubItemClick={(subId) => setMarketingTab(subId as MarketingTab)}
             />
-
-            {/* Marketing Submenu */}
-            {isExpanded && activeSection === 'marketing' && marketingExpanded && (
-              <div className="ml-4 mt-1 space-y-1 border-l-2 border-amber-500/30 pl-2">
-                {marketingSubItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setMarketingTab(item.id)}
-                    className={`
-                      w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm
-                      transition-colors
-                      ${activeMarketingTab === item.id
-                        ? 'bg-amber-500/20 text-amber-400'
-                        : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
-                      }
-                    `}
-                  >
-                    <item.icon className="w-4 h-4" />
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            )}
           </SidebarSection>
         </nav>
 
         {/* Footer */}
         <div className="border-t border-gray-800 p-2 space-y-1">
-          <SidebarItem
-            icon={MessageCircle}
-            label="Chat IA"
-            isCollapsed={!isExpanded}
-            onClick={handleChatClick}
-          />
-          <SidebarItem
-            icon={HelpCircle}
-            label="Ayuda"
-            isCollapsed={!isExpanded}
-            onClick={handleHelpClick}
-          />
+          <button
+            onClick={onOpenChat}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800/80 transition-all duration-200"
+            title={!isExpanded ? 'Chat IA' : undefined}
+          >
+            <MessageCircle className="w-5 h-5" />
+            {isExpanded && <span className="text-sm font-medium">Chat IA</span>}
+          </button>
+
+          <button
+            onClick={() => setShowHelpModal(true)}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800/80 transition-all duration-200"
+            title={!isExpanded ? 'Ayuda' : undefined}
+          >
+            <HelpCircle className="w-5 h-5" />
+            {isExpanded && <span className="text-sm font-medium">Ayuda</span>}
+          </button>
 
           {/* User */}
           {isExpanded && (
@@ -428,7 +566,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
               <button
                 onClick={() => setShowLogoutConfirm(true)}
                 className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                title="Cerrar sesión"
+                title="Cerrar sesion"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -437,12 +575,13 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
 
           {/* Collapsed user logout */}
           {!isExpanded && (
-            <SidebarItem
-              icon={LogOut}
-              label="Cerrar sesión"
-              isCollapsed={!isExpanded}
+            <button
               onClick={() => setShowLogoutConfirm(true)}
-            />
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
+              title="Cerrar sesion"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           )}
         </div>
       </aside>
@@ -453,13 +592,13 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
       {/* Logout Confirmation */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-2xl max-w-sm w-full border border-gray-700 shadow-2xl p-6">
+          <div className="bg-gray-900 rounded-2xl max-w-sm w-full border border-gray-700 shadow-2xl p-6 animate-fade-in-scale">
             <div className="text-center">
               <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <LogOut className="w-8 h-8 text-red-400" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">¿Cerrar sesión?</h3>
-              <p className="text-gray-400 text-sm mb-6">Se perderán los datos no guardados</p>
+              <h3 className="text-lg font-bold text-white mb-2">Cerrar sesion?</h3>
+              <p className="text-gray-400 text-sm mb-6">Se perderan los datos no guardados</p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowLogoutConfirm(false)}
@@ -471,7 +610,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
                   onClick={handleLogout}
                   className="flex-1 px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors"
                 >
-                  Cerrar sesión
+                  Cerrar sesion
                 </button>
               </div>
             </div>

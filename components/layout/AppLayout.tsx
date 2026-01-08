@@ -24,7 +24,11 @@ import {
   Target,
   BarChart3,
   ExternalLink,
+  User,
+  Crown,
+  Sparkles,
 } from 'lucide-react';
+import { useUserProfileStore, AVATAR_COLORS } from '../../services/userProfileService';
 import { Sidebar } from './Sidebar';
 import { useLayoutStore } from '../../stores/layoutStore';
 import { Country } from '../../types/country';
@@ -101,6 +105,7 @@ const notificationTypeIcons: Record<string, React.ElementType> = {
 
 function AnimatedStats({ shipmentsCount }: { shipmentsCount: number }) {
   const [currentStatIndex, setCurrentStatIndex] = useState(0);
+  const { profile, getGreeting, getInitials } = useUserProfileStore();
 
   const stats = [
     { label: 'Guías activas', value: shipmentsCount, color: 'text-emerald-400', icon: Package },
@@ -118,12 +123,27 @@ function AnimatedStats({ shipmentsCount }: { shipmentsCount: number }) {
 
   const currentStat = stats[currentStatIndex];
   const Icon = currentStat.icon;
+  const selectedColor = AVATAR_COLORS.find(c => c.id === profile?.avatarColor) || AVATAR_COLORS[0];
 
   return (
-    <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-gray-800/50 rounded-xl border border-gray-700/50 animate-fade-in">
-      <Icon className={`w-4 h-4 ${currentStat.color}`} />
-      <span className="text-xs text-gray-400">{currentStat.label}:</span>
-      <span className={`text-sm font-bold ${currentStat.color}`}>{currentStat.value}</span>
+    <div className="hidden lg:flex items-center gap-4">
+      {/* User Greeting */}
+      {profile?.nombre && (
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-xl border border-amber-500/20 animate-fade-in">
+          <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${selectedColor.bg} flex items-center justify-center`}>
+            <span className="text-[10px] font-bold text-white">{getInitials()}</span>
+          </div>
+          <span className="text-sm text-amber-400 font-medium">{getGreeting()}</span>
+          <Crown className="w-4 h-4 text-amber-500" />
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-800/50 rounded-xl border border-gray-700/50 animate-fade-in">
+        <Icon className={`w-4 h-4 ${currentStat.color}`} />
+        <span className="text-xs text-gray-400">{currentStat.label}:</span>
+        <span className={`text-sm font-bold ${currentStat.color}`}>{currentStat.value}</span>
+      </div>
     </div>
   );
 }

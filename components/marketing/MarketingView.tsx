@@ -1,7 +1,7 @@
 // components/marketing/MarketingView.tsx
-// Vista principal de Marketing con todas las pestañas
+// Vista principal de Marketing con todas las pestañas - Con protección de contraseña
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   TrendingUp,
   TrendingDown,
@@ -22,6 +22,10 @@ import {
   CreditCard,
   ArrowUpRight,
   ArrowDownRight,
+  Lock,
+  Shield,
+  Crown,
+  Sparkles,
 } from 'lucide-react';
 import { useLayoutStore } from '../../stores/layoutStore';
 import { useMarketingStore } from '../../stores/marketingStore';
@@ -250,11 +254,127 @@ function PlaceholderView({ title }: { title: string }) {
 }
 
 // ============================================
+// PANTALLA DE LOGIN
+// ============================================
+
+function MarketingLoginScreen({ onLogin }: { onLogin: () => void }) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    setTimeout(() => {
+      if (password === 'Sacrije2020?08') {
+        localStorage.setItem('marketing_auth', 'true');
+        onLogin();
+      } else {
+        setError('Contraseña incorrecta');
+      }
+      setIsLoading(false);
+    }, 500);
+  };
+
+  return (
+    <div className="flex items-center justify-center min-h-[600px] p-4">
+      <div className="max-w-md w-full">
+        <div className="bg-gray-800/80 backdrop-blur-xl rounded-3xl border border-gray-700/50 shadow-2xl overflow-hidden">
+          {/* Header */}
+          <div className="relative p-8 text-center">
+            <div className="absolute inset-0 bg-gradient-to-b from-purple-500/20 via-pink-500/10 to-transparent" />
+            <div className="relative">
+              <div className="w-20 h-20 mx-auto mb-4 relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 rounded-2xl animate-pulse" />
+                <div className="absolute inset-1 bg-gray-800 rounded-xl flex items-center justify-center">
+                  <Shield className="w-8 h-8 text-purple-400" />
+                </div>
+                <Crown className="absolute -top-2 -right-2 w-6 h-6 text-amber-400" />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">Marketing PRO</h2>
+              <p className="text-gray-400 text-sm">Área protegida - Ingresa tu contraseña</p>
+            </div>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="p-8 pt-0 space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Contraseña de acceso
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••••"
+                  className="w-full pl-12 pr-4 py-4 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                  autoFocus
+                />
+              </div>
+              {error && (
+                <p className="mt-2 text-sm text-red-400 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  {error}
+                </p>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading || !password}
+              className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition-all ${
+                isLoading || !password
+                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 transform hover:scale-[1.02]'
+              }`}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Verificando...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5" />
+                  Acceder a Marketing
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
 // MARKETING VIEW PRINCIPAL
 // ============================================
 
 export function MarketingView() {
   const { activeMarketingTab } = useLayoutStore();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Verificar autenticación al cargar
+  useEffect(() => {
+    const auth = localStorage.getItem('marketing_auth');
+    if (auth === 'true') {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+  };
+
+  // Mostrar login si no está autenticado
+  if (!isAuthenticated) {
+    return <MarketingLoginScreen onLogin={handleLogin} />;
+  }
 
   const renderContent = () => {
     switch (activeMarketingTab) {

@@ -48,12 +48,23 @@ export interface AIConfigState {
 // Las API keys se cargan desde localStorage (guardadas por el usuario en el panel de configuración)
 // o desde variables de entorno como fallback
 
+// ============================================
+// API KEYS - Se cargan desde localStorage o env
+// Las keys se configuran en el panel de configuración
+// ============================================
+const LITPER_DEFAULT_KEYS = {
+  claude: import.meta.env.VITE_ANTHROPIC_API_KEY || '',
+  gemini: import.meta.env.VITE_GEMINI_API_KEY || '',
+  openai: import.meta.env.VITE_OPENAI_API_KEY || '',
+  chateaPro: import.meta.env.VITE_CHATEA_PRO_KEY || '',
+};
+
 const DEFAULT_PROVIDERS: Record<AIProvider, AIProviderConfig> = {
   claude: {
     provider: 'claude',
     name: 'Claude (Anthropic)',
-    apiKey: '', // Se carga desde localStorage o env
-    isConfigured: false,
+    apiKey: LITPER_DEFAULT_KEYS.claude,
+    isConfigured: !!LITPER_DEFAULT_KEYS.claude,
     isEnabled: true,
     lastTested: null,
     lastTestResult: null,
@@ -65,8 +76,8 @@ const DEFAULT_PROVIDERS: Record<AIProvider, AIProviderConfig> = {
   gemini: {
     provider: 'gemini',
     name: 'Gemini (Google)',
-    apiKey: '', // Se carga desde localStorage o env
-    isConfigured: false,
+    apiKey: LITPER_DEFAULT_KEYS.gemini,
+    isConfigured: !!LITPER_DEFAULT_KEYS.gemini,
     isEnabled: true,
     lastTested: null,
     lastTestResult: null,
@@ -78,8 +89,8 @@ const DEFAULT_PROVIDERS: Record<AIProvider, AIProviderConfig> = {
   openai: {
     provider: 'openai',
     name: 'GPT (OpenAI)',
-    apiKey: '', // Se carga desde localStorage o env
-    isConfigured: false,
+    apiKey: LITPER_DEFAULT_KEYS.openai,
+    isConfigured: !!LITPER_DEFAULT_KEYS.openai,
     isEnabled: true,
     lastTested: null,
     lastTestResult: null,
@@ -89,6 +100,9 @@ const DEFAULT_PROVIDERS: Record<AIProvider, AIProviderConfig> = {
     temperature: 0.7,
   },
 };
+
+// Exportar API key de Chatea Pro
+export const CHATEA_PRO_API_KEY = LITPER_DEFAULT_KEYS.chateaPro;
 
 // ============================================
 // FUNCIONES DE TEST DE CONEXIÓN

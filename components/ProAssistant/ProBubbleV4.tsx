@@ -1,6 +1,6 @@
 // components/ProAssistant/ProBubbleV4.tsx
 // Burbuja PRO V4 - Sistema unificado con Chat IA con Modos
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Sparkles,
   X,
