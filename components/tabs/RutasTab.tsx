@@ -58,9 +58,13 @@ function EstadisticasRutas() {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
       {cards.map((card, idx) => (
-        <div key={idx} className={`${card.bg} rounded-xl p-4 border border-gray-700/50`}>
+        <div
+          key={idx}
+          className={`${card.bg} rounded-xl p-4 border border-gray-700/50 card-interactive stagger-item`}
+          style={{ animationDelay: `${idx * 60}ms` }}
+        >
           <div className="flex items-center gap-2 mb-2">
-            <card.icon className={`w-4 h-4 bg-gradient-to-r ${card.color} bg-clip-text text-transparent`} style={{ color: card.color.includes('blue') ? '#3b82f6' : card.color.includes('amber') ? '#f59e0b' : card.color.includes('green') ? '#22c55e' : card.color.includes('purple') ? '#a855f7' : card.color.includes('red') ? '#ef4444' : '#14b8a6' }} />
+            <card.icon className={`w-4 h-4 transition-transform duration-200 group-hover:scale-110`} style={{ color: card.color.includes('blue') ? '#3b82f6' : card.color.includes('amber') ? '#f59e0b' : card.color.includes('green') ? '#22c55e' : card.color.includes('purple') ? '#a855f7' : card.color.includes('red') ? '#ef4444' : '#14b8a6' }} />
             <span className="text-xs text-gray-400">{card.label}</span>
           </div>
           <p className={`text-2xl font-bold bg-gradient-to-r ${card.color} bg-clip-text text-transparent`}>
@@ -105,45 +109,47 @@ function ModalRuta({ ruta, onClose, onSave }: ModalRutaProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-gray-900 rounded-2xl max-w-lg w-full border border-gray-700 shadow-2xl animate-fade-in-scale">
-        <div className="p-6 border-b border-gray-700">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-gray-900/95 rounded-2xl max-w-lg w-full border border-gray-700/50 shadow-2xl modal-enter backdrop-blur-xl">
+        <div className="p-6 border-b border-gray-700/50 bg-gradient-to-r from-amber-600/10 to-orange-600/10">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Route className="w-6 h-6 text-amber-400" />
+            <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/20">
+              <Route className="w-5 h-5 text-white" />
+            </div>
             {ruta ? 'Editar Ruta' : 'Nueva Ruta'}
           </h2>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Nombre de la Ruta</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1.5">Nombre de la Ruta</label>
             <input
               type="text"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               placeholder="Ej: Ruta Norte AM"
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-amber-500"
+              className="w-full px-4 py-2.5 bg-gray-800/80 border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all duration-200 input-focus-glow"
               required
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Fecha</label>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">Fecha</label>
               <input
                 type="date"
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
-                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white focus:outline-none focus:border-amber-500"
+                className="w-full px-4 py-2.5 bg-gray-800/80 border border-gray-700/50 rounded-xl text-white focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all duration-200 input-focus-glow"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Zona</label>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">Zona</label>
               <select
                 value={zona}
                 onChange={(e) => setZona(e.target.value)}
-                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white focus:outline-none focus:border-amber-500"
+                className="w-full px-4 py-2.5 bg-gray-800/80 border border-gray-700/50 rounded-xl text-white focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all duration-200"
               >
                 {zonas.map((z) => (
                   <option key={z.id} value={z.nombre}>{z.nombre}</option>
@@ -154,7 +160,7 @@ function ModalRuta({ ruta, onClose, onSave }: ModalRutaProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Conductor</label>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">Conductor</label>
               <select
                 value={conductor}
                 onChange={(e) => {
@@ -162,7 +168,7 @@ function ModalRuta({ ruta, onClose, onSave }: ModalRutaProps) {
                   const cond = conductores.find(c => c.nombre === e.target.value);
                   if (cond) setVehiculo(cond.vehiculo);
                 }}
-                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white focus:outline-none focus:border-amber-500"
+                className="w-full px-4 py-2.5 bg-gray-800/80 border border-gray-700/50 rounded-xl text-white focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all duration-200"
               >
                 <option value="">Sin asignar</option>
                 {conductores.filter(c => c.estado === 'disponible').map((c) => (
@@ -171,13 +177,13 @@ function ModalRuta({ ruta, onClose, onSave }: ModalRutaProps) {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Vehiculo</label>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">Vehiculo</label>
               <input
                 type="text"
                 value={vehiculo}
                 onChange={(e) => setVehiculo(e.target.value)}
                 placeholder="Moto / Furgon"
-                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-amber-500"
+                className="w-full px-4 py-2.5 bg-gray-800/80 border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all duration-200 input-focus-glow"
               />
             </div>
           </div>
@@ -186,13 +192,13 @@ function ModalRuta({ ruta, onClose, onSave }: ModalRutaProps) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-colors"
+              className="flex-1 px-4 py-2.5 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-all duration-200 btn-secondary"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-600 hover:to-orange-600 transition-colors font-medium"
+              className="flex-1 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all duration-200 font-medium btn-primary shadow-lg shadow-amber-500/25"
             >
               {ruta ? 'Guardar Cambios' : 'Crear Ruta'}
             </button>
@@ -235,9 +241,9 @@ function TarjetaRuta({ ruta, onSelect, onEdit, onDelete, onIniciar, isSelected }
     <div
       onClick={onSelect}
       className={`
-        relative p-4 rounded-xl border cursor-pointer transition-all
+        relative p-4 rounded-xl border cursor-pointer card-interactive
         ${isSelected
-          ? 'bg-amber-500/10 border-amber-500/50 shadow-lg shadow-amber-500/10'
+          ? 'bg-amber-500/10 border-amber-500/50 shadow-lg shadow-amber-500/20 hover-glow'
           : 'bg-gray-800/50 border-gray-700/50 hover:bg-gray-800 hover:border-gray-600'
         }
       `}
@@ -266,24 +272,24 @@ function TarjetaRuta({ ruta, onSelect, onEdit, onDelete, onIniciar, isSelected }
             {showMenu && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                <div className="absolute right-0 top-full mt-1 w-40 bg-gray-800 border border-gray-700 rounded-xl shadow-xl z-20 py-1">
+                <div className="absolute right-0 top-full mt-1 w-40 bg-gray-800/95 border border-gray-700/50 rounded-xl shadow-2xl z-20 py-1 modal-enter backdrop-blur-xl">
                   <button
                     onClick={(e) => { e.stopPropagation(); onEdit(); setShowMenu(false); }}
-                    className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 flex items-center gap-2"
+                    className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/50 hover:text-white flex items-center gap-2 transition-all duration-150"
                   >
                     <Edit className="w-4 h-4" /> Editar
                   </button>
                   {ruta.estado === 'planificada' && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onIniciar(); setShowMenu(false); }}
-                      className="w-full px-3 py-2 text-left text-sm text-green-400 hover:bg-gray-700 flex items-center gap-2"
+                      className="w-full px-3 py-2 text-left text-sm text-green-400 hover:bg-green-500/10 flex items-center gap-2 transition-all duration-150"
                     >
                       <Play className="w-4 h-4" /> Iniciar
                     </button>
                   )}
                   <button
                     onClick={(e) => { e.stopPropagation(); onDelete(); setShowMenu(false); }}
-                    className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-gray-700 flex items-center gap-2"
+                    className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2 transition-all duration-150"
                   >
                     <Trash2 className="w-4 h-4" /> Eliminar
                   </button>
@@ -605,7 +611,7 @@ export default function RutasTab({ shipments }: RutasTabProps) {
         </div>
         <button
           onClick={() => { setRutaEditar(null); setShowModal(true); }}
-          className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-medium hover:from-amber-600 hover:to-orange-600 transition-colors flex items-center gap-2 shadow-lg shadow-amber-500/20"
+          className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-medium hover:from-amber-600 hover:to-orange-600 transition-all duration-200 flex items-center gap-2 shadow-lg shadow-amber-500/25 btn-primary btn-ripple"
         >
           <Plus className="w-5 h-5" />
           Nueva Ruta
@@ -627,15 +633,15 @@ export default function RutasTab({ shipments }: RutasTabProps) {
             className="w-full pl-10 pr-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-amber-500"
           />
         </div>
-        <div className="flex items-center gap-2 bg-gray-800 border border-gray-700 rounded-xl p-1">
+        <div className="flex items-center gap-1 bg-gray-800/80 border border-gray-700/50 rounded-xl p-1 backdrop-blur-sm">
           {(['todas', 'planificada', 'en_progreso', 'completada'] as const).map((estado) => (
             <button
               key={estado}
               onClick={() => setFiltroEstado(estado)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                 filtroEstado === estado
-                  ? 'bg-amber-500 text-white'
-                  : 'text-gray-400 hover:text-white'
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/20'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
               }`}
             >
               {estado === 'todas' ? 'Todas' : estado === 'planificada' ? 'Planificadas' : estado === 'en_progreso' ? 'En Progreso' : 'Completadas'}

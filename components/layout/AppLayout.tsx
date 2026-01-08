@@ -202,7 +202,7 @@ function NotificationsPanel({
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className="absolute right-0 top-full mt-2 w-96 bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-slide-down">
+      <div className="absolute right-0 top-full mt-2 w-96 bg-gray-900/95 border border-gray-700/50 rounded-2xl shadow-2xl z-50 overflow-hidden modal-enter backdrop-blur-xl">
         {/* Header */}
         <div className="p-4 border-b border-gray-700 bg-gradient-to-r from-gray-800 to-gray-900">
           <div className="flex items-center justify-between mb-2">
@@ -244,9 +244,10 @@ function NotificationsPanel({
               return (
                 <div
                   key={notif.id}
-                  className={`p-4 border-b border-gray-800 hover:bg-gray-800/50 transition-colors cursor-pointer ${
+                  className={`p-4 border-b border-gray-800/50 hover:bg-gray-800/50 transition-all duration-200 cursor-pointer stagger-item ${
                     !notif.read ? 'bg-gray-800/30' : ''
                   }`}
+                  style={{ animationDelay: `${notifications.indexOf(notif) * 50}ms` }}
                   onClick={() => onMarkRead(notif.id)}
                 >
                   <div className="flex gap-3">
@@ -367,7 +368,7 @@ function UserSettingsMenu({
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className="absolute right-0 top-full mt-2 w-80 bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-slide-down">
+      <div className="absolute right-0 top-full mt-2 w-80 bg-gray-900/95 border border-gray-700/50 rounded-2xl shadow-2xl z-50 overflow-hidden modal-enter backdrop-blur-xl">
         {/* Header con perfil */}
         <div className="p-4 bg-gradient-to-r from-amber-600/20 to-orange-600/20 border-b border-gray-700">
           <div className="flex items-center gap-3">
@@ -394,13 +395,14 @@ function UserSettingsMenu({
                 item.action();
                 if (item.label !== 'Apariencia') onClose();
               }}
-              className="w-full flex items-center gap-3 p-3 rounded-xl text-left hover:bg-gray-800/70 transition-colors group"
+              className="w-full flex items-center gap-3 p-3 rounded-xl text-left hover:bg-gray-800/70 transition-all duration-200 group stagger-item hover:translate-x-1"
+              style={{ animationDelay: `${index * 40}ms` }}
             >
-              <div className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
-                <item.icon className="w-5 h-5 text-gray-400 group-hover:text-amber-400 transition-colors" />
+              <div className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center group-hover:bg-amber-500/20 transition-all duration-200 group-hover:scale-110">
+                <item.icon className="w-5 h-5 text-gray-400 group-hover:text-amber-400 transition-colors duration-200" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white">{item.label}</p>
+                <p className="text-sm font-medium text-white group-hover:text-amber-50">{item.label}</p>
                 <p className="text-xs text-gray-500 truncate">{item.description}</p>
               </div>
             </button>
@@ -462,7 +464,7 @@ function TopBar({
   const hasCritical = notifications.some(n => n.priority === 'critical');
 
   return (
-    <header className="h-14 bg-gray-900/95 border-b border-gray-800 flex items-center justify-between px-4 sticky top-0 z-40 backdrop-blur-sm">
+    <header className="h-14 bg-gray-900/90 border-b border-gray-800/50 flex items-center justify-between px-4 sticky top-0 z-40 backdrop-blur-xl glass-subtle">
       {/* Search */}
       <div className="flex-1 max-w-md">
         <div className="relative">
@@ -470,7 +472,7 @@ function TopBar({
           <input
             type="text"
             placeholder="Buscar guías, clientes, campañas... (Ctrl+K)"
-            className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
+            className="w-full pl-10 pr-4 py-2 bg-gray-800/80 border border-gray-700/50 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 focus:bg-gray-800 transition-all duration-200 input-focus-glow"
           />
         </div>
       </div>
@@ -485,13 +487,13 @@ function TopBar({
         {/* Load Data Button */}
         <button
           onClick={onLoadData}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl font-medium text-sm transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm btn-primary btn-ripple ${
             showLoadData
               ? 'bg-amber-600 text-white'
-              : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-500/20'
+              : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-500/25'
           }`}
         >
-          <Upload className="w-4 h-4" />
+          <Upload className="w-4 h-4 transition-transform group-hover:scale-110" />
           <span className="hidden sm:inline">Cargar Guías</span>
         </button>
 

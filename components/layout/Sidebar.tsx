@@ -190,10 +190,11 @@ function ExpandableSidebarItem({
         onClick={handleClick}
         className={`
           w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
-          transition-all duration-200 group relative
+          transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] group relative
+          btn-ripple
           ${isActive
-            ? 'bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-lg shadow-orange-500/25'
-            : 'text-gray-400 hover:text-white hover:bg-gray-800/80'
+            ? 'bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-lg shadow-orange-500/30 hover-glow'
+            : 'text-gray-400 hover:text-white hover:bg-gray-800/80 hover:translate-x-1'
           }
         `}
         title={isCollapsed ? label : undefined}
@@ -238,21 +239,23 @@ function ExpandableSidebarItem({
 
       {/* Sub-menú desplegable */}
       {!isCollapsed && isExpanded && hasSubItems && subItems.length > 0 && (
-        <div className="ml-4 space-y-0.5 border-l-2 border-amber-500/30 pl-2 animate-slide-down">
-          {subItems.map((item) => (
+        <div className="ml-4 space-y-0.5 border-l-2 border-amber-500/30 pl-2 overflow-hidden">
+          {subItems.map((item, index) => (
             <button
               key={item.id}
               onClick={() => onSubItemClick?.(item.id)}
               className={`
                 w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm
-                transition-all duration-150
+                transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]
+                stagger-item
                 ${activeSubItem === item.id
-                  ? 'bg-amber-500/20 text-amber-400 font-medium'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                  ? 'bg-amber-500/20 text-amber-400 font-medium shadow-sm'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50 hover:translate-x-1'
                 }
               `}
+              style={{ animationDelay: `${index * 50}ms` }}
             >
-              <item.icon className="w-4 h-4" />
+              <item.icon className={`w-4 h-4 transition-transform duration-200 ${activeSubItem === item.id ? 'scale-110' : 'group-hover:scale-110'}`} />
               {item.label}
             </button>
           ))}
@@ -294,43 +297,43 @@ function HelpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className="bg-gray-900 rounded-2xl max-w-md w-full border border-gray-700 shadow-2xl animate-fade-in-scale">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-gray-900 rounded-2xl max-w-md w-full border border-gray-700/50 shadow-2xl modal-enter glass">
         <div className="p-6 border-b border-gray-700">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
               <HelpCircle className="w-6 h-6 text-amber-400" />
               Centro de Ayuda
             </h2>
-            <button onClick={onClose} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">
+            <button onClick={onClose} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200 hover:rotate-90">
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
         <div className="p-6 space-y-4">
-          <div className="bg-gray-800/50 rounded-xl p-4">
+          <div className="bg-gray-800/50 rounded-xl p-4 card-interactive hover:bg-gray-800/70">
             <h3 className="font-medium text-white mb-2">Documentacion</h3>
             <p className="text-sm text-gray-400 mb-3">Aprende a usar todas las funciones de LITPER PRO</p>
-            <button className="text-amber-400 text-sm hover:text-amber-300 flex items-center gap-1">
-              Ver documentacion <ExternalLink className="w-3 h-3" />
+            <button className="text-amber-400 text-sm hover:text-amber-300 flex items-center gap-1 group">
+              Ver documentacion <ExternalLink className="w-3 h-3 transition-transform group-hover:translate-x-1" />
             </button>
           </div>
 
-          <div className="bg-gray-800/50 rounded-xl p-4">
+          <div className="bg-gray-800/50 rounded-xl p-4 card-interactive hover:bg-gray-800/70">
             <h3 className="font-medium text-white mb-2">Soporte</h3>
             <p className="text-sm text-gray-400 mb-3">Necesitas ayuda? Contactanos</p>
             <div className="space-y-2">
-              <a href="mailto:litpercolombia@gmail.com" className="text-amber-400 text-sm hover:text-amber-300 flex items-center gap-2">
+              <a href="mailto:litpercolombia@gmail.com" className="text-amber-400 text-sm hover:text-amber-300 flex items-center gap-2 transition-transform hover:translate-x-1">
                 <Mail className="w-4 h-4" /> litpercolombia@gmail.com
               </a>
-              <a href="https://wa.me/573144754115" target="_blank" rel="noopener noreferrer" className="text-green-400 text-sm hover:text-green-300 flex items-center gap-2">
+              <a href="https://wa.me/573144754115" target="_blank" rel="noopener noreferrer" className="text-green-400 text-sm hover:text-green-300 flex items-center gap-2 transition-transform hover:translate-x-1">
                 <Phone className="w-4 h-4" /> +57 314 475 4115
               </a>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-amber-600/20 to-orange-600/20 rounded-xl p-4 border border-amber-500/30">
+          <div className="bg-gradient-to-r from-amber-600/20 to-orange-600/20 rounded-xl p-4 border border-amber-500/30 card-interactive hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/10">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-red-600 rounded-xl flex items-center justify-center">
                 <Crown className="w-6 h-6 text-white" />
@@ -459,9 +462,10 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
     <>
       <aside
         className={`
-          flex flex-col h-full bg-gray-900 border-r border-gray-800
-          transition-all duration-300 ease-in-out relative
+          flex flex-col h-full glass-sidebar border-r border-gray-800/50
+          transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] relative
           ${isExpanded ? 'w-64' : 'w-16'}
+          shadow-2xl shadow-black/20
         `}
         onMouseEnter={() => sidebarCollapsed && setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -591,10 +595,10 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
 
       {/* Logout Confirmation */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-2xl max-w-sm w-full border border-gray-700 shadow-2xl p-6 animate-fade-in-scale">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-gray-900 rounded-2xl max-w-sm w-full border border-gray-700/50 shadow-2xl p-6 modal-enter glass">
             <div className="text-center">
-              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 bounce-in">
                 <LogOut className="w-8 h-8 text-red-400" />
               </div>
               <h3 className="text-lg font-bold text-white mb-2">Cerrar sesion?</h3>
@@ -602,13 +606,13 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowLogoutConfirm(false)}
-                  className="flex-1 px-4 py-2 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-all duration-200 btn-secondary"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl hover:from-red-700 hover:to-red-600 transition-all duration-200 btn-primary shadow-lg shadow-red-500/25"
                 >
                   Cerrar sesion
                 </button>
