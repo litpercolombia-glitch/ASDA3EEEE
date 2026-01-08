@@ -54,6 +54,10 @@ import { useLayoutStore } from './stores/layoutStore';
 import { MarketingView } from './components/marketing';
 // Auth service for logout
 import { logout as authLogout, getCurrentUser } from './services/authService';
+// User Profile & Onboarding
+import { UserOnboarding } from './components/onboarding';
+import { useUserProfileStore } from './services/userProfileService';
+import { UserProfileSettings } from './components/settings';
 import {
   Crown,
   Search,
@@ -360,6 +364,10 @@ const App: React.FC = () => {
   // Estado para mostrar/ocultar el chat IA (ProBubble)
   const [showProBubble, setShowProBubble] = useState(false);
   const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
+  const [showUserSettings, setShowUserSettings] = useState(false);
+
+  // User Profile Store
+  const { profile, isOnboardingComplete } = useUserProfileStore();
 
   // Obtener usuario actual
   const currentUser = getCurrentUser();
@@ -603,6 +611,19 @@ const App: React.FC = () => {
   // Mostrar selector de país si no hay país seleccionado
   if (showCountrySelector || !selectedCountry) {
     return <CountrySelector onCountrySelected={handleCountrySelected} />;
+  }
+
+  // Mostrar onboarding si el usuario no ha completado el registro
+  if (!isOnboardingComplete) {
+    return (
+      <UserOnboarding
+        country={selectedCountry}
+        onComplete={() => {
+          // El onboarding se marca como completado automáticamente
+          // cuando el usuario termina el flujo
+        }}
+      />
+    );
   }
 
   // Función para renderizar contenido según la sección activa del sidebar
