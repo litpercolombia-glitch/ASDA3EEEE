@@ -359,7 +359,20 @@ const App: React.FC = () => {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   // Nuevo sistema de navegación con Sidebar
-  const { activeSection, setActiveSection } = useLayoutStore();
+  const {
+    activeSection,
+    setActiveSection,
+    activeOperacionesTab,
+    setOperacionesTab,
+    activeInteligenciaTab,
+    setInteligenciaTab,
+    activeCerebroIATab,
+    setCerebroIATab,
+    activeNegocioTab,
+    setNegocioTab,
+    activeInicioTab,
+    setInicioTab,
+  } = useLayoutStore();
 
   // Estado para mostrar/ocultar el chat IA (ProBubble)
   const [showProBubble, setShowProBubble] = useState(false);
@@ -644,6 +657,8 @@ const App: React.FC = () => {
             shipments={shipments}
             onShipmentsLoaded={(newShipments) => setShipments(newShipments)}
             onSemaforoDataLoaded={handleSemaforoDataLoaded}
+            activeSubTab={activeOperacionesTab}
+            onSubTabChange={setOperacionesTab}
           />
         );
       case 'inteligencia':
@@ -651,12 +666,24 @@ const App: React.FC = () => {
           <InteligenciaIAUnificadoTab
             shipments={shipments}
             selectedCountry={selectedCountry}
+            activeSubTab={activeInteligenciaTab}
+            onSubTabChange={setInteligenciaTab}
           />
         );
       case 'cerebro-ia':
-        return <AIBrainDashboard />;
+        return (
+          <AIBrainDashboard
+            activeSubTab={activeCerebroIATab}
+            onSubTabChange={setCerebroIATab}
+          />
+        );
       case 'negocio':
-        return <CentroNegocioTab />;
+        return (
+          <CentroNegocioTab
+            activeSubTab={activeNegocioTab}
+            onSubTabChange={setNegocioTab}
+          />
+        );
       case 'marketing':
         return <MarketingView />;
       case 'config':

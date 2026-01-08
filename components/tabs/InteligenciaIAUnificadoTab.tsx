@@ -1,6 +1,6 @@
 // components/tabs/InteligenciaIAUnificadoTab.tsx
 // Tab unificado que combina: Asistente IA + Sistema ML + Ciudad IA + Predicciones + Priorización IA
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Brain,
   Bot,
@@ -39,10 +39,23 @@ import { SmartPrioritizationPanel, AILearningPanel, AutomationPanel } from '../i
 // =====================================
 type SubView = 'asistente' | 'prioridad' | 'automatizacion' | 'predicciones' | 'ml' | 'aprendizaje' | 'agentes';
 
+// Tipo para las sub-pestañas del sidebar
+type SidebarSubTab = 'analisis' | 'reportes' | 'predicciones' | 'insights';
+
 interface InteligenciaIAUnificadoTabProps {
   shipments: Shipment[];
   selectedCountry?: string;
+  activeSubTab?: SidebarSubTab;
+  onSubTabChange?: (tab: SidebarSubTab) => void;
 }
+
+// Mapeo de sub-tabs del sidebar a vistas internas
+const SIDEBAR_TAB_VIEWS: Record<SidebarSubTab, { views: SubView[]; default: SubView }> = {
+  analisis: { views: ['asistente', 'prioridad'], default: 'asistente' },
+  reportes: { views: ['ml', 'aprendizaje'], default: 'ml' },
+  predicciones: { views: ['predicciones', 'automatizacion'], default: 'predicciones' },
+  insights: { views: ['agentes'], default: 'agentes' },
+};
 
 // =====================================
 // SUB-NAVEGACIÓN
@@ -105,8 +118,25 @@ const subNavItems: { id: SubView; label: string; icon: React.ElementType; descri
 export const InteligenciaIAUnificadoTab: React.FC<InteligenciaIAUnificadoTabProps> = ({
   shipments,
   selectedCountry = 'CO',
+  activeSubTab = 'analisis',
+  onSubTabChange,
 }) => {
-  const [activeView, setActiveView] = useState<SubView>('asistente');
+  // Determinar la vista activa basada en el sub-tab del sidebar
+  const sidebarConfig = SIDEBAR_TAB_VIEWS[activeSubTab];
+  const [activeView, setActiveView] = useState<SubView>(sidebarConfig.default);
+
+  // Cuando cambia el sub-tab del sidebar, cambiar a la vista por defecto de esa sección
+  React.useEffect(() => {
+    const config = SIDEBAR_TAB_VIEWS[activeSubTab];
+    if (config && !config.views.includes(activeView)) {
+      setActiveView(config.default);
+    }
+  }, [activeSubTab]);
+
+  // Filtrar las vistas disponibles según el sub-tab del sidebar
+  const availableViews = useMemo(() => {
+    return subNavItems.filter(item => sidebarConfig.views.includes(item.id));
+  }, [activeSubTab]);
 
   // Métricas de IA
   const aiMetrics = useMemo(() => {
@@ -203,10 +233,10 @@ export const InteligenciaIAUnificadoTab: React.FC<InteligenciaIAUnificadoTabProp
           </div>
         </div>
 
-        {/* Sub-navegación con gradientes */}
+        {/* Sub-navegación con gradientes - Solo muestra las vistas disponibles para el sub-tab activo */}
         <div className="px-4 py-3 bg-black/30 border-t border-white/10">
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            {subNavItems.map((item) => {
+            {availableViews.map((item) => {
               const isActive = activeView === item.id;
               const Icon = item.icon;
 
