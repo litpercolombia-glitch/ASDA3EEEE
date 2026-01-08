@@ -7,15 +7,15 @@ import { UsuarioOperador } from '../types/analisis-rondas';
 
 // ===== USUARIOS DEL SISTEMA =====
 export const USUARIOS_OPERADORES: UsuarioOperador[] = [
-  { id: 'angie', nombre: 'ANGIE' },
-  { id: 'catalina', nombre: 'CATALINA' },
-  { id: 'felipe', nombre: 'FELIPE' },
-  { id: 'evan', nombre: 'EVAN' },
-  { id: 'norman', nombre: 'NORMAN' },
-  { id: 'alejandra', nombre: 'ALEJANDRA' },
-  { id: 'karen', nombre: 'KAREN' },
-  { id: 'jimmy', nombre: 'JIMMY' },
-  { id: 'carolina', nombre: 'CAROLINA' },
+  { id: 'angie', nombre: 'ANGIE', icono: '👩‍💼', color: '#ec4899' },
+  { id: 'catalina', nombre: 'CATALINA', icono: '👩‍🔧', color: '#8b5cf6' },
+  { id: 'felipe', nombre: 'FELIPE', icono: '👨‍💻', color: '#3b82f6' },
+  { id: 'evan', nombre: 'EVAN', icono: '👨‍🚀', color: '#10b981' },
+  { id: 'norman', nombre: 'NORMAN', icono: '👨‍✈️', color: '#f59e0b' },
+  { id: 'alejandra', nombre: 'ALEJANDRA', icono: '👩‍🎤', color: '#ef4444' },
+  { id: 'karen', nombre: 'KAREN', icono: '👩‍🏫', color: '#06b6d4' },
+  { id: 'jimmy', nombre: 'JIMMY', icono: '👨‍🔬', color: '#84cc16' },
+  { id: 'carolina', nombre: 'CAROLINA', icono: '👩‍⚕️', color: '#f97316' },
 ];
 
 export const ADMIN_CONFIG = {
@@ -47,8 +47,8 @@ export const METRICAS_AVANZADAS = {
   GUIAS_POR_HORA_ESPERADAS: 20, // 60/3 = 20 guías por hora
 
   // Meta diaria
-  META_DIARIA_GUIAS: 80,        // 80 guías/día (4 horas efectivas)
-  META_DIARIA_HORAS: 4,         // 4 horas de trabajo efectivo
+  META_DIARIA_GUIAS: 10,        // 10 guías/día (meta mínima diaria)
+  META_DIARIA_HORAS: 2,         // 2 horas de trabajo efectivo
 
   // Eficiencia = (Guías × 3) / Tiempo Real × 100
   EFICIENCIA_EXCELENTE: 100,    // >= 100% = trabaja más rápido que base

@@ -32,6 +32,10 @@ import {
   ChevronUp,
   Eye,
   FileText,
+  Share2,
+  Link2,
+  Copy,
+  Check,
 } from 'lucide-react';
 import {
   BarChart,
@@ -102,6 +106,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [dragActive, setDragActive] = useState(false);
   const [showHistorico, setShowHistorico] = useState(false);
   const [expandedRecs, setExpandedRecs] = useState(true);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [linkCopiado, setLinkCopiado] = useState(false);
+
+  // Generar link para compartir con el equipo
+  const shareLink = `${window.location.origin}${window.location.pathname}?view=analisis-rondas`;
+
+  const copiarLinkEquipo = async () => {
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setLinkCopiado(true);
+      setTimeout(() => setLinkCopiado(false), 2000);
+    } catch {
+      // Fallback para navegadores sin clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = shareLink;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setLinkCopiado(true);
+      setTimeout(() => setLinkCopiado(false), 2000);
+    }
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -200,6 +227,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <History className="w-4 h-4" />
               Histórico
             </button>
+            <button
+              onClick={() => setShowShareModal(!showShareModal)}
+              className="px-4 py-2 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition-all flex items-center gap-2"
+            >
+              <Share2 className="w-4 h-4" />
+              Compartir
+            </button>
             {datos && (
               <button
                 onClick={() => onExportar('excel')}
@@ -268,6 +302,63 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Modal de Compartir */}
+      {showShareModal && (
+        <div className="bg-white dark:bg-navy-800 rounded-xl border border-blue-200 dark:border-blue-800 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+              <Share2 className="w-5 h-5 text-blue-500" />
+              Compartir con el Equipo
+            </h3>
+            <button
+              onClick={() => setShowShareModal(false)}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+            >
+              <XCircle className="w-5 h-5" />
+            </button>
+          </div>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Comparte este link con tu equipo para que puedan acceder al análisis de rondas y ver su rendimiento individual.
+          </p>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-navy-900 rounded-lg border border-slate-200 dark:border-navy-600">
+              <Link2 className="w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={shareLink}
+                readOnly
+                className="flex-1 bg-transparent text-sm text-slate-700 dark:text-slate-300 outline-none"
+              />
+            </div>
+            <button
+              onClick={copiarLinkEquipo}
+              className={`px-4 py-3 rounded-lg font-medium flex items-center gap-2 transition-all ${
+                linkCopiado
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-blue-500 text-white hover:bg-blue-600'
+              }`}
+            >
+              {linkCopiado ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  Copiado
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  Copiar
+                </>
+              )}
+            </button>
+          </div>
+          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <p className="text-xs text-blue-700 dark:text-blue-400">
+              💡 <strong>Tip:</strong> Cada operador podrá seleccionar su nombre al ingresar para ver sus propias métricas personalizadas.
+            </p>
+          </div>
         </div>
       )}
 

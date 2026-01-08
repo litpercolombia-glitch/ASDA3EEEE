@@ -544,6 +544,109 @@ export const OperadorDashboard: React.FC<OperadorDashboardProps> = ({
             </div>
           )}
 
+          {/* Recomendaciones Categorizadas - Mi Día */}
+          <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-6">
+            <h3 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+              <Lightbulb className="w-5 h-5 text-purple-500" />
+              Recomendaciones del Día
+            </h3>
+            <div className="space-y-4">
+              {/* Obligatorio */}
+              <div className="p-4 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl">🔴</span>
+                  <h4 className="font-bold text-red-700 dark:text-red-400">OBLIGATORIO</h4>
+                </div>
+                <ul className="space-y-2 text-sm text-red-600 dark:text-red-300">
+                  {misMetricas.tasaExito < UMBRALES.BUENO && (
+                    <li className="flex items-start gap-2">
+                      <span className="text-red-500 font-bold">•</span>
+                      <span>Mejorar tasa de éxito - Actualmente {misMetricas.tasaExito.toFixed(1)}%, meta mínima {UMBRALES.BUENO}%</span>
+                    </li>
+                  )}
+                  {misMetricas.pendientes > 5 && (
+                    <li className="flex items-start gap-2">
+                      <span className="text-red-500 font-bold">•</span>
+                      <span>Resolver {misMetricas.pendientes} guías pendientes antes del cierre</span>
+                    </li>
+                  )}
+                  {misMetricas.avanzadas && misMetricas.avanzadas.metaDiaria.progreso < 50 && (
+                    <li className="flex items-start gap-2">
+                      <span className="text-red-500 font-bold">•</span>
+                      <span>Alcanzar al menos 50% de la meta diaria ({METRICAS_AVANZADAS.META_DIARIA_GUIAS} guías)</span>
+                    </li>
+                  )}
+                  {misMetricas.tasaExito >= UMBRALES.BUENO && misMetricas.pendientes <= 5 && (!misMetricas.avanzadas || misMetricas.avanzadas.metaDiaria.progreso >= 50) && (
+                    <li className="flex items-start gap-2 text-emerald-600 dark:text-emerald-400">
+                      <span className="font-bold">✓</span>
+                      <span>¡Sin tareas obligatorias pendientes!</span>
+                    </li>
+                  )}
+                </ul>
+              </div>
+
+              {/* Recomendable */}
+              <div className="p-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl">🟡</span>
+                  <h4 className="font-bold text-amber-700 dark:text-amber-400">RECOMENDABLE</h4>
+                </div>
+                <ul className="space-y-2 text-sm text-amber-600 dark:text-amber-300">
+                  {misMetricas.avanzadas && misMetricas.avanzadas.eficiencia < 100 && (
+                    <li className="flex items-start gap-2">
+                      <span className="text-amber-500 font-bold">•</span>
+                      <span>Mejorar eficiencia - Actualmente {misMetricas.avanzadas.eficiencia.toFixed(0)}%, ideal 100%+</span>
+                    </li>
+                  )}
+                  {misMetricas.novedades > 0 && (
+                    <li className="flex items-start gap-2">
+                      <span className="text-amber-500 font-bold">•</span>
+                      <span>Revisar y resolver las {misMetricas.novedades} novedades reportadas</span>
+                    </li>
+                  )}
+                  {misMetricas.avanzadas && misMetricas.avanzadas.metaDiaria.progreso < 100 && misMetricas.avanzadas.metaDiaria.progreso >= 50 && (
+                    <li className="flex items-start gap-2">
+                      <span className="text-amber-500 font-bold">•</span>
+                      <span>Completar meta diaria - Faltan {METRICAS_AVANZADAS.META_DIARIA_GUIAS - misMetricas.avanzadas.metaDiaria.guiasHoy} guías</span>
+                    </li>
+                  )}
+                  {misMetricas.avanzadas && misMetricas.avanzadas.racha.dias < 3 && (
+                    <li className="flex items-start gap-2">
+                      <span className="text-amber-500 font-bold">•</span>
+                      <span>Mantener rendimiento para construir racha (actualmente {misMetricas.avanzadas.racha.dias} días)</span>
+                    </li>
+                  )}
+                </ul>
+              </div>
+
+              {/* Menor Relevancia */}
+              <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl">🟢</span>
+                  <h4 className="font-bold text-emerald-700 dark:text-emerald-400">MENOR RELEVANCIA</h4>
+                </div>
+                <ul className="space-y-2 text-sm text-emerald-600 dark:text-emerald-300">
+                  {misMetricas.avanzadas && misMetricas.avanzadas.analisisPorHorario && (
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 font-bold">•</span>
+                      <span>Tu mejor hora es a las {misMetricas.avanzadas.analisisPorHorario.mejorHora} - aprovéchala</span>
+                    </li>
+                  )}
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-500 font-bold">•</span>
+                    <span>Revisar estadísticas de días anteriores para identificar patrones</span>
+                  </li>
+                  {misMetricas.canceladas > 0 && (
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 font-bold">•</span>
+                      <span>Analizar razones de las {misMetricas.canceladas} guías canceladas</span>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          </div>
+
           {/* Sugerencia motivacional */}
           <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800 p-6">
             <div className="flex items-start gap-4">

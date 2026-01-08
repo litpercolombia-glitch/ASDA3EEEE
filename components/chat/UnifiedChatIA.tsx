@@ -40,6 +40,7 @@ import {
 import { Shipment } from '../../types';
 import { unifiedAI } from '../../services/unifiedAIService';
 import { useProAssistantStore, AIModel } from '../../stores/proAssistantStore';
+import inteligenciaService from '../../services/inteligenciaLogisticaService';
 
 // ============================================
 // TIPOS Y CONFIGURACIÓN
@@ -341,7 +342,38 @@ const UnifiedChatIA: React.FC<UnifiedChatIAProps> = ({
             QUICK_COMMANDS.forEach(cmd => {
               response += `• \`${cmd.command}\` - ${cmd.description}\n`;
             });
+            response += `• \`/inteligencia\` - Ver resumen de Inteligencia Logística\n`;
             response += `\n💡 También puedes escribir preguntas en lenguaje natural.`;
+            break;
+
+          case 'inteligencia':
+          case 'int':
+          case 'logistica':
+            // Obtener datos de Inteligencia Logística
+            const sesionActiva = inteligenciaService.getSesionActiva();
+            if (sesionActiva) {
+              response = inteligenciaService.getResumenParaChat();
+            } else {
+              response = `📊 **Inteligencia Logística**\n\n⚠️ No hay sesión activa.\n\nPara usar esta función:\n1. Ve a la pestaña "Inteligencia Logística"\n2. Carga un archivo Excel con tus guías\n3. Los datos estarán disponibles aquí`;
+            }
+            break;
+
+          case 'novedades':
+            const guiasNovedad = inteligenciaService.getGuiasConNovedad();
+            if (guiasNovedad.length > 0) {
+              response = `⚠️ **Guías con Novedad (${guiasNovedad.length})**\n\n`;
+              guiasNovedad.slice(0, 10).forEach((g, i) => {
+                response += `${i + 1}. **${g.guia}** - ${g.estado}\n`;
+                response += `   ${g.transportadora} | ${g.ciudad || 'Sin ciudad'}\n\n`;
+              });
+              if (guiasNovedad.length > 10) {
+                response += `\n... y ${guiasNovedad.length - 10} más`;
+              }
+            } else if (!inteligenciaService.tieneDatos()) {
+              response = `⚠️ No hay datos de Inteligencia Logística cargados. Usa \`/inteligencia\` para más información.`;
+            } else {
+              response = `✅ No hay guías con novedad. ¡Excelente!`;
+            }
             break;
 
           default:
@@ -361,7 +393,20 @@ const UnifiedChatIA: React.FC<UnifiedChatIAProps> = ({
           report: 'Genera un reporte estructurado y profesional.',
         };
 
-        const enrichedPrompt = `[Modo: ${currentMode}] ${modeContext[currentMode]}\n\nPregunta del usuario: ${text}`;
+        // Agregar contexto de Inteligencia Logística si hay datos
+        let inteligenciaContext = '';
+        if (inteligenciaService.tieneDatos()) {
+          const stats = inteligenciaService.getEstadisticas();
+          const sesion = inteligenciaService.getSesionActiva();
+          inteligenciaContext = `\n\n[Datos de Inteligencia Logística - Sesión: ${sesion?.nombre || 'Activa'}]
+- Total guías: ${stats.total}
+- Entregadas: ${stats.entregadas}
+- En reparto: ${stats.enReparto}
+- Con novedad: ${stats.conNovedad}
+- Pendientes: ${stats.pendientes}`;
+        }
+
+        const enrichedPrompt = `[Modo: ${currentMode}] ${modeContext[currentMode]}${inteligenciaContext}\n\nPregunta del usuario: ${text}`;
 
         // Llamar al servicio de IA unificado
         const aiResponse = await unifiedAI.chat(enrichedPrompt, shipments, {

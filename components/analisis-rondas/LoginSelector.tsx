@@ -130,11 +130,14 @@ export const LoginSelector: React.FC<LoginSelectorProps> = ({ onLogin }) => {
                             ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 ring-2 ring-emerald-500/20'
                             : 'border-slate-200 dark:border-navy-600 hover:border-emerald-300 dark:hover:border-emerald-700 text-slate-700 dark:text-slate-300'
                         }`}
+                        style={{
+                          borderColor: usuarioSeleccionado === usuario.nombre ? usuario.color : undefined,
+                        }}
                       >
-                        <div className="text-lg mb-1">
-                          {usuarioSeleccionado === usuario.nombre ? '✅' : '👤'}
+                        <div className="text-2xl mb-1">
+                          {usuarioSeleccionado === usuario.nombre ? '✅' : (usuario.icono || '👤')}
                         </div>
-                        {usuario.nombre}
+                        <span className="text-xs">{usuario.nombre}</span>
                       </button>
                     ))}
                   </div>

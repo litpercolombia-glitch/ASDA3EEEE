@@ -68,6 +68,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
     color: string;
   } | null>(null);
 
+  // Filtros nuevos
+  const [filtroFecha, setFiltroFecha] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [filtroUsuario, setFiltroUsuario] = useState<string>('todos');
+
   // Calculate reports
   const reportes: ReporteUsuario[] = useMemo(() => {
     const hoy = new Date().toISOString().split('T')[0];
@@ -124,23 +128,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
     });
   }, [usuarios, rondas]);
 
-  // General stats
+  // General stats - usa filtro de fecha
   const statsGenerales = useMemo(() => {
-    const hoy = new Date().toISOString().split('T')[0];
-    const rondasHoy = rondas.filter((r) => r.fecha === hoy);
+    const fechaFiltro = filtroFecha;
+    let rondasFiltradas = rondas.filter((r) => r.fecha === fechaFiltro);
+
+    // Filtrar por usuario si no es "todos"
+    if (filtroUsuario !== 'todos') {
+      rondasFiltradas = rondasFiltradas.filter((r) => r.usuarioId === filtroUsuario);
+    }
+
+    const usuariosFiltrados = filtroUsuario === 'todos'
+      ? usuarios
+      : usuarios.filter((u) => u.id === filtroUsuario);
 
     return {
-      totalUsuarios: usuarios.length,
-      guiasHoy: rondasHoy.reduce((acc, r) => acc + r.realizado, 0),
-      promedioGuias: usuarios.length > 0
-        ? Math.round(rondasHoy.reduce((acc, r) => acc + r.realizado, 0) / usuarios.length)
+      totalUsuarios: usuariosFiltrados.length,
+      guiasHoy: rondasFiltradas.reduce((acc, r) => acc + r.realizado, 0),
+      promedioGuias: usuariosFiltrados.length > 0
+        ? Math.round(rondasFiltradas.reduce((acc, r) => acc + r.realizado, 0) / usuariosFiltrados.length)
         : 0,
       mejorUsuario: reportes.reduce(
         (max, r) => (r.guiasHoy > max.guiasHoy ? r : max),
         { nombre: '-', guiasHoy: 0 }
       ).nombre,
+      fechaMostrada: fechaFiltro === new Date().toISOString().split('T')[0] ? 'hoy' : fechaFiltro,
     };
-  }, [usuarios, rondas, reportes]);
+  }, [usuarios, rondas, reportes, filtroFecha, filtroUsuario]);
 
   // Generate AI recommendations
   const recomendacionesIA = useMemo(() => {
@@ -231,6 +245,46 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
         </div>
       </div>
 
+      {/* Filtros */}
+      <div className="flex flex-wrap items-center gap-4 bg-slate-800/50 rounded-xl p-4">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-slate-400" />
+          <span className="text-sm text-slate-400">Fecha:</span>
+          <input
+            type="date"
+            value={filtroFecha}
+            onChange={(e) => setFiltroFecha(e.target.value)}
+            className="bg-slate-700 text-white px-3 py-1.5 rounded-lg text-sm border border-slate-600 focus:border-blue-500 outline-none"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Users className="w-4 h-4 text-slate-400" />
+          <span className="text-sm text-slate-400">Usuario:</span>
+          <select
+            value={filtroUsuario}
+            onChange={(e) => setFiltroUsuario(e.target.value)}
+            className="bg-slate-700 text-white px-3 py-1.5 rounded-lg text-sm border border-slate-600 focus:border-blue-500 outline-none min-w-[150px]"
+          >
+            <option value="todos">Todos los usuarios</option>
+            {usuarios.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          onClick={() => {
+            setFiltroFecha(new Date().toISOString().split('T')[0]);
+            setFiltroUsuario('todos');
+          }}
+          className="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+        >
+          <X className="w-3 h-3" />
+          Limpiar filtros
+        </button>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-xl p-4 border border-blue-500/30">
@@ -242,7 +296,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
         <div className="bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-xl p-4 border border-emerald-500/30">
           <Target className="w-6 h-6 text-emerald-400 mb-2" />
           <p className="text-2xl font-bold text-white">{statsGenerales.guiasHoy}</p>
-          <p className="text-sm text-slate-400">Guias hoy</p>
+          <p className="text-sm text-slate-400">
+            Guías {statsGenerales.fechaMostrada === 'hoy' ? 'hoy' : `(${statsGenerales.fechaMostrada})`}
+          </p>
         </div>
 
         <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 rounded-xl p-4 border border-amber-500/30">
