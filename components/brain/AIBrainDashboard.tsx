@@ -16,14 +16,17 @@
  *   <AIBrainDashboard />
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Brain, Zap, MessageCircle, Bell, Activity, RefreshCw,
   Send, AlertTriangle, CheckCircle, XCircle, Clock,
   TrendingUp, Users, Package, Wifi, WifiOff, Sparkles,
   ChevronRight, BarChart3, Settings, Bot, Loader2,
-  Phone, MessageSquare, Eye, Filter
+  Phone, MessageSquare, Eye, Filter, Target
 } from 'lucide-react';
+
+// Tipo para las sub-pestañas del sidebar
+type SidebarSubTab = 'asistente' | 'configuracion-ia' | 'historial-chat';
 
 // ============================================================================
 // CONFIGURACION
@@ -63,6 +66,18 @@ interface AnalyticsSummary {
 }
 
 type TabType = 'overview' | 'events' | 'analytics' | 'chat' | 'whatsapp';
+
+// Mapeo de sub-tabs del sidebar a vistas internas
+const SIDEBAR_TAB_VIEWS: Record<SidebarSubTab, { views: TabType[]; default: TabType }> = {
+  asistente: { views: ['chat', 'whatsapp'], default: 'chat' },
+  'configuracion-ia': { views: ['overview'], default: 'overview' },
+  'historial-chat': { views: ['events', 'analytics'], default: 'events' },
+};
+
+interface AIBrainDashboardProps {
+  activeSubTab?: SidebarSubTab;
+  onSubTabChange?: (tab: SidebarSubTab) => void;
+}
 
 // ============================================================================
 // API HELPERS
@@ -212,7 +227,10 @@ const EventRow: React.FC<{ event: WebhookEvent }> = ({ event }) => {
 // COMPONENTE PRINCIPAL
 // ============================================================================
 
-export const AIBrainDashboard: React.FC = () => {
+export const AIBrainDashboard: React.FC<AIBrainDashboardProps> = ({
+  activeSubTab = 'asistente',
+  onSubTabChange,
+}) => {
   // Estado
   const [brainStatus, setBrainStatus] = useState<BrainStatus | null>(null);
   const [chateaStatus, setChateaStatus] = useState<any>(null);
@@ -221,8 +239,29 @@ export const AIBrainDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  // Tab activo
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  // Determinar la vista activa basada en el sub-tab del sidebar
+  const sidebarConfig = SIDEBAR_TAB_VIEWS[activeSubTab];
+  const [activeTab, setActiveTab] = useState<TabType>(sidebarConfig.default);
+
+  // Cuando cambia el sub-tab del sidebar, cambiar a la vista por defecto de esa sección
+  useEffect(() => {
+    const config = SIDEBAR_TAB_VIEWS[activeSubTab];
+    if (config && !config.views.includes(activeTab)) {
+      setActiveTab(config.default);
+    }
+  }, [activeSubTab]);
+
+  // Filtrar las vistas disponibles según el sub-tab del sidebar
+  const availableTabs = useMemo(() => {
+    const allTabs = [
+      { id: 'overview', label: 'General', icon: Activity },
+      { id: 'events', label: 'Eventos', icon: Bell },
+      { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+      { id: 'chat', label: 'Chat IA', icon: MessageCircle },
+      { id: 'whatsapp', label: 'WhatsApp', icon: Phone },
+    ];
+    return allTabs.filter(tab => sidebarConfig.views.includes(tab.id as TabType));
+  }, [activeSubTab]);
 
   // Chat
   const [chatInput, setChatInput] = useState('');
@@ -298,14 +337,7 @@ export const AIBrainDashboard: React.FC = () => {
     setInsightsLoading(false);
   };
 
-  // Tabs config
-  const tabs = [
-    { id: 'overview', label: 'General', icon: Activity },
-    { id: 'events', label: 'Eventos', icon: Bell },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'chat', label: 'Chat IA', icon: MessageCircle },
-    { id: 'whatsapp', label: 'WhatsApp', icon: Phone },
-  ];
+  // Tabs config - Ahora usamos availableTabs filtrado por el sidebar
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 p-4 md:p-6">
@@ -338,9 +370,9 @@ export const AIBrainDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs - Filtrados por el sidebar */}
         <div className="flex gap-2 mt-4 overflow-x-auto pb-2 scrollbar-hide">
-          {tabs.map(tab => (
+          {availableTabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as TabType)}

@@ -294,34 +294,62 @@ export const webhookOutbound = {
 };
 
 // ============================================
-// VERIFICACIÓN DE WEBHOOKS
+// UTILIDADES DE WEBHOOK (FRONTEND - SIN SECRETOS)
 // ============================================
+// NOTA: La verificación HMAC de webhooks se hace 100% en el BACKEND.
+// El frontend NUNCA debe tener acceso a secrets de webhook.
+// Este módulo solo contiene utilidades de formato y timestamp.
 
-export const webhookVerification = {
-  /**
-   * Verificar firma HMAC de webhook
-   */
-  verifySignature(payload: string, signature: string, secret: string): boolean {
-    // Implementación básica - en producción usar crypto
-    // const expectedSignature = crypto
-    //   .createHmac('sha256', secret)
-    //   .update(payload)
-    //   .digest('hex');
-    // return signature === expectedSignature;
-
-    // Por ahora, verificación simple
-    return signature.length > 0 && secret.length > 0;
-  },
-
+export const webhookUtils = {
   /**
    * Verificar que el timestamp no sea muy antiguo (prevenir replay attacks)
+   * Esta verificación NO requiere secretos - es solo validación de tiempo
    */
-  verifyTimestamp(timestamp: string, maxAgeSeconds: number = 300): boolean {
-    const webhookTime = new Date(timestamp).getTime();
-    const now = Date.now();
-    const age = (now - webhookTime) / 1000;
-    return age <= maxAgeSeconds;
+  isTimestampValid(timestamp: string, maxAgeSeconds: number = 300): boolean {
+    try {
+      const webhookTime = new Date(timestamp).getTime();
+      const now = Date.now();
+      const age = (now - webhookTime) / 1000;
+
+      if (age > maxAgeSeconds) {
+        console.warn(`⚠️ Webhook timestamp too old: ${age}s (max: ${maxAgeSeconds}s)`);
+        return false;
+      }
+
+      if (age < -60) {
+        // Timestamp en el futuro (más de 1 minuto) - sospechoso
+        console.warn(`⚠️ Webhook timestamp in future: ${age}s`);
+        return false;
+      }
+
+      return true;
+    } catch {
+      console.warn('⚠️ Invalid timestamp format');
+      return false;
+    }
   },
+
+  /**
+   * Formatear payload para envío (sin firma - el backend firma si es necesario)
+   */
+  formatPayload(event: string, data: Record<string, unknown>): string {
+    return JSON.stringify({
+      event,
+      data,
+      timestamp: new Date().toISOString(),
+      source: 'litper-pro-frontend',
+    });
+  },
+};
+
+// Para compatibilidad con código existente, exportamos webhookVerification
+// pero sin funciones que usen secretos
+export const webhookVerification = {
+  /**
+   * @deprecated La verificación HMAC debe hacerse en el BACKEND.
+   * Esta función solo valida el timestamp.
+   */
+  isTimestampValid: webhookUtils.isTimestampValid,
 };
 
 // ============================================
@@ -331,5 +359,6 @@ export const webhookVerification = {
 export default {
   handlers: webhookHandlers,
   outbound: webhookOutbound,
-  verification: webhookVerification,
+  utils: webhookUtils,
+  // verification se mantiene solo para compatibilidad pero sin secretos
 };
