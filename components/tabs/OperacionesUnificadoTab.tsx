@@ -25,6 +25,7 @@ import {
   Map,
   GitBranch,
   X,
+  Route,
 } from 'lucide-react';
 import { Shipment } from '../../types';
 
@@ -42,10 +43,13 @@ import TrackingMap from '../maps/TrackingMap';
 // Análisis de Rondas LITPER
 import { AnalisisRondasTab } from './AnalisisRondasTab';
 
+// Gestión de Rutas
+import RutasTab from './RutasTab';
+
 // =====================================
 // TIPOS
 // =====================================
-type SubView = 'carga' | 'tabla' | 'timeline' | 'mapa' | 'prioridad' | 'inteligencia' | 'semaforo' | 'cerebro' | 'analisis-rondas';
+type SubView = 'carga' | 'tabla' | 'timeline' | 'mapa' | 'prioridad' | 'inteligencia' | 'semaforo' | 'cerebro' | 'analisis-rondas' | 'rutas';
 
 interface OperacionesUnificadoTabProps {
   shipments: Shipment[];
@@ -119,6 +123,13 @@ const subNavItems: { id: SubView; label: string; icon: React.ElementType; descri
     icon: TrendingUp,
     description: 'Control de rondas',
     color: 'emerald'
+  },
+  {
+    id: 'rutas',
+    label: '🚚 Rutas',
+    icon: Route,
+    description: 'Gestión de rutas',
+    color: 'orange'
   },
 ];
 
@@ -329,6 +340,13 @@ export const OperacionesUnificadoTab: React.FC<OperacionesUnificadoTabProps> = (
         {activeView === 'analisis-rondas' && (
           <div className="animate-fade-in">
             <AnalisisRondasTab />
+          </div>
+        )}
+
+        {/* Tab: Gestión de Rutas */}
+        {activeView === 'rutas' && (
+          <div className="animate-fade-in">
+            <RutasTab shipments={shipments} />
           </div>
         )}
       </div>
