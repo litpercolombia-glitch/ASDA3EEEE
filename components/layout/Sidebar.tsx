@@ -48,6 +48,7 @@ import {
   LayoutDashboard,
   Bot,
   MessageSquare,
+  Sheet,
 } from 'lucide-react';
 import {
   useLayoutStore,
@@ -109,6 +110,7 @@ const SUB_MENUS: Record<MainSection, SubMenuItem[]> = {
     { id: 'reportes', icon: FileText, label: 'Reportes' },
     { id: 'predicciones', icon: Target, label: 'Predicciones' },
     { id: 'insights', icon: Lightbulb, label: 'Insights' },
+    { id: 'google-sheets', icon: Sheet, label: 'Google Sheets' },
   ],
   'cerebro-ia': [
     { id: 'asistente', icon: Bot, label: 'Asistente IA' },

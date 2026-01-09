@@ -36,6 +36,7 @@ import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
 import { OperacionesUnificadoTab } from './components/tabs/OperacionesUnificadoTab';
 import { InteligenciaIAUnificadoTab } from './components/tabs/InteligenciaIAUnificadoTab';
 import { AnalisisUnificadoTab } from './components/tabs/AnalisisUnificadoTab';
+import GoogleSheetsTab from './components/tabs/GoogleSheetsTab';
 import { ProBubbleV4 } from './components/ProAssistant';
 import UniversalSearch from './components/search/UniversalSearch';
 // Cerebro IA - Dashboard con Chatea Pro, Webhooks y Analytics
@@ -662,6 +663,10 @@ const App: React.FC = () => {
           />
         );
       case 'inteligencia':
+        // Si está seleccionado Google Sheets, mostrar ese tab directamente
+        if (activeInteligenciaTab === 'google-sheets') {
+          return <GoogleSheetsTab shipments={shipments} />;
+        }
         return (
           <InteligenciaIAUnificadoTab
             shipments={shipments}
