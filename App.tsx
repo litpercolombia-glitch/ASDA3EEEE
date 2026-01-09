@@ -58,6 +58,8 @@ import { logout as authLogout, getCurrentUser } from './services/authService';
 import { UserOnboarding } from './components/onboarding';
 import { useUserProfileStore } from './services/userProfileService';
 import { UserProfileSettings } from './components/settings';
+// Enhanced Excel Upload with column config
+import { EnhancedExcelUpload } from './components/upload';
 import {
   Crown,
   Search,
@@ -792,43 +794,75 @@ const App: React.FC = () => {
             </div>
 
             {activeInputTab === 'EXCEL' ? (
-              <div className="p-8">
-                <div className="max-w-lg mx-auto text-center">
-                  <div className="bg-gradient-to-br from-purple-500 to-blue-600 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-xl">
-                    <FileUp className="w-10 h-10 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">
-                    📊 Importar desde Excel
-                  </h3>
-                  <p className="text-gray-400 mb-6">
-                    Sube un archivo Excel (.xlsx, .xls) con tus guías
-                  </p>
-                  <label className={`inline-flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-lg cursor-pointer transition-all transform hover:scale-105 shadow-xl ${
-                    isExcelLoading
-                      ? 'bg-gray-600 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
-                  }`}>
-                    {isExcelLoading ? (
-                      <>
-                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Procesando...
-                      </>
-                    ) : (
-                      <>
-                        <FileUp className="w-6 h-6" />
-                        Seleccionar Archivo
-                      </>
-                    )}
-                    <input
-                      type="file"
-                      accept=".xlsx,.xls"
-                      onChange={handleExcelUpload}
-                      disabled={isExcelLoading}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-              </div>
+              <EnhancedExcelUpload
+                onUploadComplete={({ sessionName, rows, columnMapping }) => {
+                  // Procesar los datos mapeados
+                  const processedShipments = rows.map((row, idx) => {
+                    const shipment: Partial<Shipment> = {
+                      id: `upload_${Date.now()}_${idx}`,
+                    };
+
+                    columnMapping.forEach((col) => {
+                      if (col.enabled && col.mappedTo && row[col.excelColumn] !== undefined) {
+                        const value = row[col.excelColumn];
+                        switch (col.mappedTo) {
+                          case 'trackingNumber':
+                            shipment.trackingNumber = String(value);
+                            shipment.id = String(value) || shipment.id;
+                            break;
+                          case 'phone':
+                            shipment.phone = String(value);
+                            break;
+                          case 'status':
+                            shipment.status = String(value) as any;
+                            break;
+                          case 'carrier':
+                            shipment.carrier = String(value) as any;
+                            break;
+                          case 'destinationCity':
+                            shipment.destinationCity = String(value);
+                            break;
+                          case 'recipientName':
+                            shipment.recipientName = String(value);
+                            break;
+                          case 'recipientPhone':
+                            shipment.recipientPhone = String(value);
+                            break;
+                          case 'lastUpdate':
+                            shipment.lastUpdate = String(value);
+                            break;
+                          case 'lastMovement':
+                            // Store in history if exists
+                            if (!shipment.history) shipment.history = [];
+                            shipment.history.push({ description: String(value), timestamp: new Date() });
+                            break;
+                          case 'daysInTransit':
+                            shipment.daysInTransit = parseInt(String(value)) || 0;
+                            break;
+                          case 'value':
+                            shipment.declaredValue = parseFloat(String(value).replace(/[^0-9.-]/g, '')) || 0;
+                            break;
+                          case 'address':
+                            shipment.address = String(value);
+                            break;
+                        }
+                      }
+                    });
+
+                    return shipment as Shipment;
+                  }).filter(s => s.trackingNumber); // Solo guías con número válido
+
+                  // Agregar al estado
+                  setShipments((prev) => {
+                    const ids = new Set(processedShipments.map((s) => s.id));
+                    return [...prev.filter((s) => !ids.has(s.id)), ...processedShipments];
+                  });
+
+                  setNotification(`✅ ${sessionName}: ${processedShipments.length} guías cargadas`);
+                  setShowDataInput(false);
+                }}
+                onCancel={() => setShowDataInput(false)}
+              />
             ) : (
               <div className="p-6">
                 {(activeInputTab === 'REPORT' || activeInputTab === 'SUMMARY') && (
