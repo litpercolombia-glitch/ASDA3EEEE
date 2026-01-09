@@ -58,3 +58,9 @@ backend/ml_models/saved/*
 # Backend environment (contains API keys)
 backend/.env.backend
 backend/.env
+
+# Google Cloud credentials (NEVER commit these!)
+backend/credentials/*.json
+!backend/credentials/.gitkeep
+**/google-sheets-credentials.json
+**/service-account*.json

@@ -49,6 +49,11 @@ httpx==0.26.0
 pytest==8.0.0
 pytest-asyncio==0.23.5
 
+# Google Sheets Integration
+google-api-python-client==2.118.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.0
+
 # Herramientas de Desarrollo (opcional)
 black==24.1.1
 isort==5.13.2
