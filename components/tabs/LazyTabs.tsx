@@ -175,6 +175,11 @@ export const LazyAnalisisUnificadoTab = lazy(() =>
   import('./AnalisisUnificadoTab').then((m) => ({ default: m.AnalisisUnificadoTab }))
 );
 
+// Google Sheets Integration
+export const LazyGoogleSheetsTab = lazy(() =>
+  import('./GoogleSheetsTab').then((m) => ({ default: m.default }))
+);
+
 // ============================================
 // PREFETCH UTILITY
 // ============================================
@@ -194,6 +199,7 @@ const tabImportMap: Record<string, () => Promise<unknown>> = {
   operaciones: () => import('./OperacionesUnificadoTab'),
   'inteligencia-ia': () => import('./InteligenciaIAUnificadoTab'),
   analisis: () => import('./AnalisisUnificadoTab'),
+  'google-sheets': () => import('./GoogleSheetsTab'),
 };
 
 /**
@@ -290,6 +296,8 @@ export const LazyTabRenderer: React.FC<TabRendererProps> = ({ tabId, ...props })
         return <LazyInteligenciaIAUnificadoTab {...props} />;
       case 'analisis':
         return <LazyAnalisisUnificadoTab {...props} />;
+      case 'google-sheets':
+        return <LazyGoogleSheetsTab {...props} />;
       default:
         return null;
     }
