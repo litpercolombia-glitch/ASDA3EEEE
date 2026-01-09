@@ -104,13 +104,13 @@ const SUB_MENUS: Record<MainSection, SubMenuItem[]> = {
     { id: 'tracking', icon: MapPin, label: 'Tracking' },
     { id: 'historial', icon: History, label: 'Historial' },
     { id: 'rutas', icon: Route, label: 'Rutas' },
+    { id: 'google-sheets', icon: Sheet, label: 'Google Sheets' },
   ],
   'inteligencia': [
     { id: 'analisis', icon: LineChart, label: 'Análisis' },
     { id: 'reportes', icon: FileText, label: 'Reportes' },
     { id: 'predicciones', icon: Target, label: 'Predicciones' },
     { id: 'insights', icon: Lightbulb, label: 'Insights' },
-    { id: 'google-sheets', icon: Sheet, label: 'Google Sheets' },
   ],
   'cerebro-ia': [
     { id: 'asistente', icon: Bot, label: 'Asistente IA' },

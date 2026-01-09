@@ -653,6 +653,10 @@ const App: React.FC = () => {
           />
         );
       case 'operaciones':
+        // Si está seleccionado Google Sheets, mostrar ese tab directamente
+        if (activeOperacionesTab === 'google-sheets') {
+          return <GoogleSheetsTab shipments={shipments} />;
+        }
         return (
           <OperacionesUnificadoTab
             shipments={shipments}
@@ -663,10 +667,6 @@ const App: React.FC = () => {
           />
         );
       case 'inteligencia':
-        // Si está seleccionado Google Sheets, mostrar ese tab directamente
-        if (activeInteligenciaTab === 'google-sheets') {
-          return <GoogleSheetsTab shipments={shipments} />;
-        }
         return (
           <InteligenciaIAUnificadoTab
             shipments={shipments}
