@@ -89,4 +89,14 @@ export const useMarketingStore = create<MarketingState>()(
   )
 );
 
+// Hook para acceder a las métricas del dashboard
+export const useMarketingMetrics = () => {
+  return useMarketingStore((state) => ({
+    metrics: state.dashboardMetrics,
+    isLoading: state.isLoading,
+    lastSyncAt: state.lastSyncAt,
+    setMetrics: state.setDashboardMetrics,
+  }));
+};
+
 export default useMarketingStore;
