@@ -1,6 +1,6 @@
 // components/ChatFirst/SkillViews/ReportesSkillView.tsx
 // Vista simplificada de Reportes - Generacion rapida de informes
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   FileText,
   Download,
@@ -16,8 +16,19 @@ import {
   ChevronRight,
   BarChart3,
   PieChart,
+  FileSpreadsheet,
+  Printer,
+  ExternalLink,
 } from 'lucide-react';
 import { Shipment, ShipmentStatus } from '../../../types';
+import {
+  generateShipmentReport,
+  generateDailyReport,
+  openPDFInNewTab,
+  printPDF,
+  downloadPDF,
+} from '../../../services/pdfService';
+import * as XLSX from 'xlsx';
 
 interface ReportesSkillViewProps {
   shipments: Shipment[];
@@ -32,6 +43,15 @@ interface ReportTemplate {
   icon: React.ElementType;
   color: string;
   prompt: string;
+}
+
+interface RecentReport {
+  id: string;
+  name: string;
+  time: Date;
+  html: string;
+  type: 'pdf' | 'excel';
+  shipmentCount: number;
 }
 
 const REPORT_TEMPLATES: ReportTemplate[] = [
@@ -91,7 +111,7 @@ export const ReportesSkillView: React.FC<ReportesSkillViewProps> = ({
   onChatQuery,
 }) => {
   const [generatingReport, setGeneratingReport] = useState<string | null>(null);
-  const [recentReports, setRecentReports] = useState<{ id: string; name: string; time: Date }[]>([]);
+  const [recentReports, setRecentReports] = useState<RecentReport[]>([]);
 
   // Quick stats para mostrar en reportes
   const stats = {
@@ -104,23 +124,121 @@ export const ReportesSkillView: React.FC<ReportesSkillViewProps> = ({
       : 0,
   };
 
+  // Exportar a Excel - FUNCIONAL
+  const exportToExcel = useCallback((data: Shipment[], filename: string) => {
+    const wsData = data.map(s => ({
+      'Guía': s.trackingNumber || s.id,
+      'Transportadora': s.carrier || 'N/A',
+      'Estado': s.status,
+      'Destino': s.detailedInfo?.destination || 'N/A',
+      'Días en Tránsito': s.detailedInfo?.daysInTransit || 0,
+      'Teléfono': s.phone || 'N/A',
+      'Última Actualización': s.detailedInfo?.lastUpdate || 'N/A',
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Guías');
+
+    // Ajustar ancho de columnas
+    ws['!cols'] = [
+      { wch: 20 }, { wch: 18 }, { wch: 12 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 20 }
+    ];
+
+    XLSX.writeFile(wb, `${filename}.xlsx`);
+  }, []);
+
+  // Generar reporte - FUNCIONAL
   const handleGenerateReport = async (template: ReportTemplate) => {
+    if (shipments.length === 0) {
+      onChatQuery?.('No hay guías cargadas para generar un reporte');
+      return;
+    }
+
     setGeneratingReport(template.id);
 
-    // Simular generacion (en produccion llamaria al servicio)
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      let html = '';
+      let filteredShipments = shipments;
 
-    // Agregar a reportes recientes
-    setRecentReports(prev => [
-      { id: template.id, name: template.name, time: new Date() },
-      ...prev.slice(0, 4),
-    ]);
+      switch (template.id) {
+        case 'daily':
+          html = generateDailyReport(shipments);
+          break;
 
-    setGeneratingReport(null);
+        case 'critical':
+          filteredShipments = shipments.filter(s => {
+            const days = s.detailedInfo?.daysInTransit || 0;
+            return days >= 5 || s.status === ShipmentStatus.ISSUE || s.status === ShipmentStatus.EXCEPTION;
+          });
+          html = generateShipmentReport({
+            shipments: filteredShipments,
+            status: 'Críticos'
+          });
+          break;
 
-    // Trigger chat query para generar el reporte real
-    onChatQuery?.(template.prompt);
-    onGenerateReport?.(template.id);
+        case 'performance':
+        case 'carriers':
+        case 'cities':
+        case 'executive':
+        default:
+          html = generateShipmentReport({ shipments });
+          break;
+      }
+
+      // Abrir reporte en nueva pestaña
+      openPDFInNewTab(html);
+
+      // Agregar a reportes recientes con el HTML guardado
+      setRecentReports(prev => [
+        {
+          id: `${template.id}-${Date.now()}`,
+          name: template.name,
+          time: new Date(),
+          html,
+          type: 'pdf',
+          shipmentCount: filteredShipments.length,
+        },
+        ...prev.slice(0, 4),
+      ]);
+
+      onGenerateReport?.(template.id);
+    } catch (error) {
+      console.error('Error generando reporte:', error);
+      onChatQuery?.('Hubo un error generando el reporte. Intenta de nuevo.');
+    } finally {
+      setGeneratingReport(null);
+    }
+  };
+
+  // Descargar reporte reciente
+  const handleDownloadReport = async (report: RecentReport) => {
+    if (report.type === 'pdf') {
+      await downloadPDF(report.html, `${report.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.png`);
+    }
+  };
+
+  // Imprimir reporte
+  const handlePrintReport = (report: RecentReport) => {
+    if (report.type === 'pdf') {
+      printPDF(report.html);
+    }
+  };
+
+  // Exportar como Excel
+  const handleExportExcel = (templateId: string) => {
+    let data = shipments;
+    let filename = 'reporte_guias';
+
+    if (templateId === 'critical') {
+      data = shipments.filter(s => {
+        const days = s.detailedInfo?.daysInTransit || 0;
+        return days >= 5 || s.status === ShipmentStatus.ISSUE || s.status === ShipmentStatus.EXCEPTION;
+      });
+      filename = 'guias_criticas';
+    }
+
+    exportToExcel(data, filename);
   };
 
   return (
@@ -191,11 +309,11 @@ export const ReportesSkillView: React.FC<ReportesSkillViewProps> = ({
       {/* Recent Reports */}
       {recentReports.length > 0 && (
         <div>
-          <p className="text-sm font-medium text-slate-400 mb-3">Reportes Recientes</p>
+          <p className="text-sm font-medium text-slate-400 mb-3">Reportes Generados</p>
           <div className="space-y-2">
-            {recentReports.map((report, idx) => (
+            {recentReports.map((report) => (
               <div
-                key={`${report.id}-${idx}`}
+                key={report.id}
                 className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10"
               >
                 <div className="flex items-center gap-3">
@@ -203,16 +321,31 @@ export const ReportesSkillView: React.FC<ReportesSkillViewProps> = ({
                   <div>
                     <p className="text-sm text-white">{report.name}</p>
                     <p className="text-xs text-slate-500">
-                      {report.time.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                      {report.time.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })} • {report.shipmentCount} guías
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
-                    <Download className="w-4 h-4 text-slate-400" />
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => openPDFInNewTab(report.html)}
+                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                    title="Ver reporte"
+                  >
+                    <ExternalLink className="w-4 h-4 text-blue-400" />
                   </button>
-                  <button className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
-                    <Send className="w-4 h-4 text-slate-400" />
+                  <button
+                    onClick={() => handleDownloadReport(report)}
+                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                    title="Descargar"
+                  >
+                    <Download className="w-4 h-4 text-emerald-400" />
+                  </button>
+                  <button
+                    onClick={() => handlePrintReport(report)}
+                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                    title="Imprimir"
+                  >
+                    <Printer className="w-4 h-4 text-slate-400" />
                   </button>
                 </div>
               </div>
@@ -220,6 +353,27 @@ export const ReportesSkillView: React.FC<ReportesSkillViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Export Section */}
+      <div className="pt-3 border-t border-white/10">
+        <p className="text-sm font-medium text-slate-400 mb-3">Exportar Datos</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => exportToExcel(shipments, 'todas_las_guias')}
+            className="flex items-center justify-center gap-2 p-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-emerald-400 transition-colors"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="text-xs font-medium">Excel - Todas ({stats.total})</span>
+          </button>
+          <button
+            onClick={() => handleExportExcel('critical')}
+            className="flex items-center justify-center gap-2 p-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-xl text-red-400 transition-colors"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="text-xs font-medium">Excel - Críticas ({stats.issues})</span>
+          </button>
+        </div>
+      </div>
 
       {/* Custom Report */}
       <div className="pt-3 border-t border-white/10">

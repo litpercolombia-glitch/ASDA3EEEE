@@ -1,6 +1,6 @@
 // components/ChatFirst/SkillViews/AutomatizacionesSkillView.tsx
 // Vista de Automatizaciones - Panel unificado de automatizacion
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Zap,
   Upload,
@@ -18,24 +18,27 @@ import {
   Loader2,
   Mail,
   Smartphone,
+  History,
+  RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import { Shipment } from '../../../types';
+import {
+  obtenerReglas,
+  guardarReglas,
+  procesarAutomatizaciones,
+  generarAlertasInteligentes,
+  obtenerHistorialEjecuciones,
+  guardarEjecucion,
+  type AutomationRule,
+  type WorkflowExecution,
+  type SmartAlert,
+} from '../../../services/automationService';
 
 interface AutomatizacionesSkillViewProps {
   shipments: Shipment[];
   onChatQuery?: (query: string) => void;
   onFileUpload?: (file: File) => void;
-}
-
-interface Automation {
-  id: string;
-  name: string;
-  description: string;
-  trigger: string;
-  action: string;
-  isActive: boolean;
-  lastRun?: Date;
-  runsToday: number;
 }
 
 interface QuickAction {
@@ -53,61 +56,148 @@ export const AutomatizacionesSkillView: React.FC<AutomatizacionesSkillViewProps>
   onFileUpload,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'quick' | 'rules' | 'scheduled'>('quick');
+  const [activeTab, setActiveTab] = useState<'quick' | 'rules' | 'history'>('quick');
+  const [isRunning, setIsRunning] = useState(false);
 
-  // Automatizaciones activas (simuladas)
-  const [automations, setAutomations] = useState<Automation[]>([
-    {
-      id: '1',
-      name: 'Alerta envios criticos',
-      description: 'Notifica cuando un envio supera 5 dias sin movimiento',
-      trigger: 'Envio > 5 dias sin actualizar',
-      action: 'Enviar alerta WhatsApp',
-      isActive: true,
-      lastRun: new Date(Date.now() - 3600000),
-      runsToday: 12,
-    },
-    {
-      id: '2',
-      name: 'Reporte diario automatico',
-      description: 'Genera y envia reporte cada dia a las 8am',
-      trigger: 'Cada dia 8:00 AM',
-      action: 'Generar reporte + Email',
-      isActive: true,
-      lastRun: new Date(Date.now() - 7200000),
-      runsToday: 1,
-    },
-    {
-      id: '3',
-      name: 'Mensaje cliente entrega',
-      description: 'Notifica al cliente cuando su pedido esta por llegar',
-      trigger: 'Estado: En camino a destino',
-      action: 'SMS al cliente',
-      isActive: false,
-      runsToday: 0,
-    },
-  ]);
+  // Cargar reglas REALES desde automationService
+  const [automations, setAutomations] = useState<AutomationRule[]>([]);
+  const [historial, setHistorial] = useState<WorkflowExecution[]>([]);
+  const [alertas, setAlertas] = useState<SmartAlert[]>([]);
+
+  // Cargar reglas al montar
+  useEffect(() => {
+    const reglas = obtenerReglas();
+    setAutomations(reglas);
+    setHistorial(obtenerHistorialEjecuciones());
+  }, []);
+
+  // Actualizar historial periódicamente
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setHistorial(obtenerHistorialEjecuciones());
+    }, 30000); // Cada 30 segundos
+    return () => clearInterval(interval);
+  }, []);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
-    // Simular carga
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     setIsUploading(false);
 
     onFileUpload?.(file);
     onChatQuery?.(`Procesa el archivo Excel ${file.name}`);
   };
 
-  const toggleAutomation = (id: string) => {
-    setAutomations(prev => prev.map(a =>
-      a.id === id ? { ...a, isActive: !a.isActive } : a
-    ));
+  // Toggle regla y PERSISTIR en localStorage
+  const toggleAutomation = useCallback((id: string) => {
+    setAutomations(prev => {
+      const updated = prev.map(a =>
+        a.id === id ? { ...a, activo: !a.activo } : a
+      );
+      guardarReglas(updated); // ✅ PERSISTIR EN LOCALSTORAGE
+      return updated;
+    });
+  }, []);
+
+  // Ejecutar automatizaciones REALES
+  const runAutomations = useCallback(async () => {
+    if (shipments.length === 0) {
+      onChatQuery?.('No hay guías cargadas para procesar automatizaciones');
+      return;
+    }
+
+    setIsRunning(true);
+
+    try {
+      // Ejecutar el motor de automatizaciones real
+      const { ejecuciones, alertas: nuevasAlertas } = procesarAutomatizaciones(shipments, automations);
+
+      // Guardar ejecuciones en historial
+      ejecuciones.forEach(exec => guardarEjecucion(exec));
+
+      // Generar alertas inteligentes
+      const alertasIA = generarAlertasInteligentes(shipments);
+
+      // Actualizar estado
+      setHistorial(obtenerHistorialEjecuciones());
+      setAlertas([...nuevasAlertas, ...alertasIA]);
+
+      // Actualizar contador de ejecuciones en reglas
+      setAutomations(prev => {
+        const updated = prev.map(regla => {
+          const ejecutada = ejecuciones.filter(e => e.reglaId === regla.id).length;
+          if (ejecutada > 0) {
+            return {
+              ...regla,
+              ejecutados: regla.ejecutados + ejecutada,
+              ultimaEjecucion: new Date().toISOString(),
+            };
+          }
+          return regla;
+        });
+        guardarReglas(updated);
+        return updated;
+      });
+
+      // Mostrar resultado
+      if (ejecuciones.length > 0) {
+        onChatQuery?.(`✅ Se ejecutaron ${ejecuciones.length} automatizaciones para ${new Set(ejecuciones.map(e => e.guiaId)).size} guías`);
+      } else {
+        onChatQuery?.('No hay guías que cumplan las condiciones de las reglas activas');
+      }
+    } catch (error) {
+      console.error('Error ejecutando automatizaciones:', error);
+      onChatQuery?.('Error ejecutando automatizaciones');
+    } finally {
+      setIsRunning(false);
+    }
+  }, [shipments, automations, onChatQuery]);
+
+  // Obtener descripción legible del trigger
+  const getTriggerDescription = (regla: AutomationRule): string => {
+    const { trigger } = regla;
+    switch (trigger.tipo) {
+      case 'time_threshold':
+        return `>${trigger.condiciones.horasSinMovimiento}h sin movimiento`;
+      case 'status_change':
+        return `Estado: ${trigger.condiciones.nuevoEstado}`;
+      case 'risk_level':
+        return `Riesgo: ${trigger.condiciones.nivelMinimo}`;
+      case 'multiple_attempts':
+        return `${trigger.condiciones.intentosFallidos}+ intentos fallidos`;
+      case 'schedule':
+        return `Programado: ${trigger.condiciones.hora}`;
+      default:
+        return trigger.tipo;
+    }
+  };
+
+  // Obtener descripción de acciones
+  const getActionsDescription = (regla: AutomationRule): string => {
+    return regla.acciones.map(a => {
+      switch (a.tipo) {
+        case 'send_whatsapp': return 'WhatsApp';
+        case 'create_alert': return 'Alerta';
+        case 'escalate': return 'Escalar';
+        case 'notify_team': return 'Notificar';
+        case 'tag_priority': return 'Priorizar';
+        default: return a.tipo;
+      }
+    }).join(' + ');
   };
 
   const quickActions: QuickAction[] = [
+    {
+      id: 'run-now',
+      name: 'Ejecutar Ahora',
+      description: `Procesar ${shipments.length} guías`,
+      icon: RefreshCw,
+      color: 'from-accent-500 to-amber-500',
+      action: runAutomations,
+    },
     {
       id: 'upload',
       name: 'Cargar Excel',
@@ -132,14 +222,6 @@ export const AutomatizacionesSkillView: React.FC<AutomatizacionesSkillViewProps>
       color: 'from-blue-500 to-cyan-500',
       action: () => onChatQuery?.('Genera mensajes para clientes con envios retrasados'),
     },
-    {
-      id: 'schedule-report',
-      name: 'Programar Reporte',
-      description: 'Automatizar generacion',
-      icon: Clock,
-      color: 'from-purple-500 to-violet-500',
-      action: () => onChatQuery?.('Quiero programar un reporte automatico diario'),
-    },
   ];
 
   return (
@@ -156,13 +238,13 @@ export const AutomatizacionesSkillView: React.FC<AutomatizacionesSkillViewProps>
       {/* Tab Navigation */}
       <div className="flex gap-2 p-1 bg-white/5 rounded-xl">
         {[
-          { id: 'quick', label: 'Acciones Rapidas', icon: Zap },
-          { id: 'rules', label: 'Reglas Activas', icon: Settings },
-          { id: 'scheduled', label: 'Programadas', icon: Clock },
+          { id: 'quick', label: 'Acciones', icon: Zap },
+          { id: 'rules', label: `Reglas (${automations.filter(a => a.activo).length})`, icon: Settings },
+          { id: 'history', label: `Historial (${historial.length})`, icon: History },
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => setActiveTab(tab.id as 'quick' | 'rules' | 'history')}
             className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
               activeTab === tab.id
                 ? 'bg-accent-500 text-white'
@@ -209,12 +291,21 @@ export const AutomatizacionesSkillView: React.FC<AutomatizacionesSkillViewProps>
               <button
                 key={action.id}
                 onClick={action.action}
-                className="p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-left transition-all hover:scale-[1.02]"
+                disabled={action.id === 'run-now' && isRunning}
+                className={`p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-left transition-all hover:scale-[1.02] ${
+                  action.id === 'run-now' && isRunning ? 'opacity-70 cursor-wait' : ''
+                }`}
               >
                 <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center mb-3`}>
-                  <action.icon className="w-5 h-5 text-white" />
+                  {action.id === 'run-now' && isRunning ? (
+                    <Loader2 className="w-5 h-5 text-white animate-spin" />
+                  ) : (
+                    <action.icon className="w-5 h-5 text-white" />
+                  )}
                 </div>
-                <p className="font-medium text-white text-sm">{action.name}</p>
+                <p className="font-medium text-white text-sm">
+                  {action.id === 'run-now' && isRunning ? 'Procesando...' : action.name}
+                </p>
                 <p className="text-xs text-slate-400">{action.description}</p>
               </button>
             ))}
@@ -225,11 +316,11 @@ export const AutomatizacionesSkillView: React.FC<AutomatizacionesSkillViewProps>
       {/* Rules Tab */}
       {activeTab === 'rules' && (
         <div className="space-y-3">
-          {automations.map((auto) => (
+          {automations.map((regla) => (
             <div
-              key={auto.id}
+              key={regla.id}
               className={`p-4 rounded-xl border transition-all ${
-                auto.isActive
+                regla.activo
                   ? 'bg-white/5 border-white/20'
                   : 'bg-white/[0.02] border-white/10 opacity-60'
               }`}
@@ -237,39 +328,42 @@ export const AutomatizacionesSkillView: React.FC<AutomatizacionesSkillViewProps>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-medium text-white">{auto.name}</p>
-                    {auto.isActive && (
+                    <p className="font-medium text-white">{regla.nombre}</p>
+                    {regla.activo && (
                       <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs rounded-full">
                         Activa
                       </span>
                     )}
+                    <span className="px-2 py-0.5 bg-slate-500/20 text-slate-400 text-xs rounded-full">
+                      P{regla.prioridad}
+                    </span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">{auto.description}</p>
+                  <p className="text-xs text-slate-400 mt-1">{regla.descripcion}</p>
                   <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
                     <span className="flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
-                      {auto.trigger}
+                      {getTriggerDescription(regla)}
                     </span>
                     <span className="flex items-center gap-1">
                       <Zap className="w-3 h-3" />
-                      {auto.action}
+                      {getActionsDescription(regla)}
                     </span>
                   </div>
-                  {auto.lastRun && (
-                    <p className="text-xs text-slate-600 mt-1">
-                      Ultima: {auto.lastRun.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })} | Hoy: {auto.runsToday} veces
-                    </p>
-                  )}
+                  <p className="text-xs text-slate-600 mt-1">
+                    Ejecutadas: {regla.ejecutados} veces
+                    {regla.ultimaEjecucion && ` | Última: ${new Date(regla.ultimaEjecucion).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`}
+                  </p>
                 </div>
                 <button
-                  onClick={() => toggleAutomation(auto.id)}
+                  onClick={() => toggleAutomation(regla.id)}
                   className={`p-2 rounded-lg transition-colors ${
-                    auto.isActive
+                    regla.activo
                       ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
                       : 'bg-white/10 text-slate-400 hover:bg-white/20'
                   }`}
+                  title={regla.activo ? 'Pausar regla' : 'Activar regla'}
                 >
-                  {auto.isActive ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                  {regla.activo ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                 </button>
               </div>
             </div>
@@ -285,44 +379,73 @@ export const AutomatizacionesSkillView: React.FC<AutomatizacionesSkillViewProps>
         </div>
       )}
 
-      {/* Scheduled Tab */}
-      {activeTab === 'scheduled' && (
+      {/* History Tab */}
+      {activeTab === 'history' && (
         <div className="space-y-3">
-          <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-blue-400" />
-                <span className="font-medium text-white">Reporte Diario</span>
-              </div>
-              <span className="text-xs text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full">
-                Activo
-              </span>
+          {historial.length === 0 ? (
+            <div className="text-center py-8 text-slate-400">
+              <History className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>No hay ejecuciones registradas</p>
+              <p className="text-xs mt-2">Ejecuta las automatizaciones para ver el historial</p>
             </div>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="p-2 bg-white/5 rounded-lg">
-                <p className="text-sm font-medium text-white">8:00 AM</p>
-                <p className="text-xs text-slate-500">Hora</p>
-              </div>
-              <div className="p-2 bg-white/5 rounded-lg">
-                <p className="text-sm font-medium text-white">Diario</p>
-                <p className="text-xs text-slate-500">Frecuencia</p>
-              </div>
-              <div className="p-2 bg-white/5 rounded-lg">
-                <div className="flex items-center justify-center gap-1">
-                  <Mail className="w-3 h-3 text-white" />
-                  <Smartphone className="w-3 h-3 text-white" />
+          ) : (
+            <>
+              {historial.slice(0, 10).map((exec) => (
+                <div
+                  key={exec.id}
+                  className={`p-3 rounded-xl border ${
+                    exec.resultado === 'exito'
+                      ? 'bg-emerald-500/5 border-emerald-500/20'
+                      : exec.resultado === 'parcial'
+                      ? 'bg-amber-500/5 border-amber-500/20'
+                      : 'bg-red-500/5 border-red-500/20'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        {exec.resultado === 'exito' ? (
+                          <CheckCircle className="w-4 h-4 text-emerald-400" />
+                        ) : exec.resultado === 'parcial' ? (
+                          <AlertCircle className="w-4 h-4 text-amber-400" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-red-400" />
+                        )}
+                        <span className="font-medium text-white text-sm">{exec.nombreRegla}</span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Guía: <span className="font-mono">{exec.guiaId.slice(0, 15)}...</span>
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {exec.accionesEjecutadas.join(' → ')}
+                      </p>
+                    </div>
+                    <span className="text-xs text-slate-500">
+                      {new Date(exec.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
                 </div>
-                <p className="text-xs text-slate-500">Canales</p>
-              </div>
-            </div>
-          </div>
+              ))}
+
+              {historial.length > 10 && (
+                <p className="text-xs text-center text-slate-500">
+                  Mostrando 10 de {historial.length} ejecuciones
+                </p>
+              )}
+            </>
+          )}
 
           <button
-            onClick={() => onChatQuery?.('Programa un nuevo reporte automatico')}
-            className="w-full p-3 border border-dashed border-white/20 hover:border-white/40 rounded-xl text-center text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-2"
+            onClick={runAutomations}
+            disabled={isRunning || shipments.length === 0}
+            className="w-full p-3 bg-accent-500/20 hover:bg-accent-500/30 border border-accent-500/30 rounded-xl text-center text-accent-400 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            <Plus className="w-4 h-4" />
-            Programar nuevo
+            {isRunning ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+            {isRunning ? 'Ejecutando...' : `Ejecutar ahora (${shipments.length} guías)`}
           </button>
         </div>
       )}

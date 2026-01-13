@@ -32,11 +32,13 @@ interface Prediction {
 }
 
 interface CarrierRecommendation {
-  carrier: CarrierName;
+  carrier: string;
   score: number;
-  avgDays: number;
+  avgDays: string;
   successRate: number;
   reason: string;
+  total: number;
+  delivered: number;
 }
 
 // Funcion de prediccion simplificada
@@ -110,16 +112,74 @@ export const PrediccionesSkillView: React.FC<PrediccionesSkillViewProps> = ({
     return { highRisk, mediumRisk, lowRisk, avgProbability, total: predictions.length };
   }, [predictions]);
 
-  // Recomendaciones de transportadora por ciudad (simplificado)
+  // Recomendaciones de transportadora CALCULADAS desde datos REALES
   const carrierRecommendations = useMemo((): CarrierRecommendation[] => {
-    // En produccion esto vendria del ML service
-    return [
-      { carrier: CarrierName.INTERRAPIDISIMO, score: 92, avgDays: 2.3, successRate: 94, reason: 'Mejor tasa de exito en Bogota' },
-      { carrier: CarrierName.ENVIA, score: 88, avgDays: 2.8, successRate: 91, reason: 'Buena cobertura nacional' },
-      { carrier: CarrierName.COORDINADORA, score: 85, avgDays: 3.1, successRate: 88, reason: 'Precio competitivo' },
-      { carrier: CarrierName.TCC, score: 78, avgDays: 3.5, successRate: 82, reason: 'Mejor para carga pesada' },
-    ];
-  }, []);
+    if (shipments.length === 0) return [];
+
+    // Agrupar por transportadora
+    const byCarrier: Record<string, {
+      total: number;
+      delivered: number;
+      daysSum: number;
+      daysCount: number;
+    }> = {};
+
+    shipments.forEach(s => {
+      const carrier = s.carrier || 'Desconocida';
+      if (!byCarrier[carrier]) {
+        byCarrier[carrier] = { total: 0, delivered: 0, daysSum: 0, daysCount: 0 };
+      }
+      byCarrier[carrier].total++;
+
+      if (s.status === ShipmentStatus.DELIVERED) {
+        byCarrier[carrier].delivered++;
+        const days = s.detailedInfo?.daysInTransit || 0;
+        if (days > 0) {
+          byCarrier[carrier].daysSum += days;
+          byCarrier[carrier].daysCount++;
+        }
+      }
+    });
+
+    // Convertir a recomendaciones
+    return Object.entries(byCarrier)
+      .filter(([_, data]) => data.total >= 3) // Mínimo 3 envíos para recomendar
+      .map(([carrier, data]) => {
+        const successRate = data.total > 0 ? Math.round((data.delivered / data.total) * 100) : 0;
+        const avgDays = data.daysCount > 0
+          ? (data.daysSum / data.daysCount).toFixed(1)
+          : 'N/A';
+
+        // Calcular score: 60% tasa éxito + 40% tiempo
+        const timeScore = data.daysCount > 0
+          ? Math.max(0, 100 - (data.daysSum / data.daysCount) * 10)
+          : 50;
+        const score = Math.round(successRate * 0.6 + timeScore * 0.4);
+
+        // Generar razón basada en datos
+        let reason = '';
+        if (successRate >= 90) reason = `Excelente tasa de éxito (${successRate}%)`;
+        else if (successRate >= 80) reason = `Buena tasa de entrega (${successRate}%)`;
+        else if (successRate >= 70) reason = `Tasa aceptable - monitorear`;
+        else reason = `Revisar - tasa baja (${successRate}%)`;
+
+        if (avgDays !== 'N/A' && parseFloat(avgDays) <= 3) {
+          reason += ` • Tiempos rápidos (${avgDays}d)`;
+        }
+
+        return {
+          carrier,
+          score,
+          avgDays,
+          successRate,
+          reason,
+          total: data.total,
+          delivered: data.delivered,
+        };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6); // Top 6
+  }, [shipments]);
 
   const getRiskColor = (level: string) => {
     switch (level) {
@@ -239,38 +299,64 @@ export const PrediccionesSkillView: React.FC<PrediccionesSkillViewProps> = ({
       {/* Carrier Recommendations */}
       {viewMode === 'recommendations' && (
         <div className="space-y-2">
-          {carrierRecommendations.map((rec) => (
-            <div
-              key={rec.carrier}
-              className="p-3 bg-white/5 border border-white/10 rounded-xl"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Truck className="w-5 h-5 text-slate-400" />
-                  <div>
-                    <p className="font-medium text-white">{rec.carrier}</p>
-                    <p className="text-xs text-slate-400">{rec.reason}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="flex items-center gap-2">
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-accent-400">{rec.score}</p>
-                      <p className="text-[10px] text-slate-500">Score</p>
-                    </div>
-                    <div className="text-center border-l border-white/10 pl-2">
-                      <p className="text-sm font-medium text-emerald-400">{rec.successRate}%</p>
-                      <p className="text-[10px] text-slate-500">Exito</p>
-                    </div>
-                    <div className="text-center border-l border-white/10 pl-2">
-                      <p className="text-sm font-medium text-blue-400">{rec.avgDays}d</p>
-                      <p className="text-[10px] text-slate-500">Tiempo</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          {carrierRecommendations.length === 0 ? (
+            <div className="text-center py-8 text-slate-400">
+              <Truck className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>No hay suficientes datos para recomendar</p>
+              <p className="text-xs mt-2">Se necesitan al menos 3 envíos por transportadora</p>
             </div>
-          ))}
+          ) : (
+            <>
+              <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl mb-3">
+                <p className="text-xs text-purple-300 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Recomendaciones basadas en {shipments.length} envíos reales
+                </p>
+              </div>
+
+              {carrierRecommendations.map((rec) => (
+                <div
+                  key={rec.carrier}
+                  className="p-3 bg-white/5 border border-white/10 rounded-xl"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Truck className="w-5 h-5 text-slate-400" />
+                      <div>
+                        <p className="font-medium text-white">{rec.carrier}</p>
+                        <p className="text-xs text-slate-400">{rec.reason}</p>
+                        <p className="text-[10px] text-slate-500 mt-1">
+                          {rec.delivered}/{rec.total} entregados
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="flex items-center gap-2">
+                        <div className="text-center">
+                          <p className={`text-lg font-bold ${
+                            rec.score >= 80 ? 'text-emerald-400' :
+                            rec.score >= 60 ? 'text-amber-400' : 'text-red-400'
+                          }`}>{rec.score}</p>
+                          <p className="text-[10px] text-slate-500">Score</p>
+                        </div>
+                        <div className="text-center border-l border-white/10 pl-2">
+                          <p className={`text-sm font-medium ${
+                            rec.successRate >= 80 ? 'text-emerald-400' :
+                            rec.successRate >= 60 ? 'text-amber-400' : 'text-red-400'
+                          }`}>{rec.successRate}%</p>
+                          <p className="text-[10px] text-slate-500">Éxito</p>
+                        </div>
+                        <div className="text-center border-l border-white/10 pl-2">
+                          <p className="text-sm font-medium text-blue-400">{rec.avgDays}d</p>
+                          <p className="text-[10px] text-slate-500">Tiempo</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
 
