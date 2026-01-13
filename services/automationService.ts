@@ -1,6 +1,7 @@
 // services/automationService.ts
 // Sistema de Automatización Inteligente para gestión de guías
 import { Shipment } from '../types';
+import { getSupabase, isSupabaseConfigured } from './supabaseService';
 
 // =====================================
 // TIPOS
@@ -556,14 +557,26 @@ export const generarAlertasInteligentes = (shipments: Shipment[]): SmartAlert[] 
   return alertas;
 };
 
+// =====================================
+// CACHE LOCAL + SUPABASE
+// =====================================
+
+let reglasCache: AutomationRule[] | null = null;
+let historialCache: WorkflowExecution[] | null = null;
+
 /**
- * Obtiene reglas guardadas o crea las predefinidas
+ * Obtiene reglas - Intenta Supabase primero, luego localStorage
  */
 export const obtenerReglas = (): AutomationRule[] => {
+  // Si hay cache, retornar
+  if (reglasCache) return reglasCache;
+
+  // Intentar localStorage primero (sync)
   const saved = localStorage.getItem('litper_automation_rules');
   if (saved) {
     try {
-      return JSON.parse(saved);
+      reglasCache = JSON.parse(saved);
+      return reglasCache!;
     } catch (e) {
       console.error('Error parsing saved rules:', e);
     }
@@ -578,24 +591,115 @@ export const obtenerReglas = (): AutomationRule[] => {
   }));
 
   localStorage.setItem('litper_automation_rules', JSON.stringify(reglas));
+  reglasCache = reglas;
+
+  // Sync con Supabase en background
+  sincronizarReglasConSupabase(reglas);
+
   return reglas;
 };
 
 /**
- * Guarda reglas actualizadas
+ * Obtiene reglas desde Supabase (async)
+ */
+export const obtenerReglasAsync = async (): Promise<AutomationRule[]> => {
+  if (!isSupabaseConfigured()) {
+    return obtenerReglas();
+  }
+
+  try {
+    const { data, error } = await getSupabase()
+      .from('automation_rules')
+      .select('*')
+      .order('prioridad', { ascending: true });
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      // Convertir formato de Supabase a formato local
+      const reglas: AutomationRule[] = data.map(r => ({
+        id: r.id,
+        nombre: r.nombre,
+        descripcion: r.descripcion,
+        activo: r.activo,
+        trigger: {
+          tipo: r.trigger_tipo as TriggerType,
+          condiciones: r.trigger_condiciones || {},
+        },
+        acciones: r.acciones || [],
+        prioridad: r.prioridad,
+        createdAt: r.created_at,
+        ejecutados: r.ejecutados,
+        ultimaEjecucion: r.ultima_ejecucion,
+      }));
+
+      // Actualizar cache y localStorage
+      reglasCache = reglas;
+      localStorage.setItem('litper_automation_rules', JSON.stringify(reglas));
+
+      return reglas;
+    }
+  } catch (e) {
+    console.warn('Error obteniendo reglas de Supabase, usando localStorage:', e);
+  }
+
+  return obtenerReglas();
+};
+
+/**
+ * Guarda reglas en localStorage y Supabase
  */
 export const guardarReglas = (reglas: AutomationRule[]): void => {
+  // Guardar en localStorage (sync)
   localStorage.setItem('litper_automation_rules', JSON.stringify(reglas));
+  reglasCache = reglas;
+
+  // Sync con Supabase en background
+  sincronizarReglasConSupabase(reglas);
+};
+
+/**
+ * Sincroniza reglas con Supabase (background)
+ */
+const sincronizarReglasConSupabase = async (reglas: AutomationRule[]): Promise<void> => {
+  if (!isSupabaseConfigured()) return;
+
+  try {
+    for (const regla of reglas) {
+      const supabaseData = {
+        id: regla.id,
+        nombre: regla.nombre,
+        descripcion: regla.descripcion,
+        activo: regla.activo,
+        trigger_tipo: regla.trigger.tipo,
+        trigger_condiciones: regla.trigger.condiciones,
+        acciones: regla.acciones,
+        prioridad: regla.prioridad,
+        ejecutados: regla.ejecutados,
+        ultima_ejecucion: regla.ultimaEjecucion,
+        updated_at: new Date().toISOString(),
+      };
+
+      await getSupabase()
+        .from('automation_rules')
+        .upsert(supabaseData, { onConflict: 'id' });
+    }
+  } catch (e) {
+    console.warn('Error sincronizando reglas con Supabase:', e);
+  }
 };
 
 /**
  * Obtiene historial de ejecuciones
  */
 export const obtenerHistorialEjecuciones = (): WorkflowExecution[] => {
+  if (historialCache) return historialCache;
+
   const saved = localStorage.getItem('litper_automation_history');
   if (saved) {
     try {
-      return JSON.parse(saved);
+      historialCache = JSON.parse(saved);
+      return historialCache!;
     } catch (e) {
       return [];
     }
@@ -604,14 +708,82 @@ export const obtenerHistorialEjecuciones = (): WorkflowExecution[] => {
 };
 
 /**
- * Guarda ejecución en historial
+ * Obtiene historial desde Supabase (async)
+ */
+export const obtenerHistorialAsync = async (limit = 100): Promise<WorkflowExecution[]> => {
+  if (!isSupabaseConfigured()) {
+    return obtenerHistorialEjecuciones();
+  }
+
+  try {
+    const { data, error } = await getSupabase()
+      .from('automation_history')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      const historial: WorkflowExecution[] = data.map(h => ({
+        id: h.id,
+        reglaId: h.regla_id,
+        nombreRegla: h.nombre_regla,
+        guiaId: h.guia_id,
+        accionesEjecutadas: h.acciones_ejecutadas || [],
+        resultado: h.resultado,
+        timestamp: h.created_at,
+        detalles: h.detalles,
+      }));
+
+      historialCache = historial;
+      localStorage.setItem('litper_automation_history', JSON.stringify(historial));
+
+      return historial;
+    }
+  } catch (e) {
+    console.warn('Error obteniendo historial de Supabase:', e);
+  }
+
+  return obtenerHistorialEjecuciones();
+};
+
+/**
+ * Guarda ejecución en historial (localStorage + Supabase)
  */
 export const guardarEjecucion = (ejecucion: WorkflowExecution): void => {
+  // Guardar en localStorage (sync)
   const historial = obtenerHistorialEjecuciones();
   historial.unshift(ejecucion);
-  // Mantener solo las últimas 100 ejecuciones
   const limitado = historial.slice(0, 100);
   localStorage.setItem('litper_automation_history', JSON.stringify(limitado));
+  historialCache = limitado;
+
+  // Guardar en Supabase (background)
+  guardarEjecucionEnSupabase(ejecucion);
+};
+
+/**
+ * Guarda ejecución en Supabase (background)
+ */
+const guardarEjecucionEnSupabase = async (ejecucion: WorkflowExecution): Promise<void> => {
+  if (!isSupabaseConfigured()) return;
+
+  try {
+    await getSupabase()
+      .from('automation_history')
+      .insert({
+        id: ejecucion.id,
+        regla_id: ejecucion.reglaId,
+        nombre_regla: ejecucion.nombreRegla,
+        guia_id: ejecucion.guiaId,
+        acciones_ejecutadas: ejecucion.accionesEjecutadas,
+        resultado: ejecucion.resultado,
+        detalles: ejecucion.detalles,
+      });
+  } catch (e) {
+    console.warn('Error guardando ejecución en Supabase:', e);
+  }
 };
 
 /**
@@ -786,18 +958,24 @@ export default {
   ejecutarAcciones,
   procesarAutomatizaciones,
   generarAlertasInteligentes,
+  // Reglas (sync + async)
   obtenerReglas,
+  obtenerReglasAsync,
   guardarReglas,
+  // Historial (sync + async)
   obtenerHistorialEjecuciones,
+  obtenerHistorialAsync,
   guardarEjecucion,
+  // Alertas
   obtenerAlertas,
   guardarAlertas,
   marcarAlertaLeida,
-  // Nuevas funciones
+  // Plantillas WhatsApp
   PLANTILLAS_WHATSAPP,
   obtenerPlantilla,
   renderizarPlantilla,
   obtenerPlantillasPorCategoria,
+  // CRUD Reglas
   crearReglaPersonalizada,
   eliminarRegla,
   actualizarRegla,
