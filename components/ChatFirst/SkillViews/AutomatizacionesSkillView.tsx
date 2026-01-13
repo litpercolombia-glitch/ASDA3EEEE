@@ -30,9 +30,14 @@ import {
   generarAlertasInteligentes,
   obtenerHistorialEjecuciones,
   guardarEjecucion,
+  eliminarRegla,
+  crearReglaDesdeTemplate,
+  PLANTILLAS_REGLAS,
+  PLANTILLAS_WHATSAPP,
   type AutomationRule,
   type WorkflowExecution,
   type SmartAlert,
+  type MessageTemplate,
 } from '../../../services/automationService';
 
 interface AutomatizacionesSkillViewProps {
@@ -56,8 +61,9 @@ export const AutomatizacionesSkillView: React.FC<AutomatizacionesSkillViewProps>
   onFileUpload,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'quick' | 'rules' | 'history'>('quick');
+  const [activeTab, setActiveTab] = useState<'quick' | 'rules' | 'history' | 'templates'>('quick');
   const [isRunning, setIsRunning] = useState(false);
+  const [showRuleCreator, setShowRuleCreator] = useState(false);
 
   // Cargar reglas REALES desde automationService
   const [automations, setAutomations] = useState<AutomationRule[]>([]);
@@ -101,6 +107,24 @@ export const AutomatizacionesSkillView: React.FC<AutomatizacionesSkillViewProps>
       return updated;
     });
   }, []);
+
+  // Crear regla desde plantilla
+  const handleCreateFromTemplate = useCallback((templateId: string) => {
+    const nuevaRegla = crearReglaDesdeTemplate(templateId);
+    if (nuevaRegla) {
+      setAutomations(obtenerReglas());
+      onChatQuery?.(`✅ Regla "${nuevaRegla.nombre}" creada exitosamente`);
+      setShowRuleCreator(false);
+    }
+  }, [onChatQuery]);
+
+  // Eliminar regla
+  const handleDeleteRule = useCallback((reglaId: string, nombre: string) => {
+    if (eliminarRegla(reglaId)) {
+      setAutomations(obtenerReglas());
+      onChatQuery?.(`🗑️ Regla "${nombre}" eliminada`);
+    }
+  }, [onChatQuery]);
 
   // Ejecutar automatizaciones REALES
   const runAutomations = useCallback(async () => {
@@ -236,22 +260,23 @@ export const AutomatizacionesSkillView: React.FC<AutomatizacionesSkillViewProps>
       />
 
       {/* Tab Navigation */}
-      <div className="flex gap-2 p-1 bg-white/5 rounded-xl">
+      <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
         {[
           { id: 'quick', label: 'Acciones', icon: Zap },
           { id: 'rules', label: `Reglas (${automations.filter(a => a.activo).length})`, icon: Settings },
-          { id: 'history', label: `Historial (${historial.length})`, icon: History },
+          { id: 'templates', label: 'Plantillas', icon: MessageSquare },
+          { id: 'history', label: `Historial`, icon: History },
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as 'quick' | 'rules' | 'history')}
-            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+            onClick={() => setActiveTab(tab.id as 'quick' | 'rules' | 'history' | 'templates')}
+            className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
               activeTab === tab.id
                 ? 'bg-accent-500 text-white'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <tab.icon className="w-4 h-4" />
+            <tab.icon className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{tab.label}</span>
           </button>
         ))}
@@ -354,28 +379,75 @@ export const AutomatizacionesSkillView: React.FC<AutomatizacionesSkillViewProps>
                     {regla.ultimaEjecucion && ` | Última: ${new Date(regla.ultimaEjecucion).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`}
                   </p>
                 </div>
-                <button
-                  onClick={() => toggleAutomation(regla.id)}
-                  className={`p-2 rounded-lg transition-colors ${
-                    regla.activo
-                      ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
-                      : 'bg-white/10 text-slate-400 hover:bg-white/20'
-                  }`}
-                  title={regla.activo ? 'Pausar regla' : 'Activar regla'}
-                >
-                  {regla.activo ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => toggleAutomation(regla.id)}
+                    className={`p-2 rounded-lg transition-colors ${
+                      regla.activo
+                        ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
+                        : 'bg-white/10 text-slate-400 hover:bg-white/20'
+                    }`}
+                    title={regla.activo ? 'Pausar regla' : 'Activar regla'}
+                  >
+                    {regla.activo ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                  </button>
+                  {regla.id.startsWith('rule_custom') && (
+                    <button
+                      onClick={() => handleDeleteRule(regla.id, regla.nombre)}
+                      className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                      title="Eliminar regla"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
 
-          <button
-            onClick={() => onChatQuery?.('Quiero crear una nueva regla de automatizacion')}
-            className="w-full p-3 border border-dashed border-white/20 hover:border-white/40 rounded-xl text-center text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Crear nueva regla
-          </button>
+          {/* Crear nueva regla */}
+          {!showRuleCreator ? (
+            <button
+              onClick={() => setShowRuleCreator(true)}
+              className="w-full p-3 border border-dashed border-white/20 hover:border-white/40 rounded-xl text-center text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Crear nueva regla
+            </button>
+          ) : (
+            <div className="p-4 bg-navy-800/50 rounded-xl border border-white/10 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-white">Crear Regla desde Plantilla</p>
+                <button
+                  onClick={() => setShowRuleCreator(false)}
+                  className="p-1 hover:bg-white/10 rounded"
+                >
+                  <Plus className="w-4 h-4 text-slate-400 rotate-45" />
+                </button>
+              </div>
+              <div className="grid gap-2">
+                {PLANTILLAS_REGLAS.map((template) => (
+                  <button
+                    key={template.id}
+                    onClick={() => handleCreateFromTemplate(template.id)}
+                    className="p-3 bg-white/5 hover:bg-white/10 rounded-lg text-left transition-colors border border-white/10 hover:border-accent-500/30"
+                  >
+                    <p className="text-sm font-medium text-white">{template.nombre}</p>
+                    <p className="text-xs text-slate-400 mt-1">{template.descripcion}</p>
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => {
+                  setShowRuleCreator(false);
+                  onChatQuery?.('Quiero crear una regla de automatización personalizada');
+                }}
+                className="w-full p-2 text-xs text-accent-400 hover:bg-accent-500/10 rounded-lg transition-colors"
+              >
+                O crear regla completamente personalizada...
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -450,6 +522,74 @@ export const AutomatizacionesSkillView: React.FC<AutomatizacionesSkillViewProps>
         </div>
       )}
 
+      {/* Templates Tab - Plantillas WhatsApp */}
+      {activeTab === 'templates' && (
+        <div className="space-y-4">
+          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+            <p className="text-xs text-emerald-400 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Plantillas de mensajes para automatizaciones
+            </p>
+          </div>
+
+          {/* Categorías de plantillas */}
+          {(['entrega', 'novedad', 'oficina', 'seguimiento'] as const).map(categoria => {
+            const plantillas = PLANTILLAS_WHATSAPP.filter(p => p.categoria === categoria);
+            if (plantillas.length === 0) return null;
+
+            return (
+              <div key={categoria}>
+                <p className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">
+                  {categoria === 'entrega' ? '✅ Entregas' :
+                   categoria === 'novedad' ? '⚠️ Novedades' :
+                   categoria === 'oficina' ? '📦 En Oficina' :
+                   '📊 Seguimiento'}
+                </p>
+                <div className="space-y-2">
+                  {plantillas.map(plantilla => (
+                    <div
+                      key={plantilla.id}
+                      className="p-3 bg-white/5 rounded-xl border border-white/10 hover:border-white/20 transition-colors"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <p className="text-sm font-medium text-white">{plantilla.nombre}</p>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(plantilla.mensaje);
+                            onChatQuery?.(`📋 Plantilla "${plantilla.nombre}" copiada al portapapeles`);
+                          }}
+                          className="px-2 py-1 text-xs text-accent-400 hover:bg-accent-500/10 rounded transition-colors"
+                        >
+                          Copiar
+                        </button>
+                      </div>
+                      <p className="text-xs text-slate-300 bg-navy-900/50 p-2 rounded-lg font-mono">
+                        {plantilla.mensaje}
+                      </p>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {plantilla.variables.map(v => (
+                          <span key={v} className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] rounded">
+                            {`{${v}}`}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          <button
+            onClick={() => onChatQuery?.('Quiero crear una plantilla de mensaje personalizada para WhatsApp')}
+            className="w-full p-3 border border-dashed border-white/20 hover:border-white/40 rounded-xl text-center text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Crear plantilla personalizada
+          </button>
+        </div>
+      )}
+
       {/* Quick Chat Actions */}
       <div className="flex flex-wrap gap-2 pt-2 border-t border-white/10">
         <button
@@ -459,10 +599,10 @@ export const AutomatizacionesSkillView: React.FC<AutomatizacionesSkillViewProps>
           Recomendar automatizaciones
         </button>
         <button
-          onClick={() => onChatQuery?.('Crea una regla: si retraso mayor a 3 dias, alertar')}
+          onClick={() => onChatQuery?.('Genera mensajes masivos para guias retrasadas')}
           className="px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-xs text-slate-300"
         >
-          Crear regla ejemplo
+          Mensajes masivos
         </button>
       </div>
     </div>

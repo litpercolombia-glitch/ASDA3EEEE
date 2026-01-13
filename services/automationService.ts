@@ -68,6 +68,108 @@ export interface WorkflowExecution {
 }
 
 // =====================================
+// PLANTILLAS DE MENSAJES WHATSAPP
+// =====================================
+
+export interface MessageTemplate {
+  id: string;
+  nombre: string;
+  categoria: 'entrega' | 'novedad' | 'oficina' | 'seguimiento' | 'personalizado';
+  mensaje: string;
+  variables: string[];
+  descripcion: string;
+}
+
+export const PLANTILLAS_WHATSAPP: MessageTemplate[] = [
+  {
+    id: 'entrega_exitosa',
+    nombre: 'Entrega Exitosa',
+    categoria: 'entrega',
+    mensaje: '¡Hola {nombre}! 🎉 Tu paquete con guía {guia} ha sido entregado exitosamente. Gracias por confiar en nosotros.',
+    variables: ['nombre', 'guia'],
+    descripcion: 'Confirmar entrega exitosa al cliente',
+  },
+  {
+    id: 'en_camino',
+    nombre: 'En Camino',
+    categoria: 'seguimiento',
+    mensaje: '¡Hola {nombre}! 🚚 Tu paquete con guía {guia} está en camino. Transportadora: {transportadora}. Tiempo estimado: {tiempo}.',
+    variables: ['nombre', 'guia', 'transportadora', 'tiempo'],
+    descripcion: 'Notificar que el paquete salió para entrega',
+  },
+  {
+    id: 'en_oficina',
+    nombre: 'Listo en Oficina',
+    categoria: 'oficina',
+    mensaje: '¡Hola {nombre}! 📦 Tu paquete con guía {guia} está listo para recoger en nuestra oficina ({direccion}). Horario: {horario}.',
+    variables: ['nombre', 'guia', 'direccion', 'horario'],
+    descripcion: 'Avisar que el paquete está en oficina para retiro',
+  },
+  {
+    id: 'intento_fallido',
+    nombre: 'Intento Fallido',
+    categoria: 'novedad',
+    mensaje: '¡Hola {nombre}! ⚠️ Intentamos entregar tu paquete (guía {guia}) pero no fue posible. Motivo: {motivo}. Reprogramamos para {fecha}.',
+    variables: ['nombre', 'guia', 'motivo', 'fecha'],
+    descripcion: 'Informar sobre intento de entrega fallido',
+  },
+  {
+    id: 'novedad_direccion',
+    nombre: 'Problema Dirección',
+    categoria: 'novedad',
+    mensaje: '¡Hola {nombre}! 📍 Necesitamos confirmar la dirección de entrega para tu paquete (guía {guia}). ¿Puedes verificar: {direccion}?',
+    variables: ['nombre', 'guia', 'direccion'],
+    descripcion: 'Solicitar confirmación de dirección',
+  },
+  {
+    id: 'retraso',
+    nombre: 'Aviso de Retraso',
+    categoria: 'seguimiento',
+    mensaje: '¡Hola {nombre}! ⏰ Tu paquete (guía {guia}) está presentando un retraso. Nueva fecha estimada: {fecha}. Disculpa los inconvenientes.',
+    variables: ['nombre', 'guia', 'fecha'],
+    descripcion: 'Notificar retraso en la entrega',
+  },
+  {
+    id: 'seguimiento_proactivo',
+    nombre: 'Seguimiento Proactivo',
+    categoria: 'seguimiento',
+    mensaje: '¡Hola {nombre}! 📊 Estado de tu envío (guía {guia}): {estado}. Última ubicación: {ubicacion}. ¿Necesitas ayuda?',
+    variables: ['nombre', 'guia', 'estado', 'ubicacion'],
+    descripcion: 'Enviar actualización proactiva del estado',
+  },
+  {
+    id: 'confirmacion_recepcion',
+    nombre: 'Confirmar Recepción',
+    categoria: 'entrega',
+    mensaje: '¡Hola {nombre}! ¿Recibiste tu paquete (guía {guia}) correctamente? Por favor confirma respondiendo SI o NO.',
+    variables: ['nombre', 'guia'],
+    descripcion: 'Solicitar confirmación de recepción',
+  },
+];
+
+// Obtener plantilla por ID
+export const obtenerPlantilla = (id: string): MessageTemplate | undefined => {
+  return PLANTILLAS_WHATSAPP.find(p => p.id === id);
+};
+
+// Renderizar plantilla con variables
+export const renderizarPlantilla = (
+  plantilla: MessageTemplate,
+  variables: Record<string, string>
+): string => {
+  let mensaje = plantilla.mensaje;
+  Object.entries(variables).forEach(([key, value]) => {
+    mensaje = mensaje.replace(new RegExp(`{${key}}`, 'g'), value);
+  });
+  return mensaje;
+};
+
+// Obtener plantillas por categoría
+export const obtenerPlantillasPorCategoria = (categoria: MessageTemplate['categoria']): MessageTemplate[] => {
+  return PLANTILLAS_WHATSAPP.filter(p => p.categoria === categoria);
+};
+
+// =====================================
 // REGLAS PREDEFINIDAS
 // =====================================
 
@@ -546,6 +648,139 @@ export const marcarAlertaLeida = (alertaId: string): void => {
   }
 };
 
+// =====================================
+// CREAR REGLAS PERSONALIZADAS
+// =====================================
+
+export interface CrearReglaParams {
+  nombre: string;
+  descripcion: string;
+  triggerTipo: TriggerType;
+  triggerCondiciones: Record<string, any>;
+  acciones: { tipo: ActionType; parametros: Record<string, any> }[];
+  prioridad?: number;
+}
+
+/**
+ * Crea una nueva regla de automatización personalizada
+ */
+export const crearReglaPersonalizada = (params: CrearReglaParams): AutomationRule => {
+  const nuevaRegla: AutomationRule = {
+    id: `rule_custom_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    nombre: params.nombre,
+    descripcion: params.descripcion,
+    activo: true,
+    trigger: {
+      tipo: params.triggerTipo,
+      condiciones: params.triggerCondiciones,
+    },
+    acciones: params.acciones,
+    prioridad: params.prioridad || 2,
+    createdAt: new Date().toISOString(),
+    ejecutados: 0,
+  };
+
+  // Guardar en las reglas existentes
+  const reglas = obtenerReglas();
+  reglas.push(nuevaRegla);
+  guardarReglas(reglas);
+
+  return nuevaRegla;
+};
+
+/**
+ * Eliminar una regla por ID
+ */
+export const eliminarRegla = (reglaId: string): boolean => {
+  const reglas = obtenerReglas();
+  const idx = reglas.findIndex(r => r.id === reglaId);
+  if (idx >= 0) {
+    reglas.splice(idx, 1);
+    guardarReglas(reglas);
+    return true;
+  }
+  return false;
+};
+
+/**
+ * Actualizar una regla existente
+ */
+export const actualizarRegla = (reglaId: string, updates: Partial<AutomationRule>): AutomationRule | null => {
+  const reglas = obtenerReglas();
+  const idx = reglas.findIndex(r => r.id === reglaId);
+  if (idx >= 0) {
+    reglas[idx] = { ...reglas[idx], ...updates };
+    guardarReglas(reglas);
+    return reglas[idx];
+  }
+  return null;
+};
+
+/**
+ * Reglas predefinidas rápidas para crear
+ */
+export const PLANTILLAS_REGLAS = [
+  {
+    id: 'retraso_3_dias',
+    nombre: 'Alerta Retraso 3+ días',
+    descripcion: 'Alerta cuando una guía lleva más de 3 días sin movimiento',
+    config: {
+      triggerTipo: 'time_threshold' as TriggerType,
+      triggerCondiciones: { horasSinMovimiento: 72, estados: ['in_transit', 'issue'] },
+      acciones: [{ tipo: 'create_alert' as ActionType, parametros: { tipo: 'urgente', mensaje: 'Guía sin movimiento por 3+ días' } }],
+    },
+  },
+  {
+    id: 'whatsapp_entregado',
+    nombre: 'WhatsApp al Entregar',
+    descripcion: 'Envía WhatsApp automático cuando se entrega',
+    config: {
+      triggerTipo: 'status_change' as TriggerType,
+      triggerCondiciones: { nuevoEstado: 'delivered' },
+      acciones: [{ tipo: 'send_whatsapp' as ActionType, parametros: { plantilla: 'entrega_exitosa', mensaje: 'Entrega confirmada' } }],
+    },
+  },
+  {
+    id: 'escalamiento_5_dias',
+    nombre: 'Escalar a Supervisor',
+    descripcion: 'Escala a supervisor si la guía lleva más de 5 días',
+    config: {
+      triggerTipo: 'time_threshold' as TriggerType,
+      triggerCondiciones: { horasSinMovimiento: 120, estados: ['in_transit', 'issue', 'exception'] },
+      acciones: [
+        { tipo: 'escalate' as ActionType, parametros: { nivel: 'supervisor', razon: 'Retraso crítico' } },
+        { tipo: 'create_alert' as ActionType, parametros: { tipo: 'critico', mensaje: 'Escalado por retraso crítico' } },
+      ],
+    },
+  },
+  {
+    id: 'notificar_novedad',
+    nombre: 'Notificar al Cliente - Novedad',
+    descripcion: 'Envía WhatsApp cuando hay una novedad en la entrega',
+    config: {
+      triggerTipo: 'status_change' as TriggerType,
+      triggerCondiciones: { nuevoEstado: 'issue' },
+      acciones: [{ tipo: 'send_whatsapp' as ActionType, parametros: { plantilla: 'intento_fallido', mensaje: 'Hubo un problema con tu entrega' } }],
+    },
+  },
+];
+
+/**
+ * Crear regla a partir de plantilla
+ */
+export const crearReglaDesdeTemplate = (templateId: string): AutomationRule | null => {
+  const template = PLANTILLAS_REGLAS.find(t => t.id === templateId);
+  if (!template) return null;
+
+  return crearReglaPersonalizada({
+    nombre: template.nombre,
+    descripcion: template.descripcion,
+    triggerTipo: template.config.triggerTipo,
+    triggerCondiciones: template.config.triggerCondiciones,
+    acciones: template.config.acciones,
+  });
+};
+
 export default {
   evaluarCondiciones,
   ejecutarAcciones,
@@ -557,5 +792,15 @@ export default {
   guardarEjecucion,
   obtenerAlertas,
   guardarAlertas,
-  marcarAlertaLeida
+  marcarAlertaLeida,
+  // Nuevas funciones
+  PLANTILLAS_WHATSAPP,
+  obtenerPlantilla,
+  renderizarPlantilla,
+  obtenerPlantillasPorCategoria,
+  crearReglaPersonalizada,
+  eliminarRegla,
+  actualizarRegla,
+  PLANTILLAS_REGLAS,
+  crearReglaDesdeTemplate,
 };
