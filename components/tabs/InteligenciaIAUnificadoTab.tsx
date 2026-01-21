@@ -12,7 +12,6 @@ import {
   Cpu,
   Network,
   Lightbulb,
-  Zap,
   BarChart3,
   Users,
   MapPin,
@@ -24,6 +23,7 @@ import {
   BookOpen,
   Activity,
   ListOrdered,
+  Zap,
 } from 'lucide-react';
 import { Shipment } from '../../types';
 
