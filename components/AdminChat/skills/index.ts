@@ -208,7 +208,27 @@ export const SKILLS: Record<string, Skill> = {
     examples: ['/dashboard', '/dash', '/dashboard kpis'],
     execute: async (ctx: SkillContext): Promise<SkillResult> => {
       try {
-        // Obtener datos del dashboard
+        // Intentar con el nuevo endpoint de chat skills primero
+        try {
+          const dashData = await ctx.api.get('/chat/dashboard');
+          return {
+            type: 'report',
+            title: dashData.titulo || '📊 Dashboard',
+            data: {
+              cards: dashData.cards || [],
+              fecha: dashData.fecha,
+              metricas: dashData.metricas_secundarias
+            },
+            actions: [
+              { label: '📈 Ver reporte', action: 'execute_skill', params: { skill: 'reporte' } },
+              { label: '⚠️ Ver alertas', action: 'execute_skill', params: { skill: 'alertas' } }
+            ]
+          };
+        } catch {
+          // Fallback a endpoints legacy
+        }
+
+        // Obtener datos del dashboard (legacy)
         const [resumen, kpis, tendencias] = await Promise.all([
           ctx.api.get('/dashboard/resumen'),
           ctx.api.get('/dashboard/kpis-avanzados'),
