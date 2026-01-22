@@ -1322,8 +1322,8 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
 
   // Procesar TODAS las guías (con límite de seguridad)
   const guiasProcesadas: GuiaProcesada[] = useMemo(() => {
-    // Límite de seguridad para evitar que el navegador se congele
-    const MAX_GUIAS_PROCESAR = 1000;
+    // Límite de seguridad - LÍMITE: 10,000 guías máximo
+    const MAX_GUIAS_PROCESAR = 10000;
     const guiasAProcesar = shipments.length > MAX_GUIAS_PROCESAR
       ? shipments.slice(0, MAX_GUIAS_PROCESAR)
       : shipments;

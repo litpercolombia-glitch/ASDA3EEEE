@@ -104,8 +104,8 @@ export const guardarNuevaHoja = async (
   guias: Shipment[],
   nombreHoja?: string
 ): Promise<HojaCarga> => {
-  // Validar cantidad de guías
-  const MAX_GUIAS_NUEVA_HOJA = 500;
+  // Validar cantidad de guías - LÍMITE: 1000 guías por hoja
+  const MAX_GUIAS_NUEVA_HOJA = 1000;
   if (guias.length > MAX_GUIAS_NUEVA_HOJA) {
     console.warn(`Muchas guías (${guias.length}), limitando a ${MAX_GUIAS_NUEVA_HOJA}`);
   }
@@ -222,8 +222,8 @@ export const restaurarHoja = async (hojaId: string): Promise<HojaCarga | null> =
  * IMPORTANTE: Limita el tamaño para evitar exceder localStorage (~5MB)
  */
 const guardarHojasGlobal = async (hojas: HojaCarga[]): Promise<void> => {
-  // Limitar guías por hoja para evitar exceder localStorage
-  const MAX_GUIAS_POR_HOJA = 200;
+  // Limitar guías por hoja - LÍMITE: 1000 guías por hoja
+  const MAX_GUIAS_POR_HOJA = 1000;
   const MAX_HOJAS = 20;
 
   // Optimizar hojas: limitar guías por hoja
