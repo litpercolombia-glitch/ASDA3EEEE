@@ -20,14 +20,16 @@ Version: 1.0.0
 import os
 import io
 import uuid
-import hashlib
 from typing import Optional, List
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Query, Depends, Header
+from fastapi import APIRouter, HTTPException, UploadFile, File, Query, Depends, Header, Request
 from pydantic import BaseModel, Field
 from loguru import logger
 import anthropic
+
+# Importar sistema de autenticacion seguro
+from .auth import auth_manager, verify_token as jwt_verify
 
 try:
     import pandas as pd
@@ -51,7 +53,9 @@ router = APIRouter(
 
 # ==================== CONFIGURACION ====================
 
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "Sacrije2020?08")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+if not ADMIN_PASSWORD:
+    raise ValueError("ADMIN_PASSWORD no configurada en variables de entorno. Revise el archivo .env")
 # En produccion, usar hash y tokens JWT
 
 
@@ -95,14 +99,13 @@ class FiltroFecha(BaseModel):
 
 # En produccion, esto iria en base de datos
 documentos_cargados = []
-sesiones_activas = {}
 
 
 # ==================== FUNCIONES AUXILIARES ====================
 
 def verificar_token(authorization: Optional[str] = Header(None)) -> bool:
     """
-    Verifica el token de autorizacion.
+    Verifica el token de autorizacion usando el sistema seguro.
     """
     if not authorization:
         raise HTTPException(status_code=401, detail="Token requerido")
@@ -114,15 +117,10 @@ def verificar_token(authorization: Optional[str] = Header(None)) -> bool:
 
     token = parts[1]
 
-    # Verificar token en sesiones
-    if token not in sesiones_activas:
+    # Verificar con el sistema de auth seguro
+    valid, payload = auth_manager.verify(token)
+    if not valid:
         raise HTTPException(status_code=401, detail="Token invalido o expirado")
-
-    # Verificar expiracion
-    sesion = sesiones_activas[token]
-    if datetime.now() > sesion["expira"]:
-        del sesiones_activas[token]
-        raise HTTPException(status_code=401, detail="Sesion expirada")
 
     return True
 
@@ -158,32 +156,27 @@ def calcular_rango_fecha(filtro: str) -> tuple:
     summary="Login de administrador",
     description="Autentica al administrador y retorna un token de sesion."
 )
-async def login(request: LoginRequest):
+async def login(request: LoginRequest, req: Request):
     """
-    Login de administrador.
+    Login de administrador con sistema de autenticacion seguro.
+    Incluye proteccion contra fuerza bruta.
     """
+    # Obtener IP del cliente
+    client_ip = req.client.host if req.client else "unknown"
 
-    if request.password != ADMIN_PASSWORD:
-        logger.warning("Intento de login fallido")
-        raise HTTPException(status_code=401, detail="Contrasena incorrecta")
+    # Usar el sistema de autenticacion seguro
+    success, token, message = auth_manager.login(request.password, client_ip)
 
-    # Generar token
-    token = hashlib.sha256(
-        f"{uuid.uuid4()}{datetime.now().isoformat()}".encode()
-    ).hexdigest()
+    if not success:
+        logger.warning(f"Intento de login fallido desde {client_ip}: {message}")
+        raise HTTPException(status_code=401, detail=message)
 
-    # Guardar sesion
-    sesiones_activas[token] = {
-        "creada": datetime.now(),
-        "expira": datetime.now() + timedelta(hours=8)
-    }
-
-    logger.info("Login de admin exitoso")
+    logger.info(f"Login de admin exitoso desde {client_ip}")
 
     return LoginResponse(
         success=True,
         token=token,
-        message="Login exitoso"
+        message=message
     )
 
 
@@ -196,13 +189,11 @@ async def logout(authorization: Optional[str] = Header(None)):
     """
     Logout de administrador.
     """
-
     if authorization:
         parts = authorization.split()
         if len(parts) == 2:
             token = parts[1]
-            if token in sesiones_activas:
-                del sesiones_activas[token]
+            auth_manager.logout(token)
 
     return {"success": True, "message": "Sesion cerrada"}
 

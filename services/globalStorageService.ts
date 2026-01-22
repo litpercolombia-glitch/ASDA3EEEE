@@ -5,9 +5,12 @@
 
 import { Shipment } from '../types';
 
-const API_BASE_URL = 'https://api.jsonbin.io/v3/b';
-const MASTER_KEY = '$2a$10$YOUR_MASTER_KEY'; // Reemplazar con clave real en producción
-const BIN_ID = 'litper-global-storage'; // ID del bin para almacenamiento
+// NOTA: JSONbin deshabilitado - usar solo localStorage por ahora
+// Para habilitar sincronización en la nube, configurar estas variables
+const API_BASE_URL = import.meta.env.VITE_STORAGE_API_URL || '';
+const MASTER_KEY = import.meta.env.VITE_STORAGE_API_KEY || '';
+const BIN_ID = import.meta.env.VITE_STORAGE_BIN_ID || '';
+const USE_CLOUD_STORAGE = Boolean(API_BASE_URL && MASTER_KEY && BIN_ID);
 
 // Interface para una Hoja de Carga
 export interface HojaCarga {
@@ -39,35 +42,37 @@ const LOCAL_STORAGE_KEY = 'litper_global_hojas';
  * Obtiene todas las hojas de carga del almacenamiento global
  */
 export const obtenerTodasLasHojas = async (): Promise<HojaCarga[]> => {
-  try {
-    // Intentar obtener del servidor primero
-    const response = await fetch(`${API_BASE_URL}/${BIN_ID}/latest`, {
-      headers: {
-        'X-Master-Key': MASTER_KEY,
-      },
-    });
+  // Si cloud storage está configurado, intentar usarlo
+  if (USE_CLOUD_STORAGE) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/${BIN_ID}/latest`, {
+        headers: {
+          'X-Master-Key': MASTER_KEY,
+        },
+      });
 
-    if (response.ok) {
-      const data = await response.json();
-      const storage: GlobalStorage = data.record;
+      if (response.ok) {
+        const data = await response.json();
+        const storage: GlobalStorage = data.record;
 
-      // Convertir fechas string a Date
-      const hojas = storage.hojas.map((h) => ({
-        ...h,
-        fechaCreacion: new Date(h.fechaCreacion),
-        fechaActualizacion: new Date(h.fechaActualizacion),
-      }));
+        // Convertir fechas string a Date
+        const hojas = storage.hojas.map((h) => ({
+          ...h,
+          fechaCreacion: new Date(h.fechaCreacion),
+          fechaActualizacion: new Date(h.fechaActualizacion),
+        }));
 
-      // Guardar en localStorage como backup
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(hojas));
+        // Guardar en localStorage como backup
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(hojas));
 
-      return hojas;
+        return hojas;
+      }
+    } catch (error) {
+      console.log('Cloud storage falló, usando localStorage');
     }
-  } catch (error) {
-    console.log('Usando almacenamiento local (modo offline)');
   }
 
-  // Fallback a localStorage
+  // Usar localStorage (modo por defecto)
   return obtenerHojasLocal();
 };
 
@@ -93,11 +98,18 @@ export const obtenerHojasLocal = (): HojaCarga[] => {
 
 /**
  * Guarda una nueva hoja de carga
+ * MEJORADO: Mejor manejo de errores y límites
  */
 export const guardarNuevaHoja = async (
   guias: Shipment[],
   nombreHoja?: string
 ): Promise<HojaCarga> => {
+  // Validar cantidad de guías - LÍMITE: 1000 guías por hoja
+  const MAX_GUIAS_NUEVA_HOJA = 1000;
+  if (guias.length > MAX_GUIAS_NUEVA_HOJA) {
+    console.warn(`Muchas guías (${guias.length}), limitando a ${MAX_GUIAS_NUEVA_HOJA}`);
+  }
+
   const hojas = await obtenerTodasLasHojas();
 
   const nuevaHoja: HojaCarga = {
@@ -113,15 +125,22 @@ export const guardarNuevaHoja = async (
       })}`,
     fechaCreacion: new Date(),
     fechaActualizacion: new Date(),
-    cantidadGuias: guias.length,
-    guias: guias,
+    cantidadGuias: Math.min(guias.length, MAX_GUIAS_NUEVA_HOJA),
+    guias: guias.slice(0, MAX_GUIAS_NUEVA_HOJA),
     creadoPor: obtenerIdDispositivo(),
     activo: true,
   };
 
-  const nuevasHojas = [nuevaHoja, ...hojas].slice(0, 50); // Máximo 50 hojas
+  // Máximo 20 hojas para evitar problemas de espacio
+  const nuevasHojas = [nuevaHoja, ...hojas].slice(0, 20);
 
-  await guardarHojasGlobal(nuevasHojas);
+  try {
+    await guardarHojasGlobal(nuevasHojas);
+    console.log(`Hoja guardada: ${nuevaHoja.nombre} con ${nuevaHoja.cantidadGuias} guías`);
+  } catch (error: any) {
+    console.error('Error guardando hoja:', error);
+    throw new Error(`No se pudo guardar la hoja: ${error.message || 'Error de almacenamiento'}`);
+  }
 
   return nuevaHoja;
 };
@@ -200,29 +219,90 @@ export const restaurarHoja = async (hojaId: string): Promise<HojaCarga | null> =
 
 /**
  * Guarda las hojas en el almacenamiento global
+ * IMPORTANTE: Limita el tamaño para evitar exceder localStorage (~5MB)
  */
 const guardarHojasGlobal = async (hojas: HojaCarga[]): Promise<void> => {
-  const storage: GlobalStorage = {
-    hojas,
-    ultimaActualizacion: new Date(),
-    version: '1.0.0',
-  };
+  // Limitar guías por hoja - LÍMITE: 1000 guías por hoja
+  const MAX_GUIAS_POR_HOJA = 1000;
+  const MAX_HOJAS = 20;
 
-  // Guardar en localStorage siempre
-  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(hojas));
+  // Optimizar hojas: limitar guías por hoja
+  const hojasOptimizadas = hojas.slice(0, MAX_HOJAS).map(hoja => ({
+    ...hoja,
+    // Guardar solo los datos esenciales de cada guía
+    guias: hoja.guias.slice(0, MAX_GUIAS_POR_HOJA).map(g => ({
+      id: g.id,
+      guia: g.guia,
+      trackingNumber: g.trackingNumber,
+      status: g.status,
+      carrier: g.carrier,
+      destination: g.destination,
+      daysInTransit: g.daysInTransit,
+      hasIssue: g.hasIssue,
+      phone: g.phone,
+      // Omitir detailedInfo para reducir tamaño
+    })),
+    cantidadGuias: Math.min(hoja.guias.length, MAX_GUIAS_POR_HOJA),
+  }));
 
+  // Guardar en localStorage con manejo de errores
   try {
-    // Intentar guardar en el servidor
-    await fetch(`${API_BASE_URL}/${BIN_ID}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': MASTER_KEY,
-      },
-      body: JSON.stringify(storage),
-    });
-  } catch (error) {
-    console.log('Guardado en modo offline');
+    const jsonData = JSON.stringify(hojasOptimizadas);
+
+    // Verificar tamaño antes de guardar (~5MB límite)
+    const sizeInMB = new Blob([jsonData]).size / (1024 * 1024);
+    if (sizeInMB > 4.5) {
+      console.warn(`Datos muy grandes (${sizeInMB.toFixed(2)}MB), reduciendo...`);
+      // Guardar solo las últimas 10 hojas con menos guías
+      const hojasReducidas = hojasOptimizadas.slice(0, 10).map(h => ({
+        ...h,
+        guias: h.guias.slice(0, 50),
+      }));
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(hojasReducidas));
+    } else {
+      localStorage.setItem(LOCAL_STORAGE_KEY, jsonData);
+    }
+  } catch (error: any) {
+    // Manejar error de quota exceeded
+    if (error.name === 'QuotaExceededError' || error.code === 22) {
+      console.error('localStorage lleno, limpiando datos antiguos...');
+      // Limpiar hojas antiguas y reintentar
+      const hojasMinimas = hojas.slice(0, 5).map(h => ({
+        ...h,
+        guias: h.guias.slice(0, 30),
+      }));
+      try {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(hojasMinimas));
+      } catch {
+        // Última opción: guardar solo IDs
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([]));
+        throw new Error('No hay espacio en localStorage. Se limpiaron los datos.');
+      }
+    } else {
+      throw error;
+    }
+  }
+
+  // Intentar guardar en cloud si está configurado
+  if (USE_CLOUD_STORAGE) {
+    const storage: GlobalStorage = {
+      hojas: hojasOptimizadas,
+      ultimaActualizacion: new Date(),
+      version: '1.0.0',
+    };
+
+    try {
+      await fetch(`${API_BASE_URL}/${BIN_ID}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Master-Key': MASTER_KEY,
+        },
+        body: JSON.stringify(storage),
+      });
+    } catch (error) {
+      console.log('Cloud sync falló, datos guardados localmente');
+    }
   }
 };
 

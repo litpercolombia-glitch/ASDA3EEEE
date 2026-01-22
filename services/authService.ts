@@ -79,7 +79,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2024-12-01T00:00:00.000Z',
       activo: true,
     },
-    password: 'LP.CAROLINA_2024?Jm',
+    password: '**MOVED_TO_BACKEND**',
   },
   {
     user: {
@@ -90,7 +90,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2024-12-01T00:00:00.000Z',
       activo: true,
     },
-    password: 'tELLEZ_LITper2025Angie?',
+    password: '**MOVED_TO_BACKEND**',
   },
   {
     user: {
@@ -101,7 +101,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2024-12-01T00:00:00.000Z',
       activo: true,
     },
-    password: '2025NORMAN_?litper',
+    password: '**MOVED_TO_BACKEND**',
   },
   // Tracking & Envíos
   {
@@ -113,7 +113,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2024-12-01T00:00:00.000Z',
       activo: true,
     },
-    password: '2025?LITper.FELIPE',
+    password: '**MOVED_TO_BACKEND**',
   },
   {
     user: {
@@ -124,7 +124,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2024-12-01T00:00:00.000Z',
       activo: true,
     },
-    password: '20.25_JIMMY.LITper?',
+    password: '**MOVED_TO_BACKEND**',
   },
   {
     user: {
@@ -135,7 +135,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2024-12-01T00:00:00.000Z',
       activo: true,
     },
-    password: '2025_EVAN10?LITper.?',
+    password: '**MOVED_TO_BACKEND**',
   },
   // Administración
   {
@@ -147,7 +147,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2024-12-01T00:00:00.000Z',
       activo: true,
     },
-    password: 'ALEJANDRA_?2025Litper',
+    password: '**MOVED_TO_BACKEND**',
   },
   {
     user: {
@@ -158,7 +158,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2024-12-01T00:00:00.000Z',
       activo: true,
     },
-    password: '2025_KAREN.litper10?',
+    password: '**MOVED_TO_BACKEND**',
   },
   {
     user: {
@@ -169,7 +169,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2024-12-01T00:00:00.000Z',
       activo: true,
     },
-    password: '?2024LP.JEferMoreno?',
+    password: '**MOVED_TO_BACKEND**',
   },
   // Usuario de Marketing
   {
@@ -181,7 +181,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2026-01-07T00:00:00.000Z',
       activo: true,
     },
-    password: '1234',
+    password: '**MOVED_TO_BACKEND**',
   },
 ];
 

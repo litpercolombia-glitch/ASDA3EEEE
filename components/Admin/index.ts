@@ -3,9 +3,22 @@
 // Exportaciones del Panel de Administración
 // ============================================
 
-// Panels principales
+// ============================================
+// NUEVO: AdminChat con Skills (RECOMENDADO)
+// ============================================
+// Sistema de chat con skills tipo Claude Code
+// Reemplaza los paneles anteriores con una interfaz unificada
+export { AdminChat } from '../AdminChat';
+
+// ============================================
+// LEGACY: Paneles anteriores (deprecados)
+// ============================================
+// Se mantienen por compatibilidad pero usar AdminChat para nuevos desarrollos
+/** @deprecated Usar AdminChat en su lugar */
 export { AdminPanel } from './AdminPanel';
+/** @deprecated Usar AdminChat en su lugar */
 export { AdminPanelPro } from './AdminPanelPro';
+/** @deprecated Usar AdminChat en su lugar */
 export { AdminPanelUltimate } from './AdminPanelUltimate';
 
 // Layout
@@ -43,5 +56,5 @@ export { SecurityDashboard } from './SecurityCenter';
 // CRM Center
 export { CRMDashboard } from './CRMCenter';
 
-// Default export - El panel más reciente
-export { AdminPanelUltimate as default } from './AdminPanelUltimate';
+// Default export - AdminChat es el nuevo sistema recomendado
+export { AdminChat as default } from '../AdminChat';
