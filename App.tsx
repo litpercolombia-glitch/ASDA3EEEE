@@ -130,10 +130,30 @@ interface DashboardProps {
 const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, country, userProfile }) => {
   const stats = useMemo(() => {
     const total = shipments.length;
-    const delivered = shipments.filter(s => s.status === ShipmentStatus.DELIVERED).length;
-    const inTransit = shipments.filter(s => s.status === ShipmentStatus.IN_TRANSIT).length;
-    const pending = shipments.filter(s => s.status === ShipmentStatus.PENDING).length;
-    const issues = shipments.filter(s => s.status === ShipmentStatus.EXCEPTION || s.status === ShipmentStatus.RETURNED).length;
+    // Soportar ambos formatos: enum español ('Entregado') y strings inglés ('delivered')
+    const isDelivered = (status: string) =>
+      status === ShipmentStatus.DELIVERED ||
+      status?.toLowerCase() === 'delivered' ||
+      status?.toLowerCase() === 'entregado';
+    const isInTransit = (status: string) =>
+      status === ShipmentStatus.IN_TRANSIT ||
+      status?.toLowerCase() === 'in_transit' ||
+      status?.toLowerCase() === 'en reparto';
+    const isPending = (status: string) =>
+      status === ShipmentStatus.PENDING ||
+      status?.toLowerCase() === 'pending' ||
+      status?.toLowerCase() === 'pendiente';
+    const isIssue = (status: string) =>
+      status === ShipmentStatus.ISSUE ||
+      status?.toLowerCase() === 'issue' ||
+      status?.toLowerCase() === 'novedad' ||
+      status?.toLowerCase() === 'exception' ||
+      status?.toLowerCase() === 'returned';
+
+    const delivered = shipments.filter(s => isDelivered(s.status)).length;
+    const inTransit = shipments.filter(s => isInTransit(s.status)).length;
+    const pending = shipments.filter(s => isPending(s.status)).length;
+    const issues = shipments.filter(s => isIssue(s.status)).length;
     const deliveryRate = total > 0 ? Math.round((delivered / total) * 100) : 0;
 
     return { total, delivered, inTransit, pending, issues, deliveryRate };

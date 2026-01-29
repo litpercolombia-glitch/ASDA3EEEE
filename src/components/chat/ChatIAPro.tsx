@@ -631,6 +631,21 @@ const useVoiceInput = (onResult: (text: string) => void) => {
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Timeout de 30 segundos para evitar que se cuelgue
+  const VOICE_TIMEOUT_MS = 30000;
+
+  const stopListening = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsListening(false);
+  }, []);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -644,31 +659,42 @@ const useVoiceInput = (onResult: (text: string) => void) => {
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         onResult(transcript);
-        setIsListening(false);
+        stopListening();
       };
 
       recognition.onerror = () => {
-        setIsListening(false);
+        stopListening();
       };
 
       recognition.onend = () => {
-        setIsListening(false);
+        stopListening();
       };
 
       recognitionRef.current = recognition;
     }
-  }, [onResult]);
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [onResult, stopListening]);
 
   const toggleListening = useCallback(() => {
     if (!recognitionRef.current) return;
 
     if (isListening) {
-      recognitionRef.current.stop();
+      stopListening();
     } else {
       recognitionRef.current.start();
       setIsListening(true);
+      // Timeout de 30 segundos para evitar que la grabación se cuelgue
+      timeoutRef.current = setTimeout(() => {
+        console.warn('Voice recognition timeout after 30 seconds');
+        stopListening();
+      }, VOICE_TIMEOUT_MS);
     }
-  }, [isListening]);
+  }, [isListening, stopListening]);
 
   return { isListening, isSupported, toggleListening };
 };
