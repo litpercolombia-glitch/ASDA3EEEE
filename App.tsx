@@ -429,7 +429,7 @@ const App: React.FC = () => {
   const [showUniversalSearch, setShowUniversalSearch] = useState(false);
 
   // Pro Layout state
-  const [useProLayout, setUseProLayout] = useState(true); // Usar nuevo layout por defecto
+  const [useProLayout, setUseProLayout] = useState(false); // Desactivado temporalmente para debug
   const [showCommandPalette, setShowCommandPalette] = useState(false);
 
   // Excel parser hook
