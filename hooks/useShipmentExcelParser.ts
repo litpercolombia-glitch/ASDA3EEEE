@@ -211,32 +211,37 @@ export function useShipmentExcelParser() {
         const firstRow = rawData[0];
         const columns = Object.keys(firstRow);
 
-        // Find guide column
+        // Find guide column - busca en cualquier parte del nombre
         const guideColumn =
-          columns.find((c) => /^(guia|guide|numero|id|tracking|nro|#)/i.test(c)) || columns[0];
+          columns.find((c) => /(guia|guide|numero|id|tracking|nro|#)/i.test(c)) || columns[0];
 
-        // Find status column
-        const statusColumn = columns.find((c) => /^(estado|status|estatus)/i.test(c));
+        // Find status column - incluye ESTATUS, ESTADO, ÚLTIMO MOVIMIENTO
+        const statusColumn = columns.find((c) => /(estado|status|estatus)/i.test(c));
 
-        // Find phone column
-        const phoneColumn = columns.find((c) => /^(telefono|phone|celular|cel|movil)/i.test(c));
-
-        // Find carrier column
-        const carrierColumn = columns.find((c) =>
-          /^(transportadora|carrier|empresa|mensajeria)/i.test(c)
+        // Find last movement column - para ÚLTIMO MOVIMIENTO
+        const lastMovementColumn = columns.find((c) =>
+          /(ultimo.*movimiento|last.*movement|movimiento|movement|ubicacion|ubicación)/i.test(c)
         );
 
-        // Find destination column
+        // Find phone column
+        const phoneColumn = columns.find((c) => /(telefono|teléfono|phone|celular|cel|movil|móvil)/i.test(c));
+
+        // Find carrier column - incluye TRANSPORTADORA
+        const carrierColumn = columns.find((c) =>
+          /(transportadora|carrier|empresa|mensajeria|mensajería|courier)/i.test(c)
+        );
+
+        // Find destination/city column - CIUDAD DESTINO, CIUDAD, DESTINO
         const destColumn = columns.find((c) =>
-          /^(destino|destination|ciudad|city|municipio)/i.test(c)
+          /(ciudad.*destino|destino|destination|ciudad|city|municipio)/i.test(c)
         );
 
         // Find days column
-        const daysColumn = columns.find((c) => /^(dias|days|tiempo|time)/i.test(c));
+        const daysColumn = columns.find((c) => /(dias|días|days|tiempo|time)/i.test(c));
 
         // Find value column
         const valueColumn = columns.find((c) =>
-          /^(valor|value|precio|price|monto|amount)/i.test(c)
+          /(valor|value|precio|price|monto|amount|total)/i.test(c)
         );
 
         const today = new Date().toISOString().split('T')[0];
@@ -255,23 +260,28 @@ export function useShipmentExcelParser() {
           if (!guideId || seenIds.has(guideId)) continue;
           seenIds.add(guideId);
 
-          // Get values from columns
+          // Get values from columns - con fallbacks
           const rawStatus = statusColumn ? String(row[statusColumn] || '') : '';
+          const lastMovement = lastMovementColumn ? String(row[lastMovementColumn] || '') : '';
+          const effectiveStatus = rawStatus || lastMovement; // Usa ÚLTIMO MOVIMIENTO si no hay ESTATUS
           const phone = phoneColumn ? String(row[phoneColumn] || '') : phoneRegistry[guideId] || '';
           const carrierText = carrierColumn ? String(row[carrierColumn] || '') : '';
           const destination = destColumn ? String(row[destColumn] || '') : 'Colombia';
           const daysStr = daysColumn ? String(row[daysColumn] || '0') : '0';
           const valueStr = valueColumn ? String(row[valueColumn] || '0') : '0';
 
-          // Process values
-          const status = normalizeExcelStatus(rawStatus);
+          // Process values - usa effectiveStatus para normalizar
+          const status = normalizeExcelStatus(effectiveStatus);
           const carrier = carrierText ? detectCarrierFromText(carrierText) : detectCarrier(guideId);
           const daysInTransit = parseInt(daysStr.replace(/\D/g, '')) || 0;
           const declaredValue = parseInt(valueStr.replace(/\D/g, '')) || 0;
 
+          // Extract city from destination (puede ser "BOGOTA, CUNDINAMARCA" o solo "BOGOTA")
+          const cityName = destination.split(',')[0].trim().toUpperCase() || 'Colombia';
+
           // Track for preview
           if (carrierText) carriers.add(carrierText);
-          if (rawStatus) statuses.add(rawStatus);
+          if (effectiveStatus) statuses.add(effectiveStatus);
 
           const shipment: Shipment = {
             id: guideId,
@@ -286,13 +296,15 @@ export function useShipmentExcelParser() {
             detailedInfo: {
               origin: 'Colombia',
               destination: destination.toUpperCase(),
+              city: cityName, // IMPORTANTE: agregar city para que los componentes lo encuentren
               daysInTransit,
-              rawStatus: rawStatus || status,
+              rawStatus: effectiveStatus || status,
+              lastMovement: lastMovement || undefined, // Guardar ÚLTIMO MOVIMIENTO si existe
               events: [
                 {
                   date: batchDate,
-                  location: destination,
-                  description: rawStatus || 'Cargado desde Excel',
+                  location: cityName,
+                  description: effectiveStatus || 'Cargado desde Excel',
                   isRecent: true,
                 },
               ],

@@ -459,6 +459,71 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Sincronizar navegación del Sidebar con currentTab
+  useEffect(() => {
+    // Mapeo de sidebar sub-items a MainTabNew
+    const tabMapping: Record<string, Record<string, MainTabNew | 'home'>> = {
+      'inicio': {
+        'resumen': 'home',
+        'actividad': 'operaciones',
+        'estadisticas': 'analisis',
+      },
+      'operaciones': {
+        'envios': 'operaciones',
+        'tracking': 'tracking-ordenes',
+        'historial': 'seguimiento',
+        'rutas': 'operaciones',
+        'google-sheets': 'operaciones',
+      },
+      'inteligencia': {
+        'analisis': 'analisis',
+        'reportes': 'reporte',
+        'predicciones': 'predicciones',
+        'insights': 'inteligencia-logistica',
+      },
+      'cerebro-ia': {
+        'asistente': 'asistente',
+        'configuracion-ia': 'cerebro-ia',
+        'historial-chat': 'chat-ia-pro',
+      },
+      'negocio': {
+        'metricas': 'negocio',
+        'clientes': 'negocio',
+        'ventas': 'negocio',
+        'rendimiento': 'negocio',
+      },
+      'config': {
+        'general': 'admin',
+        'api-keys': 'admin',
+        'integraciones': 'conexiones',
+        'usuarios': 'admin',
+        'admin': 'admin',
+      },
+    };
+
+    // Obtener el sub-item activo para la sección actual
+    const getActiveSubItem = (): string => {
+      switch (activeSection) {
+        case 'inicio': return activeInicioTab;
+        case 'operaciones': return activeOperacionesTab;
+        case 'inteligencia': return activeInteligenciaTab;
+        case 'cerebro-ia': return activeCerebroIATab;
+        case 'negocio': return activeNegocioTab;
+        default: return '';
+      }
+    };
+
+    const sectionMapping = tabMapping[activeSection];
+    const subItem = getActiveSubItem();
+
+    if (sectionMapping && subItem && sectionMapping[subItem]) {
+      const newTab = sectionMapping[subItem];
+      if (newTab !== currentTab) {
+        setCurrentTab(newTab);
+      }
+    }
+  }, [activeSection, activeInicioTab, activeOperacionesTab, activeInteligenciaTab, activeCerebroIATab, activeNegocioTab, currentTab]);
+
   useEffect(() => {
     try {
       saveShipments(shipments);
