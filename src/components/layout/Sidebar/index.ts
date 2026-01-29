@@ -50,11 +50,11 @@ export {
   useActiveItem,
   useCommandPaletteOpen,
   useSidebarTheme,
-} from '../../../stores/sidebarStore';
+} from '../../../../stores/sidebarStore';
 
 export type {
   SidebarSection as SidebarSectionType,
   SidebarFavorite,
   SidebarNotification,
   SidebarState,
-} from '../../../stores/sidebarStore';
+} from '../../../../stores/sidebarStore';

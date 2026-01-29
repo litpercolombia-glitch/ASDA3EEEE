@@ -28,7 +28,7 @@ import {
   X,
 } from 'lucide-react';
 
-import { useSidebarStore } from '../../../stores/sidebarStore';
+import { useSidebarStore } from '../../../../stores/sidebarStore';
 import { SidebarHeader } from './SidebarHeader';
 import { SidebarSearch } from './SidebarSearch';
 import { SidebarSection, SidebarDivider } from './SidebarSection';

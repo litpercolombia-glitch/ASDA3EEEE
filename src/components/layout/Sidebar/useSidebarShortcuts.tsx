@@ -5,8 +5,8 @@
  * Inspirado en Linear, Notion y VS Code
  */
 
-import { useEffect, useCallback } from 'react';
-import { useSidebarStore } from '../../../stores/sidebarStore';
+import React, { useEffect, useCallback } from 'react';
+import { useSidebarStore } from '../../../../stores/sidebarStore';
 
 interface ShortcutConfig {
   key: string;
@@ -284,6 +284,3 @@ export const useSidebarShortcutsHelp = () => {
 };
 
 export default useSidebarShortcuts;
-
-// React import for ShortcutBadge component
-import React from 'react';
