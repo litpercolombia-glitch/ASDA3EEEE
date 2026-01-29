@@ -285,11 +285,13 @@ const createCommands = (): CommandItem[] => [
   {
     id: 'import-excel',
     label: 'Importar Excel',
-    description: 'Cargar pedidos desde archivo',
+    description: 'Carga masiva de pedidos desde archivo',
     icon: <Upload className="w-4 h-4" />,
     category: 'Acciones Rápidas',
-    keywords: ['cargar', 'subir', 'excel', 'csv', 'importar'],
+    path: '/importar-excel',
+    keywords: ['cargar', 'subir', 'excel', 'csv', 'importar', 'masivo', 'bulk'],
     shortcut: '⌘I',
+    badge: { text: 'Nuevo', variant: 'success' },
   },
   {
     id: 'refresh-data',

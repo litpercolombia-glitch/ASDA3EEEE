@@ -61,6 +61,8 @@ import { useUserProfileStore } from './services/userProfileService';
 import { UserProfileSettings } from './components/settings';
 // Enhanced Excel Upload with column config
 import { EnhancedExcelUpload } from './components/upload';
+// Excel Upload Page - Importación masiva inteligente
+import ExcelUploadPage from './src/pages/ExcelUploadPage';
 import {
   Crown,
   Search,
@@ -964,6 +966,9 @@ const App: React.FC = () => {
       {currentTab === 'ciudad-agentes' && <div className="p-6"><CiudadAgentesTab selectedCountry={selectedCountry} /></div>}
       {currentTab === 'inteligencia-logistica' && <div className="p-6"><InteligenciaLogisticaTab /></div>}
       {currentTab === 'tracking-ordenes' && <div className="p-6"><TrackingOrdenesTab /></div>}
+
+      {/* Excel Upload - Importación masiva inteligente */}
+      {currentTab === 'importar-excel' && <ExcelUploadPage />}
 
       {/* Legacy Dashboard - can be accessed from quick actions */}
       {currentTab === 'dashboard-legacy' && (

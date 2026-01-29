@@ -19,6 +19,7 @@ export type MainTabNew =
   | 'negocio'
   | 'dashboard-legacy' // Dashboard clásico (para usuarios que prefieran el estilo antiguo)
   | 'cerebro-ia'  // Dashboard Cerebro IA con Chatea Pro, Webhooks y Analytics
+  | 'importar-excel' // Importación masiva de pedidos desde Excel
   // Legacy tabs (para compatibilidad)
   | 'seguimiento'
   | 'demanda'
