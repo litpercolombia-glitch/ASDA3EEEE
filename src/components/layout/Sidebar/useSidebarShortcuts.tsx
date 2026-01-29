@@ -6,7 +6,7 @@
  */
 
 import React, { useEffect, useCallback } from 'react';
-import { useSidebarStore } from '../../../stores/sidebarStore';
+import { useSidebarStore } from '../../../../stores/sidebarStore';
 
 interface ShortcutConfig {
   key: string;

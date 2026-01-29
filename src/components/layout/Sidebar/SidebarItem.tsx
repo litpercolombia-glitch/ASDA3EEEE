@@ -9,7 +9,7 @@ import React, { forwardRef, useState } from 'react';
 import { ChevronRight, Star } from 'lucide-react';
 import { SidebarBadge, BadgeVariant } from './SidebarBadge';
 import { CollapsedTooltip } from './SidebarTooltip';
-import { useSidebarStore } from '../../../stores/sidebarStore';
+import { useSidebarStore } from '../../../../stores/sidebarStore';
 
 interface SidebarItemProps {
   id: string;

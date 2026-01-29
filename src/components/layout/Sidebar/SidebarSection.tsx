@@ -8,7 +8,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, MoreHorizontal } from 'lucide-react';
 import { SidebarBadge } from './SidebarBadge';
-import { useSidebarStore, SidebarSection as SectionType } from '../../../stores/sidebarStore';
+import { useSidebarStore, SidebarSection as SectionType } from '../../../../stores/sidebarStore';
 
 interface SidebarSectionProps {
   id: SectionType;

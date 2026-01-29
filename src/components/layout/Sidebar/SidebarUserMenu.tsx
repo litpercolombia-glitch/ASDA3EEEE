@@ -23,7 +23,7 @@ import {
   Shield,
   Check,
 } from 'lucide-react';
-import { useSidebarStore } from '../../../stores/sidebarStore';
+import { useSidebarStore } from '../../../../stores/sidebarStore';
 import { StatusIndicator } from './SidebarBadge';
 import { SidebarTooltip } from './SidebarTooltip';
 

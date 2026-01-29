@@ -7,7 +7,7 @@
 
 import React, { useState } from 'react';
 import { PanelLeftClose, PanelLeft, Sparkles } from 'lucide-react';
-import { useSidebarStore } from '../../../stores/sidebarStore';
+import { useSidebarStore } from '../../../../stores/sidebarStore';
 import { SidebarTooltip } from './SidebarTooltip';
 
 interface SidebarHeaderProps {

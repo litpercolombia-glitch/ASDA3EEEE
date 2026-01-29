@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { Search, Command } from 'lucide-react';
-import { useSidebarStore } from '../../../stores/sidebarStore';
+import { useSidebarStore } from '../../../../stores/sidebarStore';
 import { SidebarTooltip } from './SidebarTooltip';
 
 interface SidebarSearchProps {

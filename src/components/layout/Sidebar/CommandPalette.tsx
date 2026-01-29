@@ -38,7 +38,7 @@ import {
   Plus,
   X,
 } from 'lucide-react';
-import { useSidebarStore } from '../../../stores/sidebarStore';
+import { useSidebarStore } from '../../../../stores/sidebarStore';
 
 interface CommandItem {
   id: string;

@@ -7,7 +7,7 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import { Star, GripVertical, Plus, X } from 'lucide-react';
-import { useSidebarStore, SidebarFavorite } from '../../../stores/sidebarStore';
+import { useSidebarStore, SidebarFavorite } from '../../../../stores/sidebarStore';
 import { SidebarCompactItem } from './SidebarItem';
 import { SidebarTooltip } from './SidebarTooltip';
 
