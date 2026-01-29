@@ -49,8 +49,12 @@ import CountrySelector from './components/CountrySelector';
 import { ChatCommandCenter } from './components/ChatFirst';
 import { detectarGuiasRetrasadas } from './utils/patternDetection';
 // Nuevo Layout con Sidebar estilo ChatGPT
-import { AppLayout } from './components/layout';
+import { AppLayout, AppLayoutPro } from './components/layout';
 import { useLayoutStore } from './stores/layoutStore';
+// Command Palette
+import { CommandPalette, useCommandPalette } from './components/CommandPalette';
+// Dashboard Pro
+import { StripeDashboard } from './components/dashboard';
 // Marketing Tracking System
 import { MarketingView } from './components/marketing';
 // Auth service for logout
@@ -424,6 +428,10 @@ const App: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showUniversalSearch, setShowUniversalSearch] = useState(false);
 
+  // Pro Layout state
+  const [useProLayout, setUseProLayout] = useState(true); // Usar nuevo layout por defecto
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+
   // Excel parser hook
   const {
     parseExcelFile,
@@ -467,17 +475,21 @@ const App: React.FC = () => {
     }
   }, [darkMode]);
 
-  // Keyboard shortcut: Ctrl+K para búsqueda universal
+  // Keyboard shortcut: Ctrl+K para Command Palette o búsqueda universal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        setShowUniversalSearch(true);
+        if (useProLayout) {
+          setShowCommandPalette(true);
+        } else {
+          setShowUniversalSearch(true);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [useProLayout]);
 
   // Sincronizar navegación del Sidebar con currentTab
   useEffect(() => {
@@ -796,6 +808,185 @@ const App: React.FC = () => {
     }
   };
 
+  // Calcular envíos pendientes para el badge del sidebar
+  const pendingShipments = shipments.filter(s =>
+    s.status === ShipmentStatus.IN_TRANSIT ||
+    s.status?.toLowerCase() === 'in_transit' ||
+    s.status === ShipmentStatus.PENDING ||
+    s.status?.toLowerCase() === 'pending'
+  ).length;
+
+  // Guías recientes para Command Palette
+  const recentGuides = shipments.slice(0, 5).map(s => ({
+    id: s.id,
+    label: `${s.id} - ${s.carrier || 'Sin transportadora'}`,
+  }));
+
+  // ============================================
+  // NUEVO LAYOUT PRO (Linear/Stripe style)
+  // ============================================
+  if (useProLayout) {
+    return (
+      <>
+        <AppLayoutPro
+          shipments={shipments}
+          onLogout={handleLogout}
+          onNewGuide={() => setShowDataInput(true)}
+          onUploadExcel={() => {
+            setActiveInputTab('EXCEL');
+            setShowDataInput(true);
+          }}
+          onGenerateReport={() => setCurrentTab('reporte')}
+          userName={currentUser?.nombre || 'Usuario'}
+          userEmail={currentUser?.email || 'user@litper.co'}
+          notifications={alertasCriticas}
+          pendingShipments={pendingShipments}
+          recentGuides={recentGuides}
+        >
+          {renderCurrentTab()}
+        </AppLayoutPro>
+
+        {/* Command Palette */}
+        <CommandPalette
+          isOpen={showCommandPalette}
+          onClose={() => setShowCommandPalette(false)}
+          onNewGuide={() => setShowDataInput(true)}
+          onUploadExcel={() => {
+            setActiveInputTab('EXCEL');
+            setShowDataInput(true);
+          }}
+          onGenerateReport={() => setCurrentTab('reporte')}
+          onNavigate={(section) => {
+            const sectionToTab: Record<string, MainTabNew | 'home'> = {
+              'inicio': 'home',
+              'envios': 'operaciones',
+              'tracking': 'tracking-ordenes',
+              'clientes': 'negocio',
+              'reportes': 'reporte',
+              'ia-assistant': 'asistente',
+              'configuracion': 'admin',
+            };
+            const tab = sectionToTab[section];
+            if (tab) {
+              if (tab === 'home') {
+                setCurrentTab('home');
+              } else {
+                setCurrentTab(tab);
+              }
+            }
+          }}
+          recentGuides={recentGuides}
+        />
+
+        {/* Notification Toast */}
+        {notification && (
+          <div className="fixed top-4 right-4 z-50 max-w-sm animate-slide-up">
+            <div className="flex items-center gap-3 px-5 py-4 bg-[#1a1a1f] rounded-xl shadow-2xl border border-white/10">
+              <div className="flex-shrink-0">
+                {notification.includes('✅') ? (
+                  <div className="w-10 h-10 rounded-full bg-emerald-900/30 flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-emerald-400" />
+                  </div>
+                ) : notification.includes('❌') ? (
+                  <div className="w-10 h-10 rounded-full bg-red-900/30 flex items-center justify-center">
+                    <X className="w-5 h-5 text-red-400" />
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-amber-900/30 flex items-center justify-center">
+                    <AlertTriangle className="w-5 h-5 text-amber-400" />
+                  </div>
+                )}
+              </div>
+              <p className="text-sm font-medium text-white">{notification}</p>
+              <button
+                onClick={() => setNotification(null)}
+                className="ml-auto p-1 hover:bg-white/10 rounded-full transition-colors"
+              >
+                <X className="w-4 h-4 text-white/40" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Data Input Modal - mantener funcionalidad existente */}
+        {showDataInput && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-[#1a1a1f] rounded-2xl max-w-2xl w-full border border-white/10 shadow-2xl max-h-[90vh] overflow-auto">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+                <div>
+                  <h2 className="font-bold text-lg text-white">📥 Cargar Guías</h2>
+                  <p className="text-sm text-white/40">Importa tus guías desde múltiples fuentes</p>
+                </div>
+                <button
+                  onClick={() => setShowDataInput(false)}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-white/40" />
+                </button>
+              </div>
+              {/* Contenido del modal se hereda del código existente */}
+              <EnhancedExcelUpload
+                onUploadComplete={({ sessionName, rows, columnMapping }) => {
+                  const processedShipments = rows.map((row, idx) => {
+                    const shipment: Partial<Shipment> = {
+                      id: `upload_${Date.now()}_${idx}`,
+                    };
+                    columnMapping.forEach((col) => {
+                      if (col.enabled && col.mappedTo && row[col.excelColumn] !== undefined) {
+                        const value = row[col.excelColumn];
+                        switch (col.mappedTo) {
+                          case 'trackingNumber':
+                            shipment.trackingNumber = String(value);
+                            shipment.id = String(value) || shipment.id;
+                            break;
+                          case 'phone':
+                            shipment.phone = String(value);
+                            break;
+                          case 'status':
+                            shipment.status = String(value) as any;
+                            break;
+                          case 'carrier':
+                            shipment.carrier = String(value) as any;
+                            break;
+                        }
+                      }
+                    });
+                    return shipment as Shipment;
+                  }).filter(s => s.trackingNumber);
+                  setShipments((prev) => {
+                    const ids = new Set(processedShipments.map((s) => s.id));
+                    return [...prev.filter((s) => !ids.has(s.id)), ...processedShipments];
+                  });
+                  setNotification(`✅ ${sessionName}: ${processedShipments.length} guías cargadas`);
+                  setShowDataInput(false);
+                }}
+                onCancel={() => setShowDataInput(false)}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Country Selector */}
+        {showCountrySelector && (
+          <CountrySelector onCountrySelected={handleCountrySelected} />
+        )}
+
+        {/* Onboarding */}
+        {!isOnboardingComplete && profile && (
+          <UserOnboarding />
+        )}
+
+        {/* User Settings */}
+        {showUserSettings && (
+          <UserProfileSettings onClose={() => setShowUserSettings(false)} />
+        )}
+      </>
+    );
+  }
+
+  // ============================================
+  // LAYOUT ORIGINAL (mantener para compatibilidad)
+  // ============================================
   return (
     <AppLayout
       selectedCountry={selectedCountry}
