@@ -20,6 +20,7 @@ export type MainTabNew =
   | 'dashboard-legacy' // Dashboard clásico (para usuarios que prefieran el estilo antiguo)
   | 'cerebro-ia'  // Dashboard Cerebro IA con Chatea Pro, Webhooks y Analytics
   | 'importar-excel' // Importación masiva de pedidos desde Excel
+  | 'chat-ia-pro' // Chat IA Premium tipo Claude.ai con skills de logística
   // Legacy tabs (para compatibilidad)
   | 'seguimiento'
   | 'demanda'

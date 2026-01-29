@@ -63,6 +63,8 @@ import { UserProfileSettings } from './components/settings';
 import { EnhancedExcelUpload } from './components/upload';
 // Excel Upload Page - Importación masiva inteligente
 import ExcelUploadPage from './src/pages/ExcelUploadPage';
+// Chat IA Pro - Asistente inteligente tipo Claude.ai
+import ChatIAPro from './src/components/chat/ChatIAPro';
 import {
   Crown,
   Search,
@@ -969,6 +971,9 @@ const App: React.FC = () => {
 
       {/* Excel Upload - Importación masiva inteligente */}
       {currentTab === 'importar-excel' && <ExcelUploadPage />}
+
+      {/* Chat IA Pro - Asistente inteligente tipo Claude.ai */}
+      {currentTab === 'chat-ia-pro' && <ChatIAPro />}
 
       {/* Legacy Dashboard - can be accessed from quick actions */}
       {currentTab === 'dashboard-legacy' && (
