@@ -46,8 +46,10 @@ export interface ShipmentEvent {
 export interface DetailedShipmentInfo {
   origin: string;
   destination: string;
+  city?: string; // Ciudad extraída (para búsquedas y filtros)
   daysInTransit: number;
   rawStatus: string;
+  lastMovement?: string; // ÚLTIMO MOVIMIENTO del Excel
   events: ShipmentEvent[];
   hasErrors: boolean;
   errorDetails?: string[];
