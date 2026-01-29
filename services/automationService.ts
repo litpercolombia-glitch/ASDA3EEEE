@@ -1,6 +1,7 @@
 // services/automationService.ts
 // Sistema de Automatización Inteligente para gestión de guías
 import { Shipment } from '../types';
+import { getSupabase, isSupabaseConfigured } from './supabaseService';
 
 // =====================================
 // TIPOS
@@ -66,6 +67,108 @@ export interface WorkflowExecution {
   timestamp: string;
   detalles?: string;
 }
+
+// =====================================
+// PLANTILLAS DE MENSAJES WHATSAPP
+// =====================================
+
+export interface MessageTemplate {
+  id: string;
+  nombre: string;
+  categoria: 'entrega' | 'novedad' | 'oficina' | 'seguimiento' | 'personalizado';
+  mensaje: string;
+  variables: string[];
+  descripcion: string;
+}
+
+export const PLANTILLAS_WHATSAPP: MessageTemplate[] = [
+  {
+    id: 'entrega_exitosa',
+    nombre: 'Entrega Exitosa',
+    categoria: 'entrega',
+    mensaje: '¡Hola {nombre}! 🎉 Tu paquete con guía {guia} ha sido entregado exitosamente. Gracias por confiar en nosotros.',
+    variables: ['nombre', 'guia'],
+    descripcion: 'Confirmar entrega exitosa al cliente',
+  },
+  {
+    id: 'en_camino',
+    nombre: 'En Camino',
+    categoria: 'seguimiento',
+    mensaje: '¡Hola {nombre}! 🚚 Tu paquete con guía {guia} está en camino. Transportadora: {transportadora}. Tiempo estimado: {tiempo}.',
+    variables: ['nombre', 'guia', 'transportadora', 'tiempo'],
+    descripcion: 'Notificar que el paquete salió para entrega',
+  },
+  {
+    id: 'en_oficina',
+    nombre: 'Listo en Oficina',
+    categoria: 'oficina',
+    mensaje: '¡Hola {nombre}! 📦 Tu paquete con guía {guia} está listo para recoger en nuestra oficina ({direccion}). Horario: {horario}.',
+    variables: ['nombre', 'guia', 'direccion', 'horario'],
+    descripcion: 'Avisar que el paquete está en oficina para retiro',
+  },
+  {
+    id: 'intento_fallido',
+    nombre: 'Intento Fallido',
+    categoria: 'novedad',
+    mensaje: '¡Hola {nombre}! ⚠️ Intentamos entregar tu paquete (guía {guia}) pero no fue posible. Motivo: {motivo}. Reprogramamos para {fecha}.',
+    variables: ['nombre', 'guia', 'motivo', 'fecha'],
+    descripcion: 'Informar sobre intento de entrega fallido',
+  },
+  {
+    id: 'novedad_direccion',
+    nombre: 'Problema Dirección',
+    categoria: 'novedad',
+    mensaje: '¡Hola {nombre}! 📍 Necesitamos confirmar la dirección de entrega para tu paquete (guía {guia}). ¿Puedes verificar: {direccion}?',
+    variables: ['nombre', 'guia', 'direccion'],
+    descripcion: 'Solicitar confirmación de dirección',
+  },
+  {
+    id: 'retraso',
+    nombre: 'Aviso de Retraso',
+    categoria: 'seguimiento',
+    mensaje: '¡Hola {nombre}! ⏰ Tu paquete (guía {guia}) está presentando un retraso. Nueva fecha estimada: {fecha}. Disculpa los inconvenientes.',
+    variables: ['nombre', 'guia', 'fecha'],
+    descripcion: 'Notificar retraso en la entrega',
+  },
+  {
+    id: 'seguimiento_proactivo',
+    nombre: 'Seguimiento Proactivo',
+    categoria: 'seguimiento',
+    mensaje: '¡Hola {nombre}! 📊 Estado de tu envío (guía {guia}): {estado}. Última ubicación: {ubicacion}. ¿Necesitas ayuda?',
+    variables: ['nombre', 'guia', 'estado', 'ubicacion'],
+    descripcion: 'Enviar actualización proactiva del estado',
+  },
+  {
+    id: 'confirmacion_recepcion',
+    nombre: 'Confirmar Recepción',
+    categoria: 'entrega',
+    mensaje: '¡Hola {nombre}! ¿Recibiste tu paquete (guía {guia}) correctamente? Por favor confirma respondiendo SI o NO.',
+    variables: ['nombre', 'guia'],
+    descripcion: 'Solicitar confirmación de recepción',
+  },
+];
+
+// Obtener plantilla por ID
+export const obtenerPlantilla = (id: string): MessageTemplate | undefined => {
+  return PLANTILLAS_WHATSAPP.find(p => p.id === id);
+};
+
+// Renderizar plantilla con variables
+export const renderizarPlantilla = (
+  plantilla: MessageTemplate,
+  variables: Record<string, string>
+): string => {
+  let mensaje = plantilla.mensaje;
+  Object.entries(variables).forEach(([key, value]) => {
+    mensaje = mensaje.replace(new RegExp(`{${key}}`, 'g'), value);
+  });
+  return mensaje;
+};
+
+// Obtener plantillas por categoría
+export const obtenerPlantillasPorCategoria = (categoria: MessageTemplate['categoria']): MessageTemplate[] => {
+  return PLANTILLAS_WHATSAPP.filter(p => p.categoria === categoria);
+};
 
 // =====================================
 // REGLAS PREDEFINIDAS
@@ -454,14 +557,26 @@ export const generarAlertasInteligentes = (shipments: Shipment[]): SmartAlert[] 
   return alertas;
 };
 
+// =====================================
+// CACHE LOCAL + SUPABASE
+// =====================================
+
+let reglasCache: AutomationRule[] | null = null;
+let historialCache: WorkflowExecution[] | null = null;
+
 /**
- * Obtiene reglas guardadas o crea las predefinidas
+ * Obtiene reglas - Intenta Supabase primero, luego localStorage
  */
 export const obtenerReglas = (): AutomationRule[] => {
+  // Si hay cache, retornar
+  if (reglasCache) return reglasCache;
+
+  // Intentar localStorage primero (sync)
   const saved = localStorage.getItem('litper_automation_rules');
   if (saved) {
     try {
-      return JSON.parse(saved);
+      reglasCache = JSON.parse(saved);
+      return reglasCache!;
     } catch (e) {
       console.error('Error parsing saved rules:', e);
     }
@@ -476,24 +591,115 @@ export const obtenerReglas = (): AutomationRule[] => {
   }));
 
   localStorage.setItem('litper_automation_rules', JSON.stringify(reglas));
+  reglasCache = reglas;
+
+  // Sync con Supabase en background
+  sincronizarReglasConSupabase(reglas);
+
   return reglas;
 };
 
 /**
- * Guarda reglas actualizadas
+ * Obtiene reglas desde Supabase (async)
+ */
+export const obtenerReglasAsync = async (): Promise<AutomationRule[]> => {
+  if (!isSupabaseConfigured()) {
+    return obtenerReglas();
+  }
+
+  try {
+    const { data, error } = await getSupabase()
+      .from('automation_rules')
+      .select('*')
+      .order('prioridad', { ascending: true });
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      // Convertir formato de Supabase a formato local
+      const reglas: AutomationRule[] = data.map(r => ({
+        id: r.id,
+        nombre: r.nombre,
+        descripcion: r.descripcion,
+        activo: r.activo,
+        trigger: {
+          tipo: r.trigger_tipo as TriggerType,
+          condiciones: r.trigger_condiciones || {},
+        },
+        acciones: r.acciones || [],
+        prioridad: r.prioridad,
+        createdAt: r.created_at,
+        ejecutados: r.ejecutados,
+        ultimaEjecucion: r.ultima_ejecucion,
+      }));
+
+      // Actualizar cache y localStorage
+      reglasCache = reglas;
+      localStorage.setItem('litper_automation_rules', JSON.stringify(reglas));
+
+      return reglas;
+    }
+  } catch (e) {
+    console.warn('Error obteniendo reglas de Supabase, usando localStorage:', e);
+  }
+
+  return obtenerReglas();
+};
+
+/**
+ * Guarda reglas en localStorage y Supabase
  */
 export const guardarReglas = (reglas: AutomationRule[]): void => {
+  // Guardar en localStorage (sync)
   localStorage.setItem('litper_automation_rules', JSON.stringify(reglas));
+  reglasCache = reglas;
+
+  // Sync con Supabase en background
+  sincronizarReglasConSupabase(reglas);
+};
+
+/**
+ * Sincroniza reglas con Supabase (background)
+ */
+const sincronizarReglasConSupabase = async (reglas: AutomationRule[]): Promise<void> => {
+  if (!isSupabaseConfigured()) return;
+
+  try {
+    for (const regla of reglas) {
+      const supabaseData = {
+        id: regla.id,
+        nombre: regla.nombre,
+        descripcion: regla.descripcion,
+        activo: regla.activo,
+        trigger_tipo: regla.trigger.tipo,
+        trigger_condiciones: regla.trigger.condiciones,
+        acciones: regla.acciones,
+        prioridad: regla.prioridad,
+        ejecutados: regla.ejecutados,
+        ultima_ejecucion: regla.ultimaEjecucion,
+        updated_at: new Date().toISOString(),
+      };
+
+      await getSupabase()
+        .from('automation_rules')
+        .upsert(supabaseData, { onConflict: 'id' });
+    }
+  } catch (e) {
+    console.warn('Error sincronizando reglas con Supabase:', e);
+  }
 };
 
 /**
  * Obtiene historial de ejecuciones
  */
 export const obtenerHistorialEjecuciones = (): WorkflowExecution[] => {
+  if (historialCache) return historialCache;
+
   const saved = localStorage.getItem('litper_automation_history');
   if (saved) {
     try {
-      return JSON.parse(saved);
+      historialCache = JSON.parse(saved);
+      return historialCache!;
     } catch (e) {
       return [];
     }
@@ -502,14 +708,82 @@ export const obtenerHistorialEjecuciones = (): WorkflowExecution[] => {
 };
 
 /**
- * Guarda ejecución en historial
+ * Obtiene historial desde Supabase (async)
+ */
+export const obtenerHistorialAsync = async (limit = 100): Promise<WorkflowExecution[]> => {
+  if (!isSupabaseConfigured()) {
+    return obtenerHistorialEjecuciones();
+  }
+
+  try {
+    const { data, error } = await getSupabase()
+      .from('automation_history')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      const historial: WorkflowExecution[] = data.map(h => ({
+        id: h.id,
+        reglaId: h.regla_id,
+        nombreRegla: h.nombre_regla,
+        guiaId: h.guia_id,
+        accionesEjecutadas: h.acciones_ejecutadas || [],
+        resultado: h.resultado,
+        timestamp: h.created_at,
+        detalles: h.detalles,
+      }));
+
+      historialCache = historial;
+      localStorage.setItem('litper_automation_history', JSON.stringify(historial));
+
+      return historial;
+    }
+  } catch (e) {
+    console.warn('Error obteniendo historial de Supabase:', e);
+  }
+
+  return obtenerHistorialEjecuciones();
+};
+
+/**
+ * Guarda ejecución en historial (localStorage + Supabase)
  */
 export const guardarEjecucion = (ejecucion: WorkflowExecution): void => {
+  // Guardar en localStorage (sync)
   const historial = obtenerHistorialEjecuciones();
   historial.unshift(ejecucion);
-  // Mantener solo las últimas 100 ejecuciones
   const limitado = historial.slice(0, 100);
   localStorage.setItem('litper_automation_history', JSON.stringify(limitado));
+  historialCache = limitado;
+
+  // Guardar en Supabase (background)
+  guardarEjecucionEnSupabase(ejecucion);
+};
+
+/**
+ * Guarda ejecución en Supabase (background)
+ */
+const guardarEjecucionEnSupabase = async (ejecucion: WorkflowExecution): Promise<void> => {
+  if (!isSupabaseConfigured()) return;
+
+  try {
+    await getSupabase()
+      .from('automation_history')
+      .insert({
+        id: ejecucion.id,
+        regla_id: ejecucion.reglaId,
+        nombre_regla: ejecucion.nombreRegla,
+        guia_id: ejecucion.guiaId,
+        acciones_ejecutadas: ejecucion.accionesEjecutadas,
+        resultado: ejecucion.resultado,
+        detalles: ejecucion.detalles,
+      });
+  } catch (e) {
+    console.warn('Error guardando ejecución en Supabase:', e);
+  }
 };
 
 /**
@@ -546,16 +820,165 @@ export const marcarAlertaLeida = (alertaId: string): void => {
   }
 };
 
+// =====================================
+// CREAR REGLAS PERSONALIZADAS
+// =====================================
+
+export interface CrearReglaParams {
+  nombre: string;
+  descripcion: string;
+  triggerTipo: TriggerType;
+  triggerCondiciones: Record<string, any>;
+  acciones: { tipo: ActionType; parametros: Record<string, any> }[];
+  prioridad?: number;
+}
+
+/**
+ * Crea una nueva regla de automatización personalizada
+ */
+export const crearReglaPersonalizada = (params: CrearReglaParams): AutomationRule => {
+  const nuevaRegla: AutomationRule = {
+    id: `rule_custom_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    nombre: params.nombre,
+    descripcion: params.descripcion,
+    activo: true,
+    trigger: {
+      tipo: params.triggerTipo,
+      condiciones: params.triggerCondiciones,
+    },
+    acciones: params.acciones,
+    prioridad: params.prioridad || 2,
+    createdAt: new Date().toISOString(),
+    ejecutados: 0,
+  };
+
+  // Guardar en las reglas existentes
+  const reglas = obtenerReglas();
+  reglas.push(nuevaRegla);
+  guardarReglas(reglas);
+
+  return nuevaRegla;
+};
+
+/**
+ * Eliminar una regla por ID
+ */
+export const eliminarRegla = (reglaId: string): boolean => {
+  const reglas = obtenerReglas();
+  const idx = reglas.findIndex(r => r.id === reglaId);
+  if (idx >= 0) {
+    reglas.splice(idx, 1);
+    guardarReglas(reglas);
+    return true;
+  }
+  return false;
+};
+
+/**
+ * Actualizar una regla existente
+ */
+export const actualizarRegla = (reglaId: string, updates: Partial<AutomationRule>): AutomationRule | null => {
+  const reglas = obtenerReglas();
+  const idx = reglas.findIndex(r => r.id === reglaId);
+  if (idx >= 0) {
+    reglas[idx] = { ...reglas[idx], ...updates };
+    guardarReglas(reglas);
+    return reglas[idx];
+  }
+  return null;
+};
+
+/**
+ * Reglas predefinidas rápidas para crear
+ */
+export const PLANTILLAS_REGLAS = [
+  {
+    id: 'retraso_3_dias',
+    nombre: 'Alerta Retraso 3+ días',
+    descripcion: 'Alerta cuando una guía lleva más de 3 días sin movimiento',
+    config: {
+      triggerTipo: 'time_threshold' as TriggerType,
+      triggerCondiciones: { horasSinMovimiento: 72, estados: ['in_transit', 'issue'] },
+      acciones: [{ tipo: 'create_alert' as ActionType, parametros: { tipo: 'urgente', mensaje: 'Guía sin movimiento por 3+ días' } }],
+    },
+  },
+  {
+    id: 'whatsapp_entregado',
+    nombre: 'WhatsApp al Entregar',
+    descripcion: 'Envía WhatsApp automático cuando se entrega',
+    config: {
+      triggerTipo: 'status_change' as TriggerType,
+      triggerCondiciones: { nuevoEstado: 'delivered' },
+      acciones: [{ tipo: 'send_whatsapp' as ActionType, parametros: { plantilla: 'entrega_exitosa', mensaje: 'Entrega confirmada' } }],
+    },
+  },
+  {
+    id: 'escalamiento_5_dias',
+    nombre: 'Escalar a Supervisor',
+    descripcion: 'Escala a supervisor si la guía lleva más de 5 días',
+    config: {
+      triggerTipo: 'time_threshold' as TriggerType,
+      triggerCondiciones: { horasSinMovimiento: 120, estados: ['in_transit', 'issue', 'exception'] },
+      acciones: [
+        { tipo: 'escalate' as ActionType, parametros: { nivel: 'supervisor', razon: 'Retraso crítico' } },
+        { tipo: 'create_alert' as ActionType, parametros: { tipo: 'critico', mensaje: 'Escalado por retraso crítico' } },
+      ],
+    },
+  },
+  {
+    id: 'notificar_novedad',
+    nombre: 'Notificar al Cliente - Novedad',
+    descripcion: 'Envía WhatsApp cuando hay una novedad en la entrega',
+    config: {
+      triggerTipo: 'status_change' as TriggerType,
+      triggerCondiciones: { nuevoEstado: 'issue' },
+      acciones: [{ tipo: 'send_whatsapp' as ActionType, parametros: { plantilla: 'intento_fallido', mensaje: 'Hubo un problema con tu entrega' } }],
+    },
+  },
+];
+
+/**
+ * Crear regla a partir de plantilla
+ */
+export const crearReglaDesdeTemplate = (templateId: string): AutomationRule | null => {
+  const template = PLANTILLAS_REGLAS.find(t => t.id === templateId);
+  if (!template) return null;
+
+  return crearReglaPersonalizada({
+    nombre: template.nombre,
+    descripcion: template.descripcion,
+    triggerTipo: template.config.triggerTipo,
+    triggerCondiciones: template.config.triggerCondiciones,
+    acciones: template.config.acciones,
+  });
+};
+
 export default {
   evaluarCondiciones,
   ejecutarAcciones,
   procesarAutomatizaciones,
   generarAlertasInteligentes,
+  // Reglas (sync + async)
   obtenerReglas,
+  obtenerReglasAsync,
   guardarReglas,
+  // Historial (sync + async)
   obtenerHistorialEjecuciones,
+  obtenerHistorialAsync,
   guardarEjecucion,
+  // Alertas
   obtenerAlertas,
   guardarAlertas,
-  marcarAlertaLeida
+  marcarAlertaLeida,
+  // Plantillas WhatsApp
+  PLANTILLAS_WHATSAPP,
+  obtenerPlantilla,
+  renderizarPlantilla,
+  obtenerPlantillasPorCategoria,
+  // CRUD Reglas
+  crearReglaPersonalizada,
+  eliminarRegla,
+  actualizarRegla,
+  PLANTILLAS_REGLAS,
+  crearReglaDesdeTemplate,
 };
