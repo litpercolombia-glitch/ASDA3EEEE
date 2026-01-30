@@ -151,18 +151,22 @@ export function useDashboardData({ shipments = [], autoFetch = true }: UseDashbo
   }, [shipments, setMetrics, setTrends, setCarrierStats, setCityStats, setStatusDistribution]);
 
   // Fetch desde API (cuando esté disponible)
-  const fetchFromAPI = useCallback(async () => {
+  const fetchFromAPI = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
 
     try {
       const [resumenRes, tendenciasRes] = await Promise.all([
-        fetch(`${API_URL}/dashboard/resumen`).catch(() => null),
-        fetch(`${API_URL}/dashboard/tendencias?dias=30`).catch(() => null),
+        fetch(`${API_URL}/dashboard/resumen`, { signal }).catch(() => null),
+        fetch(`${API_URL}/dashboard/tendencias?dias=30`, { signal }).catch(() => null),
       ]);
+
+      // Check if aborted before updating state
+      if (signal?.aborted) return;
 
       if (resumenRes?.ok) {
         const resumen = await resumenRes.json();
+        if (signal?.aborted) return;
         if (resumen.estadisticas_generales) {
           const stats = resumen.estadisticas_generales;
           setMetrics({
@@ -182,8 +186,11 @@ export function useDashboardData({ shipments = [], autoFetch = true }: UseDashbo
         }
       }
 
+      if (signal?.aborted) return;
+
       if (tendenciasRes?.ok) {
         const tendencias = await tendenciasRes.json();
+        if (signal?.aborted) return;
         if (tendencias.fechas) {
           const trendData: TrendData[] = tendencias.fechas.map((fecha: string, i: number) => ({
             fecha,
@@ -196,9 +203,13 @@ export function useDashboardData({ shipments = [], autoFetch = true }: UseDashbo
         }
       }
     } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === 'AbortError') return;
       console.warn('API no disponible, usando datos locales');
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, [setMetrics, setTrends, setLoading, setError]);
 
@@ -209,11 +220,16 @@ export function useDashboardData({ shipments = [], autoFetch = true }: UseDashbo
     }
   }, [shipments, calculateLocalMetrics]);
 
-  // Efecto para fetch inicial desde API
+  // Efecto para fetch inicial desde API con cleanup
   useEffect(() => {
-    if (autoFetch) {
-      fetchFromAPI();
-    }
+    if (!autoFetch) return;
+
+    const abortController = new AbortController();
+    fetchFromAPI(abortController.signal);
+
+    return () => {
+      abortController.abort();
+    };
   }, [autoFetch, fetchFromAPI]);
 
   return {
@@ -224,7 +240,7 @@ export function useDashboardData({ shipments = [], autoFetch = true }: UseDashbo
     statusDistribution,
     isLoading,
     dateRange,
-    refresh: fetchFromAPI,
+    refresh: () => fetchFromAPI(),
     recalculate: calculateLocalMetrics,
   };
 }
