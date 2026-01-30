@@ -307,6 +307,37 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(0);
+  const modelSelectorRef = useRef<HTMLDivElement>(null);
+  const modeSelectorRef = useRef<HTMLDivElement>(null);
+
+  // CORREGIDO BUG U2: Cerrar dropdowns con click outside y Escape
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Cerrar model selector si click fuera
+      if (modelSelectorRef.current && !modelSelectorRef.current.contains(event.target as Node)) {
+        setShowModelSelector(false);
+      }
+      // Cerrar mode selector si click fuera
+      if (modeSelectorRef.current && !modeSelectorRef.current.contains(event.target as Node)) {
+        setShowModeSelector(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowModelSelector(false);
+        setShowModeSelector(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
 
   // Auto-scroll solo cuando se agregan nuevos mensajes (no al escribir)
   const scrollToBottom = useCallback((force = false) => {
@@ -404,10 +435,13 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
   }, [isInitialized, shipments]);
 
   // Escuchar clicks en ejemplos de skills
+  // CORREGIDO: Ahora envía el mensaje automáticamente
   useEffect(() => {
     const handleSkillExample = (e: CustomEvent) => {
-      setInputValue(e.detail);
-      inputRef.current?.focus();
+      const exampleText = e.detail;
+      setInputValue(exampleText);
+      // Auto-enviar el mensaje de ejemplo
+      handleSendMessage(exampleText);
     };
 
     window.addEventListener('skill-example-click', handleSkillExample as EventListener);
@@ -455,13 +489,15 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
   }, []);
 
   // Manejar envio de mensaje
-  const handleSendMessage = async () => {
-    if ((!inputValue.trim() && !attachedImage) || isProcessing) return;
+  // CORREGIDO: Acepta mensaje opcional para auto-envío de acciones rápidas
+  const handleSendMessage = async (messageOverride?: string) => {
+    const messageToSend = messageOverride || inputValue.trim();
+    if ((!messageToSend && !attachedImage) || isProcessing) return;
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: inputValue.trim() || (attachedImage ? 'Analiza esta imagen' : ''),
+      content: messageToSend || (attachedImage ? 'Analiza esta imagen' : ''),
       timestamp: new Date(),
       image: attachedImage || undefined,
     };
@@ -560,23 +596,37 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
   };
 
   // Manejar accion rapida (pregunta predefinida)
+  // CORREGIDO: Pasar mensaje directamente para evitar problemas de closure
   const handleQuickAction = (prompt: string) => {
     setInputValue(prompt);
-    setTimeout(() => handleSendMessage(), 100);
+    handleSendMessage(prompt);
   };
 
   // Manejar click en skill
+  // CORREGIDO: Evitar duplicación de mensajes de sistema
   const handleSkillClick = (skill: Skill) => {
-    setActiveSkill(activeSkill === skill.id ? null : skill.id);
+    const isActivating = activeSkill !== skill.id;
+    setActiveSkill(isActivating ? skill.id : null);
 
-    // Agregar mensaje del sistema indicando modo activo
-    if (activeSkill !== skill.id) {
-      setMessages(prev => [...prev, {
-        id: `system-${Date.now()}`,
-        role: 'system',
-        content: `Modo ${skill.label} activado`,
-        timestamp: new Date(),
-      }]);
+    // Solo agregar mensaje si estamos activando (no desactivando)
+    if (isActivating) {
+      setMessages(prev => {
+        // Filtrar mensajes de sistema anteriores sobre modos para evitar duplicados
+        const filteredMessages = prev.filter(msg =>
+          !(msg.role === 'system' && msg.content?.includes('Modo') && msg.content?.includes('activado'))
+        );
+        // Máximo 3 mensajes de sistema recientes
+        const systemMessages = filteredMessages.filter(msg => msg.role === 'system');
+        const otherMessages = filteredMessages.filter(msg => msg.role !== 'system');
+        const recentSystemMessages = systemMessages.slice(-2);
+
+        return [...otherMessages, ...recentSystemMessages, {
+          id: `system-${Date.now()}`,
+          role: 'system',
+          content: `Modo ${skill.label} activado`,
+          timestamp: new Date(),
+        }];
+      });
     }
   };
 
@@ -632,22 +682,57 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
           const base64Audio = (reader.result as string).split(',')[1];
 
           // Agregar mensaje de sistema indicando transcripción
+          const transcriptionMsgId = `system-transcribing-${Date.now()}`;
           setMessages(prev => [...prev, {
-            id: `system-${Date.now()}`,
+            id: transcriptionMsgId,
             role: 'system',
             content: 'Transcribiendo audio...',
             timestamp: new Date(),
           }]);
 
+          // CORREGIDO BUG U4: Agregar timeout de 30 segundos y mejor manejo de errores
           try {
-            const transcription = await transcribeAudio(base64Audio);
+            // Crear promesa con timeout de 30 segundos
+            const transcriptionPromise = transcribeAudio(base64Audio);
+            const timeoutPromise = new Promise<string>((_, reject) => {
+              setTimeout(() => reject(new Error('Timeout: La transcripción tardó demasiado')), 30000);
+            });
+
+            const transcription = await Promise.race([transcriptionPromise, timeoutPromise]);
+
             if (transcription) {
               setInputValue(transcription);
               // Remover mensaje de transcripción
-              setMessages(prev => prev.filter(m => !m.content.includes('Transcribiendo')));
+              setMessages(prev => prev.filter(m => m.id !== transcriptionMsgId));
+            } else {
+              // Transcripción vacía
+              setMessages(prev => prev.map(m =>
+                m.id === transcriptionMsgId
+                  ? { ...m, content: 'No se detectó audio claro. Intenta de nuevo.' }
+                  : m
+              ));
+              // Remover mensaje después de 3 segundos
+              setTimeout(() => {
+                setMessages(prev => prev.filter(m => m.id !== transcriptionMsgId));
+              }, 3000);
             }
           } catch (error) {
             console.error('Error transcribiendo audio:', error);
+            // Mostrar error al usuario
+            setMessages(prev => prev.map(m =>
+              m.id === transcriptionMsgId
+                ? {
+                    ...m,
+                    content: error instanceof Error && error.message.includes('Timeout')
+                      ? 'La transcripción tardó demasiado. Intenta con un audio más corto.'
+                      : 'Error al transcribir audio. Intenta de nuevo.',
+                  }
+                : m
+            ));
+            // Remover mensaje de error después de 4 segundos
+            setTimeout(() => {
+              setMessages(prev => prev.filter(m => m.id !== transcriptionMsgId));
+            }, 4000);
           }
         };
         reader.readAsDataURL(audioBlob);
@@ -933,8 +1018,8 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
 
                 {/* Botones de herramientas compactos */}
                 <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1">
-                  {/* Selector de modelo */}
-                  <div className="relative">
+                  {/* Selector de modelo - CORREGIDO: Agregado ref para click outside */}
+                  <div className="relative" ref={modelSelectorRef}>
                     <button
                       onClick={() => { setShowModelSelector(!showModelSelector); setShowModeSelector(false); }}
                       className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-white/10 rounded-lg text-xs transition-colors"
@@ -975,8 +1060,8 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
                     )}
                   </div>
 
-                  {/* Selector de modo */}
-                  <div className="relative">
+                  {/* Selector de modo - CORREGIDO: Agregado ref para click outside */}
+                  <div className="relative" ref={modeSelectorRef}>
                     <button
                       onClick={() => { setShowModeSelector(!showModeSelector); setShowModelSelector(false); }}
                       className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-white/10 rounded-lg text-xs transition-colors"

@@ -79,51 +79,87 @@ export function useShipmentExcelParser() {
 
   /**
    * Normalize status from Excel to ShipmentStatus
+   * MEJORADO: Más patrones para estados de Colombia
    */
   const normalizeExcelStatus = (rawStatus: string): ShipmentStatus => {
     if (!rawStatus) return ShipmentStatus.PENDING;
 
-    const status = rawStatus.toUpperCase().trim();
+    const status = rawStatus.toUpperCase().trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // Quitar acentos
 
-    // Entregado
-    if (status.includes('ENTREG') || status.includes('DELIVERED') || status.includes('RECOGIDO')) {
+    // ===== ENTREGADO =====
+    if (
+      status.includes('ENTREG') ||
+      status.includes('DELIVERED') ||
+      status.includes('RECOGIDO') ||
+      status.includes('CUMPLIDO') ||
+      status.includes('EXITOSO') ||
+      status.includes('EFECTIV') ||
+      status === 'OK'
+    ) {
       return ShipmentStatus.DELIVERED;
     }
 
-    // Novedad/Issue
+    // ===== NOVEDAD/ISSUE =====
     if (
       status.includes('NOVEDAD') ||
       status.includes('DEVOL') ||
       status.includes('RECHAZ') ||
       status.includes('FALLIDO') ||
       status.includes('NO ENTREGA') ||
-      status.includes('RETORNO')
+      status.includes('RETORNO') ||
+      status.includes('SINIESTRO') ||
+      status.includes('PERDIDO') ||
+      status.includes('DAÑADO') ||
+      status.includes('DANADO') ||
+      status.includes('AVERIA') ||
+      status.includes('DIRECCION ERRADA') ||
+      status.includes('DIRECCION INCORRECTA') ||
+      status.includes('TELEFONO ERRADO') ||
+      status.includes('NO CONTESTA') ||
+      status.includes('AUSENTE') ||
+      status.includes('CERRADO') ||
+      status.includes('SIN DINERO') ||
+      status.includes('ZONA RIESGO') ||
+      status.includes('REPROGRAMADO')
     ) {
       return ShipmentStatus.ISSUE;
     }
 
-    // En oficina
+    // ===== EN OFICINA =====
     if (
       status.includes('OFICINA') ||
       status.includes('BODEGA') ||
       status.includes('RETIRO') ||
       status.includes('DISPONIBLE') ||
-      status.includes('ALMACEN')
+      status.includes('ALMACEN') ||
+      status.includes('PUNTO') ||
+      status.includes('AGENCIA') ||
+      status.includes('CENTRO')
     ) {
       return ShipmentStatus.IN_OFFICE;
     }
 
-    // En tránsito
+    // ===== EN TRÁNSITO =====
     if (
       status.includes('TRANSIT') ||
+      status.includes('TRANSITO') ||
       status.includes('REPARTO') ||
       status.includes('CAMINO') ||
       status.includes('RUTA') ||
-      status.includes('DISTRIBU')
+      status.includes('DISTRIBU') ||
+      status.includes('DESPACHADO') ||
+      status.includes('ENVIADO') ||
+      status.includes('MOVILIZA') ||
+      status.includes('CARGADO') ||
+      status.includes('LLEGADA') ||
+      status.includes('SALIDA') ||
+      status.includes('ARRIBO')
     ) {
       return ShipmentStatus.IN_TRANSIT;
     }
 
+    // ===== PENDIENTE (default) =====
     return ShipmentStatus.PENDING;
   };
 
@@ -211,33 +247,79 @@ export function useShipmentExcelParser() {
         const firstRow = rawData[0];
         const columns = Object.keys(firstRow);
 
-        // Find guide column
-        const guideColumn =
-          columns.find((c) => /^(guia|guide|numero|id|tracking|nro|#)/i.test(c)) || columns[0];
+        /**
+         * Helper to find column by multiple patterns
+         * CORREGIDO: Ahora busca coincidencias flexibles (contiene, no solo empieza)
+         */
+        const findColumn = (patterns: string[]): string | undefined => {
+          // Primero buscar coincidencia exacta
+          for (const pattern of patterns) {
+            const exact = columns.find((c) =>
+              c.toLowerCase().trim() === pattern.toLowerCase()
+            );
+            if (exact) return exact;
+          }
 
-        // Find status column
-        const statusColumn = columns.find((c) => /^(estado|status|estatus)/i.test(c));
+          // Luego buscar si contiene el patrón
+          for (const pattern of patterns) {
+            const partial = columns.find((c) =>
+              c.toLowerCase().includes(pattern.toLowerCase())
+            );
+            if (partial) return partial;
+          }
+
+          return undefined;
+        };
+
+        // Find guide column - Ampliado para variantes Colombia
+        const guideColumn = findColumn([
+          'guia', 'guía', 'guide', 'numero de guia', 'número de guía',
+          'numero_de_guia', 'tracking', 'nro', 'id', 'codigo', 'código',
+          'no. guia', 'no guia', '#'
+        ]) || columns[0];
+
+        // Find status column - AMPLIADO: incluye "estatus" que es común en Colombia
+        const statusColumn = findColumn([
+          'estatus', 'estado', 'status', 'estado actual',
+          'estatus actual', 'estado envio', 'state'
+        ]);
 
         // Find phone column
-        const phoneColumn = columns.find((c) => /^(telefono|phone|celular|cel|movil)/i.test(c));
+        const phoneColumn = findColumn([
+          'telefono', 'teléfono', 'phone', 'celular', 'cel', 'movil', 'móvil',
+          'telefono destinatario', 'contacto'
+        ]);
 
         // Find carrier column
-        const carrierColumn = columns.find((c) =>
-          /^(transportadora|carrier|empresa|mensajeria)/i.test(c)
-        );
+        const carrierColumn = findColumn([
+          'transportadora', 'carrier', 'empresa', 'mensajeria', 'mensajería',
+          'courier', 'operador'
+        ]);
 
-        // Find destination column
-        const destColumn = columns.find((c) =>
-          /^(destino|destination|ciudad|city|municipio)/i.test(c)
-        );
+        // Find destination column - AMPLIADO: "ciudad destino" y variantes
+        const destColumn = findColumn([
+          'ciudad destino', 'ciudad_destino', 'ciudad de destino',
+          'destino', 'destination', 'ciudad', 'city', 'municipio',
+          'ciudad destinatario', 'municipio destino'
+        ]);
 
         // Find days column
-        const daysColumn = columns.find((c) => /^(dias|days|tiempo|time)/i.test(c));
+        const daysColumn = findColumn([
+          'dias', 'días', 'days', 'tiempo', 'time',
+          'dias transito', 'días en tránsito'
+        ]);
 
         // Find value column
-        const valueColumn = columns.find((c) =>
-          /^(valor|value|precio|price|monto|amount)/i.test(c)
-        );
+        const valueColumn = findColumn([
+          'valor', 'value', 'precio', 'price', 'monto', 'amount',
+          'valor declarado', 'recaudo', 'total'
+        ]);
+
+        // Find last movement column - NUEVO: Para tracking
+        const lastMovementColumn = findColumn([
+          'ultimo movimiento', 'último movimiento', 'last movement',
+          'ultimo_movimiento', 'movimiento', 'novedad', 'observacion'
+        ]);
 
         const today = new Date().toISOString().split('T')[0];
         const batchId = uuidv4();
@@ -262,6 +344,8 @@ export function useShipmentExcelParser() {
           const destination = destColumn ? String(row[destColumn] || '') : 'Colombia';
           const daysStr = daysColumn ? String(row[daysColumn] || '0') : '0';
           const valueStr = valueColumn ? String(row[valueColumn] || '0') : '0';
+          // NUEVO: Último movimiento para tracking
+          const lastMovement = lastMovementColumn ? String(row[lastMovementColumn] || '') : '';
 
           // Process values
           const status = normalizeExcelStatus(rawStatus);
@@ -285,14 +369,14 @@ export function useShipmentExcelParser() {
             dateKey: today,
             detailedInfo: {
               origin: 'Colombia',
-              destination: destination.toUpperCase(),
+              destination: destination.toUpperCase() || 'Sin ciudad',
               daysInTransit,
               rawStatus: rawStatus || status,
               events: [
                 {
                   date: batchDate,
-                  location: destination,
-                  description: rawStatus || 'Cargado desde Excel',
+                  location: destination || 'Colombia',
+                  description: lastMovement || rawStatus || 'Cargado desde Excel',
                   isRecent: true,
                 },
               ],
@@ -301,6 +385,8 @@ export function useShipmentExcelParser() {
                 status === ShipmentStatus.DELIVERED ? 'Entregado' : 'Por confirmar',
               declaredValue,
             },
+            // NUEVO: Guardar último movimiento para seguimiento
+            notes: lastMovement || undefined,
           };
 
           shipment.riskAnalysis = analyzeShipmentRisk(shipment);
