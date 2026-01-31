@@ -179,102 +179,27 @@ export async function parseExcel<T = Record<string, unknown>>(
 
 /**
  * Configuracion para parsear envios/guias
- * ACTUALIZADO: Mapeo completo para Excel Colombia (63 columnas)
  */
 export const SHIPMENT_EXCEL_CONFIG: ExcelParserOptions = {
   requiredColumns: [],
   columnMapping: {
-    // GUÍA - Múltiples variantes
     'guia': 'guideId',
-    'guía': 'guideId',
     'guide': 'guideId',
     'numero': 'guideId',
-    'número': 'guideId',
     'tracking': 'guideId',
-    'numero de guia': 'guideId',
-    'número de guía': 'guideId',
-    'no. guia': 'guideId',
-    'codigo': 'guideId',
-    'código': 'guideId',
-
-    // ESTADO/ESTATUS - Variantes Colombia
     'estado': 'status',
-    'estatus': 'status',
     'status': 'status',
-    'estado actual': 'status',
-    'estatus actual': 'status',
-    'estado envio': 'status',
-    'estado del envio': 'status',
-
-    // CIUDAD DESTINO - Variantes completas
-    'ciudad destino': 'destination',
-    'ciudad_destino': 'destination',
-    'destino': 'destination',
-    'ciudad': 'destination',
-    'city': 'destination',
-    'municipio': 'destination',
-    'ciudad de destino': 'destination',
-    'municipio destino': 'destination',
-
-    // ÚLTIMO MOVIMIENTO
-    'ultimo movimiento': 'lastMovement',
-    'último movimiento': 'lastMovement',
-    'ultimomovimiento': 'lastMovement',
-    'movimiento': 'lastMovement',
-    'tracking': 'lastMovement',
-    'novedad': 'lastMovement',
-
-    // TELÉFONO
     'telefono': 'phone',
-    'teléfono': 'phone',
     'phone': 'phone',
     'celular': 'phone',
-    'cel': 'phone',
-    'movil': 'phone',
-    'móvil': 'phone',
-    'telefono destinatario': 'phone',
-
-    // TRANSPORTADORA
     'transportadora': 'carrier',
     'carrier': 'carrier',
-    'empresa': 'carrier',
-    'mensajeria': 'carrier',
-    'mensajería': 'carrier',
-    'courier': 'carrier',
-
-    // VALOR
+    'destino': 'destination',
+    'ciudad': 'destination',
     'valor': 'value',
     'precio': 'value',
-    'value': 'value',
-    'monto': 'value',
-    'total': 'value',
-    'valor declarado': 'value',
-    'recaudo': 'value',
-
-    // FECHA
-    'fecha': 'date',
-    'date': 'date',
-    'fecha envio': 'date',
-    'fecha creacion': 'date',
-
-    // DESTINATARIO
-    'destinatario': 'recipientName',
-    'nombre destinatario': 'recipientName',
-    'cliente': 'recipientName',
-    'receptor': 'recipientName',
-
-    // DIRECCIÓN
-    'direccion': 'address',
-    'dirección': 'address',
-    'direccion destino': 'address',
-    'dir': 'address',
-
-    // DEPARTAMENTO
-    'departamento': 'department',
-    'depto': 'department',
-    'region': 'department',
   },
-  skipEmptyRows: false, // Cambiar a false para no perder filas
+  skipEmptyRows: true,
 };
 
 /**
@@ -313,123 +238,21 @@ export const INCOME_EXCEL_CONFIG: ExcelParserOptions = {
 
 /**
  * Parsea un archivo Excel de envios/guias
- * ACTUALIZADO: Mapeo completo de columnas para Excel Colombia (63 columnas)
  */
 export async function parseShipmentExcel(file: File) {
-  let skippedRows = 0;
-  let processedRows = 0;
-
-  const result = await parseExcel(file, {
+  return parseExcel(file, {
     ...SHIPMENT_EXCEL_CONFIG,
-    skipEmptyRows: false, // No saltar filas para contar correctamente
-    transformRow: (row) => {
-      // Verificar si la fila tiene datos útiles
-      const guideId = findColumnValue(row, [
-        'guia', 'guide', 'numero', 'id', 'tracking', 'nro', 'guía',
-        'numero de guia', 'número de guía', 'no. guia', 'no guia',
-        'numero guia', 'n° guia', 'n guia', 'cod', 'codigo'
-      ]);
-
-      if (!guideId || guideId.trim() === '') {
-        skippedRows++;
-        return null; // Marcar para filtrar después
-      }
-
-      processedRows++;
-
-      return {
-        guideId,
-        // ESTATUS - Mapeo ampliado
-        status: findColumnValue(row, [
-          'estatus', 'estado', 'status', 'state',
-          'estado actual', 'estatus actual', 'estado envio',
-          'estado del envio', 'estado de la guia', 'situacion'
-        ]),
-        // CIUDAD DESTINO - Mapeo ampliado
-        destination: findColumnValue(row, [
-          'ciudad destino', 'ciudad_destino', 'ciudaddestino',
-          'destino', 'destination', 'ciudad', 'city', 'municipio',
-          'ciudad de destino', 'municipio destino', 'ciudad entrega',
-          'ciudad destinatario', 'poblacion destino', 'localidad destino'
-        ]),
-        // ÚLTIMO MOVIMIENTO - Nuevo campo
-        lastMovement: findColumnValue(row, [
-          'ultimo movimiento', 'último movimiento', 'last movement',
-          'ultimomovimiento', 'ultimo_movimiento', 'movimiento',
-          'ultima actualizacion', 'última actualización', 'tracking',
-          'seguimiento', 'novedad', 'observacion', 'descripcion estado'
-        ]),
-        // TELÉFONO - Mapeo ampliado
-        phone: findColumnValue(row, [
-          'telefono', 'teléfono', 'phone', 'celular', 'cel', 'movil', 'móvil',
-          'telefono destinatario', 'tel destinatario', 'contacto',
-          'numero celular', 'número celular', 'tel', 'fono'
-        ]),
-        // TRANSPORTADORA - Mapeo ampliado
-        carrier: findColumnValue(row, [
-          'transportadora', 'carrier', 'empresa', 'mensajeria', 'mensajería',
-          'empresa transporte', 'courier', 'operador', 'proveedor',
-          'empresa de envios', 'compañia', 'compañía'
-        ]),
-        // DÍAS EN TRÁNSITO
-        daysInTransit: findColumnValue(row, [
-          'dias', 'días', 'days', 'tiempo', 'time', 'dias transito',
-          'días en tránsito', 'tiempo transito', 'dias habiles'
-        ]),
-        // VALOR
-        value: findColumnValue(row, [
-          'valor', 'value', 'precio', 'price', 'monto', 'amount',
-          'valor declarado', 'valor envio', 'total', 'costo', 'importe',
-          'valor recaudo', 'recaudo', 'cod value'
-        ]),
-        // FECHA
-        date: findColumnValue(row, [
-          'fecha', 'date', 'fecha envio', 'fecha creacion', 'fecha despacho',
-          'fecha ingreso', 'fecha registro', 'created', 'created_at'
-        ]),
-        // DESTINATARIO
-        recipientName: findColumnValue(row, [
-          'destinatario', 'nombre destinatario', 'recipient', 'cliente',
-          'nombre cliente', 'receptor', 'consignatario', 'para'
-        ]),
-        // DIRECCIÓN
-        address: findColumnValue(row, [
-          'direccion', 'dirección', 'address', 'direccion destino',
-          'direccion entrega', 'dir', 'domicilio'
-        ]),
-        // DEPARTAMENTO
-        department: findColumnValue(row, [
-          'departamento', 'depto', 'dpto', 'region', 'región',
-          'departamento destino', 'estado destino'
-        ]),
-        // Guardar datos originales para debug
-        rawData: row,
-      };
-    },
+    transformRow: (row) => ({
+      guideId: findColumnValue(row, ['guia', 'guide', 'numero', 'id', 'tracking', 'nro']),
+      status: findColumnValue(row, ['estado', 'status', 'estatus']),
+      phone: findColumnValue(row, ['telefono', 'phone', 'celular', 'cel', 'movil']),
+      carrier: findColumnValue(row, ['transportadora', 'carrier', 'empresa', 'mensajeria']),
+      destination: findColumnValue(row, ['destino', 'destination', 'ciudad', 'city', 'municipio']),
+      daysInTransit: findColumnValue(row, ['dias', 'days', 'tiempo', 'time']),
+      value: findColumnValue(row, ['valor', 'value', 'precio', 'price', 'monto', 'amount']),
+      rawData: row,
+    }),
   });
-
-  // Filtrar filas nulas (las que no tenían guía)
-  const filteredData = result.data.filter((item: any) => item !== null);
-
-  // Log de filas procesadas vs ignoradas
-  console.log(`[ExcelParser] Procesamiento completado:`);
-  console.log(`  - Total filas en archivo: ${result.preview.totalRows + skippedRows}`);
-  console.log(`  - Filas procesadas: ${filteredData.length}`);
-  console.log(`  - Filas ignoradas (sin guía): ${skippedRows}`);
-
-  if (skippedRows > 0) {
-    result.warnings.push(`${skippedRows} filas ignoradas por no tener número de guía`);
-  }
-
-  return {
-    ...result,
-    data: filteredData,
-    preview: {
-      ...result.preview,
-      totalRows: filteredData.length,
-      sampleRows: filteredData.slice(0, 5),
-    },
-  };
 }
 
 /**
@@ -482,68 +305,16 @@ function applyColumnMapping(
 
 /**
  * Encuentra el valor de una columna por multiples nombres posibles
- * MEJORADO: Busca coincidencias exactas primero, luego parciales
  */
 function findColumnValue(row: Record<string, unknown>, possibleNames: string[]): string {
-  const normalizedRow: Record<string, { key: string; value: unknown }> = {};
-
-  // Normalizar todas las claves del row
-  for (const [key, value] of Object.entries(row)) {
-    const normalizedKey = normalizeColumnName(key);
-    normalizedRow[normalizedKey] = { key, value };
-  }
-
-  // PASO 1: Buscar coincidencia EXACTA (normalizada)
   for (const name of possibleNames) {
-    const normalizedName = normalizeColumnName(name);
-    if (normalizedRow[normalizedName]) {
-      const val = normalizedRow[normalizedName].value;
-      if (val !== null && val !== undefined && val !== '') {
-        return String(val);
+    for (const [key, value] of Object.entries(row)) {
+      if (key.toLowerCase().includes(name.toLowerCase())) {
+        return String(value || '');
       }
     }
   }
-
-  // PASO 2: Buscar coincidencia PARCIAL (la clave contiene el nombre)
-  for (const name of possibleNames) {
-    const normalizedName = normalizeColumnName(name);
-    for (const [normalizedKey, { value }] of Object.entries(normalizedRow)) {
-      if (normalizedKey.includes(normalizedName) || normalizedName.includes(normalizedKey)) {
-        if (value !== null && value !== undefined && value !== '') {
-          return String(value);
-        }
-      }
-    }
-  }
-
-  // PASO 3: Buscar coincidencia por palabras clave
-  for (const name of possibleNames) {
-    const nameWords = normalizeColumnName(name).split(/[\s_-]+/).filter(w => w.length > 2);
-    for (const [normalizedKey, { value }] of Object.entries(normalizedRow)) {
-      const keyWords = normalizedKey.split(/[\s_-]+/).filter(w => w.length > 2);
-      // Si todas las palabras del nombre están en la clave
-      if (nameWords.length > 0 && nameWords.every(word => keyWords.some(kw => kw.includes(word) || word.includes(kw)))) {
-        if (value !== null && value !== undefined && value !== '') {
-          return String(value);
-        }
-      }
-    }
-  }
-
   return '';
-}
-
-/**
- * Normaliza el nombre de una columna para comparación
- */
-function normalizeColumnName(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Quitar acentos
-    .replace(/[^a-z0-9\s]/g, ' ')    // Quitar caracteres especiales
-    .replace(/\s+/g, ' ')            // Normalizar espacios
-    .trim();
 }
 
 /**

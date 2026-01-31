@@ -1327,13 +1327,7 @@ Haz clic en cualquier plantilla para copiarla al portapapeles.`,
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => {
-              // CORREGIDO: Usar onKeyDown con preventDefault
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
+            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
             placeholder="Escribe tu pregunta o selecciona una consulta rápida..."
             disabled={isLoading}
             className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50 transition-all"

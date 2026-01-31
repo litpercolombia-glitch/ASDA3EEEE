@@ -48,7 +48,6 @@ import {
   LayoutDashboard,
   Bot,
   MessageSquare,
-  Sheet,
 } from 'lucide-react';
 import {
   useLayoutStore,
@@ -104,7 +103,6 @@ const SUB_MENUS: Record<MainSection, SubMenuItem[]> = {
     { id: 'tracking', icon: MapPin, label: 'Tracking' },
     { id: 'historial', icon: History, label: 'Historial' },
     { id: 'rutas', icon: Route, label: 'Rutas' },
-    { id: 'google-sheets', icon: Sheet, label: 'Google Sheets' },
   ],
   'inteligencia': [
     { id: 'analisis', icon: LineChart, label: 'Análisis' },

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { LoginPage } from './LoginPage';
 import { RegisterPage } from './RegisterPage';
+import { AuthCallback } from './AuthCallback';
 import { Loader2 } from 'lucide-react';
 
 interface AuthWrapperProps {
@@ -14,9 +15,18 @@ export const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
   const { isAuthenticated, checkAuth, isLoading } = useAuthStore();
   const [authView, setAuthView] = useState<'login' | 'register'>('login');
   const [isChecking, setIsChecking] = useState(true);
+  const [isOAuthCallback, setIsOAuthCallback] = useState(false);
 
   // Verificar autenticación al cargar
   useEffect(() => {
+    // Detectar si estamos en la ruta de callback OAuth
+    const pathname = window.location.pathname;
+    if (pathname === '/auth/callback' || pathname.includes('/auth/callback')) {
+      setIsOAuthCallback(true);
+      setIsChecking(false);
+      return;
+    }
+
     checkAuth();
     // Pequeño delay para evitar flash de contenido
     const timeout = setTimeout(() => {
@@ -24,6 +34,11 @@ export const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
     }, 500);
     return () => clearTimeout(timeout);
   }, [checkAuth]);
+
+  // Mostrar página de callback OAuth si estamos en esa ruta
+  if (isOAuthCallback) {
+    return <AuthCallback />;
+  }
 
   // Mostrar loading mientras verifica
   if (isChecking) {

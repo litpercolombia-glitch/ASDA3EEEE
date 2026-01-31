@@ -59,38 +59,22 @@ export const SeguimientoSkillView: React.FC<SeguimientoSkillViewProps> = ({
   const [filter, setFilter] = useState<'all' | 'critical' | 'in_transit' | 'delivered'>('all');
 
   // Procesar envios con alertas
-  // CORREGIDO: Usar múltiples campos alternativos para mejor compatibilidad
   const processedShipments = useMemo((): ProcessedShipment[] => {
     return shipments.map(shipment => {
       const days = shipment.detailedInfo?.daysInTransit || 0;
-
-      // Verificar si tiene issue de forma flexible
-      const statusStr = String(shipment.status || '').toLowerCase();
       const hasIssue = shipment.status === ShipmentStatus.ISSUE ||
-                       shipment.status === ShipmentStatus.EXCEPTION ||
-                       statusStr.includes('novedad') ||
-                       statusStr.includes('issue');
+                       shipment.status === ShipmentStatus.EXCEPTION;
 
       let alertLevel: ProcessedShipment['alertLevel'] = 'NORMAL';
       if (hasIssue || days >= 7) alertLevel = 'CRITICO';
       else if (days >= 5) alertLevel = 'ALTO';
       else if (days >= 3) alertLevel = 'MEDIO';
 
-      // CORREGIDO: Buscar último evento en múltiples lugares
-      const lastEvent = shipment.detailedInfo?.lastEvent ||
-                        shipment.notes || // Guardamos lastMovement aquí en el parser
-                        shipment.detailedInfo?.rawStatus ||
-                        shipment.detailedInfo?.events?.[0]?.description ||
-                        (shipment as any).statusDescription ||
-                        (shipment as any).lastMovement ||
-                        shipment.status ||
-                        'Procesando...';
-
       return {
         shipment,
         daysInTransit: days,
         alertLevel,
-        lastEvent,
+        lastEvent: shipment.detailedInfo?.lastEvent || shipment.statusDescription || 'Sin informacion',
       };
     });
   }, [shipments]);
@@ -224,12 +208,7 @@ export const SeguimientoSkillView: React.FC<SeguimientoSkillViewProps> = ({
                     </p>
                     <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
                       <MapPin className="w-3 h-3" />
-                      {/* CORREGIDO: Buscar destino en múltiples campos */}
-                      {processed.shipment.detailedInfo?.destination ||
-                       (processed.shipment as any).destination ||
-                       (processed.shipment as any).destinationCity ||
-                       (processed.shipment as any).city ||
-                       'Colombia'}
+                      {processed.shipment.detailedInfo?.destination || 'Destino no especificado'}
                     </p>
                   </div>
                 </div>

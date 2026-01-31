@@ -38,16 +38,6 @@ const initialConnections = {
   tiktok: { isConnected: false, accessToken: null },
 };
 
-// Hook para obtener solo las métricas del dashboard
-export const useMarketingMetrics = () => {
-  return useMarketingStore((state) => ({
-    metrics: state.dashboardMetrics,
-    isLoading: state.isLoading,
-    lastSyncAt: state.lastSyncAt,
-    setMetrics: state.setDashboardMetrics,
-  }));
-};
-
 export const useMarketingStore = create<MarketingState>()(
   persist(
     (set, get) => ({
@@ -98,5 +88,11 @@ export const useMarketingStore = create<MarketingState>()(
     }
   )
 );
+
+// Hook para obtener métricas de marketing
+export const useMarketingMetrics = () => {
+  const dashboardMetrics = useMarketingStore((state) => state.dashboardMetrics);
+  return { metrics: dashboardMetrics };
+};
 
 export default useMarketingStore;

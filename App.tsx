@@ -36,7 +36,6 @@ import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
 import { OperacionesUnificadoTab } from './components/tabs/OperacionesUnificadoTab';
 import { InteligenciaIAUnificadoTab } from './components/tabs/InteligenciaIAUnificadoTab';
 import { AnalisisUnificadoTab } from './components/tabs/AnalisisUnificadoTab';
-import GoogleSheetsTab from './components/tabs/GoogleSheetsTab';
 import { ProBubbleV4 } from './components/ProAssistant';
 import UniversalSearch from './components/search/UniversalSearch';
 // Cerebro IA - Dashboard con Chatea Pro, Webhooks y Analytics
@@ -49,12 +48,8 @@ import CountrySelector from './components/CountrySelector';
 import { ChatCommandCenter } from './components/ChatFirst';
 import { detectarGuiasRetrasadas } from './utils/patternDetection';
 // Nuevo Layout con Sidebar estilo ChatGPT
-import { AppLayout, AppLayoutPro } from './components/layout';
+import { AppLayout } from './components/layout';
 import { useLayoutStore } from './stores/layoutStore';
-// Command Palette
-import { CommandPalette, useCommandPalette } from './components/CommandPalette';
-// Dashboard Pro
-import { StripeDashboard } from './components/dashboard';
 // Marketing Tracking System
 import { MarketingView } from './components/marketing';
 // Auth service for logout
@@ -65,10 +60,6 @@ import { useUserProfileStore } from './services/userProfileService';
 import { UserProfileSettings } from './components/settings';
 // Enhanced Excel Upload with column config
 import { EnhancedExcelUpload } from './components/upload';
-// Excel Upload Page - Importación masiva inteligente
-import ExcelUploadPage from './src/pages/ExcelUploadPage';
-// Chat IA Pro - Asistente inteligente tipo Claude.ai
-import ChatIAPro from './src/components/chat/ChatIAPro';
 import {
   Crown,
   Search,
@@ -134,30 +125,10 @@ interface DashboardProps {
 const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, country, userProfile }) => {
   const stats = useMemo(() => {
     const total = shipments.length;
-    // Soportar ambos formatos: enum español ('Entregado') y strings inglés ('delivered')
-    const isDelivered = (status: string) =>
-      status === ShipmentStatus.DELIVERED ||
-      status?.toLowerCase() === 'delivered' ||
-      status?.toLowerCase() === 'entregado';
-    const isInTransit = (status: string) =>
-      status === ShipmentStatus.IN_TRANSIT ||
-      status?.toLowerCase() === 'in_transit' ||
-      status?.toLowerCase() === 'en reparto';
-    const isPending = (status: string) =>
-      status === ShipmentStatus.PENDING ||
-      status?.toLowerCase() === 'pending' ||
-      status?.toLowerCase() === 'pendiente';
-    const isIssue = (status: string) =>
-      status === ShipmentStatus.ISSUE ||
-      status?.toLowerCase() === 'issue' ||
-      status?.toLowerCase() === 'novedad' ||
-      status?.toLowerCase() === 'exception' ||
-      status?.toLowerCase() === 'returned';
-
-    const delivered = shipments.filter(s => isDelivered(s.status)).length;
-    const inTransit = shipments.filter(s => isInTransit(s.status)).length;
-    const pending = shipments.filter(s => isPending(s.status)).length;
-    const issues = shipments.filter(s => isIssue(s.status)).length;
+    const delivered = shipments.filter(s => s.status === ShipmentStatus.DELIVERED).length;
+    const inTransit = shipments.filter(s => s.status === ShipmentStatus.IN_TRANSIT).length;
+    const pending = shipments.filter(s => s.status === ShipmentStatus.PENDING).length;
+    const issues = shipments.filter(s => s.status === ShipmentStatus.EXCEPTION || s.status === ShipmentStatus.RETURNED).length;
     const deliveryRate = total > 0 ? Math.round((delivered / total) * 100) : 0;
 
     return { total, delivered, inTransit, pending, issues, deliveryRate };
@@ -428,10 +399,6 @@ const App: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showUniversalSearch, setShowUniversalSearch] = useState(false);
 
-  // Pro Layout state
-  const [useProLayout, setUseProLayout] = useState(true); // Usar nuevo layout por defecto
-  const [showCommandPalette, setShowCommandPalette] = useState(false);
-
   // Excel parser hook
   const {
     parseExcelFile,
@@ -475,86 +442,17 @@ const App: React.FC = () => {
     }
   }, [darkMode]);
 
-  // Keyboard shortcut: Ctrl+K para Command Palette o búsqueda universal
+  // Keyboard shortcut: Ctrl+K para búsqueda universal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        if (useProLayout) {
-          setShowCommandPalette(true);
-        } else {
-          setShowUniversalSearch(true);
-        }
+        setShowUniversalSearch(true);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [useProLayout]);
-
-  // Sincronizar navegación del Sidebar con currentTab
-  useEffect(() => {
-    // Mapeo de sidebar sub-items a MainTabNew
-    const tabMapping: Record<string, Record<string, MainTabNew | 'home'>> = {
-      'inicio': {
-        'resumen': 'home',
-        'actividad': 'operaciones',
-        'estadisticas': 'analisis',
-      },
-      'operaciones': {
-        'envios': 'operaciones',
-        'tracking': 'tracking-ordenes',
-        'historial': 'seguimiento',
-        'rutas': 'operaciones',
-        'google-sheets': 'operaciones',
-      },
-      'inteligencia': {
-        'analisis': 'analisis',
-        'reportes': 'reporte',
-        'predicciones': 'predicciones',
-        'insights': 'inteligencia-logistica',
-      },
-      'cerebro-ia': {
-        'asistente': 'asistente',
-        'configuracion-ia': 'cerebro-ia',
-        'historial-chat': 'chat-ia-pro',
-      },
-      'negocio': {
-        'metricas': 'negocio',
-        'clientes': 'negocio',
-        'ventas': 'negocio',
-        'rendimiento': 'negocio',
-      },
-      'config': {
-        'general': 'admin',
-        'api-keys': 'admin',
-        'integraciones': 'conexiones',
-        'usuarios': 'admin',
-        'admin': 'admin',
-      },
-    };
-
-    // Obtener el sub-item activo para la sección actual
-    const getActiveSubItem = (): string => {
-      switch (activeSection) {
-        case 'inicio': return activeInicioTab;
-        case 'operaciones': return activeOperacionesTab;
-        case 'inteligencia': return activeInteligenciaTab;
-        case 'cerebro-ia': return activeCerebroIATab;
-        case 'negocio': return activeNegocioTab;
-        default: return '';
-      }
-    };
-
-    const sectionMapping = tabMapping[activeSection];
-    const subItem = getActiveSubItem();
-
-    if (sectionMapping && subItem && sectionMapping[subItem]) {
-      const newTab = sectionMapping[subItem];
-      if (newTab !== currentTab) {
-        setCurrentTab(newTab);
-      }
-    }
-  }, [activeSection, activeInicioTab, activeOperacionesTab, activeInteligenciaTab, activeCerebroIATab, activeNegocioTab, currentTab]);
+  }, []);
 
   useEffect(() => {
     try {
@@ -756,10 +654,6 @@ const App: React.FC = () => {
           />
         );
       case 'operaciones':
-        // Si está seleccionado Google Sheets, mostrar ese tab directamente
-        if (activeOperacionesTab === 'google-sheets') {
-          return <GoogleSheetsTab shipments={shipments} />;
-        }
         return (
           <OperacionesUnificadoTab
             shipments={shipments}
@@ -1251,12 +1145,6 @@ const App: React.FC = () => {
       {currentTab === 'ciudad-agentes' && <div className="p-6"><CiudadAgentesTab selectedCountry={selectedCountry} /></div>}
       {currentTab === 'inteligencia-logistica' && <div className="p-6"><InteligenciaLogisticaTab /></div>}
       {currentTab === 'tracking-ordenes' && <div className="p-6"><TrackingOrdenesTab /></div>}
-
-      {/* Excel Upload - Importación masiva inteligente */}
-      {currentTab === 'importar-excel' && <ExcelUploadPage />}
-
-      {/* Chat IA Pro - Asistente inteligente tipo Claude.ai */}
-      {currentTab === 'chat-ia-pro' && <ChatIAPro />}
 
       {/* Legacy Dashboard - can be accessed from quick actions */}
       {currentTab === 'dashboard-legacy' && (

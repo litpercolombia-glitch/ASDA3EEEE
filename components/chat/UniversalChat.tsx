@@ -473,13 +473,7 @@ Puedo ayudarte a:
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              // CORREGIDO: Agregar preventDefault
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder="Escribe un comando o pregunta..."
             className="flex-1 px-4 py-3 bg-slate-100 dark:bg-navy-800 border-0 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
             disabled={isLoading}

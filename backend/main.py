@@ -163,15 +163,6 @@ except ImportError as e:
     AUTH_SYSTEM_AVAILABLE = False
     logger.warning(f"Sistema de Autenticación no disponible: {e}")
 
-# Sistema de Google Sheets Integration
-try:
-    from routes.google_sheets_routes import router as google_sheets_router
-    GOOGLE_SHEETS_AVAILABLE = True
-    logger.info("📊 Sistema de Google Sheets cargado")
-except ImportError as e:
-    GOOGLE_SHEETS_AVAILABLE = False
-    logger.warning(f"Sistema de Google Sheets no disponible: {e}")
-
 
 # ==================== CONFIGURACIÓN ====================
 
@@ -350,11 +341,6 @@ if CHATEA_PRO_AVAILABLE:
 if AUTH_SYSTEM_AVAILABLE:
     app.include_router(auth_router)
     logger.success("🔐 Rutas de Autenticación registradas en /api/auth")
-
-# Incluir router de Google Sheets
-if GOOGLE_SHEETS_AVAILABLE:
-    app.include_router(google_sheets_router)
-    logger.success("📊 Rutas de Google Sheets registradas en /api/google-sheets")
 
 
 # ==================== ENDPOINTS DE SISTEMA ====================
