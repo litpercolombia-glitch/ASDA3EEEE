@@ -313,8 +313,6 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
   // Timeout para grabación de audio (30 segundos)
   const RECORDING_TIMEOUT_MS = 30000;
   const prevMessagesLengthRef = useRef(0);
-  const modelSelectorRef = useRef<HTMLDivElement>(null);
-  const modeSelectorRef = useRef<HTMLDivElement>(null);
 
   // CORREGIDO BUG U2: Cerrar dropdowns con click outside y Escape
   useEffect(() => {
