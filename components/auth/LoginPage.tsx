@@ -1,5 +1,5 @@
 // components/auth/LoginPage.tsx
-// Pantalla de Login Premium - Estilo Linear/Vercel/Stripe
+// LITPER OFICIAL - Login Premium con Animaciones Logísticas Globales
 import React, { useState, useEffect } from 'react';
 import {
   Mail,
@@ -8,7 +8,6 @@ import {
   EyeOff,
   LogIn,
   UserPlus,
-  Sparkles,
   Package,
   TrendingUp,
   Shield,
@@ -19,6 +18,10 @@ import {
   Check,
   Fingerprint,
   Smartphone,
+  Truck,
+  Plane,
+  Globe,
+  MapPin,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -26,21 +29,180 @@ interface LoginPageProps {
   onSwitchToRegister: () => void;
 }
 
-// Componente de partículas flotantes
-const FloatingParticles = () => {
+// Logo LITPER con Corona - SVG Premium
+const LitperLogo = ({ className = "w-20 h-20" }: { className?: string }) => (
+  <svg viewBox="0 0 120 140" className={className}>
+    <defs>
+      {/* Gradiente dorado premium */}
+      <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#F5D061" />
+        <stop offset="25%" stopColor="#D4A843" />
+        <stop offset="50%" stopColor="#C9983A" />
+        <stop offset="75%" stopColor="#D4A843" />
+        <stop offset="100%" stopColor="#B8860B" />
+      </linearGradient>
+      {/* Gradiente corona roja */}
+      <linearGradient id="crownRed" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#DC2626" />
+        <stop offset="100%" stopColor="#991B1B" />
+      </linearGradient>
+      {/* Brillo */}
+      <linearGradient id="goldShine" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="#FFE55C" />
+        <stop offset="50%" stopColor="#F5D061" />
+        <stop offset="100%" stopColor="#B8860B" />
+      </linearGradient>
+      {/* Glow effect */}
+      <filter id="glow">
+        <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+        <feMerge>
+          <feMergeNode in="coloredBlur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+
+    {/* Corona */}
+    <g filter="url(#glow)">
+      {/* Base de la corona */}
+      <path
+        d="M30 45 L40 20 L50 35 L60 10 L70 35 L80 20 L90 45 L85 50 L35 50 Z"
+        fill="url(#crownRed)"
+        stroke="url(#goldGradient)"
+        strokeWidth="2"
+      />
+      {/* Joyas de la corona */}
+      <circle cx="60" cy="18" r="4" fill="#3B82F6" stroke="url(#goldGradient)" strokeWidth="1"/>
+      <circle cx="40" cy="28" r="3" fill="#3B82F6" stroke="url(#goldGradient)" strokeWidth="1"/>
+      <circle cx="80" cy="28" r="3" fill="#3B82F6" stroke="url(#goldGradient)" strokeWidth="1"/>
+      {/* Banda dorada de la corona */}
+      <rect x="35" y="42" width="50" height="8" fill="url(#goldGradient)" rx="2"/>
+      <circle cx="45" cy="46" r="2" fill="#3B82F6"/>
+      <circle cx="60" cy="46" r="2" fill="#3B82F6"/>
+      <circle cx="75" cy="46" r="2" fill="#3B82F6"/>
+    </g>
+
+    {/* Letras LP */}
+    <g filter="url(#glow)">
+      {/* L */}
+      <path
+        d="M25 60 L25 120 L55 120 L55 110 L38 110 L38 60 Z"
+        fill="url(#goldGradient)"
+        stroke="url(#goldShine)"
+        strokeWidth="1"
+      />
+      {/* P */}
+      <path
+        d="M50 60 L50 120 L63 120 L63 95 L80 95 Q95 95 95 77.5 Q95 60 80 60 Z M63 72 L63 83 L77 83 Q82 83 82 77.5 Q82 72 77 72 Z"
+        fill="url(#goldGradient)"
+        stroke="url(#goldShine)"
+        strokeWidth="1"
+      />
+    </g>
+  </svg>
+);
+
+// Animación de Red Global Logística
+const GlobalLogisticsNetwork = () => {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {[...Array(50)].map((_, i) => (
+      {/* Mapa mundial estilizado con puntos */}
+      <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <linearGradient id="routeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#D4A843" stopOpacity="0"/>
+            <stop offset="50%" stopColor="#D4A843" stopOpacity="1"/>
+            <stop offset="100%" stopColor="#D4A843" stopOpacity="0"/>
+          </linearGradient>
+        </defs>
+
+        {/* Puntos de ciudades/hubs logísticos */}
+        {[
+          { x: 150, y: 200, name: 'NYC' },
+          { x: 250, y: 280, name: 'MIA' },
+          { x: 180, y: 350, name: 'BOG' },
+          { x: 220, y: 420, name: 'SAO' },
+          { x: 480, y: 180, name: 'LON' },
+          { x: 520, y: 220, name: 'MAD' },
+          { x: 580, y: 280, name: 'DXB' },
+          { x: 750, y: 200, name: 'HKG' },
+          { x: 820, y: 250, name: 'SIN' },
+          { x: 880, y: 350, name: 'SYD' },
+        ].map((city, i) => (
+          <g key={i}>
+            {/* Pulso del punto */}
+            <circle cx={city.x} cy={city.y} r="8" fill="#D4A843" opacity="0.3">
+              <animate attributeName="r" values="8;20;8" dur={`${2 + i * 0.3}s`} repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0.3;0;0.3" dur={`${2 + i * 0.3}s`} repeatCount="indefinite"/>
+            </circle>
+            {/* Punto central */}
+            <circle cx={city.x} cy={city.y} r="4" fill="#D4A843">
+              <animate attributeName="fill" values="#D4A843;#FFE55C;#D4A843" dur="2s" repeatCount="indefinite"/>
+            </circle>
+          </g>
+        ))}
+
+        {/* Rutas de envío animadas */}
+        {[
+          { x1: 150, y1: 200, x2: 480, y2: 180 },
+          { x1: 180, y1: 350, x2: 250, y2: 280 },
+          { x1: 520, y1: 220, x2: 750, y2: 200 },
+          { x1: 580, y1: 280, x2: 820, y2: 250 },
+          { x1: 250, y1: 280, x2: 520, y2: 220 },
+        ].map((route, i) => (
+          <g key={`route-${i}`}>
+            <path
+              d={`M${route.x1},${route.y1} Q${(route.x1 + route.x2) / 2},${Math.min(route.y1, route.y2) - 50} ${route.x2},${route.y2}`}
+              fill="none"
+              stroke="url(#routeGradient)"
+              strokeWidth="2"
+              strokeDasharray="10,10"
+              opacity="0.5"
+            >
+              <animate attributeName="stroke-dashoffset" values="20;0" dur="1s" repeatCount="indefinite"/>
+            </path>
+            {/* Paquete moviéndose por la ruta */}
+            <circle r="5" fill="#D4A843">
+              <animateMotion
+                dur={`${3 + i}s`}
+                repeatCount="indefinite"
+                path={`M${route.x1},${route.y1} Q${(route.x1 + route.x2) / 2},${Math.min(route.y1, route.y2) - 50} ${route.x2},${route.y2}`}
+              />
+            </circle>
+          </g>
+        ))}
+      </svg>
+
+      {/* Avión animado */}
+      <div className="absolute top-1/4 animate-fly-across">
+        <Plane className="w-8 h-8 text-amber-500/40 rotate-45" />
+      </div>
+
+      {/* Camión animado */}
+      <div className="absolute bottom-1/3 animate-truck-move">
+        <Truck className="w-6 h-6 text-amber-500/30" />
+      </div>
+    </div>
+  );
+};
+
+// Partículas doradas flotantes
+const GoldenParticles = () => {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {[...Array(30)].map((_, i) => (
         <div
           key={i}
-          className="absolute rounded-full bg-white/10"
+          className="absolute rounded-full"
           style={{
-            width: Math.random() * 4 + 1 + 'px',
-            height: Math.random() * 4 + 1 + 'px',
+            width: Math.random() * 4 + 2 + 'px',
+            height: Math.random() * 4 + 2 + 'px',
             left: Math.random() * 100 + '%',
             top: Math.random() * 100 + '%',
-            animation: `float ${Math.random() * 10 + 10}s linear infinite`,
-            animationDelay: `-${Math.random() * 10}s`,
+            background: `linear-gradient(135deg, #D4A843, #FFE55C)`,
+            animation: `floatGold ${Math.random() * 15 + 10}s linear infinite`,
+            animationDelay: `-${Math.random() * 15}s`,
+            opacity: Math.random() * 0.5 + 0.2,
           }}
         />
       ))}
@@ -48,102 +210,50 @@ const FloatingParticles = () => {
   );
 };
 
-// Componente de Aurora Boreal
-const AuroraBackground = () => {
+// Fondo premium oscuro con destellos dorados
+const PremiumBackground = () => {
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {/* Gradiente base */}
-      <div className="absolute inset-0 bg-[#0a0a1a]" />
+      {/* Gradiente base oscuro premium */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a12] via-[#0d0d1a] to-[#0a0a12]" />
 
-      {/* Aurora 1 - Principal */}
+      {/* Resplandor dorado superior */}
       <div
-        className="absolute -top-1/2 -left-1/4 w-[150%] h-[150%] opacity-30"
+        className="absolute -top-1/2 left-1/4 w-[80%] h-[80%] opacity-15"
         style={{
-          background: 'radial-gradient(ellipse at center, rgba(99, 102, 241, 0.4) 0%, transparent 50%)',
-          animation: 'aurora1 15s ease-in-out infinite',
+          background: 'radial-gradient(ellipse at center, rgba(212, 168, 67, 0.4) 0%, transparent 50%)',
+          animation: 'pulseGold 8s ease-in-out infinite',
         }}
       />
 
-      {/* Aurora 2 - Secundaria */}
+      {/* Resplandor rojo (corona) */}
       <div
-        className="absolute -bottom-1/2 -right-1/4 w-[150%] h-[150%] opacity-25"
+        className="absolute top-1/4 right-1/4 w-[40%] h-[40%] opacity-10"
         style={{
-          background: 'radial-gradient(ellipse at center, rgba(139, 92, 246, 0.4) 0%, transparent 50%)',
-          animation: 'aurora2 18s ease-in-out infinite',
+          background: 'radial-gradient(ellipse at center, rgba(220, 38, 38, 0.5) 0%, transparent 50%)',
+          animation: 'pulseRed 10s ease-in-out infinite',
         }}
       />
 
-      {/* Aurora 3 - Acento naranja LITPER */}
+      {/* Resplandor dorado inferior */}
       <div
-        className="absolute top-1/4 right-1/4 w-[80%] h-[80%] opacity-20"
+        className="absolute -bottom-1/4 right-1/4 w-[60%] h-[60%] opacity-10"
         style={{
-          background: 'radial-gradient(ellipse at center, rgba(249, 115, 22, 0.5) 0%, transparent 40%)',
-          animation: 'aurora3 12s ease-in-out infinite',
+          background: 'radial-gradient(ellipse at center, rgba(184, 134, 11, 0.4) 0%, transparent 50%)',
+          animation: 'pulseGold 12s ease-in-out infinite reverse',
         }}
       />
 
-      {/* Aurora 4 - Cyan */}
+      {/* Grid sutil */}
       <div
-        className="absolute bottom-1/4 left-1/3 w-[60%] h-[60%] opacity-20"
+        className="absolute inset-0 opacity-[0.02]"
         style={{
-          background: 'radial-gradient(ellipse at center, rgba(6, 182, 212, 0.4) 0%, transparent 45%)',
-          animation: 'aurora4 20s ease-in-out infinite',
-        }}
-      />
-
-      {/* Grid overlay */}
-      <div
-        className="absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-          backgroundSize: '50px 50px',
-        }}
-      />
-
-      {/* Noise texture */}
-      <div
-        className="absolute inset-0 opacity-[0.015]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+          backgroundImage: `linear-gradient(rgba(212, 168, 67, 0.3) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(212, 168, 67, 0.3) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
         }}
       />
     </div>
-  );
-};
-
-// Orbs flotantes
-const FloatingOrbs = () => {
-  return (
-    <>
-      {/* Orb 1 */}
-      <div
-        className="absolute top-20 left-20 w-72 h-72 rounded-full"
-        style={{
-          background: 'radial-gradient(circle, rgba(249, 115, 22, 0.15) 0%, transparent 70%)',
-          filter: 'blur(40px)',
-          animation: 'orbFloat1 8s ease-in-out infinite',
-        }}
-      />
-      {/* Orb 2 */}
-      <div
-        className="absolute bottom-32 right-20 w-96 h-96 rounded-full"
-        style={{
-          background: 'radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, transparent 70%)',
-          filter: 'blur(60px)',
-          animation: 'orbFloat2 10s ease-in-out infinite',
-        }}
-      />
-      {/* Orb 3 */}
-      <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full"
-        style={{
-          background: 'radial-gradient(circle, rgba(6, 182, 212, 0.1) 0%, transparent 60%)',
-          filter: 'blur(80px)',
-          animation: 'orbFloat3 15s ease-in-out infinite',
-        }}
-      />
-    </>
   );
 };
 
@@ -171,7 +281,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
   const handleOAuthLogin = async (provider: 'google' | 'microsoft' | 'apple') => {
     clearError();
 
-    // Client IDs - usar variable de entorno o hardcoded para producción
     const clientIds = {
       google: import.meta.env.VITE_GOOGLE_CLIENT_ID || '487273250854-k66mjbe1s178kkfnibd7cl247s5kkqjj.apps.googleusercontent.com',
       microsoft: import.meta.env.VITE_MICROSOFT_CLIENT_ID || '',
@@ -180,13 +289,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
 
     const clientId = clientIds[provider];
 
-    // Si no hay client ID configurado, mostrar error
     if (!clientId) {
-      setError(`${provider.charAt(0).toUpperCase() + provider.slice(1)} OAuth no está configurado`);
       return;
     }
 
-    // URLs de OAuth para cada proveedor
     const redirectUri = encodeURIComponent(window.location.origin + '/auth/callback');
 
     const oauthUrls = {
@@ -195,23 +301,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
       apple: `https://appleid.apple.com/auth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=email%20name&state=apple&response_mode=form_post`,
     };
 
-    // Redirigir directamente a OAuth
     window.location.href = oauthUrls[provider];
   };
 
   const features = [
-    { icon: TrendingUp, label: 'Predicciones IA', desc: 'Machine Learning para entregas', color: 'emerald' },
-    { icon: Zap, label: 'Automatización', desc: 'Workflows inteligentes', color: 'amber' },
-    { icon: Shield, label: 'Seguridad', desc: 'Encriptación end-to-end', color: 'violet' },
-    { icon: Sparkles, label: 'Analytics', desc: 'Métricas en tiempo real', color: 'cyan' },
+    { icon: Globe, label: 'Cobertura Global', desc: 'Envíos a todo el mundo', color: 'amber' },
+    { icon: TrendingUp, label: 'IA Predictiva', desc: 'Machine Learning avanzado', color: 'amber' },
+    { icon: Zap, label: 'Tiempo Real', desc: 'Tracking instantáneo', color: 'amber' },
+    { icon: Shield, label: 'Garantizado', desc: 'Calidad en cada detalle', color: 'red' },
   ];
 
   return (
     <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden">
-      {/* Fondos animados */}
-      <AuroraBackground />
-      <FloatingOrbs />
-      <FloatingParticles />
+      {/* Fondos */}
+      <PremiumBackground />
+      <GlobalLogisticsNetwork />
+      <GoldenParticles />
 
       {/* Contenido principal */}
       <div
@@ -219,68 +324,72 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
           mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}
       >
-        {/* Panel izquierdo - Branding */}
+        {/* Panel izquierdo - Branding LITPER */}
         <div className="hidden lg:block text-white p-8 z-10">
-          {/* Logo con glow */}
-          <div className="flex items-center gap-4 mb-12">
+          {/* Logo LITPER Premium */}
+          <div className="flex items-center gap-6 mb-12">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl blur-xl opacity-50 animate-pulse" />
-              <div className="relative p-4 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl shadow-2xl">
-                <Package className="w-10 h-10 text-white" />
-              </div>
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/30 to-amber-700/20 rounded-3xl blur-2xl animate-pulse" />
+              <LitperLogo className="w-24 h-28 relative z-10 drop-shadow-2xl" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">LITPER PRO</h1>
-              <p className="text-white/60 text-sm font-medium">Enterprise Logistics Platform</p>
+              <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 bg-clip-text text-transparent">
+                LITPER
+              </h1>
+              <p className="text-red-500 font-semibold tracking-widest text-sm">OFICIAL</p>
+              <p className="text-amber-500/60 text-xs mt-1 tracking-wider">Calidad en cada detalle</p>
             </div>
           </div>
 
           {/* Título principal */}
           <h2 className="text-5xl font-bold mb-6 leading-[1.1] tracking-tight">
-            La plataforma de
+            <span className="text-white">Tu socio en</span>
             <br />
-            <span className="bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 bg-clip-text text-transparent">
-              logística inteligente
+            <span className="bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 bg-clip-text text-transparent">
+              logística premium
             </span>
           </h2>
 
-          <p className="text-white/70 text-lg mb-12 leading-relaxed max-w-md">
-            Optimiza cada envío con IA predictiva, automatización avanzada y análisis en tiempo real.
+          <p className="text-white/60 text-lg mb-12 leading-relaxed max-w-md">
+            Más de <span className="text-amber-400 font-bold">500,000 envíos</span> gestionados con inteligencia artificial y precisión empresarial.
           </p>
 
-          {/* Features con animación stagger */}
+          {/* Features con iconos de logística */}
           <div className="space-y-4">
             {features.map((feature, idx) => (
               <div
                 key={idx}
-                className="group flex items-center gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.05] backdrop-blur-sm
-                  hover:bg-white/[0.08] hover:border-white/[0.1] transition-all duration-300 cursor-default"
+                className="group flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] border border-amber-500/10 backdrop-blur-sm
+                  hover:bg-amber-500/5 hover:border-amber-500/20 transition-all duration-300 cursor-default"
                 style={{
                   animation: mounted ? `slideInLeft 0.6s ease-out ${idx * 0.1}s both` : 'none'
                 }}
               >
-                <div className={`p-3 rounded-xl bg-${feature.color}-500/20 group-hover:bg-${feature.color}-500/30 transition-colors`}>
-                  <feature.icon className={`w-6 h-6 text-${feature.color}-400`} />
+                <div className={`p-3 rounded-xl ${feature.color === 'red' ? 'bg-red-500/20' : 'bg-amber-500/20'}
+                  group-hover:scale-110 transition-transform`}>
+                  <feature.icon className={`w-6 h-6 ${feature.color === 'red' ? 'text-red-400' : 'text-amber-400'}`} />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-white">{feature.label}</h3>
-                  <p className="text-sm text-white/50">{feature.desc}</p>
+                  <p className="text-sm text-white/40">{feature.desc}</p>
                 </div>
-                <ArrowRight className="w-5 h-5 text-white/20 group-hover:text-white/50 group-hover:translate-x-1 transition-all" />
+                <ArrowRight className="w-5 h-5 text-amber-500/30 group-hover:text-amber-400 group-hover:translate-x-1 transition-all" />
               </div>
             ))}
           </div>
 
-          {/* Stats */}
-          <div className="mt-12 pt-8 border-t border-white/10 grid grid-cols-3 gap-6">
+          {/* Stats con estilo premium */}
+          <div className="mt-12 pt-8 border-t border-amber-500/10 grid grid-cols-3 gap-6">
             {[
-              { value: '99.9%', label: 'Uptime' },
+              { value: '99.9%', label: 'Entregas exitosas' },
               { value: '500K+', label: 'Envíos/mes' },
-              { value: '<2s', label: 'Respuesta' },
+              { value: '24/7', label: 'Soporte premium' },
             ].map((stat, idx) => (
               <div key={idx} className="text-center">
-                <div className="text-2xl font-bold text-white">{stat.value}</div>
-                <div className="text-sm text-white/40">{stat.label}</div>
+                <div className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-amber-300 bg-clip-text text-transparent">
+                  {stat.value}
+                </div>
+                <div className="text-xs text-white/40">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -288,45 +397,43 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
 
         {/* Panel derecho - Login Form */}
         <div className="relative z-10">
-          {/* Glassmorphism card */}
+          {/* Card con borde dorado */}
           <div
-            className="relative bg-white/[0.03] backdrop-blur-2xl rounded-3xl border border-white/[0.08] shadow-2xl overflow-hidden"
+            className="relative bg-black/40 backdrop-blur-2xl rounded-3xl border border-amber-500/20 shadow-2xl overflow-hidden"
             style={{
-              boxShadow: '0 0 80px rgba(249, 115, 22, 0.1), 0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              boxShadow: '0 0 60px rgba(212, 168, 67, 0.1), 0 25px 50px -12px rgba(0, 0, 0, 0.5)',
             }}
           >
-            {/* Glow top */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2/3 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
+            {/* Línea dorada superior */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-px bg-gradient-to-r from-transparent via-amber-500 to-transparent" />
 
             <div className="p-8 lg:p-10">
               {/* Logo móvil */}
-              <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-                <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl">
-                  <Package className="w-7 h-7 text-white" />
-                </div>
+              <div className="lg:hidden flex items-center justify-center gap-4 mb-8">
+                <LitperLogo className="w-16 h-20" />
                 <div>
-                  <h1 className="text-xl font-bold text-white">LITPER PRO</h1>
-                  <p className="text-white/40 text-xs">Enterprise Logistics</p>
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent">LITPER</h1>
+                  <p className="text-red-500 text-xs font-semibold tracking-widest">OFICIAL</p>
                 </div>
               </div>
 
               {/* Header */}
               <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold text-white mb-2">
-                  Potencia tu logística
+                  Accede a tu cuenta
                 </h2>
-                <p className="text-white/50">
-                  Acceso instantáneo a IA predictiva y automatización
+                <p className="text-amber-500/60">
+                  Gestiona tus envíos con tecnología premium
                 </p>
               </div>
 
-              {/* Social Login - Logos SVG reales */}
+              {/* Social Login */}
               <div className="grid grid-cols-3 gap-3 mb-6">
                 {/* Google */}
                 <button
                   type="button"
                   onClick={() => handleOAuthLogin('google')}
-                  className="p-3 rounded-xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.08] hover:border-white/20
+                  className="p-3 rounded-xl border border-amber-500/20 bg-white/[0.02] hover:bg-amber-500/10 hover:border-amber-500/40
                     transition-all duration-300 group flex items-center justify-center"
                   title="Continuar con Google"
                 >
@@ -342,7 +449,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                 <button
                   type="button"
                   onClick={() => handleOAuthLogin('microsoft')}
-                  className="p-3 rounded-xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.08] hover:border-white/20
+                  className="p-3 rounded-xl border border-amber-500/20 bg-white/[0.02] hover:bg-amber-500/10 hover:border-amber-500/40
                     transition-all duration-300 group flex items-center justify-center"
                   title="Continuar con Microsoft"
                 >
@@ -358,7 +465,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                 <button
                   type="button"
                   onClick={() => handleOAuthLogin('apple')}
-                  className="p-3 rounded-xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.08] hover:border-white/20
+                  className="p-3 rounded-xl border border-amber-500/20 bg-white/[0.02] hover:bg-amber-500/10 hover:border-amber-500/40
                     transition-all duration-300 group flex items-center justify-center"
                   title="Continuar con Apple"
                 >
@@ -370,14 +477,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
 
               {/* Divider */}
               <div className="flex items-center gap-4 mb-6">
-                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                <span className="text-xs text-white/30 uppercase tracking-wider">o usa tu correo empresarial</span>
-                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
+                <span className="text-xs text-amber-500/50 uppercase tracking-wider">o usa tu correo</span>
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
               </div>
 
               {/* Error */}
               {error && (
-                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 animate-shake">
+                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-3 animate-shake">
                   <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
                   <p className="text-red-400 text-sm">{error}</p>
                 </div>
@@ -386,14 +493,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
               <form onSubmit={handleSubmit} className="space-y-5">
                 {/* Email */}
                 <div className="relative">
-                  <label className="block text-sm font-medium text-white/70 mb-2">
+                  <label className="block text-sm font-medium text-amber-500/70 mb-2">
                     Correo electrónico
                   </label>
                   <div className={`relative rounded-xl transition-all duration-300 ${
                     focusedField === 'email' ? 'ring-2 ring-amber-500/50' : ''
                   }`}>
                     <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${
-                      focusedField === 'email' ? 'text-amber-400' : 'text-white/30'
+                      focusedField === 'email' ? 'text-amber-400' : 'text-amber-500/30'
                     }`} />
                     <input
                       type="email"
@@ -409,9 +516,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                       placeholder="tu@empresa.com"
                       autoComplete="email"
                       spellCheck={false}
-                      className="w-full pl-12 pr-4 py-4 bg-white/[0.03] border border-white/10 rounded-xl
+                      className="w-full pl-12 pr-4 py-4 bg-black/30 border border-amber-500/20 rounded-xl
                         text-white placeholder-white/30
-                        focus:outline-none focus:bg-white/[0.05] focus:border-amber-500/50
+                        focus:outline-none focus:bg-black/40 focus:border-amber-500/50
                         transition-all"
                       required
                     />
@@ -420,14 +527,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
 
                 {/* Password */}
                 <div className="relative">
-                  <label className="block text-sm font-medium text-white/70 mb-2">
+                  <label className="block text-sm font-medium text-amber-500/70 mb-2">
                     Contraseña
                   </label>
                   <div className={`relative rounded-xl transition-all duration-300 ${
                     focusedField === 'password' ? 'ring-2 ring-amber-500/50' : ''
                   }`}>
                     <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${
-                      focusedField === 'password' ? 'text-amber-400' : 'text-white/30'
+                      focusedField === 'password' ? 'text-amber-400' : 'text-amber-500/30'
                     }`} />
                     <input
                       type={showPassword ? 'text' : 'password'}
@@ -443,16 +550,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                       placeholder="••••••••••"
                       autoComplete="current-password"
                       spellCheck={false}
-                      className="w-full pl-12 pr-12 py-4 bg-white/[0.03] border border-white/10 rounded-xl
+                      className="w-full pl-12 pr-12 py-4 bg-black/30 border border-amber-500/20 rounded-xl
                         text-white placeholder-white/30
-                        focus:outline-none focus:bg-white/[0.05] focus:border-amber-500/50
+                        focus:outline-none focus:bg-black/40 focus:border-amber-500/50
                         transition-all"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-amber-500/30 hover:text-amber-400 transition-colors"
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -465,9 +572,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                     <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
                       rememberMe
                         ? 'bg-amber-500 border-amber-500'
-                        : 'border-white/20 group-hover:border-white/40'
+                        : 'border-amber-500/30 group-hover:border-amber-500/50'
                     }`}>
-                      {rememberMe && <Check className="w-3 h-3 text-white" />}
+                      {rememberMe && <Check className="w-3 h-3 text-black" />}
                     </div>
                     <input
                       type="checkbox"
@@ -475,8 +582,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                       onChange={(e) => setRememberMe(e.target.checked)}
                       className="sr-only"
                     />
-                    <span className="text-sm text-white/60 group-hover:text-white/80 transition-colors">
-                      Recordar dispositivo
+                    <span className="text-sm text-white/50 group-hover:text-white/70 transition-colors">
+                      Recordar sesión
                     </span>
                   </label>
                   <button type="button" className="text-sm text-amber-400 hover:text-amber-300 font-medium transition-colors">
@@ -484,25 +591,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                   </button>
                 </div>
 
-                {/* Submit button */}
+                {/* Submit button - Botón dorado premium */}
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="relative w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-xl
-                    hover:from-amber-400 hover:to-orange-400 transition-all duration-300
+                  className="relative w-full py-4 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-black font-bold rounded-xl
+                    hover:from-amber-500 hover:via-amber-400 hover:to-amber-500 transition-all duration-300
                     disabled:opacity-50 disabled:cursor-not-allowed
                     flex items-center justify-center gap-2
-                    shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02]
+                    shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-[1.02]
                     active:scale-[0.98] overflow-hidden group"
                 >
                   {/* Shine effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent
                     translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
 
                   {isLoading ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Iniciando sesión...</span>
+                      <span>Verificando...</span>
                     </>
                   ) : (
                     <>
@@ -513,21 +620,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                 </button>
 
                 {/* Biometric hint */}
-                <div className="flex items-center justify-center gap-2 text-white/30 text-sm">
+                <div className="flex items-center justify-center gap-2 text-amber-500/30 text-sm">
                   <Fingerprint className="w-4 h-4" />
                   <span>Face ID / Touch ID disponible</span>
                 </div>
               </form>
 
               {/* Register CTA */}
-              <div className="mt-8 pt-6 border-t border-white/10 text-center">
-                <p className="text-white/50 mb-4">
-                  ¿Primera vez aquí?
+              <div className="mt-8 pt-6 border-t border-amber-500/10 text-center">
+                <p className="text-white/40 mb-4">
+                  ¿Nuevo en LITPER?
                 </p>
                 <button
                   onClick={onSwitchToRegister}
-                  className="w-full py-3.5 border border-white/10 text-white font-medium rounded-xl
-                    hover:bg-white/[0.05] hover:border-white/20 transition-all
+                  className="w-full py-3.5 border border-amber-500/30 text-amber-400 font-medium rounded-xl
+                    hover:bg-amber-500/10 hover:border-amber-500/50 transition-all
                     flex items-center justify-center gap-2 group"
                 >
                   <UserPlus className="w-5 h-5" />
@@ -539,18 +646,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
           </div>
 
           {/* Trust badges */}
-          <div className="mt-6 flex items-center justify-center gap-6 text-white/30 text-xs">
+          <div className="mt-6 flex items-center justify-center gap-6 text-amber-500/30 text-xs">
             <div className="flex items-center gap-1.5">
               <Shield className="w-4 h-4" />
               <span>SSL Secured</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Smartphone className="w-4 h-4" />
-              <span>2FA Enabled</span>
+              <span>2FA Premium</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Check className="w-4 h-4" />
-              <span>SOC 2 Type II</span>
+              <span>ISO 27001</span>
             </div>
           </div>
         </div>
@@ -558,49 +665,44 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
 
       {/* Estilos de animación */}
       <style>{`
-        @keyframes aurora1 {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          25% { transform: translate(5%, 5%) rotate(5deg); }
-          50% { transform: translate(-5%, 10%) rotate(-5deg); }
-          75% { transform: translate(10%, -5%) rotate(3deg); }
+        @keyframes pulseGold {
+          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.15; }
+          50% { transform: translate(-5%, 5%) scale(1.1); opacity: 0.2; }
         }
 
-        @keyframes aurora2 {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          33% { transform: translate(-10%, 5%) rotate(-5deg); }
-          66% { transform: translate(5%, -10%) rotate(5deg); }
+        @keyframes pulseRed {
+          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.1; }
+          50% { transform: translate(5%, -5%) scale(1.05); opacity: 0.15; }
         }
 
-        @keyframes aurora3 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(-5%, 5%) scale(1.1); }
-        }
-
-        @keyframes aurora4 {
-          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.2; }
-          50% { transform: translate(5%, -5%) scale(0.9); opacity: 0.3; }
-        }
-
-        @keyframes orbFloat1 {
-          0%, 100% { transform: translate(0, 0); }
-          50% { transform: translate(30px, -30px); }
-        }
-
-        @keyframes orbFloat2 {
-          0%, 100% { transform: translate(0, 0); }
-          50% { transform: translate(-40px, 20px); }
-        }
-
-        @keyframes orbFloat3 {
-          0%, 100% { transform: translate(-50%, -50%) scale(1); }
-          50% { transform: translate(-50%, -50%) scale(1.1); }
-        }
-
-        @keyframes float {
+        @keyframes floatGold {
           0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 1; }
+          10% { opacity: 0.5; }
+          90% { opacity: 0.5; }
           100% { transform: translateY(-100vh) rotate(720deg); opacity: 0; }
+        }
+
+        @keyframes fly-across {
+          0% { transform: translateX(-100px) translateY(0); opacity: 0; }
+          10% { opacity: 0.4; }
+          90% { opacity: 0.4; }
+          100% { transform: translateX(calc(100vw + 100px)) translateY(-50px); opacity: 0; }
+        }
+
+        .animate-fly-across {
+          animation: fly-across 15s linear infinite;
+        }
+
+        @keyframes truck-move {
+          0% { transform: translateX(-50px); opacity: 0; }
+          10% { opacity: 0.3; }
+          90% { opacity: 0.3; }
+          100% { transform: translateX(calc(100vw + 50px)); opacity: 0; }
+        }
+
+        .animate-truck-move {
+          animation: truck-move 20s linear infinite;
+          animation-delay: 5s;
         }
 
         @keyframes slideInLeft {
