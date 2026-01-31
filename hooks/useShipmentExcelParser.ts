@@ -346,8 +346,6 @@ export function useShipmentExcelParser() {
           const destination = destColumn ? String(row[destColumn] || '') : 'Colombia';
           const daysStr = daysColumn ? String(row[daysColumn] || '0') : '0';
           const valueStr = valueColumn ? String(row[valueColumn] || '0') : '0';
-          // NUEVO: Último movimiento para tracking
-          const lastMovement = lastMovementColumn ? String(row[lastMovementColumn] || '') : '';
 
           // Process values - usa effectiveStatus para normalizar
           const status = normalizeExcelStatus(effectiveStatus);
