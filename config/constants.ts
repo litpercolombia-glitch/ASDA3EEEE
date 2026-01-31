@@ -14,15 +14,19 @@ export const BACKEND_CONFIG = {
 } as const;
 
 // API Configuration
-// IMPORTANTE: Las API keys SOLO deben estar en el backend
-// Usar BACKEND_CONFIG.URL + AI_PROXY_PATH para llamadas de IA
+// DEPRECATED: Las API keys no deben usarse en el frontend
+// Use secureAIService.ts en su lugar que llama al backend proxy
 export const API_CONFIG = {
-  // Modelos disponibles (las keys están en el backend)
+  // @deprecated - Usar BACKEND_CONFIG.URL + AI_PROXY_PATH
+  // Las API keys se mantienen solo por compatibilidad temporal
+  CLAUDE_API_KEY: import.meta.env.VITE_CLAUDE_API_KEY || '',
   CLAUDE_MODELS: {
-    DEFAULT: 'claude-sonnet-4-20250514',
-    VISION: 'claude-sonnet-4-20250514',
-    HAIKU: 'claude-3-5-haiku-20241022',
+    DEFAULT: 'claude-sonnet-4-20250514', // Latest Claude Sonnet
+    VISION: 'claude-sonnet-4-20250514', // Supports vision
+    HAIKU: 'claude-3-5-haiku-20241022', // Fast responses
   },
+  // @deprecated - Usar BACKEND_CONFIG.URL + AI_PROXY_PATH
+  GEMINI_API_KEY: import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '',
   GEMINI_MODELS: {
     VISION: 'gemini-1.5-flash',
     FLASH: 'gemini-1.5-flash',

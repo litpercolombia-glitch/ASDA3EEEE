@@ -59,8 +59,6 @@ import {
   Columns,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-// Importar servicio para conectar con chats IA
-import { notificarCambio, SesionInteligencia, GuiaInteligencia } from '../../services/inteligenciaLogisticaService';
 
 // =====================================
 // INTERFACES
@@ -511,55 +509,11 @@ const loadSesiones = (): Sesion[] => {
   }
 };
 
-// Función para convertir Sesion local a SesionInteligencia para el servicio compartido
-const convertirASesionInteligencia = (sesion: Sesion): SesionInteligencia => {
-  const guias: GuiaInteligencia[] = sesion.guias.map((g) => ({
-    guia: g.numeroGuia,
-    estado: g.estadoActual,
-    transportadora: g.transportadora,
-    ciudad: g.ciudadDestino,
-    dias: g.diasTranscurridos,
-    telefono: g.telefono,
-    novedad: g.tieneNovedad,
-    cliente: g.cliente,
-    producto: g.producto,
-    valor: g.valor ? parseFloat(g.valor.replace(/[^0-9.-]/g, '')) : undefined,
-    fecha: g.fechaEnvio,
-    direccion: g.direccion,
-  }));
-
-  return {
-    id: sesion.id,
-    nombre: sesion.nombre,
-    fecha: sesion.fecha,
-    guias,
-    resumen: {
-      total: sesion.totalGuias,
-      entregadas: sesion.entregadas,
-      enReparto: sesion.enReparto,
-      enOficina: 0,
-      conNovedad: sesion.conNovedad,
-      devueltas: sesion.devueltas,
-      otros: 0,
-    },
-  };
-};
-
 const saveSesiones = (sesiones: Sesion[]) => {
   try {
     // Mantener solo las últimas MAX_SESIONES sesiones
     const sesionesLimitadas = sesiones.slice(-MAX_SESIONES);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(sesionesLimitadas));
-
-    // Notificar al servicio compartido para que los chats IA puedan acceder a los datos
-    if (sesionesLimitadas.length > 0) {
-      const ultimaSesion = sesionesLimitadas[sesionesLimitadas.length - 1];
-      const sesionConvertida = convertirASesionInteligencia(ultimaSesion);
-      notificarCambio(sesionConvertida);
-      console.log('✅ Inteligencia Logística: Datos sincronizados con chats IA');
-    } else {
-      notificarCambio(null);
-    }
   } catch (e) {
     console.error('Error saving sesiones:', e);
   }
@@ -700,11 +654,6 @@ export const InteligenciaLogisticaTab: React.FC = () => {
     if (sesionesGuardadas.length > 0) {
       const ultimaSesion = sesionesGuardadas[sesionesGuardadas.length - 1];
       setSesionActiva(ultimaSesion);
-
-      // Sincronizar con servicio compartido para chats IA
-      const sesionConvertida = convertirASesionInteligencia(ultimaSesion);
-      notificarCambio(sesionConvertida);
-      console.log('✅ Inteligencia Logística: Datos cargados y sincronizados con chats IA');
 
       // Comparar con sesión anterior si existe
       if (sesionesGuardadas.length > 1) {

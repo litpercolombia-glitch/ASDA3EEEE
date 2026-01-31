@@ -331,46 +331,13 @@ export const useAIConfigStore = create<AIConfigState>()(
       },
     }),
     {
-      name: 'litper-ai-config-v2',
-      version: 2,
+      name: 'litper-ai-config',
       partialize: (state) => ({
         providers: state.providers,
         primaryProvider: state.primaryProvider,
         fallbackEnabled: state.fallbackEnabled,
         fallbackOrder: state.fallbackOrder,
       }),
-      // Migración para preservar datos existentes
-      migrate: (persistedState: any, version: number) => {
-        if (version === 0 || version === 1) {
-          // Migrar de versión antigua - preservar las API keys
-          console.log('[AI Config] Migrando configuración de versión', version);
-          return persistedState;
-        }
-        return persistedState;
-      },
-      // Merge estratégico: preferir valores persistidos sobre defaults
-      merge: (persistedState: any, currentState: any) => {
-        if (!persistedState) return currentState;
-
-        // Merge providers preservando API keys guardadas
-        const mergedProviders = { ...currentState.providers };
-        if (persistedState.providers) {
-          Object.keys(persistedState.providers).forEach((key) => {
-            if (persistedState.providers[key]?.apiKey) {
-              mergedProviders[key] = {
-                ...currentState.providers[key],
-                ...persistedState.providers[key],
-              };
-            }
-          });
-        }
-
-        return {
-          ...currentState,
-          ...persistedState,
-          providers: mergedProviders,
-        };
-      },
     }
   )
 );
@@ -419,51 +386,11 @@ export const initializeAIConfigFromEnv = (): void => {
   console.log('[AI Config] Initialized from environment variables');
 };
 
-// Migrar datos del localStorage antiguo al nuevo
-const migrateOldLocalStorage = () => {
-  try {
-    // Intentar cargar del storage antiguo
-    const oldKey = 'litper-ai-config';
-    const oldData = localStorage.getItem(oldKey);
-    const newKey = 'litper-ai-config-v2';
-    const newData = localStorage.getItem(newKey);
-
-    if (oldData && !newData) {
-      console.log('[AI Config] Migrando datos del localStorage antiguo...');
-      const parsed = JSON.parse(oldData);
-      if (parsed.state?.providers) {
-        // Copiar al nuevo formato
-        localStorage.setItem(newKey, JSON.stringify({
-          state: parsed.state,
-          version: 2,
-        }));
-        console.log('[AI Config] ✅ Migración completada');
-      }
-    }
-  } catch (e) {
-    console.warn('[AI Config] Error en migración:', e);
-  }
-};
-
 // Auto-inicializar cuando se importa el módulo
 if (typeof window !== 'undefined') {
-  // Primero migrar datos antiguos
-  migrateOldLocalStorage();
-
   // Ejecutar después de que el store se hidrate desde localStorage
   setTimeout(() => {
     initializeAIConfigFromEnv();
-
-    // Log para debugging
-    const state = useAIConfigStore.getState();
-    const configuredProviders = Object.entries(state.providers)
-      .filter(([_, config]) => config.apiKey)
-      .map(([name]) => name);
-    if (configuredProviders.length > 0) {
-      console.log('[AI Config] ✅ Proveedores configurados:', configuredProviders.join(', '));
-    } else {
-      console.log('[AI Config] ⚠️ No hay API keys configuradas. Configurar en Modo Admin > API Keys');
-    }
   }, 100);
 }
 
