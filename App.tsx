@@ -823,6 +823,13 @@ const App: React.FC = () => {
   }));
 
   // ============================================
+  // Función para renderizar el tab actual en Layout Pro
+  // ============================================
+  const renderCurrentTab = () => {
+    return renderSidebarContent();
+  };
+
+  // ============================================
   // NUEVO LAYOUT PRO (Linear/Stripe style)
   // ============================================
   if (useProLayout) {
