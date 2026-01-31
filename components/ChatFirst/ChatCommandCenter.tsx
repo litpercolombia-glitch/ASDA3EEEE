@@ -306,6 +306,12 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const modelSelectorRef = useRef<HTMLDivElement>(null);
+  const modeSelectorRef = useRef<HTMLDivElement>(null);
+  const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Timeout para grabación de audio (30 segundos)
+  const RECORDING_TIMEOUT_MS = 30000;
   const prevMessagesLengthRef = useRef(0);
   const modelSelectorRef = useRef<HTMLDivElement>(null);
   const modeSelectorRef = useRef<HTMLDivElement>(null);
@@ -485,6 +491,44 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
       document.removeEventListener('focusin', handleFocusIn);
       document.removeEventListener('focusout', handleFocusOut);
       window.removeEventListener('scroll', preventAutoScroll);
+    };
+  }, []);
+
+  // Cerrar dropdowns con click fuera y Escape
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modelSelectorRef.current && !modelSelectorRef.current.contains(event.target as Node)) {
+        setShowModelSelector(false);
+      }
+      if (modeSelectorRef.current && !modeSelectorRef.current.contains(event.target as Node)) {
+        setShowModeSelector(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowModelSelector(false);
+        setShowModeSelector(false);
+      }
+    };
+
+    if (showModelSelector || showModeSelector) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showModelSelector, showModeSelector]);
+
+  // Cleanup del timeout de grabación al desmontar
+  useEffect(() => {
+    return () => {
+      if (recordingTimeoutRef.current) {
+        clearTimeout(recordingTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -744,6 +788,16 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
       recorder.start();
       setMediaRecorder(recorder);
       setIsRecording(true);
+
+      // Timeout de 30 segundos para evitar que la grabación se cuelgue
+      recordingTimeoutRef.current = setTimeout(() => {
+        console.warn('Recording timeout after 30 seconds');
+        if (recorder.state !== 'inactive') {
+          recorder.stop();
+          setIsRecording(false);
+          setMediaRecorder(null);
+        }
+      }, RECORDING_TIMEOUT_MS);
     } catch (error) {
       console.error('Error accediendo al micrófono:', error);
       alert('No se pudo acceder al micrófono. Por favor verifica los permisos.');
@@ -752,6 +806,11 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
 
   // Detener grabación de audio
   const stopRecording = () => {
+    // Limpiar timeout
+    if (recordingTimeoutRef.current) {
+      clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = null;
+    }
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
       mediaRecorder.stop();
       setIsRecording(false);

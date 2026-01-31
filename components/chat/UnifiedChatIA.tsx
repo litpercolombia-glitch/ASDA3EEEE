@@ -222,6 +222,7 @@ const UnifiedChatIA: React.FC<UnifiedChatIAProps> = ({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const modelSelectorRef = useRef<HTMLDivElement>(null);
 
   const currentModeConfig = CHAT_MODES.find(m => m.id === currentMode) || CHAT_MODES[0];
   const currentAIModel = AI_MODELS.find(m => m.id === config.aiModel) || AI_MODELS[0];
@@ -262,6 +263,34 @@ const UnifiedChatIA: React.FC<UnifiedChatIAProps> = ({
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [isOpen]);
+
+  // ============================================
+  // CERRAR DROPDOWN CON CLICK FUERA Y ESCAPE
+  // ============================================
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modelSelectorRef.current && !modelSelectorRef.current.contains(event.target as Node)) {
+        setShowModelSelector(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowModelSelector(false);
+      }
+    };
+
+    if (showModelSelector) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showModelSelector]);
 
   // ============================================
   // PROCESAR MENSAJE
@@ -595,11 +624,16 @@ const UnifiedChatIA: React.FC<UnifiedChatIAProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e as unknown as React.FormEvent);
+    }
     if (e.key === '/' && inputValue === '') {
       setShowCommands(true);
     }
     if (e.key === 'Escape') {
       setShowCommands(false);
+      setShowModelSelector(false);
     }
   };
 
@@ -637,7 +671,7 @@ const UnifiedChatIA: React.FC<UnifiedChatIAProps> = ({
             </div>
             <div className="flex items-center gap-1">
               {/* Selector de Modelo IA */}
-              <div className="relative">
+              <div className="relative" ref={modelSelectorRef}>
                 <button
                   onClick={() => setShowModelSelector(!showModelSelector)}
                   className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors ${

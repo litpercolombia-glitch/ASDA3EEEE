@@ -337,8 +337,10 @@ export function useShipmentExcelParser() {
           if (!guideId || seenIds.has(guideId)) continue;
           seenIds.add(guideId);
 
-          // Get values from columns
+          // Get values from columns - con fallbacks
           const rawStatus = statusColumn ? String(row[statusColumn] || '') : '';
+          const lastMovement = lastMovementColumn ? String(row[lastMovementColumn] || '') : '';
+          const effectiveStatus = rawStatus || lastMovement; // Usa ÚLTIMO MOVIMIENTO si no hay ESTATUS
           const phone = phoneColumn ? String(row[phoneColumn] || '') : phoneRegistry[guideId] || '';
           const carrierText = carrierColumn ? String(row[carrierColumn] || '') : '';
           const destination = destColumn ? String(row[destColumn] || '') : 'Colombia';
@@ -347,15 +349,18 @@ export function useShipmentExcelParser() {
           // NUEVO: Último movimiento para tracking
           const lastMovement = lastMovementColumn ? String(row[lastMovementColumn] || '') : '';
 
-          // Process values
-          const status = normalizeExcelStatus(rawStatus);
+          // Process values - usa effectiveStatus para normalizar
+          const status = normalizeExcelStatus(effectiveStatus);
           const carrier = carrierText ? detectCarrierFromText(carrierText) : detectCarrier(guideId);
           const daysInTransit = parseInt(daysStr.replace(/\D/g, '')) || 0;
           const declaredValue = parseInt(valueStr.replace(/\D/g, '')) || 0;
 
+          // Extract city from destination (puede ser "BOGOTA, CUNDINAMARCA" o solo "BOGOTA")
+          const cityName = destination.split(',')[0].trim().toUpperCase() || 'Colombia';
+
           // Track for preview
           if (carrierText) carriers.add(carrierText);
-          if (rawStatus) statuses.add(rawStatus);
+          if (effectiveStatus) statuses.add(effectiveStatus);
 
           const shipment: Shipment = {
             id: guideId,
@@ -370,13 +375,15 @@ export function useShipmentExcelParser() {
             detailedInfo: {
               origin: 'Colombia',
               destination: destination.toUpperCase() || 'Sin ciudad',
+              city: destination.toUpperCase() || 'Sin ciudad', // Para compatibilidad con componentes
               daysInTransit,
-              rawStatus: rawStatus || status,
+              rawStatus: effectiveStatus || status,
+              lastMovement: lastMovement || undefined, // Guardar ÚLTIMO MOVIMIENTO si existe
               events: [
                 {
                   date: batchDate,
                   location: destination || 'Colombia',
-                  description: lastMovement || rawStatus || 'Cargado desde Excel',
+                  description: lastMovement || effectiveStatus || rawStatus || 'Cargado desde Excel',
                   isRecent: true,
                 },
               ],

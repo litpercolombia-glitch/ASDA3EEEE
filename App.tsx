@@ -49,8 +49,12 @@ import CountrySelector from './components/CountrySelector';
 import { ChatCommandCenter } from './components/ChatFirst';
 import { detectarGuiasRetrasadas } from './utils/patternDetection';
 // Nuevo Layout con Sidebar estilo ChatGPT
-import { AppLayout } from './components/layout';
+import { AppLayout, AppLayoutPro } from './components/layout';
 import { useLayoutStore } from './stores/layoutStore';
+// Command Palette
+import { CommandPalette, useCommandPalette } from './components/CommandPalette';
+// Dashboard Pro
+import { StripeDashboard } from './components/dashboard';
 // Marketing Tracking System
 import { MarketingView } from './components/marketing';
 // Auth service for logout
@@ -61,6 +65,10 @@ import { useUserProfileStore } from './services/userProfileService';
 import { UserProfileSettings } from './components/settings';
 // Enhanced Excel Upload with column config
 import { EnhancedExcelUpload } from './components/upload';
+// Excel Upload Page - Importación masiva inteligente
+import ExcelUploadPage from './src/pages/ExcelUploadPage';
+// Chat IA Pro - Asistente inteligente tipo Claude.ai
+import ChatIAPro from './src/components/chat/ChatIAPro';
 import {
   Crown,
   Search,
@@ -126,10 +134,30 @@ interface DashboardProps {
 const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, country, userProfile }) => {
   const stats = useMemo(() => {
     const total = shipments.length;
-    const delivered = shipments.filter(s => s.status === ShipmentStatus.DELIVERED).length;
-    const inTransit = shipments.filter(s => s.status === ShipmentStatus.IN_TRANSIT).length;
-    const pending = shipments.filter(s => s.status === ShipmentStatus.PENDING).length;
-    const issues = shipments.filter(s => s.status === ShipmentStatus.EXCEPTION || s.status === ShipmentStatus.RETURNED).length;
+    // Soportar ambos formatos: enum español ('Entregado') y strings inglés ('delivered')
+    const isDelivered = (status: string) =>
+      status === ShipmentStatus.DELIVERED ||
+      status?.toLowerCase() === 'delivered' ||
+      status?.toLowerCase() === 'entregado';
+    const isInTransit = (status: string) =>
+      status === ShipmentStatus.IN_TRANSIT ||
+      status?.toLowerCase() === 'in_transit' ||
+      status?.toLowerCase() === 'en reparto';
+    const isPending = (status: string) =>
+      status === ShipmentStatus.PENDING ||
+      status?.toLowerCase() === 'pending' ||
+      status?.toLowerCase() === 'pendiente';
+    const isIssue = (status: string) =>
+      status === ShipmentStatus.ISSUE ||
+      status?.toLowerCase() === 'issue' ||
+      status?.toLowerCase() === 'novedad' ||
+      status?.toLowerCase() === 'exception' ||
+      status?.toLowerCase() === 'returned';
+
+    const delivered = shipments.filter(s => isDelivered(s.status)).length;
+    const inTransit = shipments.filter(s => isInTransit(s.status)).length;
+    const pending = shipments.filter(s => isPending(s.status)).length;
+    const issues = shipments.filter(s => isIssue(s.status)).length;
     const deliveryRate = total > 0 ? Math.round((delivered / total) * 100) : 0;
 
     return { total, delivered, inTransit, pending, issues, deliveryRate };
@@ -400,6 +428,10 @@ const App: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showUniversalSearch, setShowUniversalSearch] = useState(false);
 
+  // Pro Layout state
+  const [useProLayout, setUseProLayout] = useState(true); // Usar nuevo layout por defecto
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+
   // Excel parser hook
   const {
     parseExcelFile,
@@ -443,17 +475,86 @@ const App: React.FC = () => {
     }
   }, [darkMode]);
 
-  // Keyboard shortcut: Ctrl+K para búsqueda universal
+  // Keyboard shortcut: Ctrl+K para Command Palette o búsqueda universal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        setShowUniversalSearch(true);
+        if (useProLayout) {
+          setShowCommandPalette(true);
+        } else {
+          setShowUniversalSearch(true);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [useProLayout]);
+
+  // Sincronizar navegación del Sidebar con currentTab
+  useEffect(() => {
+    // Mapeo de sidebar sub-items a MainTabNew
+    const tabMapping: Record<string, Record<string, MainTabNew | 'home'>> = {
+      'inicio': {
+        'resumen': 'home',
+        'actividad': 'operaciones',
+        'estadisticas': 'analisis',
+      },
+      'operaciones': {
+        'envios': 'operaciones',
+        'tracking': 'tracking-ordenes',
+        'historial': 'seguimiento',
+        'rutas': 'operaciones',
+        'google-sheets': 'operaciones',
+      },
+      'inteligencia': {
+        'analisis': 'analisis',
+        'reportes': 'reporte',
+        'predicciones': 'predicciones',
+        'insights': 'inteligencia-logistica',
+      },
+      'cerebro-ia': {
+        'asistente': 'asistente',
+        'configuracion-ia': 'cerebro-ia',
+        'historial-chat': 'chat-ia-pro',
+      },
+      'negocio': {
+        'metricas': 'negocio',
+        'clientes': 'negocio',
+        'ventas': 'negocio',
+        'rendimiento': 'negocio',
+      },
+      'config': {
+        'general': 'admin',
+        'api-keys': 'admin',
+        'integraciones': 'conexiones',
+        'usuarios': 'admin',
+        'admin': 'admin',
+      },
+    };
+
+    // Obtener el sub-item activo para la sección actual
+    const getActiveSubItem = (): string => {
+      switch (activeSection) {
+        case 'inicio': return activeInicioTab;
+        case 'operaciones': return activeOperacionesTab;
+        case 'inteligencia': return activeInteligenciaTab;
+        case 'cerebro-ia': return activeCerebroIATab;
+        case 'negocio': return activeNegocioTab;
+        default: return '';
+      }
+    };
+
+    const sectionMapping = tabMapping[activeSection];
+    const subItem = getActiveSubItem();
+
+    if (sectionMapping && subItem && sectionMapping[subItem]) {
+      const newTab = sectionMapping[subItem];
+      if (newTab !== currentTab) {
+        setCurrentTab(newTab);
+      }
+    }
+  }, [activeSection, activeInicioTab, activeOperacionesTab, activeInteligenciaTab, activeCerebroIATab, activeNegocioTab, currentTab]);
 
   useEffect(() => {
     try {
@@ -707,6 +808,185 @@ const App: React.FC = () => {
     }
   };
 
+  // Calcular envíos pendientes para el badge del sidebar
+  const pendingShipments = shipments.filter(s =>
+    s.status === ShipmentStatus.IN_TRANSIT ||
+    s.status?.toLowerCase() === 'in_transit' ||
+    s.status === ShipmentStatus.PENDING ||
+    s.status?.toLowerCase() === 'pending'
+  ).length;
+
+  // Guías recientes para Command Palette
+  const recentGuides = shipments.slice(0, 5).map(s => ({
+    id: s.id,
+    label: `${s.id} - ${s.carrier || 'Sin transportadora'}`,
+  }));
+
+  // ============================================
+  // NUEVO LAYOUT PRO (Linear/Stripe style)
+  // ============================================
+  if (useProLayout) {
+    return (
+      <>
+        <AppLayoutPro
+          shipments={shipments}
+          onLogout={handleLogout}
+          onNewGuide={() => setShowDataInput(true)}
+          onUploadExcel={() => {
+            setActiveInputTab('EXCEL');
+            setShowDataInput(true);
+          }}
+          onGenerateReport={() => setCurrentTab('reporte')}
+          userName={currentUser?.nombre || 'Usuario'}
+          userEmail={currentUser?.email || 'user@litper.co'}
+          notifications={alertasCriticas}
+          pendingShipments={pendingShipments}
+          recentGuides={recentGuides}
+        >
+          {renderCurrentTab()}
+        </AppLayoutPro>
+
+        {/* Command Palette */}
+        <CommandPalette
+          isOpen={showCommandPalette}
+          onClose={() => setShowCommandPalette(false)}
+          onNewGuide={() => setShowDataInput(true)}
+          onUploadExcel={() => {
+            setActiveInputTab('EXCEL');
+            setShowDataInput(true);
+          }}
+          onGenerateReport={() => setCurrentTab('reporte')}
+          onNavigate={(section) => {
+            const sectionToTab: Record<string, MainTabNew | 'home'> = {
+              'inicio': 'home',
+              'envios': 'operaciones',
+              'tracking': 'tracking-ordenes',
+              'clientes': 'negocio',
+              'reportes': 'reporte',
+              'ia-assistant': 'asistente',
+              'configuracion': 'admin',
+            };
+            const tab = sectionToTab[section];
+            if (tab) {
+              if (tab === 'home') {
+                setCurrentTab('home');
+              } else {
+                setCurrentTab(tab);
+              }
+            }
+          }}
+          recentGuides={recentGuides}
+        />
+
+        {/* Notification Toast */}
+        {notification && (
+          <div className="fixed top-4 right-4 z-50 max-w-sm animate-slide-up">
+            <div className="flex items-center gap-3 px-5 py-4 bg-[#1a1a1f] rounded-xl shadow-2xl border border-white/10">
+              <div className="flex-shrink-0">
+                {notification.includes('✅') ? (
+                  <div className="w-10 h-10 rounded-full bg-emerald-900/30 flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-emerald-400" />
+                  </div>
+                ) : notification.includes('❌') ? (
+                  <div className="w-10 h-10 rounded-full bg-red-900/30 flex items-center justify-center">
+                    <X className="w-5 h-5 text-red-400" />
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-amber-900/30 flex items-center justify-center">
+                    <AlertTriangle className="w-5 h-5 text-amber-400" />
+                  </div>
+                )}
+              </div>
+              <p className="text-sm font-medium text-white">{notification}</p>
+              <button
+                onClick={() => setNotification(null)}
+                className="ml-auto p-1 hover:bg-white/10 rounded-full transition-colors"
+              >
+                <X className="w-4 h-4 text-white/40" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Data Input Modal - mantener funcionalidad existente */}
+        {showDataInput && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-[#1a1a1f] rounded-2xl max-w-2xl w-full border border-white/10 shadow-2xl max-h-[90vh] overflow-auto">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+                <div>
+                  <h2 className="font-bold text-lg text-white">📥 Cargar Guías</h2>
+                  <p className="text-sm text-white/40">Importa tus guías desde múltiples fuentes</p>
+                </div>
+                <button
+                  onClick={() => setShowDataInput(false)}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-white/40" />
+                </button>
+              </div>
+              {/* Contenido del modal se hereda del código existente */}
+              <EnhancedExcelUpload
+                onUploadComplete={({ sessionName, rows, columnMapping }) => {
+                  const processedShipments = rows.map((row, idx) => {
+                    const shipment: Partial<Shipment> = {
+                      id: `upload_${Date.now()}_${idx}`,
+                    };
+                    columnMapping.forEach((col) => {
+                      if (col.enabled && col.mappedTo && row[col.excelColumn] !== undefined) {
+                        const value = row[col.excelColumn];
+                        switch (col.mappedTo) {
+                          case 'trackingNumber':
+                            shipment.trackingNumber = String(value);
+                            shipment.id = String(value) || shipment.id;
+                            break;
+                          case 'phone':
+                            shipment.phone = String(value);
+                            break;
+                          case 'status':
+                            shipment.status = String(value) as any;
+                            break;
+                          case 'carrier':
+                            shipment.carrier = String(value) as any;
+                            break;
+                        }
+                      }
+                    });
+                    return shipment as Shipment;
+                  }).filter(s => s.trackingNumber);
+                  setShipments((prev) => {
+                    const ids = new Set(processedShipments.map((s) => s.id));
+                    return [...prev.filter((s) => !ids.has(s.id)), ...processedShipments];
+                  });
+                  setNotification(`✅ ${sessionName}: ${processedShipments.length} guías cargadas`);
+                  setShowDataInput(false);
+                }}
+                onCancel={() => setShowDataInput(false)}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Country Selector */}
+        {showCountrySelector && (
+          <CountrySelector onCountrySelected={handleCountrySelected} />
+        )}
+
+        {/* Onboarding */}
+        {!isOnboardingComplete && profile && (
+          <UserOnboarding />
+        )}
+
+        {/* User Settings */}
+        {showUserSettings && (
+          <UserProfileSettings onClose={() => setShowUserSettings(false)} />
+        )}
+      </>
+    );
+  }
+
+  // ============================================
+  // LAYOUT ORIGINAL (mantener para compatibilidad)
+  // ============================================
   return (
     <AppLayout
       selectedCountry={selectedCountry}
@@ -964,6 +1244,12 @@ const App: React.FC = () => {
       {currentTab === 'ciudad-agentes' && <div className="p-6"><CiudadAgentesTab selectedCountry={selectedCountry} /></div>}
       {currentTab === 'inteligencia-logistica' && <div className="p-6"><InteligenciaLogisticaTab /></div>}
       {currentTab === 'tracking-ordenes' && <div className="p-6"><TrackingOrdenesTab /></div>}
+
+      {/* Excel Upload - Importación masiva inteligente */}
+      {currentTab === 'importar-excel' && <ExcelUploadPage />}
+
+      {/* Chat IA Pro - Asistente inteligente tipo Claude.ai */}
+      {currentTab === 'chat-ia-pro' && <ChatIAPro />}
 
       {/* Legacy Dashboard - can be accessed from quick actions */}
       {currentTab === 'dashboard-legacy' && (
