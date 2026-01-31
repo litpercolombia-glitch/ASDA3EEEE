@@ -171,31 +171,31 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
   const handleOAuthLogin = async (provider: 'google' | 'microsoft' | 'apple') => {
     clearError();
 
-    // URLs de OAuth para cada proveedor
-    const oauthUrls = {
-      google: `https://accounts.google.com/o/oauth2/v2/auth?client_id=${import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID'}&redirect_uri=${encodeURIComponent(window.location.origin + '/auth/callback')}&response_type=code&scope=email%20profile&state=google`,
-      microsoft: `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${import.meta.env.VITE_MICROSOFT_CLIENT_ID || 'YOUR_MICROSOFT_CLIENT_ID'}&redirect_uri=${encodeURIComponent(window.location.origin + '/auth/callback')}&response_type=code&scope=openid%20email%20profile&state=microsoft`,
-      apple: `https://appleid.apple.com/auth/authorize?client_id=${import.meta.env.VITE_APPLE_CLIENT_ID || 'YOUR_APPLE_CLIENT_ID'}&redirect_uri=${encodeURIComponent(window.location.origin + '/auth/callback')}&response_type=code&scope=email%20name&state=apple&response_mode=form_post`,
+    // Client IDs - usar variable de entorno o hardcoded para producción
+    const clientIds = {
+      google: import.meta.env.VITE_GOOGLE_CLIENT_ID || '487273250854-k66mjbe1s178kkfnibd7cl247s5kkqjj.apps.googleusercontent.com',
+      microsoft: import.meta.env.VITE_MICROSOFT_CLIENT_ID || '',
+      apple: import.meta.env.VITE_APPLE_CLIENT_ID || '',
     };
 
-    // Para desarrollo, simular OAuth
-    if (import.meta.env.DEV || !import.meta.env.VITE_GOOGLE_CLIENT_ID) {
-      // Simulación en desarrollo
-      const providerNames = { google: 'Google', microsoft: 'Microsoft', apple: 'Apple' };
-      const confirmed = window.confirm(`¿Iniciar sesión con ${providerNames[provider]}?\n\n(En producción, esto te redirigirá a ${providerNames[provider]} para autenticarte)`);
+    const clientId = clientIds[provider];
 
-      if (confirmed) {
-        // Simular login exitoso con OAuth
-        await login({
-          email: `usuario.${provider}@litper.com`,
-          password: 'oauth_simulated',
-          provider
-        });
-      }
+    // Si no hay client ID configurado, mostrar error
+    if (!clientId) {
+      setError(`${provider.charAt(0).toUpperCase() + provider.slice(1)} OAuth no está configurado`);
       return;
     }
 
-    // En producción, redirigir a OAuth
+    // URLs de OAuth para cada proveedor
+    const redirectUri = encodeURIComponent(window.location.origin + '/auth/callback');
+
+    const oauthUrls = {
+      google: `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=email%20profile&state=google&access_type=offline&prompt=consent`,
+      microsoft: `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=openid%20email%20profile&state=microsoft`,
+      apple: `https://appleid.apple.com/auth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=email%20name&state=apple&response_mode=form_post`,
+    };
+
+    // Redirigir directamente a OAuth
     window.location.href = oauthUrls[provider];
   };
 
