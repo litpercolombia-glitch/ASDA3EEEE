@@ -132,26 +132,38 @@ def verify_jwt_token(token: str) -> Optional[dict]:
 # ==================== INICIALIZACIÓN DE USUARIOS ====================
 
 def init_users():
-    """Inicializa usuarios desde users_config.py."""
+    """Inicializa usuarios desde configuración."""
     global users_db
 
-    # Importar configuración de usuarios
-    from .users_config import get_users_config
+    # Contraseñas desde variables de entorno (más seguro)
+    # En producción, cada usuario tendría su propia contraseña hasheada en DB
+    default_password = os.getenv("LITPER_DEFAULT_PASSWORD", "Litper2025!")
 
-    users_config = get_users_config()
+    # Usuarios base
+    base_users = [
+        {"id": "litper_karen_001", "email": "karenlitper@gmail.com", "nombre": "Karen", "rol": "operador"},
+        {"id": "litper_dayana_002", "email": "litperdayana@gmail.com", "nombre": "Dayana", "rol": "operador"},
+        {"id": "litper_david_003", "email": "litperdavid@gmail.com", "nombre": "David", "rol": "operador"},
+        {"id": "litper_felipe_004", "email": "felipelitper@gmail.com", "nombre": "Felipe", "rol": "operador"},
+        {"id": "litper_jimmy_005", "email": "jimmylitper@gmail.com", "nombre": "Jimmy", "rol": "operador"},
+        {"id": "litper_jhonnatan_006", "email": "jhonnatanlitper@gmail.com", "nombre": "Jhonnatan", "rol": "operador"},
+        {"id": "litper_daniel_007", "email": "daniellitper@gmail.com", "nombre": "Daniel", "rol": "admin"},
+        {"id": "litper_maletas_008", "email": "maletaslitper@gmail.com", "nombre": "Maletas", "rol": "admin"},
+        {"id": "litper_colombia_009", "email": "litpercolombia@gmail.com", "nombre": "Litper Colombia", "rol": "admin"},
+    ]
 
-    for user in users_config:
-        password = user.get("password", "Litper2025!")
+    for user in base_users:
+        # Obtener contraseña específica del usuario desde env, o usar default
+        env_key = f"LITPER_PASS_{user['id'].upper()}"
+        password = os.getenv(env_key, default_password)
+
         password_hash, salt = hash_password(password)
 
         users_db[user["email"].lower()] = {
-            "id": user["id"],
-            "email": user["email"],
-            "nombre": user["nombre"],
-            "rol": user["rol"],
+            **user,
             "password_hash": password_hash,
             "salt": salt,
-            "activo": user.get("activo", True),
+            "activo": True,
             "created_at": datetime.utcnow().isoformat(),
         }
 

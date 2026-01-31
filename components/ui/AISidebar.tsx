@@ -281,15 +281,13 @@ export const AISidebar: React.FC<AISidebarProps> = ({
     }
   }, [isOpen, isMinimized]);
 
-  // CORREGIDO: Acepta mensaje opcional para auto-envío
-  const handleSendMessage = (messageOverride?: string) => {
-    const messageToSend = messageOverride || inputValue.trim();
-    if (!messageToSend) return;
+  const handleSendMessage = () => {
+    if (!inputValue.trim()) return;
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: messageToSend,
+      content: inputValue,
       timestamp: new Date(),
     };
 
@@ -314,10 +312,9 @@ export const AISidebar: React.FC<AISidebarProps> = ({
     }, 800);
   };
 
-  // CORREGIDO: Pasar mensaje directamente para evitar problemas de closure
   const handleQuickSuggestion = (query: string) => {
     setInputValue(query);
-    handleSendMessage(query);
+    setTimeout(() => handleSendMessage(), 100);
   };
 
   const handleAction = (command: AICommand) => {
