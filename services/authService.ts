@@ -79,7 +79,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2024-12-01T00:00:00.000Z',
       activo: true,
     },
-    password: '**MOVED_TO_BACKEND**',
+    password: 'LP.CAROLINA_2024?Jm',
   },
   {
     user: {
@@ -90,7 +90,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2024-12-01T00:00:00.000Z',
       activo: true,
     },
-    password: '**MOVED_TO_BACKEND**',
+    password: 'tELLEZ_LITper2025Angie?',
   },
   {
     user: {
@@ -101,7 +101,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2024-12-01T00:00:00.000Z',
       activo: true,
     },
-    password: '**MOVED_TO_BACKEND**',
+    password: '2025NORMAN_?litper',
   },
   // Tracking & Envíos
   {
@@ -113,7 +113,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2024-12-01T00:00:00.000Z',
       activo: true,
     },
-    password: '**MOVED_TO_BACKEND**',
+    password: '2025?LITper.FELIPE',
   },
   {
     user: {
@@ -124,7 +124,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2024-12-01T00:00:00.000Z',
       activo: true,
     },
-    password: '**MOVED_TO_BACKEND**',
+    password: '20.25_JIMMY.LITper?',
   },
   {
     user: {
@@ -135,7 +135,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2024-12-01T00:00:00.000Z',
       activo: true,
     },
-    password: '**MOVED_TO_BACKEND**',
+    password: '2025_EVAN10?LITper.?',
   },
   // Administración
   {
@@ -147,7 +147,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2024-12-01T00:00:00.000Z',
       activo: true,
     },
-    password: '**MOVED_TO_BACKEND**',
+    password: 'ALEJANDRA_?2025Litper',
   },
   {
     user: {
@@ -158,7 +158,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2024-12-01T00:00:00.000Z',
       activo: true,
     },
-    password: '**MOVED_TO_BACKEND**',
+    password: '2025_KAREN.litper10?',
   },
   {
     user: {
@@ -169,19 +169,7 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
       createdAt: '2024-12-01T00:00:00.000Z',
       activo: true,
     },
-    password: '**MOVED_TO_BACKEND**',
-  },
-  // Usuario de Marketing
-  {
-    user: {
-      id: 'marketing_admin_001',
-      email: 'admin@marketing.com',
-      nombre: 'Marketing Admin',
-      rol: 'admin',
-      createdAt: '2026-01-07T00:00:00.000Z',
-      activo: true,
-    },
-    password: '**MOVED_TO_BACKEND**',
+    password: '?2024LP.JEferMoreno?',
   },
 ];
 
@@ -227,24 +215,37 @@ const getBrowserInfo = (): string => {
 // =====================================
 
 const getUsers = (): Map<string, { user: User; passwordHash: string }> => {
+  // Cargar usuarios existentes del localStorage
+  let existingUsers = new Map<string, { user: User; passwordHash: string }>();
   const saved = localStorage.getItem(USERS_KEY);
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      return new Map(Object.entries(parsed));
+      existingUsers = new Map(Object.entries(parsed));
     } catch (e) {
       console.error('Error parsing users:', e);
     }
   }
 
-  // Crear usuarios productivos de Litper
+  // SIEMPRE sincronizar usuarios de LITPER_USERS (para actualizar contraseñas)
   const productionUsers = new Map<string, { user: User; passwordHash: string }>();
+
+  // Primero agregar usuarios del sistema con contraseñas actualizadas
   for (const userData of LITPER_USERS) {
     productionUsers.set(userData.user.email.toLowerCase(), {
       user: userData.user,
       passwordHash: hashPassword(userData.password),
     });
   }
+
+  // Luego agregar usuarios registrados manualmente (que no están en LITPER_USERS)
+  const litperEmails = new Set(LITPER_USERS.map(u => u.user.email.toLowerCase()));
+  existingUsers.forEach((value, key) => {
+    if (!litperEmails.has(key)) {
+      productionUsers.set(key, value);
+    }
+  });
+
   saveUsers(productionUsers);
   return productionUsers;
 };
