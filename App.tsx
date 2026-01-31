@@ -843,7 +843,7 @@ const App: React.FC = () => {
           pendingShipments={pendingShipments}
           recentGuides={recentGuides}
         >
-          {renderCurrentTab()}
+          {renderSidebarContent()}
         </AppLayoutPro>
 
         {/* Command Palette */}
