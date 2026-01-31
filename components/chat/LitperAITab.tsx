@@ -237,15 +237,13 @@ export const LitperAITab: React.FC<LitperAITabProps> = ({
       `- "ciudades" - Top destinos`;
   };
 
-  // CORREGIDO: Ahora acepta mensaje opcional para auto-envío de acciones rápidas
-  const handleSend = async (messageOverride?: string) => {
-    const messageToSend = messageOverride || inputValue;
-    if (!messageToSend.trim() || isProcessing) return;
+  const handleSend = async () => {
+    if (!inputValue.trim() || isProcessing) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
-      content: messageToSend,
+      content: inputValue,
       timestamp: new Date(),
     };
 
@@ -267,7 +265,7 @@ export const LitperAITab: React.FC<LitperAITabProps> = ({
     ]);
 
     try {
-      const response = await processUserInput(messageToSend);
+      const response = await processUserInput(inputValue);
 
       // Reemplazar mensaje de carga con respuesta
       setMessages((prev) =>
@@ -297,11 +295,9 @@ export const LitperAITab: React.FC<LitperAITabProps> = ({
     { icon: <Truck className="w-4 h-4" />, label: 'Tránsito', query: 'en tránsito' },
   ];
 
-  // CORREGIDO: Enviar el mensaje directamente en lugar de depender del estado
   const handleQuickAction = (query: string) => {
     setInputValue(query);
-    // Pasar el query directamente para evitar problemas de closure
-    handleSend(query);
+    setTimeout(() => handleSend(), 100);
   };
 
   return (
@@ -406,13 +402,7 @@ export const LitperAITab: React.FC<LitperAITabProps> = ({
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => {
-              // CORREGIDO: Agregar preventDefault y verificar !shiftKey
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder="Pregunta sobre tus envíos..."
             disabled={isProcessing}
             className="flex-1 px-4 py-3 bg-slate-100 dark:bg-navy-800 rounded-xl text-sm disabled:opacity-50"

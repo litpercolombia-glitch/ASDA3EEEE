@@ -125,12 +125,10 @@ export const InteligenciaIAUnificadoTab: React.FC<InteligenciaIAUnificadoTabProp
   const sidebarConfig = SIDEBAR_TAB_VIEWS[activeSubTab];
   const [activeView, setActiveView] = useState<SubView>(sidebarConfig.default);
 
-  // Cuando cambia el sub-tab del sidebar, SIEMPRE cambiar a la vista por defecto de esa sección
-  // CORREGIDO: Forzar el cambio de vista cuando cambia el sub-tab del sidebar
+  // Cuando cambia el sub-tab del sidebar, cambiar a la vista por defecto de esa sección
   React.useEffect(() => {
     const config = SIDEBAR_TAB_VIEWS[activeSubTab];
-    if (config) {
-      // Siempre cambiar a la vista por defecto para reflejar el cambio de sección
+    if (config && !config.views.includes(activeView)) {
       setActiveView(config.default);
     }
   }, [activeSubTab]);
