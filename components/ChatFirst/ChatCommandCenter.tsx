@@ -308,6 +308,35 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(0);
 
+  // CORREGIDO BUG U2: Cerrar dropdowns con click outside y Escape
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Cerrar model selector si click fuera
+      if (modelSelectorRef.current && !modelSelectorRef.current.contains(event.target as Node)) {
+        setShowModelSelector(false);
+      }
+      // Cerrar mode selector si click fuera
+      if (modeSelectorRef.current && !modeSelectorRef.current.contains(event.target as Node)) {
+        setShowModeSelector(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowModelSelector(false);
+        setShowModeSelector(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
+
   // Auto-scroll solo cuando se agregan nuevos mensajes (no al escribir)
   const scrollToBottom = useCallback((force = false) => {
     if (!chatContainerRef.current) return;
