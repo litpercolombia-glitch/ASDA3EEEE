@@ -23,7 +23,7 @@ import {
   Users,
   MapPin,
 } from 'lucide-react';
-import { Shipment } from '../../types';
+import { Shipment, ShipmentStatus } from '../../types';
 
 interface QuickDashboardProps {
   shipments: Shipment[];
@@ -37,22 +37,43 @@ export const QuickDashboard: React.FC<QuickDashboardProps> = ({
   userName = 'Usuario',
 }) => {
   // Métricas calculadas
+  // CORREGIDO: Usar valores del enum ShipmentStatus
   const metrics = useMemo(() => {
     const total = shipments.length;
-    const delivered = shipments.filter(s => s.status === 'delivered').length;
-    const inTransit = shipments.filter(s => s.status === 'in_transit').length;
-    const issues = shipments.filter(s => s.status === 'issue').length;
-    const inOffice = shipments.filter(s => s.status === 'in_office').length;
+    const delivered = shipments.filter(s =>
+      s.status === ShipmentStatus.DELIVERED ||
+      s.status === 'delivered' ||
+      s.status === 'Entregado'
+    ).length;
+    const inTransit = shipments.filter(s =>
+      s.status === ShipmentStatus.IN_TRANSIT ||
+      s.status === 'in_transit' ||
+      s.status === 'En Reparto'
+    ).length;
+    const issues = shipments.filter(s =>
+      s.status === ShipmentStatus.ISSUE ||
+      s.status === 'issue' ||
+      s.status === 'Novedad'
+    ).length;
+    const inOffice = shipments.filter(s =>
+      s.status === ShipmentStatus.IN_OFFICE ||
+      s.status === 'in_office' ||
+      s.status === 'En Oficina'
+    ).length;
 
     const withPhone = shipments.filter(s =>
-      s.phone || s.recipientPhone || s.senderPhone
+      s.phone || (s as any).recipientPhone || (s as any).senderPhone
     ).length;
 
     // Críticas
     const critical = shipments.filter(s => {
-      if (s.status === 'delivered') return false;
+      const isDelivered = s.status === ShipmentStatus.DELIVERED ||
+        s.status === 'delivered' || s.status === 'Entregado';
+      if (isDelivered) return false;
       const days = s.detailedInfo?.daysInTransit || 0;
-      return days >= 5 || s.status === 'issue';
+      const isIssue = s.status === ShipmentStatus.ISSUE ||
+        s.status === 'issue' || s.status === 'Novedad';
+      return days >= 5 || isIssue;
     }).length;
 
     // Tasas
