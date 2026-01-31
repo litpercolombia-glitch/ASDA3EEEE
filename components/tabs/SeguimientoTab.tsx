@@ -1251,18 +1251,9 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
       // Sync con backend
       await sincronizarConBackend();
 
-    } catch (e: any) {
+    } catch (e) {
       console.error('Error guardando hoja:', e);
-      const mensaje = e?.message || 'Error desconocido';
-      if (mensaje.includes('localStorage') || mensaje.includes('QuotaExceeded')) {
-        alert('Sin espacio de almacenamiento. Se limpiarán datos antiguos. Intenta de nuevo.');
-        // Limpiar datos antiguos
-        try {
-          localStorage.removeItem('litper_global_hojas');
-        } catch {}
-      } else {
-        alert(`Error al guardar: ${mensaje}`);
-      }
+      alert('Error al guardar la hoja');
     } finally {
       setGuardandoHoja(false);
     }
@@ -1320,20 +1311,9 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
     ).length;
   }, [shipments]);
 
-  // Procesar TODAS las guías (con límite de seguridad)
+  // Procesar TODAS las guías
   const guiasProcesadas: GuiaProcesada[] = useMemo(() => {
-    // Límite de seguridad - LÍMITE: 10,000 guías máximo
-    const MAX_GUIAS_PROCESAR = 10000;
-    const guiasAProcesar = shipments.length > MAX_GUIAS_PROCESAR
-      ? shipments.slice(0, MAX_GUIAS_PROCESAR)
-      : shipments;
-
-    if (shipments.length > MAX_GUIAS_PROCESAR) {
-      console.warn(`Demasiadas guías (${shipments.length}), procesando solo ${MAX_GUIAS_PROCESAR}`);
-    }
-
-    try {
-      return guiasAProcesar.map((guia) => {
+    return shipments.map((guia) => {
       const events = guia.detailedInfo?.events || [];
       const sortedEvents = [...events].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -1431,11 +1411,7 @@ export const SeguimientoTab: React.FC<SeguimientoTabProps> = ({
         fechaRevision: reviewData?.fechaRevision,
         revisadoPor: reviewData?.revisadoPor,
       };
-      });
-    } catch (error) {
-      console.error('Error procesando guías:', error);
-      return []; // Retornar array vacío en caso de error
-    }
+    });
   }, [shipments, guiasRevisadas]);
 
   // Filtrar guías

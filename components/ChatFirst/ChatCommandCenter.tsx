@@ -93,11 +93,11 @@ interface ChatCommandCenterProps {
 // CONTEXTO DE BRIEFING MATUTINO (Usando servicio de inteligencia)
 // ============================================
 
-const generateMorningBriefing = (shipments: Shipment[]): { message: string; actions: ChatAction[]; briefingData: ReturnType<typeof contextIntelligenceService.generateDailyBriefing> } => {
+const generateMorningBriefing = (shipments: Shipment[]): { message: string; actions: ChatAction[] } => {
   const briefing = contextIntelligenceService.generateDailyBriefing(shipments);
   const message = contextIntelligenceService.formatBriefingAsMessage(briefing);
 
-  // Las acciones serán mapeadas en el componente con handlers reales
+  // Generar acciones basadas en el contexto
   const actions: ChatAction[] = [];
 
   if (briefing.keyMetrics.total === 0) {
@@ -105,7 +105,7 @@ const generateMorningBriefing = (shipments: Shipment[]): { message: string; acti
       id: 'cargar',
       label: 'Cargar guias',
       type: 'primary',
-      onClick: () => {}, // Se reemplazará en el componente
+      onClick: () => {},
     });
   } else {
     if (briefing.criticalAlerts.length > 0) {
@@ -114,7 +114,7 @@ const generateMorningBriefing = (shipments: Shipment[]): { message: string; acti
         id: 'alert-action',
         label: firstAlert.action?.label || 'Ver alertas',
         type: 'primary',
-        onClick: () => {}, // Se reemplazará en el componente
+        onClick: () => {},
       });
     }
 
@@ -124,7 +124,7 @@ const generateMorningBriefing = (shipments: Shipment[]): { message: string; acti
         id: 'rec-action',
         label: firstRec.action?.label || 'Ver sugerencias',
         type: 'secondary',
-        onClick: () => {}, // Se reemplazará en el componente
+        onClick: () => {},
       });
     }
 
@@ -133,11 +133,11 @@ const generateMorningBriefing = (shipments: Shipment[]): { message: string; acti
       id: 'reporte',
       label: 'Generar reporte',
       type: 'secondary',
-      onClick: () => {}, // Se reemplazará en el componente
+      onClick: () => {},
     });
   }
 
-  return { message, actions, briefingData: briefing };
+  return { message, actions };
 };
 
 // ============================================
@@ -333,60 +333,24 @@ export const ChatCommandCenter: React.FC<ChatCommandCenterProps> = ({
   // Inicializar con briefing matutino inteligente
   useEffect(() => {
     if (!isInitialized) {
-      const { message, actions, briefingData } = generateMorningBriefing(shipments);
+      const { message, actions } = generateMorningBriefing(shipments);
+      const briefingData = contextIntelligenceService.generateDailyBriefing(shipments);
 
-      // Mapear acciones con handlers REALES y funcionales
+      // Mapear acciones con handlers reales
       const mappedActions = actions.map(action => {
-        let handler: () => void = () => {};
-
-        switch (action.id) {
-          case 'cargar':
-            // Abrir selector de archivos o tab de automatizaciones
-            handler = () => {
-              setActiveSkill('automatizaciones');
-              handleQuickAction('Quiero cargar guias desde Excel');
-            };
-            break;
-
-          case 'alert-action':
-            // Activar skill de alertas y mostrar críticos
-            handler = () => {
-              setActiveSkill('alertas');
-              if (briefingData.criticalAlerts[0]?.action?.query) {
-                handleQuickAction(briefingData.criticalAlerts[0].action.query);
-              } else {
-                handleQuickAction('Muestrame los envios criticos');
-              }
-            };
-            break;
-
-          case 'rec-action':
-            // Activar skill de seguimiento y mostrar recomendaciones
-            handler = () => {
-              setActiveSkill('seguimiento');
-              if (briefingData.recommendations[0]?.action?.query) {
-                handleQuickAction(briefingData.recommendations[0].action.query);
-              } else {
-                handleQuickAction('Dame recomendaciones para hoy');
-              }
-            };
-            break;
-
-          case 'reporte':
-            // Activar skill de reportes y generar
-            handler = () => {
-              setActiveSkill('reportes');
-              handleQuickAction('Genera el reporte del dia');
-            };
-            break;
-
-          default:
-            handler = () => handleQuickAction(action.label);
+        let query = '';
+        if (action.id === 'cargar') query = 'Quiero cargar guias desde Excel';
+        else if (action.id === 'alert-action' && briefingData.criticalAlerts[0]?.action) {
+          query = briefingData.criticalAlerts[0].action.query;
         }
+        else if (action.id === 'rec-action' && briefingData.recommendations[0]?.action) {
+          query = briefingData.recommendations[0].action.query;
+        }
+        else if (action.id === 'reporte') query = 'Genera el reporte del dia';
 
         return {
           ...action,
-          onClick: handler,
+          onClick: () => handleQuickAction(query),
         };
       });
 

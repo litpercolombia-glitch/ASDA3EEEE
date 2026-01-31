@@ -24,7 +24,7 @@ export type MarketingTab =
 
 // Sub-tabs para cada sección
 export type InicioTab = 'resumen' | 'actividad' | 'estadisticas';
-export type OperacionesTab = 'envios' | 'tracking' | 'historial' | 'rutas' | 'google-sheets';
+export type OperacionesTab = 'envios' | 'tracking' | 'historial' | 'rutas';
 export type InteligenciaTab = 'analisis' | 'reportes' | 'predicciones' | 'insights';
 export type CerebroIATab = 'asistente' | 'configuracion-ia' | 'historial-chat';
 export type NegocioTab = 'metricas' | 'clientes' | 'ventas' | 'rendimiento';
