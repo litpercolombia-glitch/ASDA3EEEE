@@ -361,3 +361,106 @@ export const getDaysInCurrentStatus = (guia: Shipment): number => {
   const hours = getHoursSinceUpdate(guia);
   return Math.floor(hours / 24);
 };
+
+// ============================================
+// STATUS CHECKING UTILITIES
+// Funciones para verificar estados de forma flexible
+// Compatibles con múltiples formatos (enum, string, etc.)
+// ============================================
+
+/**
+ * Verifica si un shipment está entregado
+ * Compatible con múltiples formatos de status
+ */
+export const isDelivered = (shipment: Shipment): boolean => {
+  const status = String(shipment.status || '').toLowerCase().trim();
+  return (
+    status === 'entregado' ||
+    status === 'delivered' ||
+    status === ShipmentStatus.DELIVERED.toLowerCase() ||
+    shipment.status === ShipmentStatus.DELIVERED ||
+    getActualStatus(shipment) === 'ENTREGADO'
+  );
+};
+
+/**
+ * Verifica si un shipment está en tránsito/reparto
+ */
+export const isInTransit = (shipment: Shipment): boolean => {
+  const status = String(shipment.status || '').toLowerCase().trim();
+  return (
+    status === 'en reparto' ||
+    status === 'en transito' ||
+    status === 'en tránsito' ||
+    status === 'in_transit' ||
+    status === 'in transit' ||
+    shipment.status === ShipmentStatus.IN_TRANSIT ||
+    getActualStatus(shipment) === 'EN_TRANSITO' ||
+    getActualStatus(shipment) === 'EN_REPARTO'
+  );
+};
+
+/**
+ * Verifica si un shipment tiene novedad/issue
+ */
+export const isIssue = (shipment: Shipment): boolean => {
+  const status = String(shipment.status || '').toLowerCase().trim();
+  return (
+    status === 'novedad' ||
+    status === 'issue' ||
+    status === 'con novedad' ||
+    shipment.status === ShipmentStatus.ISSUE ||
+    getActualStatus(shipment) === 'NOVEDAD'
+  );
+};
+
+/**
+ * Verifica si un shipment está en oficina
+ */
+export const isInOffice = (shipment: Shipment): boolean => {
+  const status = String(shipment.status || '').toLowerCase().trim();
+  return (
+    status === 'en oficina' ||
+    status === 'in_office' ||
+    status === 'in office' ||
+    shipment.status === ShipmentStatus.IN_OFFICE ||
+    getActualStatus(shipment) === 'EN_OFICINA'
+  );
+};
+
+/**
+ * Verifica si un shipment está pendiente
+ */
+export const isPending = (shipment: Shipment): boolean => {
+  const status = String(shipment.status || '').toLowerCase().trim();
+  return (
+    status === 'pendiente' ||
+    status === 'pending' ||
+    shipment.status === ShipmentStatus.PENDING ||
+    getActualStatus(shipment) === 'PENDIENTE'
+  );
+};
+
+/**
+ * Calcula métricas de un array de shipments de forma flexible
+ * Utiliza las funciones de verificación tolerantes
+ */
+export const calculateShipmentMetrics = (shipments: Shipment[]) => {
+  const total = shipments.length;
+  const delivered = shipments.filter(isDelivered).length;
+  const inTransit = shipments.filter(isInTransit).length;
+  const issues = shipments.filter(isIssue).length;
+  const inOffice = shipments.filter(isInOffice).length;
+  const pending = shipments.filter(isPending).length;
+
+  return {
+    total,
+    delivered,
+    inTransit,
+    issues,
+    inOffice,
+    pending,
+    deliveryRate: total > 0 ? Math.round((delivered / total) * 100 * 10) / 10 : 0,
+    issueRate: total > 0 ? Math.round((issues / total) * 100 * 10) / 10 : 0,
+  };
+};
