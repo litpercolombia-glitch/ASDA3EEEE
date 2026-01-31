@@ -1,2 +1,3 @@
 // components/settings/index.ts
-export { UserProfileSettings } from './UserProfileSettings';
+export { SettingsPanel } from "./SettingsPanel";
+export { default } from "./SettingsPanel";
