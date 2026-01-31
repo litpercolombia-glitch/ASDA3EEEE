@@ -313,10 +313,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
               {/* Header */}
               <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold text-white mb-2">
-                  Bienvenido de nuevo
+                  Potencia tu logística
                 </h2>
                 <p className="text-white/50">
-                  Ingresa tus credenciales para continuar
+                  Acceso instantáneo a IA predictiva y automatización
                 </p>
               </div>
 
@@ -371,7 +371,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
               {/* Divider */}
               <div className="flex items-center gap-4 mb-6">
                 <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                <span className="text-xs text-white/30 uppercase tracking-wider">o continúa con email</span>
+                <span className="text-xs text-white/30 uppercase tracking-wider">o usa tu correo empresarial</span>
                 <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
               </div>
 
