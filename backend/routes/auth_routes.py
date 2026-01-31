@@ -902,3 +902,196 @@ async def admin_create_user(request: Request, data: AdminCreateUserRequest):
         created_at=user_data["created_at"],
         last_login=None,
     )
+
+
+# ═══════════════════════════════════════════
+# OAUTH 2.0 - Token Exchange
+# ═══════════════════════════════════════════
+
+class OAuthTokenRequest(BaseModel):
+    """Request para intercambiar código OAuth por token"""
+    code: str
+    provider: str  # google, microsoft, apple
+    redirect_uri: str
+
+
+class OAuthTokenResponse(BaseModel):
+    """Response con tokens OAuth"""
+    access_token: str
+    token_type: str = "Bearer"
+    expires_in: int
+    refresh_token: Optional[str] = None
+    id_token: Optional[str] = None
+
+
+# OAuth Configuration from environment
+OAUTH_CONFIG = {
+    "google": {
+        "token_url": "https://oauth2.googleapis.com/token",
+        "client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
+        "client_secret": os.getenv("GOOGLE_CLIENT_SECRET", ""),
+    },
+    "microsoft": {
+        "token_url": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+        "client_id": os.getenv("MICROSOFT_CLIENT_ID", ""),
+        "client_secret": os.getenv("MICROSOFT_CLIENT_SECRET", ""),
+    },
+    "apple": {
+        "token_url": "https://appleid.apple.com/auth/token",
+        "client_id": os.getenv("APPLE_CLIENT_ID", ""),
+        "client_secret": os.getenv("APPLE_CLIENT_SECRET", ""),
+    },
+}
+
+
+@router.post("/oauth/token", response_model=OAuthTokenResponse)
+async def oauth_token_exchange(request: Request, data: OAuthTokenRequest):
+    """
+    Intercambia código OAuth por tokens.
+
+    Este endpoint actúa como proxy seguro para mantener client_secret
+    en el servidor y no en el frontend.
+    """
+    import httpx
+
+    provider = data.provider.lower()
+
+    if provider not in OAUTH_CONFIG:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Proveedor OAuth no soportado: {provider}"
+        )
+
+    config = OAUTH_CONFIG[provider]
+
+    if not config["client_id"] or not config["client_secret"]:
+        logger.error(f"OAuth {provider}: credenciales no configuradas")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"OAuth {provider} no está configurado en el servidor"
+        )
+
+    # Preparar request al proveedor OAuth
+    token_data = {
+        "code": data.code,
+        "client_id": config["client_id"],
+        "client_secret": config["client_secret"],
+        "redirect_uri": data.redirect_uri,
+        "grant_type": "authorization_code",
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                config["token_url"],
+                data=token_data,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                timeout=30.0,
+            )
+
+            if response.status_code != 200:
+                logger.error(f"OAuth {provider} token exchange failed: {response.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Error al obtener token del proveedor OAuth"
+                )
+
+            token_response = response.json()
+
+            logger.info(f"✅ OAuth {provider} token exchange exitoso")
+
+            return OAuthTokenResponse(
+                access_token=token_response.get("access_token", ""),
+                token_type=token_response.get("token_type", "Bearer"),
+                expires_in=token_response.get("expires_in", 3600),
+                refresh_token=token_response.get("refresh_token"),
+                id_token=token_response.get("id_token"),
+            )
+
+    except httpx.RequestError as e:
+        logger.error(f"OAuth {provider} request error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Error de conexión con el proveedor OAuth"
+        )
+
+
+@router.post("/oauth/login")
+async def oauth_login(request: Request, response: Response, data: dict):
+    """
+    Completa el flujo OAuth creando/actualizando usuario y estableciendo sesión.
+
+    Recibe la información del usuario OAuth y crea la sesión local.
+    """
+    email = data.get("email", "").lower()
+    name = data.get("name", "")
+    provider = data.get("provider", "")
+    picture = data.get("picture", "")
+
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email es requerido"
+        )
+
+    # Buscar usuario existente
+    user_data = _get_user_by_email(email)
+
+    if not user_data:
+        # Crear nuevo usuario OAuth
+        user_id = f"user_{secrets.token_urlsafe(8)}"
+        user_data = {
+            "id": user_id,
+            "email": email,
+            "nombre": name or email.split("@")[0],
+            "hashed_password": get_password_hash(secrets.token_urlsafe(32)),  # Random password for OAuth users
+            "rol": "operador",
+            "activo": True,
+            "created_at": datetime.utcnow().isoformat(),
+            "last_login": datetime.utcnow().isoformat(),
+            "oauth_provider": provider,
+            "oauth_picture": picture,
+            "must_change_password": False,
+        }
+
+        global _users_cache
+        _users_cache[email] = user_data
+        _persist_users()
+
+        logger.info(f"✅ Nuevo usuario OAuth creado: {email} via {provider}")
+    else:
+        # Actualizar último login
+        user_data["last_login"] = datetime.utcnow().isoformat()
+        if provider:
+            user_data["oauth_provider"] = provider
+        if picture:
+            user_data["oauth_picture"] = picture
+        _persist_users()
+
+        logger.info(f"✅ Usuario OAuth existente: {email} via {provider}")
+
+    if not user_data.get("activo", True):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuario desactivado"
+        )
+
+    # Crear tokens de sesión
+    user_model = _user_to_model(user_data)
+    access_token = create_access_token(user_model)
+    refresh_token = create_refresh_token(user_model)
+    jti = secrets.token_urlsafe(16)
+
+    _store_refresh_token(user_data["id"], refresh_token, jti)
+    _set_auth_cookies(response, access_token, refresh_token, jti)
+
+    return {
+        "success": True,
+        "user": {
+            "id": user_data["id"],
+            "email": user_data["email"],
+            "nombre": user_data["nombre"],
+            "rol": user_data["rol"],
+            "picture": user_data.get("oauth_picture"),
+        }
+    }
