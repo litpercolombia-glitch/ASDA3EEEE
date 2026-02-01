@@ -1,5 +1,5 @@
 // components/layout/Sidebar.tsx
-// Sidebar profesional estilo ChatGPT - Con sub-menús desplegables
+// COMMAND CENTER - Sidebar Futurista con diseño sci-fi
 
 import React, { useState } from 'react';
 import {
@@ -48,6 +48,12 @@ import {
   LayoutDashboard,
   Bot,
   MessageSquare,
+  Radio,
+  Satellite,
+  Cpu,
+  Hexagon,
+  CircuitBoard,
+  Wifi,
 } from 'lucide-react';
 import {
   useLayoutStore,
@@ -86,6 +92,7 @@ interface MenuItem {
   badge?: number;
   isNew?: boolean;
   subItems?: SubMenuItem[];
+  color?: string;
 }
 
 // ============================================
@@ -140,7 +147,7 @@ const SUB_MENUS: Record<MainSection, SubMenuItem[]> = {
 };
 
 // ============================================
-// COMPONENTE SIDEBAR EXPANDIBLE ITEM
+// COMPONENTE SIDEBAR EXPANDIBLE ITEM - FUTURISTA
 // ============================================
 
 interface ExpandableSidebarItemProps {
@@ -156,6 +163,7 @@ interface ExpandableSidebarItemProps {
   subItems?: SubMenuItem[];
   activeSubItem?: string;
   onSubItemClick?: (id: string) => void;
+  accentColor?: string;
 }
 
 function ExpandableSidebarItem({
@@ -190,23 +198,31 @@ function ExpandableSidebarItem({
         onClick={handleClick}
         className={`
           w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
-          transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] group relative
-          btn-ripple
-          ${isActive
-            ? 'bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-lg shadow-orange-500/30 hover-glow'
-            : 'text-gray-400 hover:text-white hover:bg-gray-800/80 hover:translate-x-1'
-          }
+          transition-all duration-300 ease-out group relative
+          cc-nav-item
+          ${isActive ? 'active' : ''}
         `}
         title={isCollapsed ? label : undefined}
       >
-        <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'}`} />
+        {/* Icono con efecto neón */}
+        <div className={`relative flex-shrink-0 ${isActive ? 'cc-icon-glow' : ''}`}>
+          <Icon className={`w-5 h-5 cc-icon transition-colors duration-300 ${
+            isActive
+              ? 'text-cyan-400'
+              : 'text-gray-400 group-hover:text-cyan-300'
+          }`} />
+        </div>
 
         {!isCollapsed && (
           <>
-            <span className="flex-1 text-left text-sm font-medium truncate">{label}</span>
+            <span className={`flex-1 text-left text-sm font-medium truncate transition-colors duration-300 ${
+              isActive ? 'text-cyan-300' : 'text-gray-300 group-hover:text-white'
+            }`}>
+              {label}
+            </span>
 
             {isNew && (
-              <span className="px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded">
+              <span className="cc-badge-new px-1.5 py-0.5 text-[10px] font-bold rounded">
                 NEW
               </span>
             )}
@@ -214,7 +230,9 @@ function ExpandableSidebarItem({
             {hasSubItems && (
               <button
                 onClick={handleChevronClick}
-                className={`p-0.5 rounded transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                className={`p-0.5 rounded transition-all duration-300 ${
+                  isExpanded ? 'rotate-180 text-cyan-400' : 'text-gray-500'
+                }`}
               >
                 <ChevronDown className="w-4 h-4" />
               </button>
@@ -225,38 +243,54 @@ function ExpandableSidebarItem({
         {/* Tooltip when collapsed */}
         {isCollapsed && (
           <div className="
-            absolute left-full ml-2 px-3 py-1.5
-            bg-gray-800 text-white text-sm rounded-lg
+            absolute left-full ml-3 px-3 py-2
+            cc-glass-elevated rounded-lg
             opacity-0 group-hover:opacity-100 pointer-events-none
-            transition-opacity whitespace-nowrap z-50
-            shadow-xl border border-gray-700
+            transition-all duration-200 whitespace-nowrap z-50
+            text-cyan-300 text-sm font-medium
+            border border-cyan-500/30
           ">
+            <div className="absolute left-0 top-1/2 -translate-x-1 -translate-y-1/2 w-2 h-2 bg-cyan-500/20 rotate-45 border-l border-b border-cyan-500/30" />
             {label}
-            {isNew && <span className="ml-2 text-green-400 text-xs">NEW</span>}
+            {isNew && <span className="ml-2 cc-badge-new px-1 py-0.5 text-[9px] rounded">NEW</span>}
           </div>
         )}
       </button>
 
-      {/* Sub-menú desplegable */}
+      {/* Sub-menú desplegable con estilo futurista */}
       {!isCollapsed && isExpanded && hasSubItems && subItems.length > 0 && (
-        <div className="ml-4 space-y-0.5 border-l-2 border-amber-500/30 pl-2 overflow-hidden">
+        <div className="ml-4 space-y-0.5 pl-3 border-l border-cyan-500/20 relative overflow-hidden">
+          {/* Línea de energía animada */}
+          <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-cyan-500/50 via-amber-500/30 to-cyan-500/50" />
+
           {subItems.map((item, index) => (
             <button
               key={item.id}
               onClick={() => onSubItemClick?.(item.id)}
               className={`
                 w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm
-                transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]
-                stagger-item
+                transition-all duration-200 group/sub relative
                 ${activeSubItem === item.id
-                  ? 'bg-amber-500/20 text-amber-400 font-medium shadow-sm'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50 hover:translate-x-1'
+                  ? 'bg-cyan-500/10 text-cyan-400 font-medium border border-cyan-500/30'
+                  : 'text-gray-400 hover:text-cyan-300 hover:bg-cyan-500/5'
                 }
               `}
               style={{ animationDelay: `${index * 50}ms` }}
             >
-              <item.icon className={`w-4 h-4 transition-transform duration-200 ${activeSubItem === item.id ? 'scale-110' : 'group-hover:scale-110'}`} />
-              {item.label}
+              {/* Indicador de punto activo */}
+              <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                activeSubItem === item.id
+                  ? 'bg-cyan-400 shadow-[0_0_8px_rgba(0,245,255,0.8)]'
+                  : 'bg-gray-600 group-hover/sub:bg-cyan-500/50'
+              }`} />
+
+              <item.icon className={`w-4 h-4 transition-all duration-200 ${
+                activeSubItem === item.id
+                  ? 'text-cyan-400'
+                  : 'text-gray-500 group-hover/sub:text-cyan-400'
+              }`} />
+
+              <span className="truncate">{item.label}</span>
             </button>
           ))}
         </div>
@@ -266,7 +300,7 @@ function ExpandableSidebarItem({
 }
 
 // ============================================
-// COMPONENTE SIDEBAR SECTION
+// COMPONENTE SIDEBAR SECTION - FUTURISTA
 // ============================================
 
 interface SidebarSectionProps {
@@ -279,52 +313,70 @@ function SidebarSection({ title, isCollapsed, children }: SidebarSectionProps) {
   return (
     <div className="space-y-1">
       {title && !isCollapsed && (
-        <p className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-          {title}
-        </p>
+        <div className="px-3 py-2 flex items-center gap-2">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
+          <p className="text-[10px] font-bold text-cyan-500/70 uppercase tracking-[0.2em]">
+            {title}
+          </p>
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
+        </div>
       )}
-      {title && isCollapsed && <div className="h-px bg-gray-700/50 my-2 mx-2" />}
+      {title && isCollapsed && <div className="cc-divider" />}
       {children}
     </div>
   );
 }
 
 // ============================================
-// MODAL DE AYUDA
+// MODAL DE AYUDA - FUTURISTA
 // ============================================
 
 function HelpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-gray-900 rounded-2xl max-w-md w-full border border-gray-700/50 shadow-2xl modal-enter glass">
-        <div className="p-6 border-b border-gray-700">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fade-in cc-hex-pattern">
+      <div className="cc-glass-elevated rounded-2xl max-w-md w-full shadow-2xl modal-enter relative cc-corner-tl cc-corner-br">
+        {/* Header */}
+        <div className="p-6 border-b border-cyan-500/20">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <HelpCircle className="w-6 h-6 text-amber-400" />
-              Centro de Ayuda
+            <h2 className="text-xl font-bold text-white flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                <HelpCircle className="w-5 h-5 text-white" />
+              </div>
+              <span className="bg-gradient-to-r from-cyan-400 to-amber-400 bg-clip-text text-transparent">
+                Centro de Comando
+              </span>
             </h2>
-            <button onClick={onClose} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200 hover:rotate-90">
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-cyan-400 cc-btn rounded-lg transition-all duration-200"
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
         <div className="p-6 space-y-4">
-          <div className="bg-gray-800/50 rounded-xl p-4 card-interactive hover:bg-gray-800/70">
-            <h3 className="font-medium text-white mb-2">Documentacion</h3>
-            <p className="text-sm text-gray-400 mb-3">Aprende a usar todas las funciones de LITPER PRO</p>
-            <button className="text-amber-400 text-sm hover:text-amber-300 flex items-center gap-1 group">
-              Ver documentacion <ExternalLink className="w-3 h-3 transition-transform group-hover:translate-x-1" />
+          <div className="cc-card p-4 hover:border-cyan-500/40 transition-all duration-300">
+            <div className="flex items-center gap-3 mb-2">
+              <CircuitBoard className="w-5 h-5 text-cyan-400" />
+              <h3 className="font-semibold text-white">Documentación</h3>
+            </div>
+            <p className="text-sm text-gray-400 mb-3">Aprende a usar todas las funciones del Command Center</p>
+            <button className="text-cyan-400 text-sm hover:text-cyan-300 flex items-center gap-1 group">
+              Ver documentación <ExternalLink className="w-3 h-3 transition-transform group-hover:translate-x-1" />
             </button>
           </div>
 
-          <div className="bg-gray-800/50 rounded-xl p-4 card-interactive hover:bg-gray-800/70">
-            <h3 className="font-medium text-white mb-2">Soporte</h3>
-            <p className="text-sm text-gray-400 mb-3">Necesitas ayuda? Contactanos</p>
+          <div className="cc-card p-4 hover:border-cyan-500/40 transition-all duration-300">
+            <div className="flex items-center gap-3 mb-2">
+              <Satellite className="w-5 h-5 text-amber-400" />
+              <h3 className="font-semibold text-white">Soporte Técnico</h3>
+            </div>
+            <p className="text-sm text-gray-400 mb-3">Conexión directa con el equipo de soporte</p>
             <div className="space-y-2">
-              <a href="mailto:litpercolombia@gmail.com" className="text-amber-400 text-sm hover:text-amber-300 flex items-center gap-2 transition-transform hover:translate-x-1">
+              <a href="mailto:litpercolombia@gmail.com" className="text-cyan-400 text-sm hover:text-cyan-300 flex items-center gap-2 transition-transform hover:translate-x-1">
                 <Mail className="w-4 h-4" /> litpercolombia@gmail.com
               </a>
               <a href="https://wa.me/573144754115" target="_blank" rel="noopener noreferrer" className="text-green-400 text-sm hover:text-green-300 flex items-center gap-2 transition-transform hover:translate-x-1">
@@ -333,14 +385,18 @@ function HelpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-amber-600/20 to-orange-600/20 rounded-xl p-4 border border-amber-500/30 card-interactive hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/10">
+          <div className="cc-card p-4 cc-hologram border-amber-500/30 hover:border-amber-500/50 transition-all duration-300">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-red-600 rounded-xl flex items-center justify-center">
-                <Crown className="w-6 h-6 text-white" />
+              <div className="cc-logo w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center relative">
+                <div className="cc-logo-glow rounded-xl" />
+                <Crown className="w-6 h-6 text-white relative z-10" />
               </div>
               <div>
-                <h3 className="font-bold text-white">LITPER OFICIAL</h3>
-                <p className="text-sm text-gray-400">Calidad en cada detalle</p>
+                <h3 className="font-bold text-white flex items-center gap-2">
+                  LITPER COMMAND
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                </h3>
+                <p className="text-sm text-gray-400">Sistema Empresarial v2.0</p>
               </div>
             </div>
           </div>
@@ -351,34 +407,36 @@ function HelpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
 }
 
 // ============================================
-// LOGO LP CON CORONA - DISEÑO PROFESIONAL
+// LOGO LP - COMMAND CENTER STYLE
 // ============================================
 
 function LitperLogo({ isCollapsed }: { isCollapsed: boolean }) {
   return (
     <div className="flex items-center gap-3 group">
-      {/* Logo con efectos premium */}
-      <div className="relative">
-        {/* Glow effect behind logo */}
-        <div className="absolute inset-0 bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-500 rounded-xl blur-lg opacity-40 group-hover:opacity-60 transition-opacity scale-110" />
+      {/* Logo con efectos sci-fi */}
+      <div className="cc-logo relative">
+        {/* Glow effect */}
+        <div className="cc-logo-glow rounded-xl" />
+
         {/* Main logo container */}
-        <div className="relative w-11 h-11 bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-600 rounded-xl shadow-2xl shadow-amber-500/40 group-hover:shadow-amber-500/60 transition-all transform group-hover:scale-105 border border-yellow-300/30 flex items-center justify-center overflow-visible">
+        <div className="relative w-11 h-11 bg-gradient-to-br from-cyan-400 via-cyan-500 to-blue-600 rounded-xl shadow-lg shadow-cyan-500/40 group-hover:shadow-cyan-500/60 transition-all transform group-hover:scale-105 border border-cyan-300/30 flex items-center justify-center overflow-visible">
           {/* Inner glow ring */}
           <div className="absolute inset-0.5 bg-gradient-to-br from-white/20 to-transparent rounded-lg" />
+
+          {/* Hexagonal pattern */}
+          <div className="absolute inset-0 opacity-30 cc-hex-pattern rounded-lg" />
+
           {/* Logo letters */}
           <div className="relative flex items-center justify-center">
-            <span className="text-xl font-black text-white drop-shadow-lg tracking-tighter" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>L</span>
-            <span className="text-sm font-black text-yellow-100 -ml-0.5 drop-shadow" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>P</span>
+            <span className="text-xl font-black text-white drop-shadow-lg tracking-tighter" style={{ textShadow: '0 0 10px rgba(0,245,255,0.5)' }}>L</span>
+            <span className="text-sm font-black text-cyan-100 -ml-0.5 drop-shadow" style={{ textShadow: '0 0 8px rgba(0,245,255,0.3)' }}>P</span>
           </div>
-          {/* Crown accent */}
-          <Crown className="absolute -top-2 -right-2 w-4 h-4 text-yellow-200 drop-shadow-lg" />
-          {/* Sparkle effects */}
-          <div className="absolute -top-1 -left-1 w-2 h-2 bg-white rounded-full animate-ping opacity-60" />
-          <div className="absolute -bottom-0.5 right-0 w-1.5 h-1.5 bg-yellow-200 rounded-full animate-pulse" />
-        </div>
-        {/* Status indicator */}
-        <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full border-2 border-gray-900 shadow-lg shadow-emerald-500/50">
-          <div className="absolute inset-0.5 bg-emerald-300 rounded-full animate-pulse opacity-50" />
+
+          {/* Circuit accent */}
+          <Cpu className="absolute -top-2 -right-2 w-4 h-4 text-cyan-300 drop-shadow-lg" />
+
+          {/* Status indicator */}
+          <div className="absolute -bottom-1 -right-1 cc-status-online" />
         </div>
       </div>
 
@@ -386,11 +444,11 @@ function LitperLogo({ isCollapsed }: { isCollapsed: boolean }) {
         <div>
           <h1 className="text-xl font-black tracking-tight flex items-center gap-1">
             <span className="text-white">LIT</span>
-            <span className="bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-400 bg-clip-text text-transparent">PER</span>
+            <span className="bg-gradient-to-r from-cyan-400 via-cyan-300 to-amber-400 bg-clip-text text-transparent">PER</span>
           </h1>
-          <p className="text-[9px] text-slate-400 font-semibold tracking-[0.15em] uppercase -mt-0.5 flex items-center gap-1">
-            <span className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />
-            PRO ENTERPRISE
+          <p className="text-[9px] text-cyan-500/70 font-bold tracking-[0.2em] uppercase -mt-0.5 flex items-center gap-1">
+            <Radio className="w-2.5 h-2.5 animate-pulse" />
+            COMMAND CENTER
           </p>
         </div>
       )}
@@ -399,7 +457,30 @@ function LitperLogo({ isCollapsed }: { isCollapsed: boolean }) {
 }
 
 // ============================================
-// COMPONENTE PRINCIPAL SIDEBAR
+// STATUS BAR COMPONENT
+// ============================================
+
+function StatusBar({ isCollapsed }: { isCollapsed: boolean }) {
+  if (isCollapsed) return null;
+
+  return (
+    <div className="px-3 py-2 mx-2 rounded-lg bg-black/30 border border-cyan-500/10">
+      <div className="flex items-center justify-between text-[10px]">
+        <div className="flex items-center gap-1.5">
+          <div className="cc-status-online w-2 h-2" />
+          <span className="text-cyan-400 font-mono uppercase">Sistema Online</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Wifi className="w-3 h-3 text-green-400" />
+          <span className="text-gray-500 font-mono">99.9%</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// COMPONENTE PRINCIPAL SIDEBAR - COMMAND CENTER
 // ============================================
 
 export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail }: SidebarProps) {
@@ -433,17 +514,17 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
 
   const isExpanded = !sidebarCollapsed || sidebarHovered;
 
-  // Menu principal
+  // Menu principal con colores de acento
   const mainMenuItems: MenuItem[] = [
-    { id: 'inicio', icon: Home, label: 'Inicio', subItems: SUB_MENUS['inicio'] },
+    { id: 'inicio', icon: Home, label: 'Centro de Control', subItems: SUB_MENUS['inicio'] },
     { id: 'operaciones', icon: Package, label: 'Operaciones', subItems: SUB_MENUS['operaciones'] },
     { id: 'inteligencia', icon: Sparkles, label: 'Inteligencia', subItems: SUB_MENUS['inteligencia'] },
     { id: 'cerebro-ia', icon: Brain, label: 'Cerebro IA', isNew: true, subItems: SUB_MENUS['cerebro-ia'] },
-    { id: 'negocio', icon: Briefcase, label: 'Negocio', subItems: SUB_MENUS['negocio'] },
+    { id: 'negocio', icon: Briefcase, label: 'Centro Negocio', subItems: SUB_MENUS['negocio'] },
     { id: 'config', icon: Shield, label: 'Modo Admin', subItems: SUB_MENUS['config'] },
   ];
 
-  // Obtener el sub-item activo segun la seccion
+  // Obtener el sub-item activo según la sección
   const getActiveSubItem = (section: MainSection): string | undefined => {
     switch (section) {
       case 'inicio': return activeInicioTab;
@@ -479,17 +560,20 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
     <>
       <aside
         className={`
-          flex flex-col h-full glass-sidebar border-r border-gray-800/50
-          transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] relative
+          flex flex-col h-full cc-sidebar relative
+          transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]
           ${isExpanded ? 'w-64' : 'w-16'}
-          shadow-2xl shadow-black/20
+          shadow-2xl shadow-black/50
         `}
         onMouseEnter={() => sidebarCollapsed && setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
+        {/* Patrón hexagonal de fondo */}
+        <div className="absolute inset-0 cc-hex-pattern opacity-50 pointer-events-none" />
+
         {/* Header */}
         <div className={`
-          flex items-center h-16 px-3 border-b border-gray-800
+          relative z-10 flex items-center h-16 px-3 border-b border-cyan-500/20
           ${isExpanded ? 'justify-between' : 'justify-center'}
         `}>
           {isExpanded ? (
@@ -497,8 +581,8 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
               <LitperLogo isCollapsed={false} />
               <button
                 onClick={toggleSidebar}
-                className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all"
-                title="Colapsar sidebar"
+                className="p-1.5 text-gray-400 hover:text-cyan-400 cc-btn rounded-lg transition-all duration-300"
+                title="Colapsar panel"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
@@ -506,40 +590,47 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
           ) : (
             <button
               onClick={toggleSidebar}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all"
-              title="Expandir sidebar"
+              className="p-2 text-gray-400 hover:text-cyan-400 cc-btn rounded-lg transition-all duration-300"
+              title="Expandir panel"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
           )}
         </div>
 
+        {/* Status Bar */}
+        <div className="relative z-10 py-2">
+          <StatusBar isCollapsed={!isExpanded} />
+        </div>
+
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
+        <nav className="relative z-10 flex-1 overflow-y-auto py-2 px-2 space-y-1 cc-scrollbar">
           {/* Main Menu */}
-          {mainMenuItems.map((item) => (
-            <ExpandableSidebarItem
-              key={item.id}
-              icon={item.icon}
-              label={item.label}
-              isActive={activeSection === item.id}
-              isExpanded={expandedSections.includes(item.id)}
-              isCollapsed={!isExpanded}
-              hasSubItems={!!item.subItems && item.subItems.length > 0}
-              isNew={item.isNew}
-              onClick={() => setActiveSection(item.id)}
-              onToggleExpand={() => toggleSectionExpanded(item.id)}
-              subItems={item.subItems}
-              activeSubItem={getActiveSubItem(item.id)}
-              onSubItemClick={(subId) => handleSubItemClick(item.id, subId)}
-            />
-          ))}
+          <SidebarSection isCollapsed={!isExpanded}>
+            {mainMenuItems.map((item) => (
+              <ExpandableSidebarItem
+                key={item.id}
+                icon={item.icon}
+                label={item.label}
+                isActive={activeSection === item.id}
+                isExpanded={expandedSections.includes(item.id)}
+                isCollapsed={!isExpanded}
+                hasSubItems={!!item.subItems && item.subItems.length > 0}
+                isNew={item.isNew}
+                onClick={() => setActiveSection(item.id)}
+                onToggleExpand={() => toggleSectionExpanded(item.id)}
+                subItems={item.subItems}
+                activeSubItem={getActiveSubItem(item.id)}
+                onSubItemClick={(subId) => handleSubItemClick(item.id, subId)}
+              />
+            ))}
+          </SidebarSection>
 
           {/* Marketing Section */}
-          <SidebarSection title="Marketing" isCollapsed={!isExpanded}>
+          <SidebarSection title="Marketing Hub" isCollapsed={!isExpanded}>
             <ExpandableSidebarItem
               icon={TrendingUp}
-              label="Marketing"
+              label="Marketing Central"
               isActive={activeSection === 'marketing'}
               isExpanded={expandedSections.includes('marketing')}
               isCollapsed={!isExpanded}
@@ -555,42 +646,53 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
         </nav>
 
         {/* Footer */}
-        <div className="border-t border-gray-800 p-2 space-y-1">
-          <button
-            onClick={onOpenChat}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800/80 transition-all duration-200"
-            title={!isExpanded ? 'Chat IA' : undefined}
-          >
-            <MessageCircle className="w-5 h-5" />
-            {isExpanded && <span className="text-sm font-medium">Chat IA</span>}
-          </button>
+        <div className="relative z-10 border-t border-cyan-500/20 p-2 space-y-1">
+          {/* Quick Actions */}
+          <div className="flex gap-1 mb-2">
+            <button
+              onClick={onOpenChat}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl cc-btn transition-all duration-300 ${
+                !isExpanded ? 'justify-center' : ''
+              }`}
+              title="Chat IA"
+            >
+              <Bot className="w-5 h-5 text-cyan-400" />
+              {isExpanded && <span className="text-sm font-medium text-gray-300">Chat IA</span>}
+            </button>
 
-          <button
-            onClick={() => setShowHelpModal(true)}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800/80 transition-all duration-200"
-            title={!isExpanded ? 'Ayuda' : undefined}
-          >
-            <HelpCircle className="w-5 h-5" />
-            {isExpanded && <span className="text-sm font-medium">Ayuda</span>}
-          </button>
+            <button
+              onClick={() => setShowHelpModal(true)}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl cc-btn transition-all duration-300 ${
+                !isExpanded ? 'justify-center' : ''
+              }`}
+              title="Ayuda"
+            >
+              <HelpCircle className="w-5 h-5 text-amber-400" />
+              {isExpanded && <span className="text-sm font-medium text-gray-300">Ayuda</span>}
+            </button>
+          </div>
 
-          {/* User */}
+          {/* User Card */}
           {isExpanded && (
-            <div className="flex items-center gap-3 px-3 py-2 mt-2 bg-gray-800/50 rounded-xl">
-              <div className="w-9 h-9 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg">
-                <User className="w-4 h-4 text-white" />
+            <div className="cc-card p-3 cc-data-stream">
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="cc-avatar">
+                  <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg relative z-10">
+                    <User className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{userName || 'Operador'}</p>
+                  <p className="text-xs text-cyan-500/70 truncate font-mono">{userEmail || 'operator@litper.co'}</p>
+                </div>
+                <button
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all duration-300 border border-transparent hover:border-red-500/30"
+                  title="Cerrar sesión"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{userName || 'Usuario'}</p>
-                <p className="text-xs text-gray-500 truncate">{userEmail || 'user@litper.co'}</p>
-              </div>
-              <button
-                onClick={() => setShowLogoutConfirm(true)}
-                className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                title="Cerrar sesion"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
             </div>
           )}
 
@@ -598,8 +700,8 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
           {!isExpanded && (
             <button
               onClick={() => setShowLogoutConfirm(true)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
-              title="Cerrar sesion"
+              className="w-full flex items-center justify-center px-3 py-2.5 rounded-xl cc-btn text-gray-400 hover:text-red-400 hover:border-red-500/30 transition-all duration-300"
+              title="Cerrar sesión"
             >
               <LogOut className="w-5 h-5" />
             </button>
@@ -610,28 +712,31 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
       {/* Help Modal */}
       <HelpModal isOpen={showHelpModal} onClose={() => setShowHelpModal(false)} />
 
-      {/* Logout Confirmation */}
+      {/* Logout Confirmation - Futuristic */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-gray-900 rounded-2xl max-w-sm w-full border border-gray-700/50 shadow-2xl p-6 modal-enter glass">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fade-in cc-hex-pattern">
+          <div className="cc-glass-elevated rounded-2xl max-w-sm w-full p-6 modal-enter cc-corner-tl cc-corner-br relative">
             <div className="text-center">
-              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 bounce-in">
-                <LogOut className="w-8 h-8 text-red-400" />
+              <div className="relative mx-auto w-20 h-20 mb-4">
+                <div className="absolute inset-0 bg-red-500/20 rounded-full animate-ping" />
+                <div className="relative w-full h-full bg-gradient-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center shadow-lg shadow-red-500/30">
+                  <LogOut className="w-8 h-8 text-white" />
+                </div>
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Cerrar sesion?</h3>
-              <p className="text-gray-400 text-sm mb-6">Se perderan los datos no guardados</p>
+              <h3 className="text-xl font-bold text-white mb-2">Desconexión del Sistema</h3>
+              <p className="text-gray-400 text-sm mb-6">Se perderán los datos de sesión no guardados</p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowLogoutConfirm(false)}
-                  className="flex-1 px-4 py-2.5 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-all duration-200 btn-secondary"
+                  className="flex-1 px-4 py-3 cc-btn text-white rounded-xl font-medium transition-all duration-300"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl hover:from-red-700 hover:to-red-600 transition-all duration-200 btn-primary shadow-lg shadow-red-500/25"
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl font-medium transition-all duration-300 hover:shadow-lg hover:shadow-red-500/30 hover:translate-y-[-2px]"
                 >
-                  Cerrar sesion
+                  Desconectar
                 </button>
               </div>
             </div>
