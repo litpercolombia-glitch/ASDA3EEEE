@@ -202,15 +202,15 @@ function NotificationsPanel({
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className="absolute right-0 top-full mt-2 w-96 bg-gray-900/95 border border-gray-700/50 rounded-2xl shadow-2xl z-50 overflow-hidden modal-enter backdrop-blur-xl">
+      <div className="absolute right-0 top-full mt-2 w-96 cc-glass-elevated rounded-2xl shadow-2xl z-50 overflow-hidden modal-enter cc-corner-tl cc-corner-br">
         {/* Header */}
-        <div className="p-4 border-b border-gray-700 bg-gradient-to-r from-gray-800 to-gray-900">
+        <div className="p-4 border-b border-cyan-500/20 bg-gradient-to-r from-cyan-500/10 to-amber-500/5">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <Bell className="w-5 h-5 text-amber-400" />
-              <h3 className="font-bold text-white">Notificaciones</h3>
+              <Bell className="w-5 h-5 text-cyan-400 cc-icon-glow" />
+              <h3 className="font-bold text-white">Centro de Alertas</h3>
             </div>
-            <button onClick={onClose} className="p-1 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">
+            <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-cyan-400 cc-btn rounded-lg transition-all duration-200">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -368,9 +368,9 @@ function UserSettingsMenu({
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className="absolute right-0 top-full mt-2 w-80 bg-gray-900/95 border border-gray-700/50 rounded-2xl shadow-2xl z-50 overflow-hidden modal-enter backdrop-blur-xl">
+      <div className="absolute right-0 top-full mt-2 w-80 cc-glass-elevated rounded-2xl shadow-2xl z-50 overflow-hidden modal-enter cc-corner-tl cc-corner-br">
         {/* Header con perfil */}
-        <div className="p-4 bg-gradient-to-r from-amber-600/20 to-orange-600/20 border-b border-gray-700">
+        <div className="p-4 bg-gradient-to-r from-cyan-500/10 to-amber-500/10 border-b border-cyan-500/20">
           <div className="flex items-center gap-3">
             <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${selectedColor.bg} flex items-center justify-center shadow-lg`}>
               <span className="text-xl font-bold text-white">{getInitials()}</span>
@@ -464,15 +464,15 @@ function TopBar({
   const hasCritical = notifications.some(n => n.priority === 'critical');
 
   return (
-    <header className="h-14 bg-gray-900/90 border-b border-gray-800/50 flex items-center justify-between px-4 sticky top-0 z-40 backdrop-blur-xl glass-subtle">
+    <header className="h-14 cc-topbar flex items-center justify-between px-4 sticky top-0 z-40">
       {/* Search */}
       <div className="flex-1 max-w-md">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+        <div className="relative cc-search flex items-center">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400/60" />
           <input
             type="text"
             placeholder="Buscar guías, clientes, campañas... (Ctrl+K)"
-            className="w-full pl-10 pr-4 py-2 bg-gray-800/80 border border-gray-700/50 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 focus:bg-gray-800 transition-all duration-200 input-focus-glow"
+            className="w-full pl-10 pr-4 py-2.5 bg-transparent text-sm text-white placeholder-gray-500 focus:outline-none transition-all duration-200"
           />
         </div>
       </div>
@@ -535,16 +535,16 @@ function TopBar({
         <div className="relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className={`relative p-2 rounded-xl transition-colors ${
+            className={`relative p-2.5 cc-btn rounded-xl transition-all duration-300 ${
               hasCritical
-                ? 'text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                ? 'border-red-500/50 text-red-400'
+                : 'text-cyan-400'
             }`}
           >
-            <Bell className="w-5 h-5" />
+            <Bell className="w-5 h-5 cc-icon relative z-10" />
             {unreadCount > 0 && (
-              <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold text-white rounded-full ${
-                hasCritical ? 'bg-red-500 animate-pulse' : 'bg-amber-500'
+              <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold rounded-full ${
+                hasCritical ? 'cc-notif-badge text-white' : 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/30'
               }`}>
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
@@ -561,23 +561,23 @@ function TopBar({
         {/* Theme Toggle */}
         <button
           onClick={onDarkModeToggle}
-          className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-colors"
+          className="p-2.5 cc-btn rounded-xl transition-all duration-300 text-amber-400"
           title={darkMode ? 'Modo claro' : 'Modo oscuro'}
         >
-          {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          {darkMode ? <Sun className="w-5 h-5 cc-icon relative z-10" /> : <Moon className="w-5 h-5 cc-icon relative z-10" />}
         </button>
 
         {/* User Avatar & Settings */}
         <div className="relative">
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-gray-800 transition-colors"
+            className="flex items-center gap-2 p-1.5 cc-btn rounded-xl transition-all duration-300"
             title="Configuración"
           >
-            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${selectedColor.bg} flex items-center justify-center shadow-lg`}>
+            <div className={`cc-avatar w-8 h-8 rounded-lg bg-gradient-to-br ${selectedColor.bg} flex items-center justify-center shadow-lg relative z-10`}>
               <span className="text-xs font-bold text-white">{getInitials()}</span>
             </div>
-            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-cyan-400 transition-transform relative z-10 ${showUserMenu ? 'rotate-180' : ''}`} />
           </button>
           <UserSettingsMenu
             isOpen={showUserMenu}
