@@ -5,18 +5,19 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 const OAUTH_CONFIG = {
   google: {
     tokenUrl: 'https://oauth2.googleapis.com/token',
-    clientId: process.env.GOOGLE_CLIENT_ID || '',
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    // Soporta ambos formatos de variable de entorno
+    clientId: process.env.VITE_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '',
+    clientSecret: process.env.VITE_GOOGLE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || '',
   },
   microsoft: {
     tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-    clientId: process.env.MICROSOFT_CLIENT_ID || '',
-    clientSecret: process.env.MICROSOFT_CLIENT_SECRET || '',
+    clientId: process.env.VITE_MICROSOFT_CLIENT_ID || process.env.MICROSOFT_CLIENT_ID || '',
+    clientSecret: process.env.VITE_MICROSOFT_CLIENT_SECRET || process.env.MICROSOFT_CLIENT_SECRET || '',
   },
   apple: {
     tokenUrl: 'https://appleid.apple.com/auth/token',
-    clientId: process.env.APPLE_CLIENT_ID || '',
-    clientSecret: process.env.APPLE_CLIENT_SECRET || '',
+    clientId: process.env.VITE_APPLE_CLIENT_ID || process.env.APPLE_CLIENT_ID || '',
+    clientSecret: process.env.VITE_APPLE_CLIENT_SECRET || process.env.APPLE_CLIENT_SECRET || '',
   },
 };
 
