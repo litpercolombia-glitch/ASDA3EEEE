@@ -293,7 +293,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
       return;
     }
 
-    const redirectUri = encodeURIComponent(window.location.origin + '/auth/callback');
+    // IMPORTANTE: Usar SIEMPRE la URL de producción para OAuth
+    // Google Cloud Console solo tiene configurada esta URL
+    const productionUrl = 'https://asda3eeee.vercel.app';
+    const redirectUri = encodeURIComponent(productionUrl + '/auth/callback');
 
     const oauthUrls = {
       google: `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=email%20profile&state=google&access_type=offline&prompt=consent`,
