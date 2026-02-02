@@ -11,7 +11,8 @@ export type MainSection =
   | 'cerebro-ia'
   | 'negocio'
   | 'marketing'
-  | 'config';
+  | 'config'
+  | 'enterprise';
 
 export type MarketingTab =
   | 'dashboard'
@@ -29,6 +30,7 @@ export type InteligenciaTab = 'analisis' | 'reportes' | 'predicciones' | 'insigh
 export type CerebroIATab = 'asistente' | 'configuracion-ia' | 'historial-chat';
 export type NegocioTab = 'metricas' | 'clientes' | 'ventas' | 'rendimiento';
 export type ConfigTab = 'general' | 'api-keys' | 'integraciones' | 'usuarios' | 'admin';
+export type EnterpriseTab = 'command-center' | 'empresas' | 'analytics' | 'compliance' | 'security' | 'users' | 'automation';
 
 interface LayoutState {
   // Sidebar
@@ -46,6 +48,7 @@ interface LayoutState {
   activeCerebroIATab: CerebroIATab;
   activeNegocioTab: NegocioTab;
   activeConfigTab: ConfigTab;
+  activeEnterpriseTab: EnterpriseTab;
 
   // Secciones expandidas
   expandedSections: MainSection[];
@@ -70,6 +73,7 @@ interface LayoutState {
   setCerebroIATab: (tab: CerebroIATab) => void;
   setNegocioTab: (tab: NegocioTab) => void;
   setConfigTab: (tab: ConfigTab) => void;
+  setEnterpriseTab: (tab: EnterpriseTab) => void;
 
   // Expandir/colapsar secciones
   toggleSectionExpanded: (section: MainSection) => void;
@@ -94,6 +98,7 @@ export const useLayoutStore = create<LayoutState>()(
       activeCerebroIATab: 'asistente',
       activeNegocioTab: 'metricas',
       activeConfigTab: 'general',
+      activeEnterpriseTab: 'command-center',
 
       // Secciones expandidas
       expandedSections: [],
@@ -122,6 +127,7 @@ export const useLayoutStore = create<LayoutState>()(
       setCerebroIATab: (tab) => set({ activeCerebroIATab: tab }),
       setNegocioTab: (tab) => set({ activeNegocioTab: tab }),
       setConfigTab: (tab) => set({ activeConfigTab: tab }),
+      setEnterpriseTab: (tab) => set({ activeEnterpriseTab: tab }),
 
       // Toggle expandir sección
       toggleSectionExpanded: (section) => set((state) => {

@@ -43,6 +43,7 @@ import { AIBrainDashboard } from './components/brain/AIBrainDashboard';
 import { AuthWrapper, UserProfilePanel } from './components/auth';
 import { EnhancedGuideTable } from './components/tables';
 import { AdminPanelPro } from './components/Admin/AdminPanelPro';
+import { EnterpriseAdminDashboard } from './components/Admin/EnterpriseAdminDashboard';
 import CountrySelector from './components/CountrySelector';
 // Chat-First Design System
 import { ChatCommandCenter } from './components/ChatFirst';
@@ -374,6 +375,8 @@ const App: React.FC = () => {
     setNegocioTab,
     activeInicioTab,
     setInicioTab,
+    activeEnterpriseTab,
+    setEnterpriseTab,
   } = useLayoutStore();
 
   // Estado para mostrar/ocultar el chat IA (ProBubble)
@@ -690,6 +693,8 @@ const App: React.FC = () => {
         return <MarketingView />;
       case 'config':
         return <AdminPanelPro />;
+      case 'enterprise':
+        return <EnterpriseAdminDashboard />;
       default:
         return (
           <ChatCommandCenter

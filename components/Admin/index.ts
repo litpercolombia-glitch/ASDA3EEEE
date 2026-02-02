@@ -43,5 +43,8 @@ export { SecurityDashboard } from './SecurityCenter';
 // CRM Center
 export { CRMDashboard } from './CRMCenter';
 
+// Enterprise Admin Dashboard - TOP GLOBAL
+export { EnterpriseAdminDashboard } from './EnterpriseAdminDashboard';
+
 // Default export - El panel más reciente
 export { AdminPanelUltimate as default } from './AdminPanelUltimate';
