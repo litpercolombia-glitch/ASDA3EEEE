@@ -19,6 +19,13 @@ export interface User {
 export interface LoginCredentials {
   email: string;
   password: string;
+  // OAuth fields
+  provider?: 'google' | 'microsoft' | 'apple';
+  oauthData?: {
+    name: string;
+    picture?: string;
+    accessToken: string;
+  };
 }
 
 export interface RegisterData {
@@ -299,18 +306,94 @@ const saveActivityLog = (log: ActivityLog): void => {
 // =====================================
 
 /**
- * Iniciar sesión
+ * Iniciar sesión (soporta email/password y OAuth)
  */
 export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
-  const { email, password } = credentials;
+  const { email, password, provider, oauthData } = credentials;
 
-  // Validar campos
-  if (!email || !password) {
-    return { success: false, message: 'Email y contraseña son requeridos' };
+  // Validar campos básicos
+  if (!email) {
+    return { success: false, message: 'Email es requerido' };
   }
 
   const users = getUsers();
-  const userData = users.get(email.toLowerCase());
+  let userData = users.get(email.toLowerCase());
+
+  // ========== OAuth Login ==========
+  if (provider && oauthData) {
+    // Si el usuario existe, usarlo; si no, crear uno nuevo
+    if (!userData) {
+      // Crear nuevo usuario OAuth
+      const newUser: User = {
+        id: `oauth_${provider}_${generateId()}`,
+        email: email.toLowerCase(),
+        nombre: oauthData.name || email.split('@')[0],
+        rol: 'operador', // Rol por defecto para usuarios OAuth
+        avatar: oauthData.picture,
+        createdAt: new Date().toISOString(),
+        activo: true,
+      };
+
+      // Guardar usuario con password hash vacío (OAuth no usa password)
+      users.set(email.toLowerCase(), {
+        user: newUser,
+        passwordHash: hashPassword(`oauth_${provider}_${Date.now()}`),
+      });
+      saveUsers(users);
+
+      userData = users.get(email.toLowerCase());
+
+      // Registrar actividad de nuevo registro OAuth
+      logActivity(newUser.id, newUser.email, 'Registro OAuth', `Nuevo usuario registrado via ${provider}`, 'auth');
+    } else {
+      // Actualizar avatar si viene de OAuth
+      if (oauthData.picture && !userData.user.avatar) {
+        userData.user.avatar = oauthData.picture;
+        users.set(email.toLowerCase(), userData);
+        saveUsers(users);
+      }
+    }
+
+    // Verificar que el usuario está activo
+    if (!userData?.user.activo) {
+      return { success: false, message: 'Usuario desactivado. Contacte al administrador.' };
+    }
+
+    // Actualizar último login
+    userData.user.lastLogin = new Date().toISOString();
+    users.set(email.toLowerCase(), userData);
+    saveUsers(users);
+
+    // Generar token
+    const token = generateToken();
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData.user));
+
+    // Registrar sesión OAuth
+    saveSessionLog({
+      id: generateId(),
+      odigo: userData.user.id,
+      action: 'login',
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      device: getDeviceInfo(),
+    });
+
+    // Registrar actividad
+    logActivity(userData.user.id, userData.user.email, 'Inicio de sesión OAuth', `Usuario inició sesión via ${provider}`, 'auth');
+
+    return {
+      success: true,
+      user: userData.user,
+      token,
+      message: `Inicio de sesión con ${provider} exitoso`,
+    };
+  }
+
+  // ========== Login tradicional (email/password) ==========
+  if (!password) {
+    return { success: false, message: 'Contraseña es requerida' };
+  }
 
   if (!userData) {
     return { success: false, message: 'Usuario no encontrado' };
