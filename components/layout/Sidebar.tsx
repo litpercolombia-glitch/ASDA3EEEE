@@ -35,6 +35,10 @@ import {
   MapPin,
   History,
   Route,
+  Building2,
+  ShieldCheck,
+  BarChart2,
+  Workflow,
   LineChart,
   FileText,
   Lightbulb,
@@ -65,6 +69,7 @@ import {
   CerebroIATab,
   NegocioTab,
   ConfigTab,
+  EnterpriseTab,
 } from '../../stores/layoutStore';
 
 // ============================================
@@ -143,6 +148,15 @@ const SUB_MENUS: Record<MainSection, SubMenuItem[]> = {
     { id: 'utm', icon: Link2, label: 'UTMs' },
     { id: 'integraciones', icon: Webhook, label: 'Integraciones' },
     { id: 'reglas', icon: Zap, label: 'Reglas' },
+  ],
+  'enterprise': [
+    { id: 'command-center', icon: LayoutDashboard, label: 'Command Center' },
+    { id: 'empresas', icon: Building2, label: 'Multi-Empresa' },
+    { id: 'analytics', icon: BarChart2, label: 'Analytics Global' },
+    { id: 'compliance', icon: ShieldCheck, label: 'Compliance' },
+    { id: 'security', icon: Shield, label: 'Security SOC' },
+    { id: 'users', icon: Users, label: 'Usuarios' },
+    { id: 'automation', icon: Workflow, label: 'Automatizacion' },
   ],
 };
 
@@ -495,6 +509,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
     activeCerebroIATab,
     activeNegocioTab,
     activeConfigTab,
+    activeEnterpriseTab,
     expandedSections,
     toggleSidebar,
     setHovered,
@@ -506,6 +521,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
     setCerebroIATab,
     setNegocioTab,
     setConfigTab,
+    setEnterpriseTab,
     toggleSectionExpanded,
   } = useLayoutStore();
 
@@ -522,6 +538,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
     { id: 'cerebro-ia', icon: Brain, label: 'Cerebro IA', isNew: true, subItems: SUB_MENUS['cerebro-ia'] },
     { id: 'negocio', icon: Briefcase, label: 'Centro Negocio', subItems: SUB_MENUS['negocio'] },
     { id: 'config', icon: Shield, label: 'Modo Admin', subItems: SUB_MENUS['config'] },
+    { id: 'enterprise', icon: Crown, label: 'Enterprise Global', isNew: true, subItems: SUB_MENUS['enterprise'] },
   ];
 
   // Obtener el sub-item activo según la sección
@@ -534,6 +551,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
       case 'negocio': return activeNegocioTab;
       case 'config': return activeConfigTab;
       case 'marketing': return activeMarketingTab;
+      case 'enterprise': return activeEnterpriseTab;
       default: return undefined;
     }
   };
@@ -548,6 +566,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
       case 'negocio': setNegocioTab(subItemId as NegocioTab); break;
       case 'config': setConfigTab(subItemId as ConfigTab); break;
       case 'marketing': setMarketingTab(subItemId as MarketingTab); break;
+      case 'enterprise': setEnterpriseTab(subItemId as EnterpriseTab); break;
     }
   };
 
