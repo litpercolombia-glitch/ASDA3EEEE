@@ -80,6 +80,8 @@ import { MarketingModule } from '../marketing';
 import { SupportDashboard } from './SupportCenter';
 import { NotificationsDashboard } from './NotificationsCenter';
 import { SecurityDashboard } from './SecurityCenter';
+import { FinanceHub } from './FinanceModules';
+import { Wallet } from 'lucide-react';
 
 // ============================================
 // TIPOS E INTERFACES
@@ -166,7 +168,7 @@ export const AdminPanelPro: React.FC = () => {
 
   // Estados de UI
   const [filtroFecha, setFiltroFecha] = useState<FiltroFecha>('todo');
-  const [activeTab, setActiveTab] = useState<'procesamiento' | 'documentos' | 'financial' | 'centro-financiero' | 'conocimiento' | 'integraciones' | 'predicciones' | 'info-logistica' | 'api-publica' | 'mcp-conexiones' | 'aprendizaje' | 'reportes' | 'crm' | 'pedidos' | 'marketing' | 'soporte' | 'notificaciones' | 'seguridad'>('procesamiento');
+  const [activeTab, setActiveTab] = useState<'procesamiento' | 'documentos' | 'financial' | 'centro-financiero' | 'finanzas-pro' | 'conocimiento' | 'integraciones' | 'predicciones' | 'info-logistica' | 'api-publica' | 'mcp-conexiones' | 'aprendizaje' | 'reportes' | 'crm' | 'pedidos' | 'marketing' | 'soporte' | 'notificaciones' | 'seguridad'>('procesamiento');
 
   // Estados de documentos
   const [documentos, setDocumentos] = useState<DocumentoCargado[]>([]);
@@ -611,7 +613,8 @@ export const AdminPanelPro: React.FC = () => {
             { id: 'procesamiento', label: 'Procesamiento IA', icon: Brain, color: 'purple' },
             { id: 'documentos', label: 'Documentos', icon: FileText, color: 'blue', badge: documentos.length },
             { id: 'centro-financiero', label: 'Centro Financiero', icon: PieChart, color: 'success' },
-            { id: 'financial', label: 'Análisis Financiero', icon: DollarSign, color: 'emerald' },
+            { id: 'finanzas-pro', label: 'Finanzas PRO', icon: Wallet, color: 'emerald' },
+            { id: 'financial', label: 'Análisis Financiero', icon: DollarSign, color: 'teal' },
             { id: 'conocimiento', label: 'Base de Conocimiento', icon: BookOpen, color: 'amber', badge: knowledgeEntries.length },
             { id: 'predicciones', label: 'Predicciones ML', icon: Activity, color: 'pink' },
             { id: 'integraciones', label: 'Integraciones', icon: Plug, color: 'orange' },
@@ -919,6 +922,15 @@ export const AdminPanelPro: React.FC = () => {
           {/* ============================================ */}
           {activeTab === 'centro-financiero' && (
             <FinanceDashboard />
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: FINANZAS PRO */}
+          {/* ============================================ */}
+          {activeTab === 'finanzas-pro' && (
+            <div className="h-[calc(100vh-200px)]">
+              <FinanceHub />
+            </div>
           )}
 
           {/* ============================================ */}
