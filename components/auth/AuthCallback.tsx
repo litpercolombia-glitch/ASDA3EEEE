@@ -219,9 +219,9 @@ export const AuthCallback: React.FC = () => {
 
 // Función para intercambiar código por token
 async function exchangeCodeForToken(code: string, provider: OAuthProvider): Promise<OAuthTokenResponse> {
-  // IMPORTANTE: En producción, esto debe hacerse desde el backend por seguridad
-  // El client_secret NUNCA debe estar en el frontend
-  // Esta es una implementación simplificada para demostración
+  // IMPORTANTE: Usar siempre la URL de producción para OAuth
+  // Google Cloud Console solo tiene configurada esta URL
+  const productionUrl = 'https://asda3eeee.vercel.app';
 
   const response = await fetch('/api/auth/oauth/token', {
     method: 'POST',
@@ -229,7 +229,7 @@ async function exchangeCodeForToken(code: string, provider: OAuthProvider): Prom
     body: JSON.stringify({
       code,
       provider,
-      redirect_uri: `${window.location.origin}/auth/callback`,
+      redirect_uri: `${productionUrl}/auth/callback`,
     }),
   });
 
