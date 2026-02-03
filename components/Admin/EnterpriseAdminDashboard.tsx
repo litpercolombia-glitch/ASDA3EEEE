@@ -226,6 +226,19 @@ import {
   Cake,
 } from 'lucide-react';
 
+// Import Enterprise Modules
+import {
+  EnterpriseFinanceModule,
+  EnterpriseIntegrationsModule,
+  EnterpriseAlertsModule,
+  ActivityLogGlobal,
+  WebhooksCenter,
+  DashboardBuilder,
+  SLAMonitor,
+  BillingCenter,
+  CommandPalette,
+} from './EnterpriseModules';
+
 // ============================================
 // TIPOS E INTERFACES ENTERPRISE
 // ============================================
@@ -1742,7 +1755,14 @@ type EnterpriseTab =
   | 'users'
   | 'automation'
   | 'api'
-  | 'billing';
+  | 'billing'
+  | 'finanzas'
+  | 'activity'
+  | 'webhooks'
+  | 'dashboards'
+  | 'sla'
+  | 'integraciones'
+  | 'alertas';
 
 export const EnterpriseAdminDashboard: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -1755,6 +1775,7 @@ export const EnterpriseAdminDashboard: React.FC = () => {
   const [empresas] = useState(generarEmpresas);
   const [alertas] = useState(generarAlertas);
   const [complianceRules] = useState(generarComplianceRules);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
 
   // Autenticacion
   const handleLogin = () => {
@@ -1778,6 +1799,19 @@ export const EnterpriseAdminDashboard: React.FC = () => {
     if (token) {
       setIsAuthenticated(true);
     }
+  }, []);
+
+  // Command Palette - Ctrl+K keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCommandPalette(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Pantalla de login
@@ -1856,11 +1890,19 @@ export const EnterpriseAdminDashboard: React.FC = () => {
   const tabs: { id: EnterpriseTab; label: string; icon: React.ElementType; color: string }[] = [
     { id: 'command-center', label: 'Command Center', icon: LayoutDashboard, color: 'from-amber-500 to-amber-600' },
     { id: 'empresas', label: 'Multi-Empresa', icon: Building2, color: 'from-indigo-500 to-indigo-600' },
-    { id: 'analytics', label: 'Analytics Global', icon: BarChart3, color: 'from-purple-500 to-purple-600' },
-    { id: 'compliance', label: 'Compliance', icon: ShieldCheck, color: 'from-emerald-500 to-emerald-600' },
-    { id: 'security', label: 'Security SOC', icon: Shield, color: 'from-red-500 to-red-600' },
+    { id: 'finanzas', label: 'Finanzas PRO', icon: Wallet, color: 'from-emerald-500 to-emerald-600' },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3, color: 'from-purple-500 to-purple-600' },
+    { id: 'dashboards', label: 'Dashboards', icon: LayoutGrid, color: 'from-pink-500 to-pink-600' },
+    { id: 'sla', label: 'SLA Monitor', icon: Gauge, color: 'from-orange-500 to-orange-600' },
+    { id: 'billing', label: 'Billing', icon: CreditCard, color: 'from-teal-500 to-teal-600' },
+    { id: 'integraciones', label: 'Integraciones', icon: Plug, color: 'from-violet-500 to-violet-600' },
+    { id: 'webhooks', label: 'Webhooks', icon: Webhook, color: 'from-sky-500 to-sky-600' },
+    { id: 'activity', label: 'Activity Log', icon: Activity, color: 'from-rose-500 to-rose-600' },
+    { id: 'alertas', label: 'Alertas', icon: Bell, color: 'from-yellow-500 to-yellow-600' },
+    { id: 'compliance', label: 'Compliance', icon: ShieldCheck, color: 'from-lime-500 to-lime-600' },
+    { id: 'security', label: 'Security', icon: Shield, color: 'from-red-500 to-red-600' },
     { id: 'users', label: 'Usuarios', icon: Users, color: 'from-blue-500 to-blue-600' },
-    { id: 'automation', label: 'Automatizacion', icon: Workflow, color: 'from-cyan-500 to-cyan-600' },
+    { id: 'automation', label: 'Automation', icon: Workflow, color: 'from-cyan-500 to-cyan-600' },
   ];
 
   return (
@@ -1885,6 +1927,16 @@ export const EnterpriseAdminDashboard: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-4">
+              {/* Search Button - Opens Command Palette */}
+              <button
+                onClick={() => setShowCommandPalette(true)}
+                className="flex items-center gap-3 px-4 py-2 bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition-colors border border-slate-700/50"
+              >
+                <Search className="w-4 h-4" />
+                <span className="text-sm">Buscar...</span>
+                <kbd className="px-1.5 py-0.5 bg-slate-700 text-slate-400 text-xs rounded">⌘K</kbd>
+              </button>
+
               <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm">
                 <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
                 Sistema Online
@@ -1927,7 +1979,15 @@ export const EnterpriseAdminDashboard: React.FC = () => {
       <div className="max-w-7xl mx-auto px-6 py-8">
         {activeTab === 'command-center' && <CommandCenterModule stats={stats} alertas={alertas} />}
         {activeTab === 'empresas' && <MultiEnterpriseModule empresas={empresas} />}
+        {activeTab === 'finanzas' && <EnterpriseFinanceModule />}
         {activeTab === 'analytics' && <GlobalAnalyticsModule />}
+        {activeTab === 'dashboards' && <DashboardBuilder />}
+        {activeTab === 'sla' && <SLAMonitor />}
+        {activeTab === 'billing' && <BillingCenter />}
+        {activeTab === 'integraciones' && <EnterpriseIntegrationsModule />}
+        {activeTab === 'webhooks' && <WebhooksCenter />}
+        {activeTab === 'activity' && <ActivityLogGlobal />}
+        {activeTab === 'alertas' && <EnterpriseAlertsModule />}
         {activeTab === 'compliance' && <ComplianceModule rules={complianceRules} />}
         {activeTab === 'security' && <SecurityModule />}
         {activeTab === 'users' && <UserManagementModule />}
@@ -1943,6 +2003,16 @@ export const EnterpriseAdminDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Command Palette - Ctrl+K */}
+      <CommandPalette
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        onNavigate={(section) => {
+          setActiveTab(section as EnterpriseTab);
+          setShowCommandPalette(false);
+        }}
+      />
     </div>
   );
 };

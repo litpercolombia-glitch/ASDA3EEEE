@@ -531,13 +531,13 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
   const isExpanded = !sidebarCollapsed || sidebarHovered;
 
   // Menu principal con colores de acento
+  // NOTA: Modo Admin (config) ha sido migrado a Enterprise Global
   const mainMenuItems: MenuItem[] = [
     { id: 'inicio', icon: Home, label: 'Centro de Control', subItems: SUB_MENUS['inicio'] },
     { id: 'operaciones', icon: Package, label: 'Operaciones', subItems: SUB_MENUS['operaciones'] },
     { id: 'inteligencia', icon: Sparkles, label: 'Inteligencia', subItems: SUB_MENUS['inteligencia'] },
     { id: 'cerebro-ia', icon: Brain, label: 'Cerebro IA', isNew: true, subItems: SUB_MENUS['cerebro-ia'] },
     { id: 'negocio', icon: Briefcase, label: 'Centro Negocio', subItems: SUB_MENUS['negocio'] },
-    { id: 'config', icon: Shield, label: 'Modo Admin', subItems: SUB_MENUS['config'] },
     { id: 'enterprise', icon: Crown, label: 'Enterprise Global', isNew: true, subItems: SUB_MENUS['enterprise'] },
   ];
 
