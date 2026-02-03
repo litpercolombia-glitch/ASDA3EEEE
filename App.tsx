@@ -998,9 +998,51 @@ const App: React.FC = () => {
 };
 
 // Exportar App envuelto en AuthWrapper para requerir autenticación
+// Con sistema de Onboarding integrado
+import {
+  SplashScreen,
+  WelcomeModal,
+  OnboardingChecklist,
+} from './components/Onboarding';
+import { useOnboardingStore } from './stores/onboardingStore';
+
+const AppWithOnboarding: React.FC = () => {
+  const {
+    showSplash,
+    setShowSplash,
+    showWelcome,
+    setShowWelcome,
+    showOnboarding,
+  } = useOnboardingStore();
+
+  return (
+    <>
+      {/* Splash Screen - Shows after login */}
+      {showSplash && (
+        <SplashScreen
+          onComplete={() => setShowSplash(false)}
+          duration={3000}
+        />
+      )}
+
+      {/* Welcome Modal - Shows after splash */}
+      <WelcomeModal
+        isOpen={showWelcome}
+        onClose={() => setShowWelcome(false)}
+      />
+
+      {/* Main App */}
+      <App />
+
+      {/* Onboarding Checklist - Floating widget */}
+      {showOnboarding && <OnboardingChecklist />}
+    </>
+  );
+};
+
 const AppWithAuth: React.FC = () => (
   <AuthWrapper>
-    <App />
+    <AppWithOnboarding />
   </AuthWrapper>
 );
 
