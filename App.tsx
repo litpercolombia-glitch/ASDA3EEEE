@@ -55,8 +55,7 @@ import { useLayoutStore } from './stores/layoutStore';
 import { MarketingView } from './components/marketing';
 // Auth service for logout
 import { logout as authLogout, getCurrentUser } from './services/authService';
-// User Profile & Onboarding
-import { UserOnboarding } from './components/onboarding';
+// User Profile
 import { useUserProfileStore } from './services/userProfileService';
 import { UserProfileSettings } from './components/settings';
 // Enhanced Excel Upload with column config
@@ -629,19 +628,6 @@ const App: React.FC = () => {
   // Mostrar selector de país si no hay país seleccionado
   if (showCountrySelector || !selectedCountry) {
     return <CountrySelector onCountrySelected={handleCountrySelected} />;
-  }
-
-  // Mostrar onboarding si el usuario no ha completado el registro
-  if (!isOnboardingComplete) {
-    return (
-      <UserOnboarding
-        country={selectedCountry}
-        onComplete={() => {
-          // El onboarding se marca como completado automáticamente
-          // cuando el usuario termina el flujo
-        }}
-      />
-    );
   }
 
   // Función para renderizar contenido según la sección activa del sidebar
