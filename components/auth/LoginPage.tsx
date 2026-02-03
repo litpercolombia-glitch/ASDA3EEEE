@@ -171,16 +171,37 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
   const handleOAuthLogin = async (provider: 'google' | 'microsoft' | 'apple') => {
     clearError();
 
-    // URLs de OAuth para cada proveedor
-    const oauthUrls = {
-      google: `https://accounts.google.com/o/oauth2/v2/auth?client_id=${import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID'}&redirect_uri=${encodeURIComponent(window.location.origin + '/auth/callback')}&response_type=code&scope=email%20profile&state=google`,
-      microsoft: `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${import.meta.env.VITE_MICROSOFT_CLIENT_ID || 'YOUR_MICROSOFT_CLIENT_ID'}&redirect_uri=${encodeURIComponent(window.location.origin + '/auth/callback')}&response_type=code&scope=openid%20email%20profile&state=microsoft`,
-      apple: `https://appleid.apple.com/auth/authorize?client_id=${import.meta.env.VITE_APPLE_CLIENT_ID || 'YOUR_APPLE_CLIENT_ID'}&redirect_uri=${encodeURIComponent(window.location.origin + '/auth/callback')}&response_type=code&scope=email%20name&state=apple&response_mode=form_post`,
+    // IMPORTANTE: Usar SIEMPRE la URL de producción para OAuth
+    // Google Cloud Console solo tiene configurada esta URL
+    const productionUrl = 'https://asda3eeee.vercel.app';
+    const redirectUri = encodeURIComponent(productionUrl + '/auth/callback');
+
+    const clientIds = {
+      google: import.meta.env.VITE_GOOGLE_CLIENT_ID || '487273250854-k66mjbe1s178kkfnibd7cl247s5kkqjj.apps.googleusercontent.com',
+      microsoft: import.meta.env.VITE_MICROSOFT_CLIENT_ID || '',
+      apple: import.meta.env.VITE_APPLE_CLIENT_ID || '',
     };
 
-    // Para desarrollo, simular OAuth
-    if (import.meta.env.DEV || !import.meta.env.VITE_GOOGLE_CLIENT_ID) {
-      // Simulación en desarrollo
+    const clientId = clientIds[provider];
+    if (!clientId) {
+      return;
+    }
+
+    // URLs de OAuth para cada proveedor
+    const oauthUrls = {
+      google: `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=email%20profile&state=google&access_type=offline&prompt=consent`,
+      microsoft: `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=openid%20email%20profile&state=microsoft`,
+      apple: `https://appleid.apple.com/auth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=email%20name&state=apple&response_mode=form_post`,
+    };
+
+    // Redirigir directamente a OAuth (sin simulación)
+    if (clientId && clientId !== '') {
+      window.location.href = oauthUrls[provider];
+      return;
+    }
+
+    // Fallback: Para desarrollo sin credenciales, simular OAuth
+    if (import.meta.env.DEV) {
       const providerNames = { google: 'Google', microsoft: 'Microsoft', apple: 'Apple' };
       const confirmed = window.confirm(`¿Iniciar sesión con ${providerNames[provider]}?\n\n(En producción, esto te redirigirá a ${providerNames[provider]} para autenticarte)`);
 

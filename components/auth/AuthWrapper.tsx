@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { LoginPage } from './LoginPage';
 import { RegisterPage } from './RegisterPage';
+import { AuthCallback } from './AuthCallback';
 import { Loader2 } from 'lucide-react';
 
 interface AuthWrapperProps {
@@ -14,6 +15,14 @@ export const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
   const { isAuthenticated, checkAuth, isLoading } = useAuthStore();
   const [authView, setAuthView] = useState<'login' | 'register'>('login');
   const [isChecking, setIsChecking] = useState(true);
+
+  // Detectar si estamos en la ruta de callback OAuth
+  const isOAuthCallback = window.location.pathname === '/auth/callback';
+
+  // Si estamos en callback OAuth, mostrar el componente de callback
+  if (isOAuthCallback) {
+    return <AuthCallback />;
+  }
 
   // Verificar autenticación al cargar
   useEffect(() => {
