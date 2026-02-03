@@ -43,5 +43,19 @@ export { SecurityDashboard } from './SecurityCenter';
 // CRM Center
 export { CRMDashboard } from './CRMCenter';
 
+// Enterprise Admin Dashboard - TOP GLOBAL
+export { EnterpriseAdminDashboard } from './EnterpriseAdminDashboard';
+
+// Finance Modules PRO
+export {
+  FinanceHub,
+  InvoiceManager,
+  ExpenseManager,
+  PayrollManager,
+  TaxCalculator,
+  PLReports,
+  UniversalImporter,
+} from './FinanceModules';
+
 // Default export - El panel más reciente
 export { AdminPanelUltimate as default } from './AdminPanelUltimate';
