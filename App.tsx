@@ -998,28 +998,35 @@ const App: React.FC = () => {
 };
 
 // Exportar App envuelto en AuthWrapper para requerir autenticación
-// Con sistema de Onboarding integrado
+// Con sistema de Onboarding Enterprise integrado
 import {
   SplashScreen,
   WelcomeModal,
   OnboardingChecklist,
+  EnterpriseOnboarding,
 } from './components/Onboarding';
 import { useOnboardingStore } from './stores/onboardingStore';
+import { useCompanyStore } from './stores/companyStore';
 
 const AppWithOnboarding: React.FC = () => {
+  // Old onboarding store (for splash/welcome)
   const {
     showSplash,
     setShowSplash,
     showWelcome,
     setShowWelcome,
-    showOnboarding,
-    setShowOnboarding,
     hideWelcomeForever,
-    onboardingDismissed,
-    getOnboardingPercentage,
   } = useOnboardingStore();
 
-  // Initialize onboarding on first load for existing authenticated users
+  // New company store (for enterprise onboarding)
+  const {
+    showEnterpriseOnboarding,
+    setShowEnterpriseOnboarding,
+    isOnboardingComplete,
+    getCompletionPercentage,
+  } = useCompanyStore();
+
+  // Initialize onboarding on first load
   const [initialized, setInitialized] = React.useState(false);
 
   React.useEffect(() => {
@@ -1040,15 +1047,16 @@ const AppWithOnboarding: React.FC = () => {
         }, 2500);
       }
 
-      // Show onboarding checklist if not complete
-      const percentage = getOnboardingPercentage();
-      if (percentage < 100 && !onboardingDismissed) {
+      // Show enterprise onboarding if not complete (after welcome)
+      const percentage = getCompletionPercentage();
+      if (percentage < 100 && !isOnboardingComplete) {
         setTimeout(() => {
-          setShowOnboarding(true);
+          // Show the checklist widget automatically
+          // User can click it to open the full onboarding
         }, 3500);
       }
     }
-  }, [initialized, hideWelcomeForever, onboardingDismissed, getOnboardingPercentage, setShowSplash, setShowWelcome, setShowOnboarding]);
+  }, [initialized, hideWelcomeForever, isOnboardingComplete, getCompletionPercentage, setShowSplash, setShowWelcome]);
 
   return (
     <>
@@ -1066,11 +1074,18 @@ const AppWithOnboarding: React.FC = () => {
         onClose={() => setShowWelcome(false)}
       />
 
+      {/* Enterprise Onboarding - Full-screen wizard */}
+      {showEnterpriseOnboarding && (
+        <EnterpriseOnboarding
+          onComplete={() => setShowEnterpriseOnboarding(false)}
+        />
+      )}
+
       {/* Main App */}
       <App />
 
-      {/* Onboarding Checklist - Floating widget */}
-      {showOnboarding && <OnboardingChecklist />}
+      {/* Onboarding Checklist - Floating widget (uses companyStore) */}
+      {!isOnboardingComplete && <OnboardingChecklist />}
     </>
   );
 };
