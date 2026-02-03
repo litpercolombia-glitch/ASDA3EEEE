@@ -1013,15 +1013,50 @@ const AppWithOnboarding: React.FC = () => {
     showWelcome,
     setShowWelcome,
     showOnboarding,
+    setShowOnboarding,
+    hideWelcomeForever,
+    onboardingDismissed,
+    getOnboardingPercentage,
   } = useOnboardingStore();
+
+  // Initialize onboarding on first load for existing authenticated users
+  const [initialized, setInitialized] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!initialized) {
+      setInitialized(true);
+
+      // Check if we should show welcome (for returning users)
+      const hasSeenWelcomeThisSession = sessionStorage.getItem('litper-welcome-shown');
+
+      if (!hasSeenWelcomeThisSession && !hideWelcomeForever) {
+        // Show splash first for a nice entry
+        setShowSplash(true);
+
+        setTimeout(() => {
+          setShowSplash(false);
+          setShowWelcome(true);
+          sessionStorage.setItem('litper-welcome-shown', 'true');
+        }, 2500);
+      }
+
+      // Show onboarding checklist if not complete
+      const percentage = getOnboardingPercentage();
+      if (percentage < 100 && !onboardingDismissed) {
+        setTimeout(() => {
+          setShowOnboarding(true);
+        }, 3500);
+      }
+    }
+  }, [initialized, hideWelcomeForever, onboardingDismissed, getOnboardingPercentage, setShowSplash, setShowWelcome, setShowOnboarding]);
 
   return (
     <>
-      {/* Splash Screen - Shows after login */}
+      {/* Splash Screen - Shows on entry */}
       {showSplash && (
         <SplashScreen
           onComplete={() => setShowSplash(false)}
-          duration={3000}
+          duration={2500}
         />
       )}
 
