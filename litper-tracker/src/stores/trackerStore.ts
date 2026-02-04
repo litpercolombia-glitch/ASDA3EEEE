@@ -40,9 +40,11 @@ export interface RondaGuias extends RondaBase {
 
 export interface RondaNovedades extends RondaBase {
   tipo: 'novedades';
+  totalNovedades: number;
   revisadas: number;
   solucionadas: number;
-  devolucion: number;
+  errorPorSolucion: number;
+  proveedor: number;
   cliente: number;
   transportadora: number;
   litper: number;
@@ -85,9 +87,11 @@ export interface TrackerState {
 
   // Valores NOVEDADES
   valoresNovedades: {
+    totalNovedades: number;
     revisadas: number;
     solucionadas: number;
-    devolucion: number;
+    errorPorSolucion: number;
+    proveedor: number;
     cliente: number;
     transportadora: number;
     litper: number;
@@ -105,6 +109,21 @@ export interface TrackerState {
   // Configuración
   apiUrl: string;
   mostrarConfig: boolean;
+
+  // Sidebar
+  sidebarCollapsed: boolean;
+
+  // Stopwatch (cronómetro ascendente para novedades)
+  tiempoTranscurrido: number;
+  estadoStopwatch: 'idle' | 'running' | 'paused';
+
+  // Toast
+  toastMessage: string;
+  toastVisible: boolean;
+
+  // Modal confirmación
+  modalVisible: boolean;
+  modalCallback: (() => void) | null;
 
   // === NAVEGACIÓN ===
   seleccionarUsuario: (usuario: Usuario) => void;
@@ -148,6 +167,30 @@ export interface TrackerState {
 
   // === EXPORTAR ===
   exportarExcel: () => Promise<void>;
+
+  // === SIDEBAR ===
+  toggleSidebar: () => void;
+
+  // === STOPWATCH (Cronómetro ascendente) ===
+  iniciarStopwatch: () => void;
+  pausarStopwatch: () => void;
+  resetStopwatch: () => void;
+  tickStopwatch: () => void;
+
+  // === TIMER AJUSTE ===
+  ajustarTiempo: (minutos: number) => void;
+
+  // === REINICIO DIARIO ===
+  reiniciarDia: () => Promise<void>;
+
+  // === TOAST ===
+  showToast: (message: string) => void;
+  hideToast: () => void;
+
+  // === MODAL ===
+  showModal: (callback: () => void) => void;
+  hideModal: () => void;
+  confirmModal: () => void;
 }
 
 // ============================================
@@ -169,9 +212,11 @@ const valoresGuiasIniciales = {
 };
 
 const valoresNovedadesIniciales = {
+  totalNovedades: 0,
   revisadas: 0,
   solucionadas: 0,
-  devolucion: 0,
+  errorPorSolucion: 0,
+  proveedor: 0,
   cliente: 0,
   transportadora: 0,
   litper: 0,
@@ -262,17 +307,15 @@ const playAlarmSound = () => {
 // STORE
 // ============================================
 
-// 9 USUARIOS LITPER - DEFINIDOS GLOBALMENTE PARA CARGA INMEDIATA
+// 7 USUARIOS LITPER - DEFINIDOS GLOBALMENTE PARA CARGA INMEDIATA
 const USUARIOS_LITPER: Usuario[] = [
   { id: 'cat1', nombre: 'CATALINA', avatar: '👑', color: '#8B5CF6', metaDiaria: 60, activo: true },
   { id: 'ang1', nombre: 'ANGIE', avatar: '🌟', color: '#EC4899', metaDiaria: 60, activo: true },
-  { id: 'car1', nombre: 'CAROLINA', avatar: '💜', color: '#6366F1', metaDiaria: 60, activo: true },
-  { id: 'ale1', nombre: 'ALEJANDRA', avatar: '🔥', color: '#F59E0B', metaDiaria: 60, activo: true },
   { id: 'eva1', nombre: 'EVAN', avatar: '🚀', color: '#10B981', metaDiaria: 60, activo: true },
   { id: 'jim1', nombre: 'JIMMY', avatar: '⚡', color: '#3B82F6', metaDiaria: 60, activo: true },
   { id: 'fel1', nombre: 'FELIPE', avatar: '🎯', color: '#14B8A6', metaDiaria: 60, activo: true },
-  { id: 'nor1', nombre: 'NORMA', avatar: '💎', color: '#A855F7', metaDiaria: 60, activo: true },
   { id: 'kar1', nombre: 'KAREN', avatar: '✨', color: '#F43F5E', metaDiaria: 60, activo: true },
+  { id: 'jul1', nombre: 'JULIAN', avatar: '🎮', color: '#06B6D4', metaDiaria: 60, activo: true },
 ];
 
 export const useTrackerStore = create<TrackerState>((set, get) => ({
@@ -282,8 +325,8 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
   usuarioActual: null,
   procesoActual: null,
 
-  tiempoTotal: 25 * 60,
-  tiempoRestante: 25 * 60,
+  tiempoTotal: 30 * 60,
+  tiempoRestante: 30 * 60,
   estadoTimer: 'idle',
 
   rondaNumero: 1,
@@ -302,6 +345,21 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
   // Configuración
   apiUrl: DEFAULT_API_URL,
   mostrarConfig: false,
+
+  // Sidebar
+  sidebarCollapsed: false,
+
+  // Stopwatch
+  tiempoTranscurrido: 0,
+  estadoStopwatch: 'idle',
+
+  // Toast
+  toastMessage: '',
+  toastVisible: false,
+
+  // Modal
+  modalVisible: false,
+  modalCallback: null,
 
   // === NAVEGACIÓN ===
   seleccionarUsuario: (usuario) => {
@@ -514,9 +572,11 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
             hora_fin: nuevaRonda.horaFin,
             tiempo_usado: nuevaRonda.tiempoUsado,
             tipo: 'novedades',
+            total_novedades: state.valoresNovedades.totalNovedades,
             revisadas: state.valoresNovedades.revisadas,
             solucionadas: state.valoresNovedades.solucionadas,
-            devolucion: state.valoresNovedades.devolucion,
+            error_por_solucion: state.valoresNovedades.errorPorSolucion,
+            proveedor: state.valoresNovedades.proveedor,
             cliente: state.valoresNovedades.cliente,
             transportadora: state.valoresNovedades.transportadora,
             litper: state.valoresNovedades.litper,
@@ -692,9 +752,11 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
             return {
               ...base,
               tipo: 'novedades' as const,
+              totalNovedades: r.total_novedades || 0,
               revisadas: r.revisadas || 0,
               solucionadas: r.solucionadas || 0,
-              devolucion: r.devolucion || 0,
+              errorPorSolucion: r.error_por_solucion || r.devolucion || 0,
+              proveedor: r.proveedor || 0,
               cliente: r.cliente || 0,
               transportadora: r.transportadora || 0,
               litper: r.litper || 0,
@@ -803,7 +865,7 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
 
     const headersNovedades = [
       'Fecha', 'Usuario', 'Ronda', 'Hora Inicio', 'Hora Fin', 'Tiempo (min)',
-      'Revisadas', 'Solucionadas', 'Devolucion', 'Cliente', 'Transportadora', 'LITPER'
+      'Total Novedades', 'Revisadas', 'Solucionadas', 'Error por Solucion', 'Proveedor', 'Cliente', 'Transportadora', 'LITPER'
     ];
 
     // Filtrar rondas por tipo
@@ -840,9 +902,11 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
         r.horaInicio,
         r.horaFin,
         r.tiempoUsado,
+        r.totalNovedades || 0,
         r.revisadas,
         r.solucionadas,
-        r.devolucion,
+        r.errorPorSolucion || 0,
+        r.proveedor || 0,
         r.cliente,
         r.transportadora,
         r.litper,
@@ -885,5 +949,124 @@ Total Rondas: ${state.rondasHoy.length}
       a.remove();
       playSuccessSound();
     }
+  },
+
+  // === SIDEBAR ===
+  toggleSidebar: () => {
+    set((state) => {
+      const newValue = !state.sidebarCollapsed;
+      // Guardar preferencia
+      if (window.electronAPI) {
+        window.electronAPI.setStore('sidebarCollapsed', newValue);
+      }
+      return { sidebarCollapsed: newValue };
+    });
+  },
+
+  // === STOPWATCH (Cronómetro ascendente para novedades) ===
+  iniciarStopwatch: () => {
+    const state = get();
+    set({
+      estadoStopwatch: 'running',
+      horaInicio: state.horaInicio || horaActual(),
+    });
+  },
+
+  pausarStopwatch: () => set({ estadoStopwatch: 'paused' }),
+
+  resetStopwatch: () => {
+    set({
+      estadoStopwatch: 'idle',
+      tiempoTranscurrido: 0,
+      horaInicio: '',
+    });
+  },
+
+  tickStopwatch: () => {
+    const { estadoStopwatch } = get();
+    if (estadoStopwatch !== 'running') return;
+    set((state) => ({ tiempoTranscurrido: state.tiempoTranscurrido + 1 }));
+  },
+
+  // === TIMER AJUSTE ===
+  ajustarTiempo: (minutos) => {
+    set((state) => {
+      const nuevoTiempo = Math.max(5 * 60, state.tiempoTotal + (minutos * 60));
+      return {
+        tiempoTotal: nuevoTiempo,
+        tiempoRestante: state.estadoTimer === 'idle' ? nuevoTiempo : state.tiempoRestante,
+      };
+    });
+  },
+
+  // === REINICIO DIARIO ===
+  reiniciarDia: async () => {
+    const state = get();
+
+    // 1. Exportar Excel automáticamente
+    await state.exportarExcel();
+
+    // 2. Limpiar todos los datos del día
+    set({
+      rondasHoy: [],
+      totalHoyGuias: 0,
+      totalHoyNovedades: 0,
+      rondaNumero: 1,
+      valoresGuias: { ...valoresGuiasIniciales },
+      valoresNovedades: { ...valoresNovedadesIniciales },
+      tiempoRestante: get().tiempoTotal,
+      estadoTimer: 'idle',
+      tiempoTranscurrido: 0,
+      estadoStopwatch: 'idle',
+      horaInicio: '',
+    });
+
+    // 3. Guardar fecha nueva
+    const fechaHoy = hoy();
+    if (window.electronAPI) {
+      await window.electronAPI.setStore('fecha', fechaHoy);
+      await window.electronAPI.setStore('rondasHoy', []);
+    }
+
+    // También limpiar localStorage
+    try {
+      localStorage.setItem('litper-tracker-data', JSON.stringify({
+        fecha: fechaHoy,
+        rondasHoy: [],
+        totalHoyGuias: 0,
+        totalHoyNovedades: 0,
+      }));
+    } catch (e) {}
+
+    // 4. Mostrar toast de confirmación
+    get().showToast('Día reiniciado correctamente');
+  },
+
+  // === TOAST ===
+  showToast: (message) => {
+    set({ toastMessage: message, toastVisible: true });
+    // Auto-hide después de 3 segundos
+    setTimeout(() => {
+      set({ toastVisible: false });
+    }, 3000);
+  },
+
+  hideToast: () => set({ toastVisible: false }),
+
+  // === MODAL ===
+  showModal: (callback) => {
+    set({ modalVisible: true, modalCallback: callback });
+  },
+
+  hideModal: () => {
+    set({ modalVisible: false, modalCallback: null });
+  },
+
+  confirmModal: () => {
+    const { modalCallback } = get();
+    if (modalCallback) {
+      modalCallback();
+    }
+    set({ modalVisible: false, modalCallback: null });
   },
 }));

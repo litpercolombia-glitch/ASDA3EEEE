@@ -2,22 +2,25 @@ import React, { useEffect } from 'react';
 import { useTrackerStore, Usuario } from './stores/trackerStore';
 import TitleBar from './components/TitleBar';
 import Timer from './components/Timer';
+import Stopwatch from './components/Stopwatch';
 import QuickCounter from './components/QuickCounter';
 import ProgressBar from './components/ProgressBar';
 import MiniMode from './components/MiniMode';
 import SuperMiniMode from './components/SuperMiniMode';
 import ConfigPanel from './components/ConfigPanel';
-import { LogOut, ArrowLeft, FileText, AlertTriangle, User, Download, Settings, RefreshCw } from 'lucide-react';
+import Toast from './components/Toast';
+import ConfirmModal from './components/ConfirmModal';
+import { LogOut, ArrowLeft, FileText, AlertTriangle, User, Download, Settings, RefreshCw, RotateCcw, CheckCircle, Eye, ArrowLeftRight } from 'lucide-react';
 
 const App: React.FC = () => {
-  const { modo, pantalla, cargarDatos, tick, estadoTimer } = useTrackerStore();
+  const { modo, pantalla, cargarDatos, tick, estadoTimer, tickStopwatch, estadoStopwatch } = useTrackerStore();
 
   // Cargar datos al iniciar
   useEffect(() => {
     cargarDatos();
   }, [cargarDatos]);
 
-  // Timer tick
+  // Timer tick (countdown)
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (estadoTimer === 'running') {
@@ -27,6 +30,17 @@ const App: React.FC = () => {
       if (interval) clearInterval(interval);
     };
   }, [estadoTimer, tick]);
+
+  // Stopwatch tick (count up)
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (estadoStopwatch === 'running') {
+      interval = setInterval(tickStopwatch, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [estadoStopwatch, tickStopwatch]);
 
   // Renderizar segun modo
   if (modo === 'micro') {
@@ -65,6 +79,8 @@ const App: React.FC = () => {
     <>
       {renderPantalla()}
       <ConfigPanel />
+      <Toast />
+      <ConfirmModal />
     </>
   );
 };
@@ -201,7 +217,7 @@ const UsuarioCard: React.FC<UsuarioCardProps> = ({ usuario, onClick }) => {
 // PANTALLA: Selección de Proceso
 // ============================================
 const SeleccionProceso: React.FC = () => {
-  const { usuarioActual, seleccionarProceso, cerrarSesion, rondasHoy } = useTrackerStore();
+  const { usuarioActual, seleccionarProceso, cerrarSesion, rondasHoy, showModal, reiniciarDia } = useTrackerStore();
 
   const handleClose = () => {
     window.electronAPI?.close();
@@ -256,14 +272,26 @@ const SeleccionProceso: React.FC = () => {
           ¿Qué vas a trabajar?
         </h2>
 
-        {/* Botón exportar datos */}
-        <button
-          onClick={() => useTrackerStore.getState().exportarExcel()}
-          className="w-full mb-4 p-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-all flex items-center justify-center gap-2 text-slate-300 hover:text-white"
-        >
-          <Download className="w-4 h-4" />
-          <span className="text-sm">Exportar mis datos (Excel)</span>
-        </button>
+        {/* Botones de acciones */}
+        <div className="flex gap-2 mb-4">
+          {/* Botón exportar datos */}
+          <button
+            onClick={() => useTrackerStore.getState().exportarExcel()}
+            className="flex-1 p-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-all flex items-center justify-center gap-2 text-slate-300 hover:text-white"
+          >
+            <Download className="w-4 h-4" />
+            <span className="text-sm">Exportar</span>
+          </button>
+
+          {/* Botón nuevo día */}
+          <button
+            onClick={() => showModal(reiniciarDia)}
+            className="flex-1 p-3 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 rounded-lg transition-all flex items-center justify-center gap-2 text-amber-400 hover:text-amber-300"
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span className="text-sm">Nuevo Día</span>
+          </button>
+        </div>
 
         <div className="space-y-3">
           {/* Botón GUÍAS */}
@@ -426,19 +454,23 @@ const ModoNovedades: React.FC = () => {
     rondaNumero,
     totalHoyNovedades,
     usuarioActual,
-    estadoTimer,
+    estadoStopwatch,
     volverASeleccion,
   } = useTrackerStore();
 
+  // Campos actualizados con nuevos nombres
   const campos: Array<{
     key: keyof typeof valoresNovedades;
     label: string;
     icon: string;
     color: string;
+    editable?: boolean;
   }> = [
+    { key: 'totalNovedades', label: 'Total novedades', icon: '📊', color: 'cyan', editable: true },
     { key: 'revisadas', label: 'Revisadas', icon: '👁️', color: 'slate' },
     { key: 'solucionadas', label: 'Solucionadas', icon: '✅', color: 'emerald' },
-    { key: 'devolucion', label: 'Devolución', icon: '↩️', color: 'red' },
+    { key: 'errorPorSolucion', label: 'Error por solución', icon: '🔄', color: 'red' },
+    { key: 'proveedor', label: 'Proveedor', icon: '🏭', color: 'indigo' },
     { key: 'cliente', label: 'Cliente', icon: '👤', color: 'blue' },
     { key: 'transportadora', label: 'Transportadora', icon: '🚚', color: 'purple' },
     { key: 'litper', label: 'LITPER', icon: '🏢', color: 'orange' },
@@ -465,8 +497,8 @@ const ModoNovedades: React.FC = () => {
           </div>
         </div>
 
-        {/* Timer */}
-        <Timer />
+        {/* Stopwatch - Cronómetro ascendente */}
+        <Stopwatch />
 
         {/* Numero de ronda */}
         <div className="text-center text-sm text-slate-400">
@@ -493,13 +525,40 @@ const ModoNovedades: React.FC = () => {
         <button
           onClick={guardarRonda}
           className={`w-full py-3 rounded-lg font-bold text-white transition-all ${
-            estadoTimer === 'finished'
-              ? 'bg-amber-500 hover:bg-amber-600 animate-pulse-red'
+            estadoStopwatch === 'paused'
+              ? 'bg-amber-500 hover:bg-amber-600 animate-pulse'
               : 'bg-amber-600 hover:bg-amber-500'
           }`}
         >
           💾 GUARDAR RONDA
         </button>
+
+        {/* Mini Dashboard - Resumen en tiempo real */}
+        <div className="bg-dark-700 rounded-lg p-3">
+          <h4 className="text-xs text-slate-500 mb-2 text-center">Resumen en tiempo real</h4>
+          <div className="grid grid-cols-3 gap-2">
+            {/* Solucionadas */}
+            <div className="flex flex-col items-center gap-1 bg-emerald-500/10 rounded-lg p-2">
+              <CheckCircle className="w-4 h-4 text-emerald-400" />
+              <span className="text-lg font-bold text-white">{valoresNovedades.solucionadas}</span>
+              <span className="text-[10px] text-slate-500">Solucionadas</span>
+            </div>
+
+            {/* Revisadas */}
+            <div className="flex flex-col items-center gap-1 bg-slate-500/10 rounded-lg p-2">
+              <Eye className="w-4 h-4 text-slate-400" />
+              <span className="text-lg font-bold text-white">{valoresNovedades.revisadas}</span>
+              <span className="text-[10px] text-slate-500">Revisadas</span>
+            </div>
+
+            {/* Error por solución */}
+            <div className="flex flex-col items-center gap-1 bg-red-500/10 rounded-lg p-2">
+              <ArrowLeftRight className="w-4 h-4 text-red-400" />
+              <span className="text-lg font-bold text-white">{valoresNovedades.errorPorSolucion}</span>
+              <span className="text-[10px] text-slate-500">Errores</span>
+            </div>
+          </div>
+        </div>
 
         {/* Progreso del dia - Novedades solucionadas */}
         <div className="bg-dark-700 rounded-lg p-2">

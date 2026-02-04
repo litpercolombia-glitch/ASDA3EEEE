@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, RotateCcw } from 'lucide-react';
+import { Play, Pause, RotateCcw, Minus, Plus } from 'lucide-react';
 import { useTrackerStore } from '../stores/trackerStore';
 
 const Timer: React.FC = () => {
@@ -11,11 +11,17 @@ const Timer: React.FC = () => {
     iniciarTimer,
     pausarTimer,
     resetTimer,
+    ajustarTiempo,
   } = useTrackerStore();
 
   const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
+
+    if (h > 0) {
+      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
@@ -28,12 +34,29 @@ const Timer: React.FC = () => {
     return 'text-red-400';
   };
 
-  const tiempoOptions = [15, 20, 25, 30, 40];
+  // Nuevas opciones: 30min, 45min, 60min (1 hora)
+  const tiempoOptions = [30, 45, 60];
 
   return (
     <div className="bg-dark-700 rounded-lg p-3">
-      {/* Display */}
-      <div className="text-center mb-3">
+      {/* Display con botones +5/-5 */}
+      <div className="flex items-center justify-center gap-3 mb-3">
+        {/* Botón -5 minutos */}
+        <button
+          onClick={() => ajustarTiempo(-5)}
+          disabled={estadoTimer === 'running'}
+          className={`flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium transition-all ${
+            estadoTimer === 'running'
+              ? 'bg-dark-600 text-slate-600 cursor-not-allowed'
+              : 'bg-red-500/20 text-red-400 hover:bg-red-500/30 active:scale-95'
+          }`}
+          title="Restar 5 minutos"
+        >
+          <Minus className="w-3 h-3" />
+          5m
+        </button>
+
+        {/* Tiempo */}
         <p
           className={`text-4xl font-mono font-bold ${getColor()} ${
             estadoTimer === 'finished' ? 'animate-pulse-red' : ''
@@ -41,22 +64,37 @@ const Timer: React.FC = () => {
         >
           {formatTime(tiempoRestante)}
         </p>
+
+        {/* Botón +5 minutos */}
+        <button
+          onClick={() => ajustarTiempo(5)}
+          disabled={estadoTimer === 'running'}
+          className={`flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium transition-all ${
+            estadoTimer === 'running'
+              ? 'bg-dark-600 text-slate-600 cursor-not-allowed'
+              : 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 active:scale-95'
+          }`}
+          title="Agregar 5 minutos"
+        >
+          <Plus className="w-3 h-3" />
+          5m
+        </button>
       </div>
 
-      {/* Time selection */}
+      {/* Time selection presets */}
       {estadoTimer === 'idle' && (
         <div className="flex justify-center gap-1 mb-3">
           {tiempoOptions.map((min) => (
             <button
               key={min}
               onClick={() => setTiempoTotal(min)}
-              className={`px-2 py-1 rounded text-xs transition-colors ${
+              className={`px-3 py-1 rounded text-xs transition-colors ${
                 tiempoTotal === min * 60
                   ? 'bg-amber-500 text-white'
                   : 'bg-dark-600 text-slate-400 hover:bg-dark-500'
               }`}
             >
-              {min}m
+              {min === 60 ? '1h' : `${min}m`}
             </button>
           ))}
         </div>
