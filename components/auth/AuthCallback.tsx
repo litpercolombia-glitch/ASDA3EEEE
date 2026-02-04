@@ -58,8 +58,8 @@ export const AuthCallback: React.FC = () => {
 
         setMessage('Iniciando sesión...');
 
-        // Iniciar sesión en la app
-        await login({
+        // Iniciar sesión en la app - IMPORTANTE: verificar resultado
+        const loginSuccess = await login({
           email: userInfo.email,
           password: 'oauth_authenticated',
           provider: state,
@@ -70,13 +70,19 @@ export const AuthCallback: React.FC = () => {
           }
         });
 
+        if (!loginSuccess) {
+          throw new Error('Error al guardar la sesión');
+        }
+
         setStatus('success');
         setMessage(`¡Bienvenido, ${userInfo.name}!`);
 
-        // Redirigir al dashboard después de 1.5 segundos
+        // Esperar un poco más para asegurar que el estado se persista
+        // y luego redirigir al dashboard
         setTimeout(() => {
-          window.location.href = '/';
-        }, 1500);
+          // Forzar recarga completa para que el AuthWrapper detecte la sesión
+          window.location.replace('/');
+        }, 2000);
 
       } catch (err) {
         console.error('OAuth callback error:', err);
