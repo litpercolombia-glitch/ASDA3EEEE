@@ -307,7 +307,7 @@ const playAlarmSound = () => {
 // STORE
 // ============================================
 
-// 7 USUARIOS LITPER - DEFINIDOS GLOBALMENTE PARA CARGA INMEDIATA
+// 9 USUARIOS LITPER - DEFINIDOS GLOBALMENTE PARA CARGA INMEDIATA
 const USUARIOS_LITPER: Usuario[] = [
   { id: 'cat1', nombre: 'CATALINA', avatar: '👑', color: '#8B5CF6', metaDiaria: 60, activo: true },
   { id: 'ang1', nombre: 'ANGIE', avatar: '🌟', color: '#EC4899', metaDiaria: 60, activo: true },
@@ -316,6 +316,8 @@ const USUARIOS_LITPER: Usuario[] = [
   { id: 'fel1', nombre: 'FELIPE', avatar: '🎯', color: '#14B8A6', metaDiaria: 60, activo: true },
   { id: 'kar1', nombre: 'KAREN', avatar: '✨', color: '#F43F5E', metaDiaria: 60, activo: true },
   { id: 'jul1', nombre: 'JULIAN', avatar: '🎮', color: '#06B6D4', metaDiaria: 60, activo: true },
+  { id: 'mai1', nombre: 'MAIRA', avatar: '🦋', color: '#D946EF', metaDiaria: 60, activo: true },
+  { id: 'eri1', nombre: 'ERIKA', avatar: '🌸', color: '#F472B6', metaDiaria: 60, activo: true },
 ];
 
 export const useTrackerStore = create<TrackerState>((set, get) => ({

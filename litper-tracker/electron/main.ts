@@ -45,13 +45,33 @@ const createWindow = () => {
     },
   });
 
+  // Detectar modo desarrollo de forma robusta
+  const isDev = !app.isPackaged || process.env.VITE_DEV_SERVER_URL;
+  const devServerUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
+
   // Cargar app
-  if (process.env.NODE_ENV === 'development' || process.env.VITE_DEV_SERVER_URL) {
-    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173');
-    // mainWindow.webContents.openDevTools({ mode: 'detach' });
+  if (isDev) {
+    console.log('🚀 Modo desarrollo - Cargando:', devServerUrl);
+    mainWindow.loadURL(devServerUrl);
+
+    // Manejar errores de carga y reintentar
+    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+      console.log('⚠️ Error cargando app:', errorDescription, '- Reintentando en 2s...');
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.loadURL(devServerUrl);
+        }
+      }, 2000);
+    });
   } else {
+    console.log('📦 Modo producción - Cargando archivo local');
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
+
+  // Log cuando la app carga correctamente
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('✅ App cargada correctamente');
+  });
 
   // Guardar posicion al mover
   mainWindow.on('moved', () => {
