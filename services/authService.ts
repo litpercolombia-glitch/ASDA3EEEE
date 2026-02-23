@@ -183,6 +183,18 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
     },
     password: '1234',
   },
+  // Usuario Julian
+  {
+    user: {
+      id: 'litper_julian_010',
+      email: 'julianlitper@gmail.com',
+      nombre: 'Julian',
+      rol: 'operador',
+      createdAt: '2026-02-23T00:00:00.000Z',
+      activo: true,
+    },
+    password: '2026.?JULIAN_LITper?',
+  },
 ];
 
 // =====================================
