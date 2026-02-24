@@ -15,7 +15,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "mcp:video-audio": "npx -y video-audio-mcp-server",
+    "mcp:setup": "bash scripts/setup-video-audio-mcp.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",

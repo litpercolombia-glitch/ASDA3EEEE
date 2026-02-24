@@ -55,6 +55,12 @@ backend/uploads/*
 backend/ml_models/saved/*
 !backend/ml_models/saved/.gitkeep
 
+# Media files (video-audio-mcp)
+media/input/*
+!media/input/.gitkeep
+media/output/*
+!media/output/.gitkeep
+
 # Backend environment (contains API keys)
 backend/.env.backend
 backend/.env

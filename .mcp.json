@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "video-audio-mcp": {
+      "command": "npx",
+      "args": ["-y", "video-audio-mcp-server"],
+      "env": {
+        "OUTPUT_DIR": "./media/output"
+      }
+    }
+  }
+}
