@@ -30,6 +30,9 @@ export type { DashboardMetrics, Prediction, CarrierStats, CityStats, DateRange }
 // Asistente PRO
 export { useProAssistantStore } from './proAssistantStore';
 
+// Edicion de Video
+export { useVideoEditingStore } from './videoEditingStore';
+
 // ============================================
 // HOOKS COMBINADOS
 // ============================================
