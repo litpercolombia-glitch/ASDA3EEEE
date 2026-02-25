@@ -58,6 +58,8 @@ import {
   Hexagon,
   CircuitBoard,
   Wifi,
+  Film,
+  Play,
 } from 'lucide-react';
 import {
   useLayoutStore,
@@ -70,6 +72,7 @@ import {
   NegocioTab,
   ConfigTab,
   EnterpriseTab,
+  VideoEditorTab,
 } from '../../stores/layoutStore';
 
 // ============================================
@@ -157,6 +160,11 @@ const SUB_MENUS: Record<MainSection, SubMenuItem[]> = {
     { id: 'security', icon: Shield, label: 'Security SOC' },
     { id: 'users', icon: Users, label: 'Usuarios' },
     { id: 'automation', icon: Workflow, label: 'Automatizacion' },
+  ],
+  'video-editor': [
+    { id: 'basico', icon: Play, label: 'Basico' },
+    { id: 'premium', icon: Crown, label: 'Premium' },
+    { id: 'historial', icon: History, label: 'Historial' },
   ],
 };
 
@@ -510,6 +518,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
     activeNegocioTab,
     activeConfigTab,
     activeEnterpriseTab,
+    activeVideoEditorTab,
     expandedSections,
     toggleSidebar,
     setHovered,
@@ -522,6 +531,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
     setNegocioTab,
     setConfigTab,
     setEnterpriseTab,
+    setVideoEditorTab,
     toggleSectionExpanded,
   } = useLayoutStore();
 
@@ -538,6 +548,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
     { id: 'inteligencia', icon: Sparkles, label: 'Inteligencia', subItems: SUB_MENUS['inteligencia'] },
     { id: 'cerebro-ia', icon: Brain, label: 'Cerebro IA', isNew: true, subItems: SUB_MENUS['cerebro-ia'] },
     { id: 'negocio', icon: Briefcase, label: 'Centro Negocio', subItems: SUB_MENUS['negocio'] },
+    { id: 'video-editor', icon: Film, label: 'Editor Video', isNew: true, subItems: SUB_MENUS['video-editor'] },
     { id: 'enterprise', icon: Crown, label: 'Enterprise Global', isNew: true, subItems: SUB_MENUS['enterprise'] },
   ];
 
@@ -552,6 +563,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
       case 'config': return activeConfigTab;
       case 'marketing': return activeMarketingTab;
       case 'enterprise': return activeEnterpriseTab;
+      case 'video-editor': return activeVideoEditorTab;
       default: return undefined;
     }
   };
@@ -567,6 +579,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
       case 'config': setConfigTab(subItemId as ConfigTab); break;
       case 'marketing': setMarketingTab(subItemId as MarketingTab); break;
       case 'enterprise': setEnterpriseTab(subItemId as EnterpriseTab); break;
+      case 'video-editor': setVideoEditorTab(subItemId as VideoEditorTab); break;
     }
   };
 

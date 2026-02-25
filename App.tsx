@@ -47,6 +47,7 @@ import { EnterpriseAdminDashboard } from './components/Admin/EnterpriseAdminDash
 import CountrySelector from './components/CountrySelector';
 // Chat-First Design System
 import { ChatCommandCenter } from './components/ChatFirst';
+import VideoEditorPanel from './components/VideoEditor/VideoEditorPanel';
 import { detectarGuiasRetrasadas } from './utils/patternDetection';
 // Nuevo Layout con Sidebar estilo ChatGPT
 import { AppLayout } from './components/layout';
@@ -679,6 +680,8 @@ const App: React.FC = () => {
         return <MarketingView />;
       case 'config':
         return <AdminPanelPro />;
+      case 'video-editor':
+        return <VideoEditorPanel />;
       case 'enterprise':
         return <EnterpriseAdminDashboard />;
       default:
