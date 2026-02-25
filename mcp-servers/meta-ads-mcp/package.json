@@ -1,0 +1,13 @@
+{
+  "name": "meta-ads-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Meta Ads integration - Litper Pro",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  }
+}
