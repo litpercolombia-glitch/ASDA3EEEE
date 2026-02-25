@@ -16,7 +16,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
-    "mcp:video-audio": "npx -y video-audio-mcp-server",
+    "mcp:video-audio": "node mcp-servers/video-audio-mcp-server/index.cjs",
+    "mcp:meta-ads": "node mcp-servers/meta-ads-mcp/index.cjs",
     "mcp:setup": "bash scripts/setup-video-audio-mcp.sh"
   },
   "dependencies": {

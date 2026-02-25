@@ -1,11 +1,16 @@
 {
   "mcpServers": {
     "video-audio-mcp": {
-      "command": "npx",
-      "args": ["-y", "video-audio-mcp-server"],
+      "command": "node",
+      "args": ["mcp-servers/video-audio-mcp-server/index.cjs"],
       "env": {
         "OUTPUT_DIR": "./media/output"
       }
+    },
+    "meta-ads-mcp": {
+      "command": "node",
+      "args": ["mcp-servers/meta-ads-mcp/index.cjs"],
+      "env": {}
     }
   }
 }
