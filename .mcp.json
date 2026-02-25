@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "meta-ads-mcp": {
+      "type": "url",
+      "url": "https://mcp.pipeboard.co/meta-ads-mcp"
+    }
+  }
+}
