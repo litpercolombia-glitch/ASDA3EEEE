@@ -9,6 +9,10 @@ export default defineConfig({
     electron([
       {
         entry: 'electron/main.ts',
+        onstart(options) {
+          // Iniciar Electron cuando el main process esté listo
+          options.startup();
+        },
         vite: {
           build: {
             outDir: 'dist-electron',
@@ -18,6 +22,7 @@ export default defineConfig({
       {
         entry: 'electron/preload.ts',
         onstart(options) {
+          // Recargar cuando el preload cambie
           options.reload();
         },
         vite: {
