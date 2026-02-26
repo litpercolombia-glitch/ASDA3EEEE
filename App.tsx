@@ -55,12 +55,18 @@ import { useLayoutStore } from './stores/layoutStore';
 import { MarketingView } from './components/marketing';
 // Auth service for logout
 import { logout as authLogout, getCurrentUser } from './services/authService';
-// User Profile & Onboarding
-import { UserOnboarding } from './components/onboarding';
+// User Profile
 import { useUserProfileStore } from './services/userProfileService';
 import { UserProfileSettings } from './components/settings';
 // Enhanced Excel Upload with column config
 import { EnhancedExcelUpload } from './components/upload';
+// Report Upload System
+import { ReportUploadModal, MyReportsPanel, AdminReportsView, PublicUploadPage } from './components/ReportUpload';
+import { useReportUploadStore } from './stores/reportUploadStore';
+import { getTokenFromUrl, getUploadLinkByToken } from './services/reportUploadService';
+// Ronda Closure System
+import { RondaClosureForm } from './components/analisis-rondas/RondaClosureForm';
+import { getClosureTokenFromUrl, getClosureLinkByToken } from './services/rondaReportBridgeService';
 import {
   Crown,
   Search,
@@ -387,6 +393,9 @@ const App: React.FC = () => {
   // User Profile Store
   const { profile, isOnboardingComplete } = useUserProfileStore();
 
+  // Report Upload Store
+  const { isModalOpen: isReportModalOpen, openModal: openReportModal, closeModal: closeReportModal } = useReportUploadStore();
+
   // Obtener usuario actual
   const currentUser = getCurrentUser();
 
@@ -631,19 +640,6 @@ const App: React.FC = () => {
     return <CountrySelector onCountrySelected={handleCountrySelected} />;
   }
 
-  // Mostrar onboarding si el usuario no ha completado el registro
-  if (!isOnboardingComplete) {
-    return (
-      <UserOnboarding
-        country={selectedCountry}
-        onComplete={() => {
-          // El onboarding se marca como completado automáticamente
-          // cuando el usuario termina el flujo
-        }}
-      />
-    );
-  }
-
   // Función para renderizar contenido según la sección activa del sidebar
   const renderSidebarContent = () => {
     switch (activeSection) {
@@ -667,6 +663,13 @@ const App: React.FC = () => {
           />
         );
       case 'inteligencia':
+        if (activeInteligenciaTab === 'reportes') {
+          return (
+            <div className="p-6">
+              <MyReportsPanel onOpenUploadModal={openReportModal} />
+            </div>
+          );
+        }
         return (
           <InteligenciaIAUnificadoTab
             shipments={shipments}
@@ -725,6 +728,7 @@ const App: React.FC = () => {
       onLogout={handleLogout}
       onOpenChat={handleOpenChat}
       onOpenHelp={handleOpenHelp}
+      onUploadReport={openReportModal}
       userName={currentUser?.nombre || 'Usuario'}
       userEmail={currentUser?.email || 'user@litper.co'}
     >
@@ -993,15 +997,156 @@ const App: React.FC = () => {
         forceOpen={showProBubble}
         onForceOpenHandled={() => setShowProBubble(false)}
       />
+
+      {/* Report Upload Modal - Accessible from anywhere */}
+      <ReportUploadModal isOpen={isReportModalOpen} onClose={closeReportModal} />
     </AppLayout>
   );
 };
 
 // Exportar App envuelto en AuthWrapper para requerir autenticación
+// Con sistema de Onboarding Enterprise integrado
+import {
+  SplashScreen,
+  WelcomeModal,
+  OnboardingChecklist,
+  EnterpriseOnboarding,
+} from './components/Onboarding';
+import { useOnboardingStore } from './stores/onboardingStore';
+import { useCompanyStore } from './stores/companyStore';
+
+const AppWithOnboarding: React.FC = () => {
+  // Old onboarding store (for splash/welcome)
+  const {
+    showSplash,
+    setShowSplash,
+    showWelcome,
+    setShowWelcome,
+    hideWelcomeForever,
+  } = useOnboardingStore();
+
+  // New company store (for enterprise onboarding)
+  const {
+    showEnterpriseOnboarding,
+    setShowEnterpriseOnboarding,
+    isOnboardingComplete,
+    getCompletionPercentage,
+  } = useCompanyStore();
+
+  // Initialize onboarding on first load
+  const [initialized, setInitialized] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!initialized) {
+      setInitialized(true);
+
+      // Check if we should show welcome (for returning users)
+      const hasSeenWelcomeThisSession = sessionStorage.getItem('litper-welcome-shown');
+
+      if (!hasSeenWelcomeThisSession && !hideWelcomeForever) {
+        // Show splash first for a nice entry
+        setShowSplash(true);
+
+        setTimeout(() => {
+          setShowSplash(false);
+          setShowWelcome(true);
+          sessionStorage.setItem('litper-welcome-shown', 'true');
+        }, 2500);
+      }
+
+      // Show enterprise onboarding if not complete (after welcome)
+      const percentage = getCompletionPercentage();
+      if (percentage < 100 && !isOnboardingComplete) {
+        setTimeout(() => {
+          // Show the checklist widget automatically
+          // User can click it to open the full onboarding
+        }, 3500);
+      }
+    }
+  }, [initialized, hideWelcomeForever, isOnboardingComplete, getCompletionPercentage, setShowSplash, setShowWelcome]);
+
+  return (
+    <>
+      {/* Splash Screen - Shows on entry */}
+      {showSplash && (
+        <SplashScreen
+          onComplete={() => setShowSplash(false)}
+          duration={2500}
+        />
+      )}
+
+      {/* Welcome Modal - Shows after splash */}
+      <WelcomeModal
+        isOpen={showWelcome}
+        onClose={() => setShowWelcome(false)}
+      />
+
+      {/* Enterprise Onboarding - Full-screen wizard */}
+      {showEnterpriseOnboarding && (
+        <EnterpriseOnboarding
+          onComplete={() => setShowEnterpriseOnboarding(false)}
+        />
+      )}
+
+      {/* Main App */}
+      <App />
+
+      {/* Onboarding Checklist - Floating widget (uses companyStore) */}
+      {!isOnboardingComplete && <OnboardingChecklist />}
+    </>
+  );
+};
+
 const AppWithAuth: React.FC = () => (
   <AuthWrapper>
-    <App />
+    <AppWithOnboarding />
   </AuthWrapper>
 );
 
-export default AppWithAuth;
+// ============================================
+// PUBLIC UPLOAD ROUTE DETECTOR
+// If URL has ?upload=TOKEN, show public page (no login required)
+// ============================================
+const AppRoot: React.FC = () => {
+  const [publicUploadToken] = React.useState(() => getTokenFromUrl());
+  const [uploadLink] = React.useState(() =>
+    publicUploadToken ? getUploadLinkByToken(publicUploadToken) : null
+  );
+  const [closureToken] = React.useState(() => getClosureTokenFromUrl());
+  const [closureLink] = React.useState(() =>
+    closureToken ? getClosureLinkByToken(closureToken) : null
+  );
+
+  // If valid upload link detected, show public upload page (bypasses auth)
+  if (publicUploadToken && uploadLink) {
+    return <PublicUploadPage uploadLink={uploadLink} />;
+  }
+
+  // If valid closure link detected, show ronda closure form (bypasses auth)
+  if (closureToken && closureLink) {
+    return <RondaClosureForm closureLink={closureLink} />;
+  }
+
+  // If invalid/expired token, show error
+  if ((publicUploadToken && !uploadLink) || (closureToken && !closureLink)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 flex items-center justify-center p-4">
+        <div className="bg-gray-900/80 backdrop-blur-xl rounded-3xl border border-gray-700/50 p-12 max-w-md w-full text-center shadow-2xl">
+          <div className="p-5 bg-red-500/20 rounded-full w-fit mx-auto mb-6">
+            <AlertTriangle className="w-16 h-16 text-red-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-3">Link No Válido</h2>
+          <p className="text-gray-400 mb-6">
+            Este link no existe, ha expirado, o ya fue utilizado.
+          </p>
+          <p className="text-sm text-gray-500">Contacta al administrador para obtener un nuevo link.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Normal app flow
+  return <AppWithAuth />;
+};
+
+export default AppRoot;

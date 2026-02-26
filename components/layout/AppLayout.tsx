@@ -89,6 +89,7 @@ interface AppLayoutProps {
   onLogout: () => void;
   onOpenChat: () => void;
   onOpenHelp: () => void;
+  onUploadReport?: () => void;
   userName?: string;
   userEmail?: string;
 }
@@ -614,6 +615,7 @@ export function AppLayout({
   onLogout,
   onOpenChat,
   onOpenHelp,
+  onUploadReport,
   userName,
   userEmail,
 }: AppLayoutProps) {
@@ -644,6 +646,7 @@ export function AppLayout({
         onLogout={onLogout}
         onOpenChat={onOpenChat}
         onOpenHelp={onOpenHelp}
+        onUploadReport={onUploadReport}
         userName={userName}
         userEmail={userEmail}
       />
