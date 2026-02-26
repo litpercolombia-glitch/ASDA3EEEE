@@ -5,18 +5,65 @@
 
 import { UsuarioOperador } from '../types/analisis-rondas';
 
-// ===== USUARIOS DEL SISTEMA =====
-export const USUARIOS_OPERADORES: UsuarioOperador[] = [
-  { id: 'angie', nombre: 'ANGIE', icono: '👩‍💼', color: '#ec4899' },
-  { id: 'catalina', nombre: 'CATALINA', icono: '👩‍🔧', color: '#8b5cf6' },
-  { id: 'felipe', nombre: 'FELIPE', icono: '👨‍💻', color: '#3b82f6' },
-  { id: 'evan', nombre: 'EVAN', icono: '👨‍🚀', color: '#10b981' },
-  { id: 'norman', nombre: 'NORMAN', icono: '👨‍✈️', color: '#f59e0b' },
-  { id: 'alejandra', nombre: 'ALEJANDRA', icono: '👩‍🎤', color: '#ef4444' },
-  { id: 'karen', nombre: 'KAREN', icono: '👩‍🏫', color: '#06b6d4' },
-  { id: 'jimmy', nombre: 'JIMMY', icono: '👨‍🔬', color: '#84cc16' },
-  { id: 'carolina', nombre: 'CAROLINA', icono: '👩‍⚕️', color: '#f97316' },
+// ===== USUARIOS DEL SISTEMA (Default - editables desde panel admin) =====
+const DEFAULT_OPERADORES: UsuarioOperador[] = [
+  { id: 'catalina', nombre: 'CATALINA', icono: '👑', color: '#8b5cf6' },    // Violeta
+  { id: 'angie', nombre: 'ANGIE', icono: '🌸', color: '#ec4899' },          // Rosa
+  { id: 'evan', nombre: 'EVAN', icono: '🌿', color: '#10b981' },            // Verde
+  { id: 'jimmy', nombre: 'JIMMY', icono: '⚡', color: '#3b82f6' },          // Azul
+  { id: 'felipe', nombre: 'FELIPE', icono: '🎯', color: '#14b8a6' },        // Teal
+  { id: 'karen', nombre: 'KAREN', icono: '🌺', color: '#f43f5e' },          // Rojo/Rosa
+  { id: 'julian', nombre: 'JULIAN', icono: '🦋', color: '#06b6d4' },        // Cyan
+  { id: 'maira', nombre: 'MAIRA', icono: '🦋', color: '#d946ef' },          // Fucsia
+  { id: 'erika', nombre: 'ERIKA', icono: '🌸', color: '#f9a8d4' },          // Rosa claro
 ];
+
+const OPERADORES_STORAGE_KEY = 'litper_operadores_config';
+
+function loadOperadores(): UsuarioOperador[] {
+  try {
+    const data = localStorage.getItem(OPERADORES_STORAGE_KEY);
+    return data ? JSON.parse(data) : DEFAULT_OPERADORES;
+  } catch {
+    return DEFAULT_OPERADORES;
+  }
+}
+
+function saveOperadores(ops: UsuarioOperador[]): void {
+  localStorage.setItem(OPERADORES_STORAGE_KEY, JSON.stringify(ops));
+}
+
+// Export mutable operators list
+export function getOperadores(): UsuarioOperador[] {
+  return loadOperadores();
+}
+
+export function addOperador(op: UsuarioOperador): void {
+  const ops = loadOperadores();
+  ops.push(op);
+  saveOperadores(ops);
+}
+
+export function updateOperador(id: string, updates: Partial<UsuarioOperador>): void {
+  const ops = loadOperadores();
+  const idx = ops.findIndex(o => o.id === id);
+  if (idx !== -1) {
+    ops[idx] = { ...ops[idx], ...updates };
+    saveOperadores(ops);
+  }
+}
+
+export function removeOperador(id: string): void {
+  const ops = loadOperadores().filter(o => o.id !== id);
+  saveOperadores(ops);
+}
+
+export function resetOperadores(): void {
+  saveOperadores(DEFAULT_OPERADORES);
+}
+
+// Backwards-compatible export (reads from localStorage or defaults)
+export const USUARIOS_OPERADORES: UsuarioOperador[] = loadOperadores();
 
 export const ADMIN_CONFIG = {
   username: 'ADMIN',
@@ -70,6 +117,37 @@ export const METRICAS_AVANZADAS = {
   TIEMPO_MAXIMO_GUIA: 10,       // Máximo 10 minutos por guía
   GUIAS_MINIMAS_RONDA: 1,       // Mínimo 1 guía por ronda
 };
+
+// ===== PRESETS DE RONDA =====
+export const RONDA_PRESETS = {
+  CORTA: {
+    label: 'Ronda Rápida',
+    duracion: 30,          // 30 minutos
+    guiasEsperadas: 10,    // 30 / 3 = 10 guías
+    icon: '⚡',
+  },
+  ESTANDAR: {
+    label: 'Ronda Estándar',
+    duracion: 60,          // 1 hora
+    guiasEsperadas: 20,    // 60 / 3 = 20 guías
+    icon: '📦',
+  },
+};
+
+// ===== SCORECARD TIERS (Tipo Amazon DSP) =====
+export const SCORECARD_TIERS = {
+  FANTASTICO: { label: 'Fantástico', minTasa: 90, icon: '🏆', color: '#10b981', bgClass: 'bg-emerald-500' },
+  EXCELENTE: { label: 'Excelente', minTasa: 80, icon: '⭐', color: '#3b82f6', bgClass: 'bg-blue-500' },
+  BUENO: { label: 'Bueno', minTasa: 70, icon: '✅', color: '#f59e0b', bgClass: 'bg-amber-500' },
+  BAJO: { label: 'Necesita Mejorar', minTasa: 0, icon: '⚠️', color: '#ef4444', bgClass: 'bg-red-500' },
+};
+
+export function getScorecardTier(tasaExito: number) {
+  if (tasaExito >= SCORECARD_TIERS.FANTASTICO.minTasa) return SCORECARD_TIERS.FANTASTICO;
+  if (tasaExito >= SCORECARD_TIERS.EXCELENTE.minTasa) return SCORECARD_TIERS.EXCELENTE;
+  if (tasaExito >= SCORECARD_TIERS.BUENO.minTasa) return SCORECARD_TIERS.BUENO;
+  return SCORECARD_TIERS.BAJO;
+}
 
 // ===== SEMÁFORO DE USUARIOS =====
 export const SEMAFORO = {

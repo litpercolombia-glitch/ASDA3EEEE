@@ -68,6 +68,9 @@ import {
   COLORES_SEMAFORO,
   METRICAS_AVANZADAS,
 } from '../../constants/analisis-rondas';
+import { WeeklyScorecard } from './WeeklyScorecard';
+import { OperadorManager } from './OperadorManager';
+import { RondaClosureLinkManager } from './RondaClosureLinkManager';
 
 interface AdminDashboardProps {
   datos: MetricasGlobales | null;
@@ -108,6 +111,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [expandedRecs, setExpandedRecs] = useState(true);
   const [showShareModal, setShowShareModal] = useState(false);
   const [linkCopiado, setLinkCopiado] = useState(false);
+  const [adminTab, setAdminTab] = useState<'dashboard' | 'scorecard' | 'closures' | 'operators'>('dashboard');
 
   // Generar link para compartir con el equipo
   const shareLink = `${window.location.origin}${window.location.pathname}?view=analisis-rondas`;
@@ -362,8 +366,46 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {/* Zona de carga si no hay datos */}
-      {!datos && (
+      {/* Admin Tabs */}
+      <div className="flex gap-1 bg-slate-100 dark:bg-navy-700 rounded-xl p-1 overflow-x-auto">
+        {[
+          { id: 'dashboard' as const, label: 'Dashboard', icon: '📊' },
+          { id: 'scorecard' as const, label: 'Scorecard Semanal', icon: '🏆' },
+          { id: 'closures' as const, label: 'Cierres de Ronda', icon: '📋' },
+          { id: 'operators' as const, label: 'Operadores', icon: '👥' },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setAdminTab(tab.id)}
+            className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
+              adminTab === tab.id
+                ? 'bg-white dark:bg-navy-600 text-slate-800 dark:text-white shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            <span>{tab.icon}</span>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Scorecard Tab */}
+      {adminTab === 'scorecard' && (
+        <WeeklyScorecard datos={datos} />
+      )}
+
+      {/* Closures Tab */}
+      {adminTab === 'closures' && (
+        <RondaClosureLinkManager />
+      )}
+
+      {/* Operators Tab */}
+      {adminTab === 'operators' && (
+        <OperadorManager />
+      )}
+
+      {/* Dashboard Tab - Original content */}
+      {adminTab === 'dashboard' && !datos && (
         <div
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
@@ -388,7 +430,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {datos && (
+      {adminTab === 'dashboard' && datos && (
         <>
           {/* Métricas globales */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">

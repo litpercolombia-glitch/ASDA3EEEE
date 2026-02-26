@@ -64,6 +64,9 @@ import { EnhancedExcelUpload } from './components/upload';
 import { ReportUploadModal, MyReportsPanel, AdminReportsView, PublicUploadPage } from './components/ReportUpload';
 import { useReportUploadStore } from './stores/reportUploadStore';
 import { getTokenFromUrl, getUploadLinkByToken } from './services/reportUploadService';
+// Ronda Closure System
+import { RondaClosureForm } from './components/analisis-rondas/RondaClosureForm';
+import { getClosureTokenFromUrl, getClosureLinkByToken } from './services/rondaReportBridgeService';
 import {
   Crown,
   Search,
@@ -1109,14 +1112,23 @@ const AppRoot: React.FC = () => {
   const [uploadLink] = React.useState(() =>
     publicUploadToken ? getUploadLinkByToken(publicUploadToken) : null
   );
+  const [closureToken] = React.useState(() => getClosureTokenFromUrl());
+  const [closureLink] = React.useState(() =>
+    closureToken ? getClosureLinkByToken(closureToken) : null
+  );
 
   // If valid upload link detected, show public upload page (bypasses auth)
   if (publicUploadToken && uploadLink) {
     return <PublicUploadPage uploadLink={uploadLink} />;
   }
 
+  // If valid closure link detected, show ronda closure form (bypasses auth)
+  if (closureToken && closureLink) {
+    return <RondaClosureForm closureLink={closureLink} />;
+  }
+
   // If invalid/expired token, show error
-  if (publicUploadToken && !uploadLink) {
+  if ((publicUploadToken && !uploadLink) || (closureToken && !closureLink)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 flex items-center justify-center p-4">
         <div className="bg-gray-900/80 backdrop-blur-xl rounded-3xl border border-gray-700/50 p-12 max-w-md w-full text-center shadow-2xl">
@@ -1125,7 +1137,7 @@ const AppRoot: React.FC = () => {
           </div>
           <h2 className="text-2xl font-bold text-white mb-3">Link No Válido</h2>
           <p className="text-gray-400 mb-6">
-            Este link de subida de reportes no existe, ha expirado, o ya alcanzó el límite de envíos.
+            Este link no existe, ha expirado, o ya fue utilizado.
           </p>
           <p className="text-sm text-gray-500">Contacta al administrador para obtener un nuevo link.</p>
         </div>
