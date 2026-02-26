@@ -58,3 +58,7 @@ backend/ml_models/saved/*
 # Backend environment (contains API keys)
 backend/.env.backend
 backend/.env
+
+# Electron build artifacts
+litper-tracker/dist-electron/
+litper-tracker/release/
