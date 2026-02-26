@@ -62,3 +62,4 @@ backend/.env
 # Electron build artifacts
 litper-tracker/dist-electron/
 litper-tracker/release/
+litper-tracker/*.zip
