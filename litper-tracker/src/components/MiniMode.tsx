@@ -1,11 +1,10 @@
 import React from 'react';
-import { Plus, Maximize2, X } from 'lucide-react';
 import { useTrackerStore } from '../stores/trackerStore';
 
 const MiniMode: React.FC = () => {
   const {
     tiempoRestante,
-    tiempoTotal,
+    tiempoTranscurrido,
     procesoActual,
     valoresGuias,
     valoresNovedades,
@@ -24,130 +23,95 @@ const MiniMode: React.FC = () => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const percentage = (tiempoRestante / tiempoTotal) * 100;
-
-  const getTimerColor = () => {
-    if (percentage > 50) return 'text-emerald-400';
-    if (percentage > 25) return 'text-amber-400';
-    if (percentage > 10) return 'text-orange-400';
-    return 'text-red-400';
-  };
+  const esGuias = procesoActual === 'guias';
+  const tiempo = esGuias ? tiempoRestante : tiempoTranscurrido;
 
   const handleClose = () => {
     window.electronAPI?.close();
   };
 
-  // Para GUÍAS: incrementar realizado
-  // Para NOVEDADES: incrementar solucionadas
-  const handleIncrement = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const amount = e.button === 2 ? 5 : 1;
-    if (procesoActual === 'guias') {
-      incrementarGuias('realizado', amount);
+  const handleIncrement = () => {
+    if (esGuias) {
+      incrementarGuias('realizado');
     } else {
-      incrementarNovedades('solucionadas', amount);
+      incrementarNovedades('solucionadas');
     }
   };
 
   const handleIncrement5 = () => {
-    if (procesoActual === 'guias') {
+    if (esGuias) {
       incrementarGuias('realizado', 5);
     } else {
       incrementarNovedades('solucionadas', 5);
     }
   };
 
-  const valorActual = procesoActual === 'guias'
-    ? valoresGuias.realizado
-    : valoresNovedades.solucionadas;
-
-  const totalHoy = procesoActual === 'guias'
-    ? totalHoyGuias
-    : totalHoyNovedades;
-
-  const etiqueta = procesoActual === 'guias' ? 'realizados' : 'solucionadas';
-  const badgeColor = procesoActual === 'guias'
-    ? 'bg-emerald-500/20 text-emerald-400'
-    : 'bg-orange-500/20 text-orange-400';
-  const buttonColor = procesoActual === 'guias'
-    ? 'bg-emerald-600 hover:bg-emerald-500'
-    : 'bg-orange-600 hover:bg-orange-500';
-  const buttonColor2 = procesoActual === 'guias'
-    ? 'bg-emerald-700 hover:bg-emerald-600'
-    : 'bg-orange-700 hover:bg-orange-600';
+  const valorActual = esGuias ? valoresGuias.realizado : valoresNovedades.solucionadas;
+  const totalHoy = esGuias ? totalHoyGuias : totalHoyNovedades;
 
   return (
-    <div className="h-full flex-1 bg-dark-800 rounded-xl overflow-hidden border border-dark-600">
+    <div className="h-full w-full bg-dark-800 flex flex-col overflow-hidden">
       {/* Title bar mini */}
-      <div className="drag-region bg-dark-900 px-2 py-1 flex items-center justify-between">
+      <div className="drag-region bg-dark-900 px-2 py-1 flex items-center justify-between border-b border-dark-700">
         <div className="flex items-center gap-1">
           <span className="text-amber-400 font-bold text-xs">LITPER</span>
-          {procesoActual && (
-            <span className={`px-1 text-[10px] font-bold rounded ${badgeColor}`}>
-              {procesoActual === 'guias' ? 'G' : 'N'}
-            </span>
-          )}
+          <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${esGuias ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/20 text-orange-400'}`}>
+            {esGuias ? 'G' : 'N'}
+          </span>
         </div>
         <div className="flex items-center gap-1 no-drag">
           <button
             onClick={() => setModo('normal')}
-            className="p-1 hover:bg-dark-700 rounded text-slate-400 hover:text-white"
+            className="px-1.5 py-0.5 text-[10px] hover:bg-dark-700 rounded text-slate-400 hover:text-white"
           >
-            <Maximize2 className="w-3 h-3" />
+            E
           </button>
           <button
             onClick={handleClose}
-            className="p-1 hover:bg-red-500/20 rounded text-slate-400 hover:text-red-400"
+            className="px-1.5 py-0.5 text-[10px] hover:bg-red-500/20 rounded text-slate-400 hover:text-red-400"
           >
-            <X className="w-3 h-3" />
+            X
           </button>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-2 space-y-2">
-        {/* Timer + Valor actual */}
+      <div className="flex-1 p-2 flex flex-col gap-2">
+        {/* Timer + Valor */}
         <div className="flex items-center justify-between">
-          <span className={`text-xl font-mono font-bold ${getTimerColor()}`}>
-            {formatTime(tiempoRestante)}
+          <span className={`text-xl font-mono font-bold ${esGuias ? 'text-emerald-400' : 'text-orange-400'}`}>
+            {formatTime(tiempo)}
           </span>
-          <div className="flex items-center gap-1">
-            <span className={procesoActual === 'guias' ? 'text-emerald-400' : 'text-orange-400'} style={{ fontWeight: 'bold' }}>
-              {procesoActual === 'guias' ? '✅' : '🔧'} {valorActual}
-            </span>
-          </div>
+          <span className={`text-lg font-bold ${esGuias ? 'text-emerald-400' : 'text-orange-400'}`}>
+            {esGuias ? '✅' : '🔧'} {valorActual}
+          </span>
         </div>
 
-        {/* Botones rapidos */}
+        {/* Botones */}
         <div className="flex gap-1">
           <button
             onClick={handleIncrement}
-            onContextMenu={handleIncrement}
-            className={`flex-1 py-2 ${buttonColor} text-white rounded font-bold text-sm flex items-center justify-center gap-1 active:scale-95 transition-all`}
-            title="Click: +1 | Click derecho: +5"
+            className={`flex-1 py-2 ${esGuias ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-orange-600 hover:bg-orange-500'} text-white rounded font-bold text-sm active:scale-95`}
           >
-            <Plus className="w-4 h-4" />
-            1
+            +1
           </button>
           <button
             onClick={handleIncrement5}
-            className={`flex-1 py-2 ${buttonColor2} text-white rounded font-bold text-sm flex items-center justify-center gap-1 active:scale-95 transition-all`}
+            className={`flex-1 py-2 ${esGuias ? 'bg-emerald-700 hover:bg-emerald-600' : 'bg-orange-700 hover:bg-orange-600'} text-white rounded font-bold text-sm active:scale-95`}
           >
-            <Plus className="w-4 h-4" />
-            5
+            +5
           </button>
           <button
             onClick={guardarRonda}
-            className="px-3 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded font-bold text-sm active:scale-95 transition-all"
-            title="Guardar ronda"
+            className="px-3 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded font-bold text-sm active:scale-95"
           >
-            💾
+            S
           </button>
         </div>
 
-        {/* Total del dia */}
+        {/* Total */}
         <div className="text-center text-xs text-slate-400">
-          {usuarioActual?.nombre}: {totalHoy} {etiqueta}
+          {usuarioActual?.nombre}: {totalHoy} hoy
         </div>
       </div>
     </div>
