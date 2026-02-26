@@ -48,27 +48,24 @@ const App: React.FC = () => {
   // Renderizar segun modo
   if (modo === 'barra') {
     return (
-      <div className="h-full w-full flex flex-col bg-dark-800">
+      <div className="h-full w-full bg-dark-900 overflow-hidden">
         <BarMode />
-        <ConfigPanel />
       </div>
     );
   }
 
   if (modo === 'micro') {
     return (
-      <div className="h-full w-full flex flex-col bg-dark-800">
+      <div className="h-full w-full bg-dark-900 overflow-hidden">
         <SuperMiniMode />
-        <ConfigPanel />
       </div>
     );
   }
 
   if (modo === 'mini') {
     return (
-      <div className="h-full w-full flex flex-col bg-dark-800">
+      <div className="h-full w-full flex flex-col bg-dark-800 overflow-hidden">
         <MiniMode />
-        <ConfigPanel />
       </div>
     );
   }
