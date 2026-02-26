@@ -45,19 +45,19 @@ const App: React.FC = () => {
   // Renderizar segun modo
   if (modo === 'micro') {
     return (
-      <>
+      <div className="h-full w-full flex flex-col bg-dark-800">
         <SuperMiniMode />
         <ConfigPanel />
-      </>
+      </div>
     );
   }
 
   if (modo === 'mini') {
     return (
-      <>
+      <div className="h-full w-full flex flex-col bg-dark-800">
         <MiniMode />
         <ConfigPanel />
-      </>
+      </div>
     );
   }
 
@@ -76,12 +76,12 @@ const App: React.FC = () => {
   };
 
   return (
-    <>
+    <div className="h-full w-full flex flex-col bg-dark-800">
       {renderPantalla()}
       <ConfigPanel />
       <Toast />
       <ConfirmModal />
-    </>
+    </div>
   );
 };
 
@@ -114,7 +114,7 @@ const SeleccionUsuario: React.FC = () => {
   const apiConectada = apiUrl && apiUrl !== '';
 
   return (
-    <div className="h-full bg-dark-800 rounded-xl overflow-hidden flex flex-col border border-dark-600">
+    <div className="h-full flex-1 bg-dark-800 rounded-xl overflow-hidden flex flex-col border border-dark-600">
       {/* Title bar con configuración */}
       <div className="drag-region bg-dark-900 px-3 py-2 flex items-center justify-between border-b border-dark-600">
         <div className="flex items-center gap-2">
@@ -232,7 +232,7 @@ const SeleccionProceso: React.FC = () => {
   ).length;
 
   return (
-    <div className="h-full bg-dark-800 rounded-xl overflow-hidden flex flex-col border border-dark-600">
+    <div className="h-full flex-1 bg-dark-800 rounded-xl overflow-hidden flex flex-col border border-dark-600">
       {/* Title bar */}
       <div className="drag-region bg-dark-900 px-3 py-2 flex items-center justify-between border-b border-dark-600">
         <div className="flex items-center gap-2">
@@ -378,7 +378,7 @@ const ModoGuias: React.FC = () => {
   const metaDiaria = usuarioActual?.metaDiaria || 100;
 
   return (
-    <div className="h-full bg-dark-800 rounded-xl overflow-hidden flex flex-col border border-dark-600">
+    <div className="h-full flex-1 bg-dark-800 rounded-xl overflow-hidden flex flex-col border border-dark-600">
       <TitleBar />
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
@@ -477,7 +477,7 @@ const ModoNovedades: React.FC = () => {
   ];
 
   return (
-    <div className="h-full bg-dark-800 rounded-xl overflow-hidden flex flex-col border border-dark-600">
+    <div className="h-full flex-1 bg-dark-800 rounded-xl overflow-hidden flex flex-col border border-dark-600">
       <TitleBar />
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3">

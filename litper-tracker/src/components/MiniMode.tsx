@@ -77,7 +77,7 @@ const MiniMode: React.FC = () => {
     : 'bg-orange-700 hover:bg-orange-600';
 
   return (
-    <div className="h-full bg-dark-800 rounded-xl overflow-hidden border border-dark-600">
+    <div className="h-full flex-1 bg-dark-800 rounded-xl overflow-hidden border border-dark-600">
       {/* Title bar mini */}
       <div className="drag-region bg-dark-900 px-2 py-1 flex items-center justify-between">
         <div className="flex items-center gap-1">

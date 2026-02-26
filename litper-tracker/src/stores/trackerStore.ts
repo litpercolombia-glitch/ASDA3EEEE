@@ -666,13 +666,13 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
           set({ apiUrl: savedApiUrl });
           console.log('📡 API URL cargada:', savedApiUrl);
         }
-        // Cargar modo de ventana guardado
-        const savedModo = await window.electronAPI.getStore('modo');
-        if (savedModo && WINDOW_SIZES[savedModo as ModoVentana]) {
-          set({ modo: savedModo as ModoVentana });
-          const size = WINDOW_SIZES[savedModo as ModoVentana];
-          window.electronAPI.setSize(size.width, size.height);
-        }
+        // SIEMPRE iniciar en modo normal para evitar problemas
+        // El usuario puede cambiar a otro modo después
+        set({ modo: 'normal' });
+        const size = WINDOW_SIZES['normal'];
+        window.electronAPI.setSize(size.width, size.height);
+        await window.electronAPI.setStore('modo', 'normal');
+        console.log('✅ Modo ventana: normal');
       } catch (e) {
         console.error('Error cargando configuración:', e);
       }

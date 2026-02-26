@@ -21,7 +21,7 @@ const SuperMiniMode: React.FC = () => {
 
   return (
     <div
-      className="h-full bg-dark-800 rounded-xl overflow-hidden border border-dark-600 drag-region cursor-move flex items-center justify-center"
+      className="h-full flex-1 bg-dark-800 rounded-xl overflow-hidden border border-dark-600 drag-region cursor-move flex items-center justify-center"
       onDoubleClick={() => setModo('normal')}
       title="Doble click para expandir"
     >
