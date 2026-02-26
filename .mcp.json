@@ -11,6 +11,31 @@
       "command": "node",
       "args": ["mcp-servers/meta-ads-mcp/index.cjs"],
       "env": {}
+    },
+    "social-media-mcp": {
+      "command": "node",
+      "args": ["mcp-servers/social-media-mcp/index.cjs"],
+      "env": {}
+    },
+    "email-marketing-mcp": {
+      "command": "node",
+      "args": ["mcp-servers/email-marketing-mcp/index.cjs"],
+      "env": {}
+    },
+    "google-drive-mcp": {
+      "command": "node",
+      "args": ["mcp-servers/google-drive-mcp/index.cjs"],
+      "env": {}
+    },
+    "slack-mcp": {
+      "command": "node",
+      "args": ["mcp-servers/slack-mcp/index.cjs"],
+      "env": {}
+    },
+    "calendar-mcp": {
+      "command": "node",
+      "args": ["mcp-servers/calendar-mcp/index.cjs"],
+      "env": {}
     }
   }
 }

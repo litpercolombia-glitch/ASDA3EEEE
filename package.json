@@ -18,6 +18,11 @@
     "test:ui": "vitest --ui",
     "mcp:video-audio": "node mcp-servers/video-audio-mcp-server/index.cjs",
     "mcp:meta-ads": "node mcp-servers/meta-ads-mcp/index.cjs",
+    "mcp:social-media": "node mcp-servers/social-media-mcp/index.cjs",
+    "mcp:email-marketing": "node mcp-servers/email-marketing-mcp/index.cjs",
+    "mcp:google-drive": "node mcp-servers/google-drive-mcp/index.cjs",
+    "mcp:slack": "node mcp-servers/slack-mcp/index.cjs",
+    "mcp:calendar": "node mcp-servers/calendar-mcp/index.cjs",
     "mcp:setup": "bash scripts/setup-video-audio-mcp.sh"
   },
   "dependencies": {
