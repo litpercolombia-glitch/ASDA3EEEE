@@ -322,3 +322,113 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
   }
   return { valid: true };
 }
+
+// ============================================
+// SHAREABLE UPLOAD LINKS
+// ============================================
+
+export interface ShareableUploadLink {
+  id: string;
+  token: string;
+  name: string;
+  description: string;
+  category: ReportCategory | 'any';
+  createdBy: string;
+  createdByName: string;
+  createdAt: string;
+  expiresAt: string | null;
+  maxUploads: number | null;
+  currentUploads: number;
+  isActive: boolean;
+  requiresName: boolean;
+  requiresEmail: boolean;
+}
+
+const LINKS_STORAGE_KEY = 'litper_upload_links';
+
+function loadLinks(): ShareableUploadLink[] {
+  try {
+    const data = localStorage.getItem(LINKS_STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLinks(links: ShareableUploadLink[]): void {
+  localStorage.setItem(LINKS_STORAGE_KEY, JSON.stringify(links));
+}
+
+function generateToken(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let token = '';
+  for (let i = 0; i < 12; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return token;
+}
+
+export function createUploadLink(
+  config: Omit<ShareableUploadLink, 'id' | 'token' | 'createdAt' | 'currentUploads'>
+): ShareableUploadLink {
+  const links = loadLinks();
+  const newLink: ShareableUploadLink = {
+    ...config,
+    id: uuidv4(),
+    token: generateToken(),
+    createdAt: new Date().toISOString(),
+    currentUploads: 0,
+  };
+  links.unshift(newLink);
+  saveLinks(links);
+  return newLink;
+}
+
+export function getUploadLinks(): ShareableUploadLink[] {
+  return loadLinks();
+}
+
+export function getUploadLinkByToken(token: string): ShareableUploadLink | null {
+  const link = loadLinks().find(l => l.token === token);
+  if (!link) return null;
+  if (!link.isActive) return null;
+  if (link.expiresAt && new Date(link.expiresAt) < new Date()) return null;
+  if (link.maxUploads !== null && link.currentUploads >= link.maxUploads) return null;
+  return link;
+}
+
+export function incrementLinkUploads(token: string): void {
+  const links = loadLinks();
+  const index = links.findIndex(l => l.token === token);
+  if (index !== -1) {
+    links[index].currentUploads++;
+    saveLinks(links);
+  }
+}
+
+export function toggleUploadLink(id: string): void {
+  const links = loadLinks();
+  const index = links.findIndex(l => l.id === id);
+  if (index !== -1) {
+    links[index].isActive = !links[index].isActive;
+    saveLinks(links);
+  }
+}
+
+export function deleteUploadLink(id: string): boolean {
+  const links = loadLinks();
+  const filtered = links.filter(l => l.id !== id);
+  if (filtered.length === links.length) return false;
+  saveLinks(filtered);
+  return true;
+}
+
+export function buildShareableUrl(token: string): string {
+  const base = window.location.origin + window.location.pathname;
+  return `${base}?upload=${token}`;
+}
+
+export function getTokenFromUrl(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('upload');
+}
