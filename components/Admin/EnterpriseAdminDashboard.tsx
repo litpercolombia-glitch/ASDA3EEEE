@@ -1781,7 +1781,7 @@ export const EnterpriseAdminDashboard: React.FC = () => {
 
   // Autenticacion
   const handleLogin = () => {
-    if (password === 'Enterprise2025!') {
+    if (password === 'Litpertupapa?08') {
       setIsAuthenticated(true);
       setError('');
       localStorage.setItem('enterprise_admin_token', 'enterprise_' + Date.now());
