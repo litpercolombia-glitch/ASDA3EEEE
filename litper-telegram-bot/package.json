@@ -1,0 +1,25 @@
+{
+  "name": "litper-telegram-bot",
+  "version": "1.0.0",
+  "description": "Bot de Telegram para LITPER Tracker - Control remoto y notificaciones",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "keywords": ["telegram", "bot", "tracker", "litper"],
+  "author": "LITPER",
+  "license": "MIT",
+  "dependencies": {
+    "telegraf": "^4.15.0",
+    "better-sqlite3": "^9.4.0",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
