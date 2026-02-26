@@ -11,6 +11,8 @@ import BarMode from './components/BarMode';
 import ConfigPanel from './components/ConfigPanel';
 import Toast from './components/Toast';
 import ConfirmModal from './components/ConfirmModal';
+import StatsPanel from './components/StatsPanel';
+import Celebrations from './components/Celebrations';
 import { LogOut, ArrowLeft, FileText, AlertTriangle, User, Download, Settings, RefreshCw, RotateCcw, CheckCircle, Eye, ArrowLeftRight } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -89,8 +91,10 @@ const App: React.FC = () => {
     <div className="h-full w-full flex flex-col bg-dark-800">
       {renderPantalla()}
       <ConfigPanel />
+      <StatsPanel />
       <Toast />
       <ConfirmModal />
+      <Celebrations />
     </div>
   );
 };

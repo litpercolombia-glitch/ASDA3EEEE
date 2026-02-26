@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Minus, X, Pin, Settings, ChevronDown, Monitor, Smartphone, Minimize2, Square, GripVertical } from 'lucide-react';
-import { useTrackerStore, ModoVentana } from '../stores/trackerStore';
+import { Minus, X, Pin, Settings, ChevronDown, Monitor, Smartphone, Minimize2, Square, GripVertical, TrendingUp } from 'lucide-react';
+import { useTrackerStore, ModoVentana, NIVELES } from '../stores/trackerStore';
 
 const MODOS_INFO: { id: ModoVentana; nombre: string; icon: React.ReactNode; color: string }[] = [
   { id: 'normal', nombre: 'Normal', icon: <Monitor size={12} />, color: 'text-emerald-400' },
@@ -11,7 +11,7 @@ const MODOS_INFO: { id: ModoVentana; nombre: string; icon: React.ReactNode; colo
 ];
 
 const TitleBar: React.FC = () => {
-  const { modo, setModo, alwaysOnTop, toggleAlwaysOnTop, toggleConfig } = useTrackerStore();
+  const { modo, setModo, alwaysOnTop, toggleAlwaysOnTop, toggleConfig, toggleStats, userStats } = useTrackerStore();
   const [showModos, setShowModos] = useState(false);
 
   const handleMinimize = () => {
@@ -23,14 +23,49 @@ const TitleBar: React.FC = () => {
   };
 
   const modoActual = MODOS_INFO.find(m => m.id === modo) || MODOS_INFO[0];
+  const nivelActual = NIVELES.find(n => n.id === userStats.nivel) || NIVELES[0];
+
+  // Calcular progreso de XP
+  const xpEnNivel = userStats.xp - nivelActual.xpMin;
+  const xpParaNivel = nivelActual.xpMax - nivelActual.xpMin;
+  const progreso = Math.min((xpEnNivel / xpParaNivel) * 100, 100);
 
   return (
     <div className="drag-region bg-dark-900 px-2 py-1.5 flex items-center justify-between border-b border-dark-600 relative">
+      {/* Logo y Nivel */}
       <div className="flex items-center gap-2">
         <span className="text-amber-400 font-bold text-xs">LITPER</span>
+
+        {/* Indicador de Nivel - clickeable para ver stats */}
+        <button
+          onClick={toggleStats}
+          className="no-drag flex items-center gap-1 px-1.5 py-0.5 bg-dark-700 hover:bg-dark-600 rounded transition-colors"
+          title="Ver estadísticas"
+        >
+          <span className="text-sm">{nivelActual.icon}</span>
+          <div className="flex flex-col items-start">
+            <span className="text-[8px] text-slate-400 leading-none">Nv.{nivelActual.id}</span>
+            {/* Mini barra de XP */}
+            <div className="w-8 h-0.5 bg-dark-500 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-purple-500 transition-all duration-300"
+                style={{ width: `${progreso}%` }}
+              />
+            </div>
+          </div>
+        </button>
       </div>
 
       <div className="flex items-center gap-0.5 no-drag">
+        {/* Botón Estadísticas */}
+        <button
+          onClick={toggleStats}
+          className="p-1 hover:bg-dark-700 rounded transition-colors text-slate-400 hover:text-amber-400"
+          title="Estadísticas"
+        >
+          <TrendingUp size={12} />
+        </button>
+
         {/* Selector de modo - Dropdown */}
         <div className="relative">
           <button

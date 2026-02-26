@@ -15,6 +15,65 @@ export interface Usuario {
 
 export type TipoProceso = 'guias' | 'novedades';
 
+// ============================================
+// GAMIFICACIÓN - TIPOS
+// ============================================
+
+export interface Nivel {
+  id: number;
+  nombre: string;
+  xpMin: number;
+  xpMax: number;
+  color: string;
+  icon: string;
+}
+
+export interface Badge {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  icon: string;
+  color: string;
+  desbloqueado: boolean;
+  fechaDesbloqueo?: string;
+}
+
+export interface UserStats {
+  xp: number;
+  nivel: number;
+  rondasTotales: number;
+  rondasHoyCount: number;
+  rachaActual: number;
+  mejorRacha: number;
+  tiempoTotalTrabajado: number;
+  guiasRealizadas: number;
+  novedadesSolucionadas: number;
+  rondasPerfectas: number;
+  rondasVeloces: number;
+}
+
+// Definición de niveles
+export const NIVELES: Nivel[] = [
+  { id: 1, nombre: 'Novato', xpMin: 0, xpMax: 100, color: '#94a3b8', icon: '🌱' },
+  { id: 2, nombre: 'Aprendiz', xpMin: 100, xpMax: 300, color: '#22c55e', icon: '📚' },
+  { id: 3, nombre: 'Competente', xpMin: 300, xpMax: 600, color: '#3b82f6', icon: '💪' },
+  { id: 4, nombre: 'Experto', xpMin: 600, xpMax: 1000, color: '#a855f7', icon: '⭐' },
+  { id: 5, nombre: 'Maestro', xpMin: 1000, xpMax: 1500, color: '#f59e0b', icon: '🏆' },
+  { id: 6, nombre: 'Leyenda', xpMin: 1500, xpMax: 999999, color: '#ef4444', icon: '👑' },
+];
+
+// Definición de badges
+export const BADGES_DEFINICION: Omit<Badge, 'desbloqueado' | 'fechaDesbloqueo'>[] = [
+  { id: 'primera_ronda', nombre: 'Primera Ronda', descripcion: 'Completa tu primera ronda', icon: '🎯', color: '#22c55e' },
+  { id: 'maratonista', nombre: 'Maratonista', descripcion: 'Completa 10 rondas en un día', icon: '🏃', color: '#3b82f6' },
+  { id: 'velocista', nombre: 'Velocista', descripcion: 'Termina antes que el timer', icon: '⚡', color: '#f59e0b' },
+  { id: 'perfeccionista', nombre: 'Perfeccionista', descripcion: 'Ronda sin errores', icon: '✨', color: '#a855f7' },
+  { id: 'constante', nombre: 'Constante', descripcion: 'Racha de 5 días', icon: '🔥', color: '#ef4444' },
+  { id: 'centenario', nombre: 'Centenario', descripcion: '100 rondas totales', icon: '💯', color: '#06b6d4' },
+  { id: 'mil_guias', nombre: 'Mil Guías', descripcion: '1000 guías realizadas', icon: '📦', color: '#10b981' },
+  { id: 'solucionador', nombre: 'Solucionador', descripcion: '500 novedades solucionadas', icon: '🔧', color: '#8b5cf6' },
+];
+
 export interface RondaBase {
   id: string;
   usuarioId: string;
@@ -125,6 +184,13 @@ export interface TrackerState {
   modalVisible: boolean;
   modalCallback: (() => void) | null;
 
+  // === GAMIFICACIÓN ===
+  userStats: UserStats;
+  badges: Badge[];
+  showLevelUp: boolean;
+  newBadge: Badge | null;
+  showStats: boolean;
+
   // === NAVEGACIÓN ===
   seleccionarUsuario: (usuario: Usuario) => void;
   seleccionarProceso: (proceso: TipoProceso) => void;
@@ -191,6 +257,15 @@ export interface TrackerState {
   showModal: (callback: () => void) => void;
   hideModal: () => void;
   confirmModal: () => void;
+
+  // === GAMIFICACIÓN ===
+  addXP: (amount: number) => void;
+  checkBadges: () => void;
+  getNivelActual: () => Nivel;
+  getXPParaSiguienteNivel: () => number;
+  toggleStats: () => void;
+  hideLevelUp: () => void;
+  hideNewBadge: () => void;
 }
 
 // ============================================
@@ -363,6 +438,25 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
   // Modal
   modalVisible: false,
   modalCallback: null,
+
+  // === GAMIFICACIÓN ===
+  userStats: {
+    xp: 0,
+    nivel: 1,
+    rondasTotales: 0,
+    rondasHoyCount: 0,
+    rachaActual: 0,
+    mejorRacha: 0,
+    tiempoTotalTrabajado: 0,
+    guiasRealizadas: 0,
+    novedadesSolucionadas: 0,
+    rondasPerfectas: 0,
+    rondasVeloces: 0,
+  },
+  badges: BADGES_DEFINICION.map(b => ({ ...b, desbloqueado: false })),
+  showLevelUp: false,
+  newBadge: null,
+  showStats: false,
 
   // === NAVEGACIÓN ===
   seleccionarUsuario: (usuario) => {
@@ -599,6 +693,34 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
       .filter((r): r is RondaNovedades => r.tipo === 'novedades')
       .reduce((acc, r) => acc + r.solucionadas, 0);
 
+    // === GAMIFICACIÓN ===
+    // Calcular XP ganado
+    let xpGanado = 10; // Base por ronda completada
+    const tiempoUsado = state.tiempoTotal - state.tiempoRestante;
+    const esVeloz = state.procesoActual === 'guias' && state.tiempoRestante > 60; // Terminó con >1min restante
+    const esPerfecta = state.procesoActual === 'novedades' && state.valoresNovedades.errorPorSolucion === 0;
+
+    // Bonus XP
+    if (state.procesoActual === 'guias') {
+      xpGanado += state.valoresGuias.realizado * 2; // 2 XP por guía
+      if (esVeloz) xpGanado += 5; // Bonus velocidad
+    } else {
+      xpGanado += state.valoresNovedades.solucionadas * 3; // 3 XP por novedad
+      if (esPerfecta) xpGanado += 10; // Bonus perfección
+    }
+
+    // Actualizar stats de usuario
+    const newStats: UserStats = {
+      ...state.userStats,
+      rondasTotales: state.userStats.rondasTotales + 1,
+      rondasHoyCount: state.userStats.rondasHoyCount + 1,
+      tiempoTotalTrabajado: state.userStats.tiempoTotalTrabajado + Math.floor(tiempoUsado / 60),
+      guiasRealizadas: state.userStats.guiasRealizadas + (state.procesoActual === 'guias' ? state.valoresGuias.realizado : 0),
+      novedadesSolucionadas: state.userStats.novedadesSolucionadas + (state.procesoActual === 'novedades' ? state.valoresNovedades.solucionadas : 0),
+      rondasPerfectas: state.userStats.rondasPerfectas + (esPerfecta ? 1 : 0),
+      rondasVeloces: state.userStats.rondasVeloces + (esVeloz ? 1 : 0),
+    };
+
     set({
       rondasHoy: nuevasRondas,
       totalHoyGuias: totalGuias,
@@ -608,11 +730,18 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
       valoresNovedades: { ...valoresNovedadesIniciales },
       tiempoRestante: state.tiempoTotal,
       estadoTimer: 'idle',
+      tiempoTranscurrido: 0,
+      estadoStopwatch: 'idle',
       horaInicio: '',
+      userStats: newStats,
     });
 
     // Sonido de éxito al guardar ronda
     playSuccessSound();
+
+    // Agregar XP y verificar badges
+    get().addXP(xpGanado);
+    get().checkBadges();
 
     get().guardarDatos();
   },
@@ -1072,4 +1201,189 @@ Total Rondas: ${state.rondasHoy.length}
     }
     set({ modalVisible: false, modalCallback: null });
   },
+
+  // === GAMIFICACIÓN ===
+  addXP: (amount) => {
+    const state = get();
+    const newXP = state.userStats.xp + amount;
+    const nivelAnterior = state.userStats.nivel;
+
+    // Calcular nuevo nivel
+    let nuevoNivel = 1;
+    for (const nivel of NIVELES) {
+      if (newXP >= nivel.xpMin && newXP < nivel.xpMax) {
+        nuevoNivel = nivel.id;
+        break;
+      }
+    }
+
+    // Actualizar stats
+    set({
+      userStats: {
+        ...state.userStats,
+        xp: newXP,
+        nivel: nuevoNivel,
+      },
+      showLevelUp: nuevoNivel > nivelAnterior,
+    });
+
+    // Guardar stats
+    if (window.electronAPI) {
+      window.electronAPI.setStore('userStats', { ...state.userStats, xp: newXP, nivel: nuevoNivel });
+    }
+
+    // Celebración de nivel
+    if (nuevoNivel > nivelAnterior) {
+      playLevelUpSound();
+      setTimeout(() => set({ showLevelUp: false }), 3000);
+    }
+  },
+
+  checkBadges: () => {
+    const state = get();
+    const { userStats, badges } = state;
+    const newBadges = [...badges];
+    let badgeDesbloqueado: Badge | null = null;
+
+    // Primera Ronda
+    if (userStats.rondasTotales >= 1 && !newBadges.find(b => b.id === 'primera_ronda')?.desbloqueado) {
+      const idx = newBadges.findIndex(b => b.id === 'primera_ronda');
+      if (idx !== -1) {
+        newBadges[idx] = { ...newBadges[idx], desbloqueado: true, fechaDesbloqueo: new Date().toISOString() };
+        badgeDesbloqueado = newBadges[idx];
+      }
+    }
+
+    // Maratonista - 10 rondas en un día
+    if (userStats.rondasHoyCount >= 10 && !newBadges.find(b => b.id === 'maratonista')?.desbloqueado) {
+      const idx = newBadges.findIndex(b => b.id === 'maratonista');
+      if (idx !== -1) {
+        newBadges[idx] = { ...newBadges[idx], desbloqueado: true, fechaDesbloqueo: new Date().toISOString() };
+        badgeDesbloqueado = newBadges[idx];
+      }
+    }
+
+    // Velocista - Terminar antes del timer
+    if (userStats.rondasVeloces >= 1 && !newBadges.find(b => b.id === 'velocista')?.desbloqueado) {
+      const idx = newBadges.findIndex(b => b.id === 'velocista');
+      if (idx !== -1) {
+        newBadges[idx] = { ...newBadges[idx], desbloqueado: true, fechaDesbloqueo: new Date().toISOString() };
+        badgeDesbloqueado = newBadges[idx];
+      }
+    }
+
+    // Perfeccionista - Ronda sin errores
+    if (userStats.rondasPerfectas >= 1 && !newBadges.find(b => b.id === 'perfeccionista')?.desbloqueado) {
+      const idx = newBadges.findIndex(b => b.id === 'perfeccionista');
+      if (idx !== -1) {
+        newBadges[idx] = { ...newBadges[idx], desbloqueado: true, fechaDesbloqueo: new Date().toISOString() };
+        badgeDesbloqueado = newBadges[idx];
+      }
+    }
+
+    // Constante - Racha de 5 días
+    if (userStats.rachaActual >= 5 && !newBadges.find(b => b.id === 'constante')?.desbloqueado) {
+      const idx = newBadges.findIndex(b => b.id === 'constante');
+      if (idx !== -1) {
+        newBadges[idx] = { ...newBadges[idx], desbloqueado: true, fechaDesbloqueo: new Date().toISOString() };
+        badgeDesbloqueado = newBadges[idx];
+      }
+    }
+
+    // Centenario - 100 rondas totales
+    if (userStats.rondasTotales >= 100 && !newBadges.find(b => b.id === 'centenario')?.desbloqueado) {
+      const idx = newBadges.findIndex(b => b.id === 'centenario');
+      if (idx !== -1) {
+        newBadges[idx] = { ...newBadges[idx], desbloqueado: true, fechaDesbloqueo: new Date().toISOString() };
+        badgeDesbloqueado = newBadges[idx];
+      }
+    }
+
+    // Mil Guías
+    if (userStats.guiasRealizadas >= 1000 && !newBadges.find(b => b.id === 'mil_guias')?.desbloqueado) {
+      const idx = newBadges.findIndex(b => b.id === 'mil_guias');
+      if (idx !== -1) {
+        newBadges[idx] = { ...newBadges[idx], desbloqueado: true, fechaDesbloqueo: new Date().toISOString() };
+        badgeDesbloqueado = newBadges[idx];
+      }
+    }
+
+    // Solucionador - 500 novedades
+    if (userStats.novedadesSolucionadas >= 500 && !newBadges.find(b => b.id === 'solucionador')?.desbloqueado) {
+      const idx = newBadges.findIndex(b => b.id === 'solucionador');
+      if (idx !== -1) {
+        newBadges[idx] = { ...newBadges[idx], desbloqueado: true, fechaDesbloqueo: new Date().toISOString() };
+        badgeDesbloqueado = newBadges[idx];
+      }
+    }
+
+    set({ badges: newBadges, newBadge: badgeDesbloqueado });
+
+    // Guardar badges
+    if (window.electronAPI) {
+      window.electronAPI.setStore('badges', newBadges);
+    }
+
+    // Mostrar notificación de badge
+    if (badgeDesbloqueado) {
+      playBadgeSound();
+      setTimeout(() => set({ newBadge: null }), 4000);
+    }
+  },
+
+  getNivelActual: () => {
+    const { userStats } = get();
+    return NIVELES.find(n => n.id === userStats.nivel) || NIVELES[0];
+  },
+
+  getXPParaSiguienteNivel: () => {
+    const { userStats } = get();
+    const nivelActual = NIVELES.find(n => n.id === userStats.nivel) || NIVELES[0];
+    return nivelActual.xpMax - userStats.xp;
+  },
+
+  toggleStats: () => {
+    set((state) => ({ showStats: !state.showStats }));
+  },
+
+  hideLevelUp: () => set({ showLevelUp: false }),
+
+  hideNewBadge: () => set({ newBadge: null }),
 }));
+
+// Sonido de Level Up
+const playLevelUpSound = () => {
+  try {
+    const ctx = new AudioContext();
+    const notes = [523, 659, 784, 1047]; // Do Mi Sol Do alto
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.2, ctx.currentTime + i * 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.15 + 0.3);
+      osc.start(ctx.currentTime + i * 0.15);
+      osc.stop(ctx.currentTime + i * 0.15 + 0.3);
+    });
+  } catch (e) {}
+};
+
+// Sonido de Badge
+const playBadgeSound = () => {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } catch (e) {}
+};
