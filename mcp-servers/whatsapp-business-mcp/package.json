@@ -1,0 +1,22 @@
+{
+  "name": "whatsapp-business-mcp",
+  "version": "1.0.0",
+  "description": "MCP Server para WhatsApp Business Cloud API - 25 herramientas para Litper Pro",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  },
+  "keywords": [
+    "mcp",
+    "whatsapp",
+    "whatsapp-business",
+    "cloud-api",
+    "litper-pro"
+  ],
+  "author": "Litper Pro",
+  "license": "MIT"
+}
