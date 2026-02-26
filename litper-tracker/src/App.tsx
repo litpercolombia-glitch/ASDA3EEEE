@@ -7,6 +7,7 @@ import QuickCounter from './components/QuickCounter';
 import ProgressBar from './components/ProgressBar';
 import MiniMode from './components/MiniMode';
 import SuperMiniMode from './components/SuperMiniMode';
+import BarMode from './components/BarMode';
 import ConfigPanel from './components/ConfigPanel';
 import Toast from './components/Toast';
 import ConfirmModal from './components/ConfirmModal';
@@ -43,6 +44,15 @@ const App: React.FC = () => {
   }, [estadoStopwatch, tickStopwatch]);
 
   // Renderizar segun modo
+  if (modo === 'barra') {
+    return (
+      <div className="h-full w-full flex flex-col bg-dark-800">
+        <BarMode />
+        <ConfigPanel />
+      </div>
+    );
+  }
+
   if (modo === 'micro') {
     return (
       <div className="h-full w-full flex flex-col bg-dark-800">

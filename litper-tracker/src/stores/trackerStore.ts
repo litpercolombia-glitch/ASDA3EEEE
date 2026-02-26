@@ -52,7 +52,7 @@ export interface RondaNovedades extends RondaBase {
 
 export type Ronda = RondaGuias | RondaNovedades;
 
-export type ModoVentana = 'normal' | 'compacto' | 'mini' | 'micro';
+export type ModoVentana = 'normal' | 'compacto' | 'mini' | 'micro' | 'barra';
 
 export interface TrackerState {
   // Pantalla actual
@@ -236,6 +236,7 @@ const WINDOW_SIZES: Record<ModoVentana, { width: number; height: number }> = {
   compacto: { width: 320, height: 420 },
   mini: { width: 280, height: 200 },
   micro: { width: 180, height: 80 },
+  barra: { width: 320, height: 36 },
 };
 
 // Helper para hacer peticiones al API
