@@ -58,6 +58,7 @@ import {
   Hexagon,
   CircuitBoard,
   Wifi,
+  Upload,
 } from 'lucide-react';
 import {
   useLayoutStore,
@@ -80,6 +81,7 @@ interface SidebarProps {
   onLogout: () => void;
   onOpenChat: () => void;
   onOpenHelp: () => void;
+  onUploadReport?: () => void;
   userName?: string;
   userEmail?: string;
 }
@@ -497,7 +499,7 @@ function StatusBar({ isCollapsed }: { isCollapsed: boolean }) {
 // COMPONENTE PRINCIPAL SIDEBAR - COMMAND CENTER
 // ============================================
 
-export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail }: SidebarProps) {
+export function Sidebar({ onLogout, onOpenChat, onOpenHelp, onUploadReport, userName, userEmail }: SidebarProps) {
   const {
     sidebarCollapsed,
     sidebarHovered,
@@ -666,6 +668,20 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, userName, userEmail 
 
         {/* Footer */}
         <div className="relative z-10 border-t border-cyan-500/20 p-2 space-y-1">
+          {/* Upload Report Button */}
+          {onUploadReport && (
+            <button
+              onClick={onUploadReport}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 mb-2 rounded-xl bg-gradient-to-r from-indigo-600/80 to-purple-600/80 hover:from-indigo-500 hover:to-purple-500 text-white transition-all duration-300 border border-indigo-500/30 shadow-lg shadow-indigo-500/20 ${
+                !isExpanded ? 'justify-center' : ''
+              }`}
+              title="Subir Reporte"
+            >
+              <Upload className="w-5 h-5" />
+              {isExpanded && <span className="text-sm font-bold">Subir Reporte</span>}
+            </button>
+          )}
+
           {/* Quick Actions */}
           <div className="flex gap-1 mb-2">
             <button

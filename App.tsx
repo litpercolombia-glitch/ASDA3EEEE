@@ -60,6 +60,9 @@ import { useUserProfileStore } from './services/userProfileService';
 import { UserProfileSettings } from './components/settings';
 // Enhanced Excel Upload with column config
 import { EnhancedExcelUpload } from './components/upload';
+// Report Upload System
+import { ReportUploadModal, MyReportsPanel, AdminReportsView } from './components/ReportUpload';
+import { useReportUploadStore } from './stores/reportUploadStore';
 import {
   Crown,
   Search,
@@ -386,6 +389,9 @@ const App: React.FC = () => {
   // User Profile Store
   const { profile, isOnboardingComplete } = useUserProfileStore();
 
+  // Report Upload Store
+  const { isModalOpen: isReportModalOpen, openModal: openReportModal, closeModal: closeReportModal } = useReportUploadStore();
+
   // Obtener usuario actual
   const currentUser = getCurrentUser();
 
@@ -653,6 +659,13 @@ const App: React.FC = () => {
           />
         );
       case 'inteligencia':
+        if (activeInteligenciaTab === 'reportes') {
+          return (
+            <div className="p-6">
+              <MyReportsPanel onOpenUploadModal={openReportModal} />
+            </div>
+          );
+        }
         return (
           <InteligenciaIAUnificadoTab
             shipments={shipments}
@@ -711,6 +724,7 @@ const App: React.FC = () => {
       onLogout={handleLogout}
       onOpenChat={handleOpenChat}
       onOpenHelp={handleOpenHelp}
+      onUploadReport={openReportModal}
       userName={currentUser?.nombre || 'Usuario'}
       userEmail={currentUser?.email || 'user@litper.co'}
     >
@@ -979,6 +993,9 @@ const App: React.FC = () => {
         forceOpen={showProBubble}
         onForceOpenHandled={() => setShowProBubble(false)}
       />
+
+      {/* Report Upload Modal - Accessible from anywhere */}
+      <ReportUploadModal isOpen={isReportModalOpen} onClose={closeReportModal} />
     </AppLayout>
   );
 };
