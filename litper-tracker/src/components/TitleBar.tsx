@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Minus, X, Pin, Settings, ChevronDown, Monitor, Smartphone, Minimize2, Square, GripVertical, TrendingUp } from 'lucide-react';
+import { Minus, X, Pin, Settings, ChevronDown, Monitor, Smartphone, Minimize2, Square, GripVertical, TrendingUp, Target, Clock, Bookmark } from 'lucide-react';
 import { useTrackerStore, ModoVentana, NIVELES } from '../stores/trackerStore';
 
 const MODOS_INFO: { id: ModoVentana; nombre: string; icon: React.ReactNode; color: string }[] = [
@@ -11,8 +11,15 @@ const MODOS_INFO: { id: ModoVentana; nombre: string; icon: React.ReactNode; colo
 ];
 
 const TitleBar: React.FC = () => {
-  const { modo, setModo, alwaysOnTop, toggleAlwaysOnTop, toggleConfig, toggleStats, userStats } = useTrackerStore();
+  const { modo, setModo, alwaysOnTop, toggleAlwaysOnTop, toggleConfig, toggleStats, toggleGoals, toggleHistory, toggleTemplates, toggleDailySummary, userStats, metasDiarias, totalHoyGuias, totalHoyNovedades } = useTrackerStore();
   const [showModos, setShowModos] = useState(false);
+
+  // Calcular progreso de metas
+  const metaGuias = metasDiarias.find((m) => m.tipo === 'guias');
+  const metaNovedades = metasDiarias.find((m) => m.tipo === 'novedades');
+  const progresoTotal = metaGuias && metaNovedades
+    ? ((totalHoyGuias / metaGuias.objetivo + totalHoyNovedades / metaNovedades.objetivo) / 2) * 100
+    : 0;
 
   const handleMinimize = () => {
     window.electronAPI?.minimize();
@@ -57,11 +64,42 @@ const TitleBar: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-0.5 no-drag">
-        {/* Botón Estadísticas */}
+        {/* Botón Metas */}
         <button
-          onClick={toggleStats}
+          onClick={toggleGoals}
+          className={`p-1 rounded transition-colors ${
+            progresoTotal >= 100
+              ? 'bg-emerald-500/20 text-emerald-400'
+              : 'hover:bg-dark-700 text-slate-400 hover:text-amber-400'
+          }`}
+          title="Metas Diarias"
+        >
+          <Target size={12} />
+        </button>
+
+        {/* Botón Historial */}
+        <button
+          onClick={toggleHistory}
+          className="p-1 hover:bg-dark-700 rounded transition-colors text-slate-400 hover:text-purple-400"
+          title="Historial"
+        >
+          <Clock size={12} />
+        </button>
+
+        {/* Botón Plantillas */}
+        <button
+          onClick={toggleTemplates}
+          className="p-1 hover:bg-dark-700 rounded transition-colors text-slate-400 hover:text-blue-400"
+          title="Plantillas"
+        >
+          <Bookmark size={12} />
+        </button>
+
+        {/* Botón Estadísticas/Resumen */}
+        <button
+          onClick={toggleDailySummary}
           className="p-1 hover:bg-dark-700 rounded transition-colors text-slate-400 hover:text-amber-400"
-          title="Estadísticas"
+          title="Resumen del Día"
         >
           <TrendingUp size={12} />
         </button>

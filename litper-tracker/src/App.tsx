@@ -13,14 +13,40 @@ import Toast from './components/Toast';
 import ConfirmModal from './components/ConfirmModal';
 import StatsPanel from './components/StatsPanel';
 import Celebrations from './components/Celebrations';
+import HistoryPanel from './components/HistoryPanel';
+import DailySummary from './components/DailySummary';
+import GoalsIndicator from './components/GoalsIndicator';
+import TemplatesPanel from './components/TemplatesPanel';
 import { LogOut, ArrowLeft, FileText, AlertTriangle, User, Download, Settings, RefreshCw, RotateCcw, CheckCircle, Eye, ArrowLeftRight } from 'lucide-react';
 
 const App: React.FC = () => {
-  const { modo, pantalla, cargarDatos, tick, estadoTimer, tickStopwatch, estadoStopwatch } = useTrackerStore();
+  const { modo, pantalla, cargarDatos, tick, estadoTimer, tickStopwatch, estadoStopwatch, setModo, toggleDailySummary, toggleGoals, toggleHistory, exportarExcel, realizarBackup } = useTrackerStore();
 
   // Cargar datos al iniciar
   useEffect(() => {
     cargarDatos();
+
+    // Registrar listeners para acciones desde el tray
+    if (window.electronAPI) {
+      window.electronAPI.onSetMode?.((mode: string) => {
+        setModo(mode as any);
+      });
+      window.electronAPI.onShowDailySummary?.(() => {
+        toggleDailySummary();
+      });
+      window.electronAPI.onShowGoals?.(() => {
+        toggleGoals();
+      });
+      window.electronAPI.onShowHistory?.(() => {
+        toggleHistory();
+      });
+      window.electronAPI.onExportData?.(() => {
+        exportarExcel();
+      });
+      window.electronAPI.onDoBackup?.(() => {
+        realizarBackup();
+      });
+    }
   }, [cargarDatos]);
 
   // Timer tick (countdown)
@@ -89,6 +115,10 @@ const App: React.FC = () => {
       {renderPantalla()}
       <ConfigPanel />
       <StatsPanel />
+      <HistoryPanel />
+      <DailySummary />
+      <GoalsIndicator />
+      <TemplatesPanel />
       <Toast />
       <ConfirmModal />
       <Celebrations />

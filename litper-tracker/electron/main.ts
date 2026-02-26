@@ -1,5 +1,6 @@
-import { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, nativeImage } from 'electron';
+import { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, nativeImage, Notification, dialog } from 'electron';
 import * as path from 'path';
+import * as fs from 'fs';
 import Store from 'electron-store';
 
 const store = new Store();
@@ -107,35 +108,97 @@ const createTray = () => {
   tray = new Tray(icon);
   tray.setToolTip('LITPER Tracker');
 
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'Mostrar',
-      click: () => mainWindow?.show(),
-    },
-    {
-      label: 'Siempre encima',
-      type: 'checkbox',
-      checked: true,
-      click: (menuItem) => {
-        mainWindow?.setAlwaysOnTop(menuItem.checked);
-      },
-    },
-    { type: 'separator' },
-    {
-      label: 'Salir',
-      click: () => {
-        isQuitting = true;
-        app.quit();
-      },
-    },
-  ]);
+  const updateTrayMenu = () => {
+    const isOnTop = mainWindow?.isAlwaysOnTop() ?? true;
 
-  tray.setContextMenu(contextMenu);
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: 'Mostrar LITPER',
+        click: () => {
+          mainWindow?.show();
+          mainWindow?.focus();
+        },
+      },
+      { type: 'separator' },
+      {
+        label: 'Modo',
+        submenu: [
+          { label: 'Normal', click: () => mainWindow?.webContents.send('set-mode', 'normal') },
+          { label: 'Compacto', click: () => mainWindow?.webContents.send('set-mode', 'compacto') },
+          { label: 'Mini', click: () => mainWindow?.webContents.send('set-mode', 'mini') },
+          { label: 'Micro', click: () => mainWindow?.webContents.send('set-mode', 'micro') },
+          { label: 'Barra', click: () => mainWindow?.webContents.send('set-mode', 'barra') },
+        ],
+      },
+      {
+        label: 'Siempre encima',
+        type: 'checkbox',
+        checked: isOnTop,
+        click: (menuItem) => {
+          mainWindow?.setAlwaysOnTop(menuItem.checked);
+        },
+      },
+      { type: 'separator' },
+      {
+        label: 'Acciones rápidas',
+        submenu: [
+          {
+            label: 'Ver Resumen del Día',
+            click: () => {
+              mainWindow?.show();
+              mainWindow?.webContents.send('show-daily-summary');
+            },
+          },
+          {
+            label: 'Ver Metas',
+            click: () => {
+              mainWindow?.show();
+              mainWindow?.webContents.send('show-goals');
+            },
+          },
+          {
+            label: 'Ver Historial',
+            click: () => {
+              mainWindow?.show();
+              mainWindow?.webContents.send('show-history');
+            },
+          },
+        ],
+      },
+      { type: 'separator' },
+      {
+        label: 'Exportar Datos',
+        click: () => {
+          mainWindow?.webContents.send('export-data');
+        },
+      },
+      {
+        label: 'Hacer Backup',
+        click: () => {
+          mainWindow?.webContents.send('do-backup');
+        },
+      },
+      { type: 'separator' },
+      {
+        label: 'Salir',
+        click: () => {
+          isQuitting = true;
+          app.quit();
+        },
+      },
+    ]);
+
+    tray?.setContextMenu(contextMenu);
+  };
+
+  updateTrayMenu();
+
   tray.on('click', () => {
     if (mainWindow?.isVisible()) {
       mainWindow.hide();
     } else {
       mainWindow?.show();
+      mainWindow?.focus();
     }
   });
 };
@@ -170,6 +233,40 @@ ipcMain.handle('set-opacity', (_, opacity: number) => {
 });
 ipcMain.handle('set-size', (_, width: number, height: number) => {
   mainWindow?.setSize(width, height, true);
+});
+
+// Export CSV
+ipcMain.handle('export-csv', async (_, content: string, filename: string) => {
+  const downloadsPath = app.getPath('downloads');
+  const filePath = path.join(downloadsPath, filename);
+
+  try {
+    fs.writeFileSync(filePath, content, 'utf-8');
+
+    // Mostrar notificacion
+    if (Notification.isSupported()) {
+      new Notification({
+        title: 'LITPER Tracker',
+        body: `Archivo exportado: ${filename}`,
+      }).show();
+    }
+
+    return { success: true, path: filePath };
+  } catch (error) {
+    console.error('Error exportando CSV:', error);
+    return { success: false, error: String(error) };
+  }
+});
+
+// Send notification
+ipcMain.handle('send-notification', (_, title: string, body: string) => {
+  if (Notification.isSupported()) {
+    new Notification({
+      title,
+      body,
+      silent: false,
+    }).show();
+  }
 });
 
 app.whenReady().then(() => {

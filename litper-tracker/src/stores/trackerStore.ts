@@ -52,6 +52,41 @@ export interface UserStats {
   rondasVeloces: number;
 }
 
+// ============================================
+// METAS DIARIAS
+// ============================================
+
+export interface MetaDiaria {
+  id: string;
+  tipo: 'guias' | 'novedades';
+  objetivo: number;
+  actual: number;
+  completada: boolean;
+}
+
+// ============================================
+// PLANTILLAS DE RONDA
+// ============================================
+
+export interface PlantillaRonda {
+  id: string;
+  nombre: string;
+  tipo: TipoProceso;
+  tiempoMinutos: number;
+  descripcion?: string;
+}
+
+// ============================================
+// HISTORIAL
+// ============================================
+
+export interface HistorialFiltros {
+  fechaInicio: string;
+  fechaFin: string;
+  usuario: string | null;
+  tipo: TipoProceso | null;
+}
+
 // Definición de niveles
 export const NIVELES: Nivel[] = [
   { id: 1, nombre: 'Novato', xpMin: 0, xpMax: 100, color: '#94a3b8', icon: '🌱' },
@@ -191,6 +226,26 @@ export interface TrackerState {
   newBadge: Badge | null;
   showStats: boolean;
 
+  // === METAS DIARIAS ===
+  metasDiarias: MetaDiaria[];
+  showGoals: boolean;
+
+  // === PLANTILLAS ===
+  plantillas: PlantillaRonda[];
+  showTemplates: boolean;
+
+  // === HISTORIAL ===
+  historialRondas: Ronda[];
+  historialFiltros: HistorialFiltros;
+  showHistory: boolean;
+
+  // === RESUMEN DIARIO ===
+  showDailySummary: boolean;
+
+  // === AUTO-BACKUP ===
+  lastBackup: string;
+  autoBackupEnabled: boolean;
+
   // === NAVEGACIÓN ===
   seleccionarUsuario: (usuario: Usuario) => void;
   seleccionarProceso: (proceso: TipoProceso) => void;
@@ -266,6 +321,33 @@ export interface TrackerState {
   toggleStats: () => void;
   hideLevelUp: () => void;
   hideNewBadge: () => void;
+
+  // === METAS DIARIAS ===
+  setMetaDiaria: (tipo: 'guias' | 'novedades', objetivo: number) => void;
+  actualizarProgresoMetas: () => void;
+  toggleGoals: () => void;
+
+  // === PLANTILLAS ===
+  agregarPlantilla: (plantilla: Omit<PlantillaRonda, 'id'>) => void;
+  eliminarPlantilla: (id: string) => void;
+  aplicarPlantilla: (id: string) => void;
+  toggleTemplates: () => void;
+
+  // === HISTORIAL ===
+  cargarHistorial: (filtros?: Partial<HistorialFiltros>) => Promise<void>;
+  setHistorialFiltros: (filtros: Partial<HistorialFiltros>) => void;
+  toggleHistory: () => void;
+
+  // === RESUMEN DIARIO ===
+  toggleDailySummary: () => void;
+  generarResumenDiario: () => { guias: number; novedades: number; tiempoTotal: number; rondas: number; xpGanado: number };
+
+  // === AUTO-BACKUP ===
+  realizarBackup: () => Promise<void>;
+  toggleAutoBackup: () => void;
+
+  // === NOTIFICACIONES ===
+  enviarNotificacion: (titulo: string, mensaje: string) => void;
 }
 
 // ============================================
@@ -457,6 +539,39 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
   showLevelUp: false,
   newBadge: null,
   showStats: false,
+
+  // === METAS DIARIAS ===
+  metasDiarias: [
+    { id: 'meta-guias', tipo: 'guias', objetivo: 60, actual: 0, completada: false },
+    { id: 'meta-novedades', tipo: 'novedades', objetivo: 30, actual: 0, completada: false },
+  ],
+  showGoals: false,
+
+  // === PLANTILLAS ===
+  plantillas: [
+    { id: 'tpl-1', nombre: 'Ronda Rápida', tipo: 'guias', tiempoMinutos: 15, descripcion: 'Sesión corta de guías' },
+    { id: 'tpl-2', nombre: 'Ronda Normal', tipo: 'guias', tiempoMinutos: 30, descripcion: 'Sesión estándar' },
+    { id: 'tpl-3', nombre: 'Ronda Extensa', tipo: 'guias', tiempoMinutos: 45, descripcion: 'Sesión larga' },
+    { id: 'tpl-4', nombre: 'Novedades Express', tipo: 'novedades', tiempoMinutos: 20, descripcion: 'Revisión rápida' },
+  ],
+  showTemplates: false,
+
+  // === HISTORIAL ===
+  historialRondas: [],
+  historialFiltros: {
+    fechaInicio: hoy(),
+    fechaFin: hoy(),
+    usuario: null,
+    tipo: null,
+  },
+  showHistory: false,
+
+  // === RESUMEN DIARIO ===
+  showDailySummary: false,
+
+  // === AUTO-BACKUP ===
+  lastBackup: '',
+  autoBackupEnabled: true,
 
   // === NAVEGACIÓN ===
   seleccionarUsuario: (usuario) => {
@@ -742,6 +857,14 @@ export const useTrackerStore = create<TrackerState>((set, get) => ({
     // Agregar XP y verificar badges
     get().addXP(xpGanado);
     get().checkBadges();
+
+    // Actualizar progreso de metas
+    get().actualizarProgresoMetas();
+
+    // Auto-backup si está habilitado
+    if (get().autoBackupEnabled) {
+      get().realizarBackup();
+    }
 
     get().guardarDatos();
   },
@@ -1349,6 +1472,255 @@ Total Rondas: ${state.rondasHoy.length}
   hideLevelUp: () => set({ showLevelUp: false }),
 
   hideNewBadge: () => set({ newBadge: null }),
+
+  // === METAS DIARIAS ===
+  setMetaDiaria: (tipo, objetivo) => {
+    set((state) => ({
+      metasDiarias: state.metasDiarias.map((m) =>
+        m.tipo === tipo ? { ...m, objetivo } : m
+      ),
+    }));
+    // Guardar en store
+    if (window.electronAPI) {
+      window.electronAPI.setStore('metasDiarias', get().metasDiarias);
+    }
+  },
+
+  actualizarProgresoMetas: () => {
+    const state = get();
+    const guiasHoy = state.totalHoyGuias;
+    const novedadesHoy = state.totalHoyNovedades;
+
+    const nuevasMetas = state.metasDiarias.map((m) => {
+      if (m.tipo === 'guias') {
+        const completada = guiasHoy >= m.objetivo;
+        if (completada && !m.completada) {
+          // Notificar meta completada
+          get().enviarNotificacion('Meta Completada', `Completaste tu meta de ${m.objetivo} guías`);
+          playSuccessSound();
+        }
+        return { ...m, actual: guiasHoy, completada };
+      } else {
+        const completada = novedadesHoy >= m.objetivo;
+        if (completada && !m.completada) {
+          get().enviarNotificacion('Meta Completada', `Completaste tu meta de ${m.objetivo} novedades`);
+          playSuccessSound();
+        }
+        return { ...m, actual: novedadesHoy, completada };
+      }
+    });
+
+    set({ metasDiarias: nuevasMetas });
+  },
+
+  toggleGoals: () => set((state) => ({ showGoals: !state.showGoals })),
+
+  // === PLANTILLAS ===
+  agregarPlantilla: (plantilla) => {
+    const nuevaPlantilla: PlantillaRonda = {
+      ...plantilla,
+      id: generarId(),
+    };
+    set((state) => ({
+      plantillas: [...state.plantillas, nuevaPlantilla],
+    }));
+    if (window.electronAPI) {
+      window.electronAPI.setStore('plantillas', get().plantillas);
+    }
+  },
+
+  eliminarPlantilla: (id) => {
+    set((state) => ({
+      plantillas: state.plantillas.filter((p) => p.id !== id),
+    }));
+    if (window.electronAPI) {
+      window.electronAPI.setStore('plantillas', get().plantillas);
+    }
+  },
+
+  aplicarPlantilla: (id) => {
+    const plantilla = get().plantillas.find((p) => p.id === id);
+    if (plantilla) {
+      set({
+        tiempoTotal: plantilla.tiempoMinutos * 60,
+        tiempoRestante: plantilla.tiempoMinutos * 60,
+      });
+      get().showToast(`Plantilla "${plantilla.nombre}" aplicada`);
+    }
+  },
+
+  toggleTemplates: () => set((state) => ({ showTemplates: !state.showTemplates })),
+
+  // === HISTORIAL ===
+  cargarHistorial: async (filtros) => {
+    const state = get();
+    const f = { ...state.historialFiltros, ...filtros };
+    set({ historialFiltros: f });
+
+    let historial: Ronda[] = [];
+
+    // Intentar cargar desde API
+    try {
+      const params = new URLSearchParams();
+      if (f.fechaInicio) params.append('fecha_inicio', f.fechaInicio);
+      if (f.fechaFin) params.append('fecha_fin', f.fechaFin);
+      if (f.usuario) params.append('usuario_id', f.usuario);
+      if (f.tipo) params.append('tipo', f.tipo);
+
+      const apiRondas = await apiRequest(`/rondas/historial?${params.toString()}`);
+      if (apiRondas && Array.isArray(apiRondas)) {
+        historial = apiRondas.map((r: any): Ronda => {
+          const base = {
+            id: r.id,
+            usuarioId: r.usuario_id,
+            usuarioNombre: r.usuario_nombre,
+            numero: r.numero,
+            fecha: r.fecha,
+            horaInicio: r.hora_inicio,
+            horaFin: r.hora_fin,
+            tiempoUsado: r.tiempo_usado,
+          };
+
+          if (r.tipo === 'guias') {
+            return {
+              ...base,
+              tipo: 'guias' as const,
+              pedidosIniciales: r.pedidos_iniciales || 0,
+              realizado: r.realizado || 0,
+              cancelado: r.cancelado || 0,
+              agendado: r.agendado || 0,
+              dificiles: r.dificiles || 0,
+              pendientes: r.pendientes || 0,
+              revisado: r.revisado || 0,
+            };
+          } else {
+            return {
+              ...base,
+              tipo: 'novedades' as const,
+              totalNovedades: r.total_novedades || 0,
+              revisadas: r.revisadas || 0,
+              solucionadas: r.solucionadas || 0,
+              errorPorSolucion: r.error_por_solucion || 0,
+              proveedor: r.proveedor || 0,
+              cliente: r.cliente || 0,
+              transportadora: r.transportadora || 0,
+              litper: r.litper || 0,
+            };
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('Error cargando historial desde API');
+    }
+
+    // Si no hay datos de API, usar datos locales
+    if (historial.length === 0) {
+      // Filtrar rondas de hoy según los filtros
+      historial = state.rondasHoy.filter((r) => {
+        if (f.usuario && r.usuarioId !== f.usuario) return false;
+        if (f.tipo && r.tipo !== f.tipo) return false;
+        return true;
+      });
+    }
+
+    set({ historialRondas: historial });
+  },
+
+  setHistorialFiltros: (filtros) => {
+    set((state) => ({
+      historialFiltros: { ...state.historialFiltros, ...filtros },
+    }));
+  },
+
+  toggleHistory: () => {
+    const state = get();
+    if (!state.showHistory) {
+      // Al abrir, cargar historial
+      get().cargarHistorial();
+    }
+    set({ showHistory: !state.showHistory });
+  },
+
+  // === RESUMEN DIARIO ===
+  toggleDailySummary: () => set((state) => ({ showDailySummary: !state.showDailySummary })),
+
+  generarResumenDiario: () => {
+    const state = get();
+    const tiempoTotal = state.rondasHoy.reduce((acc, r) => acc + r.tiempoUsado, 0);
+
+    return {
+      guias: state.totalHoyGuias,
+      novedades: state.totalHoyNovedades,
+      tiempoTotal,
+      rondas: state.rondasHoy.length,
+      xpGanado: state.userStats.rondasHoyCount * 10, // Aproximación
+    };
+  },
+
+  // === AUTO-BACKUP ===
+  realizarBackup: async () => {
+    const state = get();
+    const backupData = {
+      fecha: hoy(),
+      timestamp: new Date().toISOString(),
+      rondasHoy: state.rondasHoy,
+      userStats: state.userStats,
+      badges: state.badges,
+      metasDiarias: state.metasDiarias,
+      plantillas: state.plantillas,
+    };
+
+    // Guardar backup en electron-store
+    if (window.electronAPI) {
+      const backupKey = `backup_${hoy()}`;
+      await window.electronAPI.setStore(backupKey, backupData);
+      await window.electronAPI.setStore('lastBackup', new Date().toISOString());
+      set({ lastBackup: new Date().toISOString() });
+      console.log('Backup realizado:', backupKey);
+    }
+
+    // También guardar en localStorage como fallback
+    try {
+      localStorage.setItem(`litper-backup-${hoy()}`, JSON.stringify(backupData));
+    } catch (e) {}
+  },
+
+  toggleAutoBackup: () => {
+    set((state) => {
+      const newValue = !state.autoBackupEnabled;
+      if (window.electronAPI) {
+        window.electronAPI.setStore('autoBackupEnabled', newValue);
+      }
+      return { autoBackupEnabled: newValue };
+    });
+  },
+
+  // === NOTIFICACIONES ===
+  enviarNotificacion: (titulo, mensaje) => {
+    // Usar Electron API si está disponible
+    if (window.electronAPI?.sendNotification) {
+      window.electronAPI.sendNotification(titulo, mensaje);
+      return;
+    }
+
+    // Fallback a Notification API del navegador
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(titulo, {
+        body: mensaje,
+        icon: '🎯',
+        silent: false,
+      });
+    } else if ('Notification' in window && Notification.permission !== 'denied') {
+      Notification.requestPermission().then((permission) => {
+        if (permission === 'granted') {
+          new Notification(titulo, {
+            body: mensaje,
+            icon: '🎯',
+          });
+        }
+      });
+    }
+  },
 }));
 
 // Sonido de Level Up
