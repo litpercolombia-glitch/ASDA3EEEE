@@ -60,6 +60,10 @@ import { useUserProfileStore } from './services/userProfileService';
 import { UserProfileSettings } from './components/settings';
 // Enhanced Excel Upload with column config
 import { EnhancedExcelUpload } from './components/upload';
+// Report Upload System
+import { ReportUploadModal, MyReportsPanel, AdminReportsView, PublicUploadPage } from './components/ReportUpload';
+import { useReportUploadStore } from './stores/reportUploadStore';
+import { getTokenFromUrl, getUploadLinkByToken } from './services/reportUploadService';
 import {
   Crown,
   Search,
@@ -386,6 +390,9 @@ const App: React.FC = () => {
   // User Profile Store
   const { profile, isOnboardingComplete } = useUserProfileStore();
 
+  // Report Upload Store
+  const { isModalOpen: isReportModalOpen, openModal: openReportModal, closeModal: closeReportModal } = useReportUploadStore();
+
   // Obtener usuario actual
   const currentUser = getCurrentUser();
 
@@ -653,6 +660,13 @@ const App: React.FC = () => {
           />
         );
       case 'inteligencia':
+        if (activeInteligenciaTab === 'reportes') {
+          return (
+            <div className="p-6">
+              <MyReportsPanel onOpenUploadModal={openReportModal} />
+            </div>
+          );
+        }
         return (
           <InteligenciaIAUnificadoTab
             shipments={shipments}
@@ -711,6 +725,7 @@ const App: React.FC = () => {
       onLogout={handleLogout}
       onOpenChat={handleOpenChat}
       onOpenHelp={handleOpenHelp}
+      onUploadReport={openReportModal}
       userName={currentUser?.nombre || 'Usuario'}
       userEmail={currentUser?.email || 'user@litper.co'}
     >
@@ -979,6 +994,9 @@ const App: React.FC = () => {
         forceOpen={showProBubble}
         onForceOpenHandled={() => setShowProBubble(false)}
       />
+
+      {/* Report Upload Modal - Accessible from anywhere */}
+      <ReportUploadModal isOpen={isReportModalOpen} onClose={closeReportModal} />
     </AppLayout>
   );
 };
@@ -1082,4 +1100,41 @@ const AppWithAuth: React.FC = () => (
   </AuthWrapper>
 );
 
-export default AppWithAuth;
+// ============================================
+// PUBLIC UPLOAD ROUTE DETECTOR
+// If URL has ?upload=TOKEN, show public page (no login required)
+// ============================================
+const AppRoot: React.FC = () => {
+  const [publicUploadToken] = React.useState(() => getTokenFromUrl());
+  const [uploadLink] = React.useState(() =>
+    publicUploadToken ? getUploadLinkByToken(publicUploadToken) : null
+  );
+
+  // If valid upload link detected, show public upload page (bypasses auth)
+  if (publicUploadToken && uploadLink) {
+    return <PublicUploadPage uploadLink={uploadLink} />;
+  }
+
+  // If invalid/expired token, show error
+  if (publicUploadToken && !uploadLink) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 flex items-center justify-center p-4">
+        <div className="bg-gray-900/80 backdrop-blur-xl rounded-3xl border border-gray-700/50 p-12 max-w-md w-full text-center shadow-2xl">
+          <div className="p-5 bg-red-500/20 rounded-full w-fit mx-auto mb-6">
+            <AlertTriangle className="w-16 h-16 text-red-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-3">Link No Válido</h2>
+          <p className="text-gray-400 mb-6">
+            Este link de subida de reportes no existe, ha expirado, o ya alcanzó el límite de envíos.
+          </p>
+          <p className="text-sm text-gray-500">Contacta al administrador para obtener un nuevo link.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Normal app flow
+  return <AppWithAuth />;
+};
+
+export default AppRoot;

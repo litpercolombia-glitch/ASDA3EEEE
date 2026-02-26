@@ -238,6 +238,7 @@ import {
   BillingCenter,
   CommandPalette,
 } from './EnterpriseModules';
+import { AdminReportsView } from '../ReportUpload';
 
 // ============================================
 // TIPOS E INTERFACES ENTERPRISE
@@ -1762,7 +1763,8 @@ type EnterpriseTab =
   | 'dashboards'
   | 'sla'
   | 'integraciones'
-  | 'alertas';
+  | 'alertas'
+  | 'reportes-personas';
 
 export const EnterpriseAdminDashboard: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -1899,6 +1901,7 @@ export const EnterpriseAdminDashboard: React.FC = () => {
     { id: 'webhooks', label: 'Webhooks', icon: Webhook, color: 'from-sky-500 to-sky-600' },
     { id: 'activity', label: 'Activity Log', icon: Activity, color: 'from-rose-500 to-rose-600' },
     { id: 'alertas', label: 'Alertas', icon: Bell, color: 'from-yellow-500 to-yellow-600' },
+    { id: 'reportes-personas', label: 'Reportes Personas', icon: FileBarChart, color: 'from-fuchsia-500 to-fuchsia-600' },
     { id: 'compliance', label: 'Compliance', icon: ShieldCheck, color: 'from-lime-500 to-lime-600' },
     { id: 'security', label: 'Security', icon: Shield, color: 'from-red-500 to-red-600' },
     { id: 'users', label: 'Usuarios', icon: Users, color: 'from-blue-500 to-blue-600' },
@@ -1988,6 +1991,7 @@ export const EnterpriseAdminDashboard: React.FC = () => {
         {activeTab === 'webhooks' && <WebhooksCenter />}
         {activeTab === 'activity' && <ActivityLogGlobal />}
         {activeTab === 'alertas' && <EnterpriseAlertsModule />}
+        {activeTab === 'reportes-personas' && <AdminReportsView />}
         {activeTab === 'compliance' && <ComplianceModule rules={complianceRules} />}
         {activeTab === 'security' && <SecurityModule />}
         {activeTab === 'users' && <UserManagementModule />}
