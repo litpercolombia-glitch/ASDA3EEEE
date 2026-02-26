@@ -640,7 +640,7 @@ export function AppLayout({
   };
 
   return (
-    <div className={`flex h-screen overflow-hidden ${darkMode ? 'bg-gray-950' : 'bg-gray-100'}`}>
+    <div className="flex h-screen overflow-hidden" style={{ background: '#0a0e17' }}>
       {/* Sidebar */}
       <Sidebar
         onLogout={onLogout}
@@ -671,9 +671,14 @@ export function AppLayout({
           onOpenSettings={handleOpenSettings}
         />
 
-        {/* Content Area */}
-        <main className={`flex-1 overflow-auto ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
-          {children}
+        {/* Content Area - Premium Dark Background */}
+        <main className="flex-1 overflow-auto cc-content-bg relative">
+          {/* Ambient orb (amber) */}
+          <div className="cc-content-orb-amber" />
+          {/* Content with z-index above background effects */}
+          <div className="relative z-10">
+            {children}
+          </div>
         </main>
       </div>
 

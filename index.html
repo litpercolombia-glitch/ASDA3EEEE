@@ -1213,6 +1213,95 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
+
+      /* ============================================
+         CONTENT AREA - PREMIUM DARK BACKGROUND
+         ============================================ */
+
+      /* Main content background with ambient glows */
+      .cc-content-bg {
+        background:
+          radial-gradient(ellipse at 15% 5%, rgba(0, 245, 255, 0.04) 0%, transparent 50%),
+          radial-gradient(ellipse at 85% 95%, rgba(255, 184, 0, 0.03) 0%, transparent 50%),
+          radial-gradient(ellipse at 50% 50%, rgba(77, 124, 255, 0.02) 0%, transparent 40%),
+          linear-gradient(180deg, #0a0e17 0%, #0d1423 50%, #0a0e17 100%);
+        position: relative;
+      }
+
+      /* Subtle grid overlay for content area */
+      .cc-content-bg::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(0, 245, 255, 0.025) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 245, 255, 0.025) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      /* Ambient floating orbs */
+      .cc-content-bg::after {
+        content: '';
+        position: fixed;
+        top: 10%;
+        left: 5%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(0, 245, 255, 0.06) 0%, transparent 70%);
+        border-radius: 50%;
+        filter: blur(60px);
+        pointer-events: none;
+        z-index: 0;
+        animation: cc-orb-float 10s ease-in-out infinite;
+      }
+
+      @keyframes cc-orb-float {
+        0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+        25% { transform: translate(40px, -30px) scale(1.1); opacity: 0.8; }
+        50% { transform: translate(-20px, 40px) scale(0.9); opacity: 0.5; }
+        75% { transform: translate(30px, 20px) scale(1.05); opacity: 0.7; }
+      }
+
+      /* Second ambient orb (amber, bottom-right) */
+      .cc-content-orb-amber {
+        position: fixed;
+        bottom: 10%;
+        right: 5%;
+        width: 250px;
+        height: 250px;
+        background: radial-gradient(circle, rgba(255, 184, 0, 0.05) 0%, transparent 70%);
+        border-radius: 50%;
+        filter: blur(60px);
+        pointer-events: none;
+        z-index: 0;
+        animation: cc-orb-float-2 12s ease-in-out infinite;
+      }
+
+      @keyframes cc-orb-float-2 {
+        0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
+        33% { transform: translate(-30px, -20px) scale(1.1); opacity: 0.7; }
+        66% { transform: translate(20px, 30px) scale(0.95); opacity: 0.4; }
+      }
+
+      /* Content scrollbar matching Command Center theme */
+      .cc-content-bg::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .cc-content-bg::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.3);
+      }
+
+      .cc-content-bg::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, rgba(0, 245, 255, 0.4), rgba(255, 184, 0, 0.3));
+        border-radius: 3px;
+      }
+
+      .cc-content-bg::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, rgba(0, 245, 255, 0.6), rgba(255, 184, 0, 0.5));
+      }
     </style>
   <script type="importmap">
 {
