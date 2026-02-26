@@ -146,6 +146,36 @@ whatsapp_messages = Counter(
 )
 
 # ═══════════════════════════════════════════
+# MÉTRICAS DE ENTREGA DE MENSAJES
+# ═══════════════════════════════════════════
+
+message_delivery_total = Counter(
+    'litper_message_delivery_total',
+    'Total de mensajes por estado de entrega',
+    ['channel', 'status']  # channel: whatsapp/sms/email/push, status: sent/delivered/read/failed
+)
+
+message_delivery_rate = Gauge(
+    'litper_message_delivery_rate',
+    'Tasa de entrega de mensajes por canal',
+    ['channel', 'rate_type']  # rate_type: sent_rate/delivery_rate/read_rate/failure_rate
+)
+
+message_delivery_time = Histogram(
+    'litper_message_delivery_seconds',
+    'Tiempo de entrega de mensajes (sent -> delivered)',
+    ['channel'],
+    buckets=[0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600]
+)
+
+message_read_time = Histogram(
+    'litper_message_read_seconds',
+    'Tiempo de lectura de mensajes (delivered -> read)',
+    ['channel'],
+    buckets=[1, 5, 10, 30, 60, 300, 600, 1800, 3600]
+)
+
+# ═══════════════════════════════════════════
 # MÉTRICAS DE INFRAESTRUCTURA
 # ═══════════════════════════════════════════
 
@@ -358,3 +388,20 @@ def update_active_agents(district: str, country: str, count: int):
 def update_active_incidents(country: str, priority: str, count: int):
     """Actualizar contador de novedades activas."""
     incidents_active.labels(country=country, priority=priority).set(count)
+
+
+def record_message_delivery(channel: str, status: str, delivery_time_seconds: float = None, read_time_seconds: float = None):
+    """Registrar métricas de entrega de mensaje."""
+    message_delivery_total.labels(channel=channel, status=status).inc()
+    if delivery_time_seconds is not None:
+        message_delivery_time.labels(channel=channel).observe(delivery_time_seconds)
+    if read_time_seconds is not None:
+        message_read_time.labels(channel=channel).observe(read_time_seconds)
+
+
+def update_message_delivery_rates(channel: str, sent_rate: float, delivery_rate: float, read_rate: float, failure_rate: float):
+    """Actualizar tasas de entrega de mensajes por canal."""
+    message_delivery_rate.labels(channel=channel, rate_type='sent_rate').set(sent_rate)
+    message_delivery_rate.labels(channel=channel, rate_type='delivery_rate').set(delivery_rate)
+    message_delivery_rate.labels(channel=channel, rate_type='read_rate').set(read_rate)
+    message_delivery_rate.labels(channel=channel, rate_type='failure_rate').set(failure_rate)

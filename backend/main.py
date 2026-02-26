@@ -163,6 +163,15 @@ except ImportError as e:
     AUTH_SYSTEM_AVAILABLE = False
     logger.warning(f"Sistema de Autenticación no disponible: {e}")
 
+# Sistema de Métricas de Entrega de Mensajes
+try:
+    from routes.message_metrics_routes import router as message_metrics_router
+    MESSAGE_METRICS_AVAILABLE = True
+    logger.info("📊 Sistema de Métricas de Mensajes cargado")
+except ImportError as e:
+    MESSAGE_METRICS_AVAILABLE = False
+    logger.warning(f"Sistema de Métricas de Mensajes no disponible: {e}")
+
 
 # ==================== CONFIGURACIÓN ====================
 
@@ -341,6 +350,11 @@ if CHATEA_PRO_AVAILABLE:
 if AUTH_SYSTEM_AVAILABLE:
     app.include_router(auth_router)
     logger.success("🔐 Rutas de Autenticación registradas en /api/auth")
+
+# Incluir router de Métricas de Entrega de Mensajes
+if MESSAGE_METRICS_AVAILABLE:
+    app.include_router(message_metrics_router, prefix="/api")
+    logger.success("📊 Rutas de Métricas de Mensajes registradas en /api/message-metrics")
 
 
 # ==================== ENDPOINTS DE SISTEMA ====================
