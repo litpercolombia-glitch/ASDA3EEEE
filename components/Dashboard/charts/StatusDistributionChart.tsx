@@ -18,11 +18,11 @@ interface StatusDistributionChartProps {
 }
 
 const STATUS_CONFIG = {
-  delivered: { label: 'Entregadas', color: '#10B981' },
-  in_transit: { label: 'En Tránsito', color: '#3B82F6' },
-  issue: { label: 'Con Novedad', color: '#EF4444' },
-  in_office: { label: 'En Oficina', color: '#F59E0B' },
-  returned: { label: 'Devueltas', color: '#8B5CF6' },
+  delivered: { label: 'Entregadas', color: '#00ff88' },
+  in_transit: { label: 'En Tránsito', color: '#00d4ff' },
+  issue: { label: 'Con Novedad', color: '#ff6666' },
+  in_office: { label: 'En Oficina', color: '#ffb800' },
+  returned: { label: 'Devueltas', color: '#a855f7' },
 };
 
 export const StatusDistributionChart: React.FC<StatusDistributionChartProps> = ({
@@ -117,10 +117,11 @@ export const StatusDistributionChart: React.FC<StatusDistributionChartProps> = (
 
           <Tooltip
             contentStyle={{
-              backgroundColor: '#1F2937',
-              border: 'none',
-              borderRadius: '8px',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
+              backgroundColor: 'rgba(10, 14, 23, 0.95)',
+              border: '1px solid rgba(0, 245, 255, 0.2)',
+              borderRadius: '12px',
+              boxShadow: '0 0 20px rgba(0, 245, 255, 0.1), 0 8px 32px rgba(0, 0, 0, 0.4)',
+              backdropFilter: 'blur(20px)',
             }}
             labelStyle={{ color: '#F3F4F6' }}
             formatter={(value: number, name: string) => [

@@ -48,31 +48,31 @@ export const DeliveryTrendChart: React.FC<DeliveryTrendChartProps> = ({
         <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="colorEntregas" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+              <stop offset="5%" stopColor="#00ff88" stopOpacity={0.4} />
+              <stop offset="95%" stopColor="#00ff88" stopOpacity={0} />
             </linearGradient>
             <linearGradient id="colorRetrasos" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
+              <stop offset="5%" stopColor="#ff6666" stopOpacity={0.4} />
+              <stop offset="95%" stopColor="#ff6666" stopOpacity={0} />
             </linearGradient>
             <linearGradient id="colorNovedades" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
+              <stop offset="5%" stopColor="#ffb800" stopOpacity={0.4} />
+              <stop offset="95%" stopColor="#ffb800" stopOpacity={0} />
             </linearGradient>
           </defs>
 
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
 
           <XAxis
             dataKey="fecha"
-            stroke="#9CA3AF"
+            stroke="rgba(255,255,255,0.4)"
             fontSize={12}
             tickLine={false}
             axisLine={false}
           />
 
           <YAxis
-            stroke="#9CA3AF"
+            stroke="rgba(255,255,255,0.4)"
             fontSize={12}
             tickLine={false}
             axisLine={false}
@@ -81,10 +81,11 @@ export const DeliveryTrendChart: React.FC<DeliveryTrendChartProps> = ({
 
           <Tooltip
             contentStyle={{
-              backgroundColor: '#1F2937',
-              border: 'none',
-              borderRadius: '8px',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
+              backgroundColor: 'rgba(10, 14, 23, 0.95)',
+              border: '1px solid rgba(0, 245, 255, 0.2)',
+              borderRadius: '12px',
+              boxShadow: '0 0 20px rgba(0, 245, 255, 0.1), 0 8px 32px rgba(0, 0, 0, 0.4)',
+              backdropFilter: 'blur(20px)',
             }}
             labelStyle={{ color: '#F3F4F6', fontWeight: 'bold' }}
             itemStyle={{ color: '#D1D5DB' }}
@@ -98,7 +99,7 @@ export const DeliveryTrendChart: React.FC<DeliveryTrendChartProps> = ({
           <Area
             type="monotone"
             dataKey="entregas"
-            stroke="#10B981"
+            stroke="#00ff88"
             strokeWidth={2}
             fill="url(#colorEntregas)"
             name="Entregas"
@@ -107,7 +108,7 @@ export const DeliveryTrendChart: React.FC<DeliveryTrendChartProps> = ({
           <Area
             type="monotone"
             dataKey="retrasos"
-            stroke="#EF4444"
+            stroke="#ff6666"
             strokeWidth={2}
             fill="url(#colorRetrasos)"
             name="Retrasos"
@@ -116,7 +117,7 @@ export const DeliveryTrendChart: React.FC<DeliveryTrendChartProps> = ({
           <Area
             type="monotone"
             dataKey="novedades"
-            stroke="#F59E0B"
+            stroke="#ffb800"
             strokeWidth={2}
             fill="url(#colorNovedades)"
             name="Novedades"

@@ -21,7 +21,7 @@ interface CarrierPerformanceChartProps {
   maxItems?: number;
 }
 
-const COLORS = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#06B6D4'];
+const COLORS = ['#a855f7', '#00d4ff', '#00ff88', '#ffb800', '#ff6666', '#ff6eb4', '#00f5ff'];
 
 export const CarrierPerformanceChart: React.FC<CarrierPerformanceChartProps> = ({
   data,
@@ -85,10 +85,11 @@ export const CarrierPerformanceChart: React.FC<CarrierPerformanceChartProps> = (
 
           <Tooltip
             contentStyle={{
-              backgroundColor: '#1F2937',
-              border: 'none',
-              borderRadius: '8px',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
+              backgroundColor: 'rgba(10, 14, 23, 0.95)',
+              border: '1px solid rgba(0, 245, 255, 0.2)',
+              borderRadius: '12px',
+              boxShadow: '0 0 20px rgba(0, 245, 255, 0.1), 0 8px 32px rgba(0, 0, 0, 0.4)',
+              backdropFilter: 'blur(20px)',
             }}
             labelStyle={{ color: '#F3F4F6', fontWeight: 'bold' }}
             formatter={(value: number, name: string, props: { payload: CarrierStats & { nombreCompleto: string } }) => {
