@@ -1,5 +1,6 @@
-# PLAN V2: "Linear meets Stripe on Dark Logistics"
+# PLAN V3: "Linear meets Stripe on Dark Logistics"
 # Upgrade del Design System + Integracion Stripe de LITPER PRO
+# Basado en investigacion de 35+ empresas + estudios NNG/Baymard/Google/IBM
 
 ---
 
@@ -541,19 +542,119 @@ const litperAppearance: Appearance = {
 };
 ```
 
-**Estructura del componente:**
+**Estructura completa del componente (React 19 + TS):**
 ```tsx
+import { useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import {
+  Elements,
+  PaymentElement,
+  useStripe,
+  useElements,
+} from '@stripe/react-stripe-js';
+import type { Appearance } from '@stripe/stripe-js';
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
-function CheckoutModal({ plan, isOpen, onClose }) {
-  // 1. Crear PaymentIntent via API
-  // 2. Renderizar dentro de <Elements> con litperAppearance
-  // 3. Manejar submit con stripe.confirmPayment()
-  // 4. Mostrar success/error con ls-badge
+// Dark theme appearance (definido arriba como litperAppearance)
+
+function CheckoutForm({ onSuccess, onError }: {
+  onSuccess: () => void;
+  onError: (msg: string) => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setLoading(true);
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+      onError(submitError.message ?? 'Error de validacion');
+      setLoading(false);
+      return;
+    }
+
+    // Crear PaymentIntent en el backend
+    const res = await fetch('/api/stripe/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ price_id: 'price_pro_monthly' }),
+    });
+    const { client_secret } = await res.json();
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      clientSecret: client_secret,
+      confirmParams: {
+        return_url: `${window.location.origin}/billing/success`,
+      },
+    });
+
+    if (error) {
+      onError(error.message ?? 'El pago fallo');
+    } else {
+      onSuccess();
+    }
+    setLoading(false);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <PaymentElement />
+      <button
+        type="submit"
+        disabled={!stripe || loading}
+        className="ls-btn-primary w-full disabled:opacity-50"
+      >
+        {loading ? 'Procesando...' : 'Confirmar Pago'}
+      </button>
+    </form>
+  );
 }
+
+export function CheckoutModal({ clientSecret, isOpen, onClose }: {
+  clientSecret: string;
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 ls-modal-overlay flex items-center justify-center z-50 p-4">
+      <div className="ls-modal w-full max-w-md p-6">
+        <h3 className="text-lg font-semibold text-[#f1f5f9] mb-4">
+          Completar Pago
+        </h3>
+        <Elements
+          stripe={stripePromise}
+          options={{ clientSecret, appearance: litperAppearance }}
+        >
+          <CheckoutForm
+            onSuccess={() => { /* toast + redirect */ }}
+            onError={(msg) => { /* toast error */ }}
+          />
+        </Elements>
+      </div>
+    </div>
+  );
+}
+```
+
+**Packages requeridos (versiones Feb 2026):**
+```bash
+npm install @stripe/stripe-js@^8.8.0 @stripe/react-stripe-js@^5.6.0
+```
+API version actual: `2026-02-25.clover`
+
+**Variables de entorno (.env - NUNCA commitear):**
+```bash
+VITE_STRIPE_PUBLISHABLE_KEY=pk_live_xxx  # Frontend (prefijo VITE_)
+STRIPE_SECRET_KEY=sk_live_xxx             # Backend only
+STRIPE_WEBHOOK_SECRET=whsec_xxx           # Backend only
 ```
 
 #### `components/Billing/SubscriptionManager.tsx`
@@ -813,7 +914,143 @@ api/
 
 ---
 
-## FUENTES DE LA INVESTIGACION V2
+## FASE 7: ESTUDIOS UX APLICADOS (NNG, Baymard, Google, IBM Carbon)
+
+### 7.1 Dashboard Layout (Nielsen Norman Group + IBM Carbon)
+
+**Hallazgos con datos duros:**
+- Dashboards user-centered aumentan usabilidad **70%** (NNG)
+- Vistas por nivel de expertise aumentan usabilidad **60%** (NNG)
+- Buena arquitectura de info acelera tareas **30%** (NNG)
+- Visualizacion optima de datos aumenta eficiencia **55%** (NNG)
+
+**Reglas a seguir en LITPER PRO:**
+1. **F-pattern layout**: KPIs criticos arriba-izquierda (envios activos, on-time rate)
+2. **Vistas por expertise**: Admin ve KPIs resumidos, Operador ve tablas detalladas
+3. **Grid 4px/8px** consistente (ya usamos 8px base)
+4. **Max 5-7 visualizaciones** por vista de dashboard
+5. **Progressive disclosure**: cards resumen -> click -> detalle
+6. **Cross-filtering**: filtrar un chart filtra todos los relacionados
+
+### 7.2 Pricing Page (datos de conversion)
+
+**Benchmarks:**
+- Pricing page SaaS promedio: **3.8%** conversion
+- Bien optimizada: **8-12%** conversion (2-3x mejora)
+- Toggle anual/mensual: **+25-35%** adopcion plan anual
+- Badge "Mas Popular": **+16-30%** seleccion del plan medio (CXL Institute)
+- **3 tiers es optimo** - 5+ tiers baja conversion 18%
+- 58% del trafico pricing es mobile en 2026
+
+**Aplicado a LITPER PRO PricingPage.tsx:**
+- 3 tiers (ya definidos: Starter/Pro/Enterprise)
+- Default a precio anual con "Ahorra 17%"
+- Badge `.ls-pricing-card.recommended` en Pro (tier medio)
+- CTA "Contactar Ventas" visible en Enterprise
+- Mobile: stack vertical, botones 44x44px minimo
+- Social proof near CTA: "200+ empresas de logistica"
+
+### 7.3 Checkout Flow (Baymard Institute)
+
+**Datos criticos:**
+- Abandono promedio de checkout: **70.22%** (50 estudios Baymard)
+- Mejoras en diseno de checkout pueden dar **+35%** conversion
+- **22% abandonan** por complejidad (muchos campos)
+- **25% abandonan** por no confiar con tarjeta
+
+**Reglas para CheckoutModal.tsx:**
+1. **Max 6-8 campos** (Stripe PaymentElement ya maneja esto)
+2. **Guest checkout** por defecto (no pedir crear cuenta antes de pagar)
+3. **1-2 security badges** cerca del form (Stripe badge + SSL lock)
+4. **Inline validation** en tiempo real (Stripe Elements lo hace)
+5. **Procesando...** con animacion (no dejar pantalla en blanco)
+6. **Error especifico**: "Tarjeta rechazada. Intenta otro metodo" (no "Algo fallo")
+7. **Success screen**: Numero de orden + resumen + siguientes pasos
+
+### 7.4 Feature Gating (Appcues + Estudios)
+
+**Estrategias por efectividad:**
+
+| Estrategia | Ejemplo | Conversion |
+|------------|---------|------------|
+| Soft gate (lock + tooltip) | Slack busqueda | Alta retencion, conversion gradual |
+| Usage gate (barra de progreso) | Zapier limites | Trigger a 80% uso -> upgrade |
+| Blur preview | SquareSpace premium | Muestra valor sin dar acceso |
+| Restrict on click | Spotify features | Deseo + riesgo de molestar |
+| Build first, gate publish | Intercom | Usuarios que construyen convierten mas |
+
+**Freemium conversion benchmarks:**
+- Freemium self-serve: **3-5%** (bueno), **6-8%** (excelente)
+- Free trial opt-in: **8-12%** (bueno), **15-25%** (excelente)
+- Free trial opt-out (tarjeta requerida): **~48.8%** (commitment effect)
+
+**Aplicado a LITPER PRO:**
+- Features IA/Analytics: **soft gate** (lock icon + tooltip + "Disponible en Pro")
+- Envios/mes: **usage gate** con barra al 80% -> banner "Upgrade"
+- Dashboard avanzado: **blur preview** para free users
+- NO gatear onboarding ni features de activacion (anti-patron)
+
+### 7.5 Subscription Management (UX Patterns)
+
+**Panel de billing debe tener:**
+1. **Overview card**: Plan actual + proxima factura + monto
+2. **Usage meters**: Barras de progreso para envios/users/storage
+3. **Billing history**: Tabla sorteable (fecha, monto, status, download)
+4. **Plan change**: Comparacion side-by-side con explicacion de prorrateo
+5. **Failed payment**: Banner persistente (NO modal bloqueante) con link directo
+
+**Upgrade flow:**
+- Entry points: boton "Upgrade" en billing + CTAs cerca de features premium
+- Comparacion side-by-side de planes
+- Post-upgrade: acceso inmediato + tour guiado de nuevas features
+
+**Downgrade flow:**
+- Ofrecer alternativas antes (pausar, plan menor)
+- Survey de 1 pregunta opcional
+- Email confirmacion con lo que cambia
+
+### 7.6 Data Visualization para Logistica
+
+**Charts recomendados para LITPER PRO:**
+
+| Tipo de Dato | Chart Optimo | Uso |
+|--------------|-------------|-----|
+| Rutas de envio | Flow maps / Route maps | Movimiento de mercancias |
+| Performance regional | Choropleth maps | Rendimiento por zona |
+| Densidad de ordenes | Heatmaps | Hotspots de volumen |
+| Status de envios | Donut charts | Distribucion (entregado/transito/retrasado) |
+| Tendencias on-time | Line charts con target line | Performance vs objetivo |
+| Comparacion carriers | Horizontal bar charts | Performance por transportista |
+| Segmentacion productos | Pareto charts | Regla 80-20 |
+
+**KPIs criticos para dashboard:**
+- On-time delivery rate (%)
+- Delivery lead time (order -> delivery)
+- Transportation cost per unit
+- Delivery accuracy rate
+- MTD/YTD trend lines con color-coding
+
+### 7.7 Costos Stripe (Importante para Pricing)
+
+| Producto | Costo |
+|----------|-------|
+| Procesamiento tarjetas | 2.9% + $0.30 por transaccion |
+| Tarjetas internacionales | +1.5% surcharge |
+| Conversion de moneda | +1.0% |
+| Stripe Billing | +0.7% sobre volumen |
+| Stripe Connect payouts | 0.25% + $0.25 por payout |
+| Instant Payouts (drivers) | 1% del payout (min $0.50) |
+| Stripe Tax Basic | Por transaccion (variable) |
+| Stripe Radar (fraude) | Gratis basico; Teams: $0.07/tx |
+
+**COP en Stripe:**
+- COP es moneda soportada (max 9,999,999,999.9 COP)
+- Settlement en USD o EUR (no COP local)
+- Adaptive Pricing auto-convierte por IP del usuario
+
+---
+
+## FUENTES DE LA INVESTIGACION V3
 
 ### Design Systems Enterprise
 - [Salesforce SLDS 2.0](https://developer.salesforce.com/docs/platform/lwc/guide/create-components-css-design-tokens.html)
@@ -842,7 +1079,40 @@ api/
 - [Freemium Upgrade Prompts](https://www.appcues.com/blog/best-freemium-upgrade-prompts)
 - [Pricing Page Conversion](https://userpilot.com/blog/pricing-page-best-practices/)
 
-### Design References (Originales)
+### Stripe Deep-Dive (agente de investigacion dedicado)
+- [Stripe Checkout Sessions API](https://docs.stripe.com/payments/checkout)
+- [Stripe Payment Element](https://docs.stripe.com/payments/payment-element)
+- [React Stripe.js SDK Reference](https://docs.stripe.com/sdks/stripejs-react)
+- [@stripe/react-stripe-js GitHub](https://github.com/stripe/react-stripe-js)
+- [@stripe/stripe-js npm v8.8.0](https://www.npmjs.com/package/@stripe/stripe-js)
+- [Stripe Connect Express Accounts](https://docs.stripe.com/connect/express-accounts)
+- [Connect Embedded Components](https://docs.stripe.com/connect/get-started-connect-embedded-components)
+- [Stripe Billing Meters (Usage-Based)](https://docs.stripe.com/billing/subscriptions/usage-based)
+- [Stripe Per-Seat Pricing](https://docs.stripe.com/subscriptions/pricing-models/per-seat-pricing)
+- [Stripe Customer Portal](https://docs.stripe.com/customer-management)
+- [Stripe Payment Links](https://docs.stripe.com/payment-links)
+- [Stripe Invoicing API](https://docs.stripe.com/api/invoices)
+- [Stripe Tax Colombia](https://docs.stripe.com/tax/supported-countries/latin-america-and-caribbean/colombia)
+- [Stripe Radar (Fraud)](https://docs.stripe.com/radar)
+- [Stripe 3D Secure / SCA](https://docs.stripe.com/payments/3d-secure/authentication-flow)
+- [Stripe Webhook Handling](https://docs.stripe.com/webhooks)
+- [Stripe Webhook Signature Verification](https://docs.stripe.com/webhooks/signature)
+- [Stripe Idempotent Requests](https://docs.stripe.com/api/idempotent_requests)
+- [Stripe Supported Currencies (COP)](https://docs.stripe.com/currencies)
+- [Stripe Data Pipeline](https://docs.stripe.com/stripe-data)
+
+### UX Research & Industry Studies
+- [Nielsen Norman Group - Dashboard Design](https://www.nngroup.com/articles/)
+- [Baymard Institute - Checkout UX (70.22% abandonment)](https://baymard.com/blog/current-state-of-checkout-ux)
+- [Google Material Design - Data Visualization Principles](https://m2.material.io/design/communication/data-visualization.html)
+- [IBM Carbon Design System - Dashboards](https://carbondesignsystem.com/data-visualization/dashboards/)
+- [Microsoft Fluent Design - Layout & Spacing](https://fluent2.microsoft.design/layout)
+- [CXL Institute - Most Popular Badge (+16-30% conversion)](https://userpilot.com/blog/pricing-page-best-practices/)
+- [First Page Sage - Free-to-Paid Conversion Benchmarks](https://firstpagesage.com/seo-blog/saas-free-trial-conversion-rate-benchmarks/)
+- [Appcues - Freemium Upgrade Prompts](https://www.appcues.com/blog/best-freemium-upgrade-prompts)
+- [Baremetrics - SaaS Metrics Dashboards](https://baremetrics.com/blog/advanced-stripe-dashboards-for-subscription-management)
+
+### Design References (Originales del Plan V1)
 - [Linear UI Redesign](https://linear.app/now/how-we-redesigned-the-linear-ui)
 - [Vercel Geist Design System](https://vercel.com/geist/introduction)
 - [Stripe Accessible Color Systems](https://stripe.com/blog/accessible-color-systems)
