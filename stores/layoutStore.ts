@@ -12,7 +12,8 @@ export type MainSection =
   | 'negocio'
   | 'marketing'
   | 'config'
-  | 'enterprise';
+  | 'enterprise'
+  | 'herramientas';
 
 export type MarketingTab =
   | 'dashboard'
@@ -31,6 +32,7 @@ export type CerebroIATab = 'asistente' | 'configuracion-ia' | 'historial-chat';
 export type NegocioTab = 'metricas' | 'clientes' | 'ventas' | 'rendimiento';
 export type ConfigTab = 'general' | 'api-keys' | 'integraciones' | 'usuarios' | 'admin';
 export type EnterpriseTab = 'command-center' | 'empresas' | 'analytics' | 'compliance' | 'security' | 'users' | 'automation';
+export type HerramientasTab = 'video-trimmer';
 
 interface LayoutState {
   // Sidebar
@@ -49,6 +51,7 @@ interface LayoutState {
   activeNegocioTab: NegocioTab;
   activeConfigTab: ConfigTab;
   activeEnterpriseTab: EnterpriseTab;
+  activeHerramientasTab: HerramientasTab;
 
   // Secciones expandidas
   expandedSections: MainSection[];
@@ -74,6 +77,7 @@ interface LayoutState {
   setNegocioTab: (tab: NegocioTab) => void;
   setConfigTab: (tab: ConfigTab) => void;
   setEnterpriseTab: (tab: EnterpriseTab) => void;
+  setHerramientasTab: (tab: HerramientasTab) => void;
 
   // Expandir/colapsar secciones
   toggleSectionExpanded: (section: MainSection) => void;
@@ -99,6 +103,7 @@ export const useLayoutStore = create<LayoutState>()(
       activeNegocioTab: 'metricas',
       activeConfigTab: 'general',
       activeEnterpriseTab: 'command-center',
+      activeHerramientasTab: 'video-trimmer',
 
       // Secciones expandidas
       expandedSections: [],
@@ -128,6 +133,7 @@ export const useLayoutStore = create<LayoutState>()(
       setNegocioTab: (tab) => set({ activeNegocioTab: tab }),
       setConfigTab: (tab) => set({ activeConfigTab: tab }),
       setEnterpriseTab: (tab) => set({ activeEnterpriseTab: tab }),
+      setHerramientasTab: (tab) => set({ activeHerramientasTab: tab }),
 
       // Toggle expandir sección
       toggleSectionExpanded: (section) => set((state) => {

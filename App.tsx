@@ -691,6 +691,8 @@ const App: React.FC = () => {
             onSubTabChange={setNegocioTab}
           />
         );
+      case 'herramientas':
+        return <VideoTrimmer />;
       case 'marketing':
         return <MarketingView />;
       case 'config':
