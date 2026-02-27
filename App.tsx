@@ -64,6 +64,8 @@ import { EnhancedExcelUpload } from './components/upload';
 import { ReportUploadModal, MyReportsPanel, AdminReportsView, PublicUploadPage } from './components/ReportUpload';
 import { useReportUploadStore } from './stores/reportUploadStore';
 import { getTokenFromUrl, getUploadLinkByToken } from './services/reportUploadService';
+// Video Trimmer
+import { VideoTrimmer } from './components/VideoTrimmer';
 import {
   Crown,
   Search,
@@ -965,6 +967,7 @@ const App: React.FC = () => {
       {currentTab === 'ciudad-agentes' && <div className="p-6"><CiudadAgentesTab selectedCountry={selectedCountry} /></div>}
       {currentTab === 'inteligencia-logistica' && <div className="p-6"><InteligenciaLogisticaTab /></div>}
       {currentTab === 'tracking-ordenes' && <div className="p-6"><TrackingOrdenesTab /></div>}
+      {currentTab === 'video-trimmer' && <div className="p-6"><VideoTrimmer /></div>}
 
       {/* Legacy Dashboard - can be accessed from quick actions */}
       {currentTab === 'dashboard-legacy' && (

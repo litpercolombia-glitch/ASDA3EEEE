@@ -33,7 +33,8 @@ export type MainTabNew =
   | 'conexiones'
   | 'reporte'
   | 'aprendizaje-ia'
-  | 'tracking-ordenes';
+  | 'tracking-ordenes'
+  | 'video-trimmer';
 
 // ============================================
 // GUIA RETRASADA (DELAYED SHIPMENT)

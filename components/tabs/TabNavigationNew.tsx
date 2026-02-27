@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, Activity, Target, FileBarChart, Bot, Brain, TrendingUp, Trophy, Building2, GraduationCap, Plug, ShieldCheck, BarChart2, Truck } from 'lucide-react';
+import { Package, Activity, Target, FileBarChart, Bot, Brain, TrendingUp, Trophy, Building2, GraduationCap, Plug, ShieldCheck, BarChart2, Truck, Scissors } from 'lucide-react';
 import { MainTabNew } from '../../types/logistics';
 
 interface TabNavigationNewProps {
@@ -153,6 +153,15 @@ const tabs: TabConfig[] = [
     shortLabel: 'Conex.',
     color: 'text-orange-500',
     activeColor: 'bg-gradient-to-r from-orange-500 to-amber-500',
+    isNew: true,
+  },
+  {
+    id: 'video-trimmer',
+    icon: Scissors,
+    label: 'Recortar Video',
+    shortLabel: 'Video',
+    color: 'text-red-500',
+    activeColor: 'bg-gradient-to-r from-red-500 to-orange-500',
     isNew: true,
   },
   {
