@@ -62,6 +62,10 @@ import { UserProfileSettings } from './components/settings';
 import { EnhancedExcelUpload } from './components/upload';
 // Report Upload System
 import { ReportUploadModal, MyReportsPanel, AdminReportsView, PublicUploadPage } from './components/ReportUpload';
+// Billing & Subscription
+import { PricingPage, CheckoutModal, SubscriptionManager, BillingHistory, FeatureGate } from './components/Billing';
+import { useSubscriptionStore } from './stores/subscriptionStore';
+import { STRIPE_PLANS } from './services/stripeService';
 import { useReportUploadStore } from './stores/reportUploadStore';
 import { getTokenFromUrl, getUploadLinkByToken } from './services/reportUploadService';
 // Ronda Closure System
@@ -381,6 +385,8 @@ const App: React.FC = () => {
     setNegocioTab,
     activeInicioTab,
     setInicioTab,
+    activeBillingTab,
+    setBillingTab,
     activeEnterpriseTab,
     setEnterpriseTab,
   } = useLayoutStore();
@@ -395,6 +401,19 @@ const App: React.FC = () => {
 
   // Report Upload Store
   const { isModalOpen: isReportModalOpen, openModal: openReportModal, closeModal: closeReportModal } = useReportUploadStore();
+
+  // Billing / Checkout state
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [checkoutPlan, setCheckoutPlan] = useState<{ name: string; price: number; cycle: 'monthly' | 'annual' }>({ name: '', price: 0, cycle: 'monthly' });
+  const { currentPlan, setBillingCycle: setStoreBillingCycle } = useSubscriptionStore();
+
+  const handleSelectPlan = (planId: string, priceId: string) => {
+    const plan = STRIPE_PLANS.find(p => p.id === planId);
+    if (plan) {
+      setCheckoutPlan({ name: plan.name, price: plan.priceMonthly, cycle: 'monthly' });
+      setShowCheckout(true);
+    }
+  };
 
   // Obtener usuario actual
   const currentUser = getCurrentUser();
@@ -680,10 +699,16 @@ const App: React.FC = () => {
         );
       case 'cerebro-ia':
         return (
-          <AIBrainDashboard
-            activeSubTab={activeCerebroIATab}
-            onSubTabChange={setCerebroIATab}
-          />
+          <FeatureGate
+            requiredPlan="pro"
+            featureLabel="Cerebro IA"
+            onUpgrade={() => { setActiveSection('billing'); setBillingTab('planes'); }}
+          >
+            <AIBrainDashboard
+              activeSubTab={activeCerebroIATab}
+              onSubTabChange={setCerebroIATab}
+            />
+          </FeatureGate>
         );
       case 'negocio':
         return (
@@ -691,6 +716,22 @@ const App: React.FC = () => {
             activeSubTab={activeNegocioTab}
             onSubTabChange={setNegocioTab}
           />
+        );
+      case 'billing':
+        return (
+          <div className="p-6">
+            {activeBillingTab === 'planes' && (
+              <PricingPage onSelectPlan={handleSelectPlan} />
+            )}
+            {activeBillingTab === 'suscripcion' && (
+              <SubscriptionManager
+                onOpenPricing={() => setBillingTab('planes')}
+              />
+            )}
+            {activeBillingTab === 'historial' && (
+              <BillingHistory />
+            )}
+          </div>
         );
       case 'marketing':
         return <MarketingView />;
@@ -1000,6 +1041,15 @@ const App: React.FC = () => {
 
       {/* Report Upload Modal - Accessible from anywhere */}
       <ReportUploadModal isOpen={isReportModalOpen} onClose={closeReportModal} />
+
+      {/* Checkout Modal - Stripe Payment */}
+      <CheckoutModal
+        isOpen={showCheckout}
+        onClose={() => setShowCheckout(false)}
+        planName={checkoutPlan.name}
+        planPrice={checkoutPlan.price}
+        billingCycle={checkoutPlan.cycle}
+      />
     </AppLayout>
   );
 };

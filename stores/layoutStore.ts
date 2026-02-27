@@ -10,6 +10,7 @@ export type MainSection =
   | 'inteligencia'
   | 'cerebro-ia'
   | 'negocio'
+  | 'billing'
   | 'marketing'
   | 'config'
   | 'enterprise';
@@ -30,6 +31,7 @@ export type InteligenciaTab = 'analisis' | 'reportes' | 'predicciones' | 'insigh
 export type CerebroIATab = 'asistente' | 'configuracion-ia' | 'historial-chat';
 export type NegocioTab = 'metricas' | 'clientes' | 'ventas' | 'rendimiento';
 export type ConfigTab = 'general' | 'api-keys' | 'integraciones' | 'usuarios' | 'admin';
+export type BillingTab = 'planes' | 'suscripcion' | 'historial';
 export type EnterpriseTab = 'command-center' | 'empresas' | 'analytics' | 'compliance' | 'security' | 'users' | 'automation';
 
 interface LayoutState {
@@ -48,6 +50,7 @@ interface LayoutState {
   activeCerebroIATab: CerebroIATab;
   activeNegocioTab: NegocioTab;
   activeConfigTab: ConfigTab;
+  activeBillingTab: BillingTab;
   activeEnterpriseTab: EnterpriseTab;
 
   // Secciones expandidas
@@ -72,6 +75,7 @@ interface LayoutState {
   setInteligenciaTab: (tab: InteligenciaTab) => void;
   setCerebroIATab: (tab: CerebroIATab) => void;
   setNegocioTab: (tab: NegocioTab) => void;
+  setBillingTab: (tab: BillingTab) => void;
   setConfigTab: (tab: ConfigTab) => void;
   setEnterpriseTab: (tab: EnterpriseTab) => void;
 
@@ -97,6 +101,7 @@ export const useLayoutStore = create<LayoutState>()(
       activeInteligenciaTab: 'analisis',
       activeCerebroIATab: 'asistente',
       activeNegocioTab: 'metricas',
+      activeBillingTab: 'planes',
       activeConfigTab: 'general',
       activeEnterpriseTab: 'command-center',
 
@@ -126,6 +131,7 @@ export const useLayoutStore = create<LayoutState>()(
       setInteligenciaTab: (tab) => set({ activeInteligenciaTab: tab }),
       setCerebroIATab: (tab) => set({ activeCerebroIATab: tab }),
       setNegocioTab: (tab) => set({ activeNegocioTab: tab }),
+      setBillingTab: (tab) => set({ activeBillingTab: tab }),
       setConfigTab: (tab) => set({ activeConfigTab: tab }),
       setEnterpriseTab: (tab) => set({ activeEnterpriseTab: tab }),
 

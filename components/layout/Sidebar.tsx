@@ -59,6 +59,8 @@ import {
   CircuitBoard,
   Wifi,
   Upload,
+  CreditCard,
+  Receipt,
 } from 'lucide-react';
 import {
   useLayoutStore,
@@ -69,6 +71,7 @@ import {
   InteligenciaTab,
   CerebroIATab,
   NegocioTab,
+  BillingTab,
   ConfigTab,
   EnterpriseTab,
 } from '../../stores/layoutStore';
@@ -134,6 +137,11 @@ const SUB_MENUS: Record<MainSection, SubMenuItem[]> = {
     { id: 'clientes', icon: Users, label: 'Clientes' },
     { id: 'ventas', icon: DollarSign, label: 'Ventas' },
     { id: 'rendimiento', icon: TrendingUp, label: 'Rendimiento' },
+  ],
+  'billing': [
+    { id: 'planes', icon: CreditCard, label: 'Planes' },
+    { id: 'suscripcion', icon: Settings, label: 'Mi Suscripción' },
+    { id: 'historial', icon: Receipt, label: 'Facturas' },
   ],
   'config': [
     { id: 'general', icon: Cog, label: 'General' },
@@ -510,6 +518,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, onUploadReport, user
     activeInteligenciaTab,
     activeCerebroIATab,
     activeNegocioTab,
+    activeBillingTab,
     activeConfigTab,
     activeEnterpriseTab,
     expandedSections,
@@ -522,6 +531,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, onUploadReport, user
     setInteligenciaTab,
     setCerebroIATab,
     setNegocioTab,
+    setBillingTab,
     setConfigTab,
     setEnterpriseTab,
     toggleSectionExpanded,
@@ -540,6 +550,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, onUploadReport, user
     { id: 'inteligencia', icon: Sparkles, label: 'Inteligencia', subItems: SUB_MENUS['inteligencia'] },
     { id: 'cerebro-ia', icon: Brain, label: 'Cerebro IA', isNew: true, subItems: SUB_MENUS['cerebro-ia'] },
     { id: 'negocio', icon: Briefcase, label: 'Centro Negocio', subItems: SUB_MENUS['negocio'] },
+    { id: 'billing', icon: CreditCard, label: 'Plan & Billing', isNew: true, subItems: SUB_MENUS['billing'] },
     { id: 'enterprise', icon: Crown, label: 'Enterprise Global', isNew: true, subItems: SUB_MENUS['enterprise'] },
   ];
 
@@ -551,6 +562,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, onUploadReport, user
       case 'inteligencia': return activeInteligenciaTab;
       case 'cerebro-ia': return activeCerebroIATab;
       case 'negocio': return activeNegocioTab;
+      case 'billing': return activeBillingTab;
       case 'config': return activeConfigTab;
       case 'marketing': return activeMarketingTab;
       case 'enterprise': return activeEnterpriseTab;
@@ -566,6 +578,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, onUploadReport, user
       case 'inteligencia': setInteligenciaTab(subItemId as InteligenciaTab); break;
       case 'cerebro-ia': setCerebroIATab(subItemId as CerebroIATab); break;
       case 'negocio': setNegocioTab(subItemId as NegocioTab); break;
+      case 'billing': setBillingTab(subItemId as BillingTab); break;
       case 'config': setConfigTab(subItemId as ConfigTab); break;
       case 'marketing': setMarketingTab(subItemId as MarketingTab); break;
       case 'enterprise': setEnterpriseTab(subItemId as EnterpriseTab); break;

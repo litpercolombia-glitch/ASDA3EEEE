@@ -30,6 +30,10 @@ export type { DashboardMetrics, Prediction, CarrierStats, CityStats, DateRange }
 // Asistente PRO
 export { useProAssistantStore } from './proAssistantStore';
 
+// Suscripcion y billing
+export { useSubscriptionStore, PLAN_HIERARCHY, PLAN_LIMITS, PLAN_PRICING } from './subscriptionStore';
+export type { PlanTier, SubscriptionStatus, BillingCycle, SubscriptionState } from './subscriptionStore';
+
 // ============================================
 // HOOKS COMBINADOS
 // ============================================
