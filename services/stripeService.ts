@@ -101,8 +101,8 @@ export const STRIPE_PLANS: PlanConfig[] = [
     ],
     highlighted: true,
     cta: 'Upgrade a Pro',
-    stripePriceIdMonthly: 'price_pro_monthly',
-    stripePriceIdAnnual: 'price_pro_annual',
+    stripePriceIdMonthly: import.meta.env.VITE_STRIPE_PRICE_PRO_MONTHLY || 'price_pro_monthly',
+    stripePriceIdAnnual: import.meta.env.VITE_STRIPE_PRICE_PRO_ANNUAL || 'price_pro_annual',
   },
   {
     id: 'enterprise',
@@ -123,8 +123,8 @@ export const STRIPE_PLANS: PlanConfig[] = [
     ],
     highlighted: false,
     cta: 'Contactar Ventas',
-    stripePriceIdMonthly: 'price_enterprise_monthly',
-    stripePriceIdAnnual: 'price_enterprise_annual',
+    stripePriceIdMonthly: import.meta.env.VITE_STRIPE_PRICE_ENTERPRISE_MONTHLY || 'price_enterprise_monthly',
+    stripePriceIdAnnual: import.meta.env.VITE_STRIPE_PRICE_ENTERPRISE_ANNUAL || 'price_enterprise_annual',
   },
 ];
 
