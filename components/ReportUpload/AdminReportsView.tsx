@@ -1,5 +1,6 @@
 // components/ReportUpload/AdminReportsView.tsx
 // Vista Admin: Dashboard consolidado de todos los reportes de todas las personas
+// Design System: Linear meets Stripe on Dark Logistics (LS V2)
 
 import React, { useState, useMemo } from 'react';
 import {
@@ -10,16 +11,8 @@ import {
   Clock,
   AlertCircle,
   Search,
-  Filter,
   Eye,
   MessageSquare,
-  TrendingUp,
-  BarChart3,
-  Download,
-  ChevronDown,
-  ChevronUp,
-  X,
-  Tag,
   Calendar,
   File,
   Image,
@@ -27,8 +20,11 @@ import {
   Shield,
   Inbox,
   Check,
-  Share2,
   Link2,
+  X,
+  Tag,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useReportUploadStore } from '../../stores/reportUploadStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -107,7 +103,7 @@ export function AdminReportsView() {
       case 'rejected': return <XCircle className="w-4 h-4 text-red-400" />;
       case 'under_review': return <AlertCircle className="w-4 h-4 text-yellow-400" />;
       case 'submitted': return <Clock className="w-4 h-4 text-blue-400" />;
-      default: return <FileText className="w-4 h-4 text-gray-400" />;
+      default: return <FileText className="w-4 h-4 text-[#64748b]" />;
     }
   };
 
@@ -116,40 +112,50 @@ export function AdminReportsView() {
     if (type.includes('spreadsheet') || type.includes('excel') || type.includes('csv'))
       return <FileSpreadsheet className="w-5 h-5 text-green-400" />;
     if (type.includes('pdf')) return <FileText className="w-5 h-5 text-red-400" />;
-    return <File className="w-5 h-5 text-gray-400" />;
+    return <File className="w-5 h-5 text-[#64748b]" />;
+  };
+
+  const getBadgeClass = (status: ReportStatus) => {
+    switch (status) {
+      case 'approved': return 'ls-badge ls-badge-green';
+      case 'rejected': return 'ls-badge ls-badge-red';
+      case 'under_review': return 'ls-badge ls-badge-amber';
+      case 'submitted': return 'ls-badge ls-badge-blue';
+      default: return 'ls-badge ls-badge-gray';
+    }
   };
 
   const statCards = [
-    { label: 'Total Reportes', value: stats.total, icon: FileText, color: 'from-indigo-500 to-blue-600' },
-    { label: 'Este Mes', value: stats.thisMonth, icon: Calendar, color: 'from-purple-500 to-violet-600' },
-    { label: 'Pendientes', value: stats.pendingReview, icon: Clock, color: 'from-amber-500 to-orange-600' },
-    { label: 'Personas', value: stats.uniqueUsers, icon: Users, color: 'from-emerald-500 to-teal-600' },
+    { label: 'Total Reportes', value: stats.total, icon: FileText, gradient: 'from-[rgba(0,245,255,0.15)] to-[rgba(14,165,233,0.08)]' },
+    { label: 'Este Mes', value: stats.thisMonth, icon: Calendar, gradient: 'from-[rgba(168,85,247,0.15)] to-[rgba(139,92,246,0.08)]' },
+    { label: 'Pendientes', value: stats.pendingReview, icon: Clock, gradient: 'from-[rgba(251,191,36,0.15)] to-[rgba(245,158,11,0.08)]' },
+    { label: 'Personas', value: stats.uniqueUsers, icon: Users, gradient: 'from-[rgba(74,222,128,0.15)] to-[rgba(34,197,94,0.08)]' },
   ];
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="p-3 bg-gradient-to-br from-indigo-500/30 to-purple-500/30 rounded-xl">
-          <Shield className="w-8 h-8 text-indigo-400" />
+        <div className="p-3 bg-[rgba(0,245,255,0.12)] rounded-xl">
+          <Shield className="w-8 h-8 text-cyan-400" />
         </div>
         <div>
           <h2 className="text-2xl font-bold text-white">Gestión de Reportes</h2>
-          <p className="text-gray-400">Administra todos los reportes de tu equipo</p>
+          <p className="text-[#94a3b8]">Administra todos los reportes de tu equipo</p>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats Cards - Bento Grid */}
+      <div className="ls-bento">
         {statCards.map((card, i) => (
-          <div key={i} className="bg-gray-800/50 rounded-xl border border-gray-700 p-4">
+          <div key={i} className="ls-metric-card">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-400 text-sm">{card.label}</p>
+                <p className="text-[#94a3b8] text-sm">{card.label}</p>
                 <p className="text-3xl font-bold text-white mt-1">{card.value}</p>
               </div>
-              <div className={`p-3 bg-gradient-to-br ${card.color} rounded-xl opacity-80`}>
-                <card.icon className="w-6 h-6 text-white" />
+              <div className={`p-3 bg-gradient-to-br ${card.gradient} rounded-xl`}>
+                <card.icon className="w-6 h-6 text-white/80" />
               </div>
             </div>
           </div>
@@ -157,14 +163,14 @@ export function AdminReportsView() {
       </div>
 
       {/* Compliance Rate Bar */}
-      <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-4">
+      <div className="ls-card p-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-gray-300 font-medium">Tasa de Cumplimiento (este mes)</span>
+          <span className="text-[#f1f5f9] font-medium">Tasa de Cumplimiento (este mes)</span>
           <span className="text-2xl font-bold text-white">{stats.complianceRate}%</span>
         </div>
-        <div className="w-full bg-gray-700 rounded-full h-3">
+        <div className="ls-progress-track">
           <div
-            className={`h-3 rounded-full transition-all duration-500 ${
+            className={`ls-progress-fill ${
               stats.complianceRate >= 80 ? 'bg-gradient-to-r from-green-500 to-emerald-400' :
               stats.complianceRate >= 50 ? 'bg-gradient-to-r from-yellow-500 to-amber-400' :
               'bg-gradient-to-r from-red-500 to-rose-400'
@@ -175,7 +181,7 @@ export function AdminReportsView() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-700 pb-2">
+      <div className="flex gap-2 border-b border-[rgba(255,255,255,0.06)] pb-2">
         {[
           { id: 'all', label: 'Todos los Reportes', icon: FileText, count: stats.total },
           { id: 'pending', label: 'Pendientes de Revisión', icon: Clock, count: stats.pendingReview },
@@ -185,17 +191,13 @@ export function AdminReportsView() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as typeof activeTab)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${
-              activeTab === tab.id
-                ? 'bg-indigo-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-700'
-            }`}
+            className={`ls-tab ${activeTab === tab.id ? 'active' : ''}`}
           >
             <tab.icon className="w-4 h-4" />
             {tab.label}
             {tab.count > 0 && (
               <span className={`px-2 py-0.5 text-xs rounded-full ${
-                activeTab === tab.id ? 'bg-indigo-500' : 'bg-gray-600'
+                activeTab === tab.id ? 'bg-[rgba(0,245,255,0.2)]' : 'bg-white/[0.06]'
               }`}>
                 {tab.count}
               </span>
@@ -211,23 +213,23 @@ export function AdminReportsView() {
         <div className="space-y-3">
           {compliance.length === 0 ? (
             <div className="text-center py-12">
-              <Users className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">No hay datos de cumplimiento aún</p>
+              <Users className="w-12 h-12 text-[#64748b] mx-auto mb-4" />
+              <p className="text-[#94a3b8]">No hay datos de cumplimiento aún</p>
             </div>
           ) : (
             compliance.map(person => (
-              <div key={person.userId} className="bg-gray-800/50 rounded-xl border border-gray-700 overflow-hidden">
+              <div key={person.userId} className="ls-card overflow-hidden">
                 <button
                   onClick={() => setExpandedUser(expandedUser === person.userId ? null : person.userId)}
-                  className="w-full flex items-center justify-between p-4 hover:bg-gray-700/30 transition-colors"
+                  className="w-full flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-indigo-500/30 rounded-full flex items-center justify-center text-indigo-300 font-bold">
+                    <div className="w-10 h-10 bg-[rgba(0,245,255,0.12)] rounded-full flex items-center justify-center text-cyan-300 font-bold">
                       {person.userName.charAt(0).toUpperCase()}
                     </div>
                     <div className="text-left">
                       <p className="text-white font-medium">{person.userName}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-[#64748b]">
                         Último envío: {person.lastSubmission
                           ? new Date(person.lastSubmission).toLocaleDateString('es-CO')
                           : 'Nunca'}
@@ -237,38 +239,38 @@ export function AdminReportsView() {
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <p className="text-lg font-bold text-white">{person.totalReports}</p>
-                      <p className="text-xs text-gray-500">reportes</p>
+                      <p className="text-xs text-[#64748b]">reportes</p>
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-bold text-emerald-400">{person.thisMonth}</p>
-                      <p className="text-xs text-gray-500">este mes</p>
+                      <p className="text-xs text-[#64748b]">este mes</p>
                     </div>
                     <div className="text-right">
                       <p className={`text-lg font-bold ${person.approvedRate >= 70 ? 'text-green-400' : person.approvedRate >= 40 ? 'text-yellow-400' : 'text-red-400'}`}>
                         {person.approvedRate}%
                       </p>
-                      <p className="text-xs text-gray-500">aprobados</p>
+                      <p className="text-xs text-[#64748b]">aprobados</p>
                     </div>
-                    {expandedUser === person.userId ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                    {expandedUser === person.userId ? <ChevronUp className="w-4 h-4 text-[#64748b]" /> : <ChevronDown className="w-4 h-4 text-[#64748b]" />}
                   </div>
                 </button>
                 {expandedUser === person.userId && (
-                  <div className="border-t border-gray-700 p-4 space-y-2">
+                  <div className="border-t border-[rgba(255,255,255,0.06)] p-4 space-y-2">
                     {getAll().filter(r => r.userId === person.userId)
                       .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
                       .slice(0, 5)
                       .map(report => (
-                        <div key={report.id} className="flex items-center justify-between py-2 px-3 bg-gray-700/30 rounded-lg">
+                        <div key={report.id} className="flex items-center justify-between py-2 px-3 bg-white/[0.02] rounded-lg">
                           <div className="flex items-center gap-2">
                             {getFileIcon(report.fileType)}
                             <span className="text-sm text-white">{report.title}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className={`flex items-center gap-1 px-2 py-0.5 text-xs rounded-full ${STATUS_CONFIG[report.status].bgColor} ${STATUS_CONFIG[report.status].color}`}>
+                            <span className={getBadgeClass(report.status)}>
                               {getStatusIcon(report.status)}
                               {STATUS_CONFIG[report.status].label}
                             </span>
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-[#64748b]">
                               {new Date(report.submittedAt).toLocaleDateString('es-CO')}
                             </span>
                           </div>
@@ -286,20 +288,20 @@ export function AdminReportsView() {
           {/* Search & Filters */}
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748b]" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar por título, persona o email..."
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="ls-input w-full pl-10"
               />
             </div>
             {activeTab === 'all' && (
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as ReportStatus | 'all')}
-                className="px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="ls-select"
               >
                 <option value="all">Todos los estados</option>
                 {(Object.entries(STATUS_CONFIG) as [ReportStatus, typeof STATUS_CONFIG[ReportStatus]][]).map(([key, config]) => (
@@ -313,35 +315,35 @@ export function AdminReportsView() {
           <div className="space-y-3">
             {reports.length === 0 ? (
               <div className="text-center py-12">
-                <Inbox className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400">
+                <Inbox className="w-12 h-12 text-[#64748b] mx-auto mb-4" />
+                <p className="text-[#94a3b8]">
                   {activeTab === 'pending' ? 'No hay reportes pendientes de revisión' : 'No hay reportes'}
                 </p>
               </div>
             ) : (
               reports.map(report => (
-                <div key={report.id} className="bg-gray-800/50 rounded-xl border border-gray-700 p-4 hover:border-gray-600 transition-colors">
+                <div key={report.id} className="ls-card p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <div className="p-2 bg-gray-700/50 rounded-lg flex-shrink-0">
+                      <div className="p-2 bg-white/[0.04] border border-[rgba(255,255,255,0.06)] rounded-lg flex-shrink-0">
                         {getFileIcon(report.fileType)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="font-medium text-white">{report.title}</h4>
-                          <span className={`flex items-center gap-1 px-2 py-0.5 text-xs rounded-full ${STATUS_CONFIG[report.status].bgColor} ${STATUS_CONFIG[report.status].color}`}>
+                          <span className={getBadgeClass(report.status)}>
                             {getStatusIcon(report.status)}
                             {STATUS_CONFIG[report.status].label}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 mt-1">
-                          <div className="w-5 h-5 bg-indigo-500/30 rounded-full flex items-center justify-center text-indigo-300 text-[10px] font-bold">
+                          <div className="w-5 h-5 bg-[rgba(0,245,255,0.12)] rounded-full flex items-center justify-center text-cyan-300 text-[10px] font-bold">
                             {report.userName.charAt(0).toUpperCase()}
                           </div>
-                          <span className="text-sm text-gray-300">{report.userName}</span>
-                          <span className="text-xs text-gray-500">{report.userEmail}</span>
+                          <span className="text-sm text-[#f1f5f9]">{report.userName}</span>
+                          <span className="text-xs text-[#64748b]">{report.userEmail}</span>
                         </div>
-                        <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                        <div className="flex items-center gap-3 mt-2 text-xs text-[#64748b]">
                           <span className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             {new Date(report.submittedAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
@@ -357,7 +359,7 @@ export function AdminReportsView() {
                           {report.status === 'submitted' && (
                             <button
                               onClick={() => handleMarkUnderReview(report.id)}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-yellow-500/20 text-yellow-400 rounded-lg hover:bg-yellow-500/30 text-sm"
+                              className="flex items-center gap-1 px-3 py-1.5 bg-[rgba(251,191,36,0.15)] text-yellow-400 border border-[rgba(251,191,36,0.25)] rounded-lg hover:bg-[rgba(251,191,36,0.25)] text-sm transition-colors"
                               title="Marcar en revisión"
                             >
                               <Eye className="w-3.5 h-3.5" />
@@ -366,7 +368,7 @@ export function AdminReportsView() {
                           )}
                           <button
                             onClick={() => { setReviewingReport(report); setReviewComment(''); }}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-indigo-500/20 text-indigo-400 rounded-lg hover:bg-indigo-500/30 text-sm"
+                            className="flex items-center gap-1 px-3 py-1.5 bg-[rgba(0,245,255,0.1)] text-cyan-400 border border-[rgba(0,245,255,0.2)] rounded-lg hover:bg-[rgba(0,245,255,0.18)] text-sm transition-colors"
                           >
                             <MessageSquare className="w-3.5 h-3.5" />
                             Evaluar
@@ -375,7 +377,7 @@ export function AdminReportsView() {
                       )}
                       <button
                         onClick={() => setReviewingReport(report)}
-                        className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg"
+                        className="p-1.5 text-[#64748b] hover:text-white hover:bg-white/[0.06] rounded-lg transition-colors"
                         title="Ver detalle"
                       >
                         <Eye className="w-4 h-4" />
@@ -391,47 +393,47 @@ export function AdminReportsView() {
 
       {/* Review Modal */}
       {reviewingReport && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden border border-gray-700">
-            <div className="flex items-center justify-between p-4 border-b border-gray-700">
-              <h3 className="text-lg font-bold text-white">Revisar Reporte</h3>
-              <button onClick={() => { setReviewingReport(null); setReviewComment(''); }} className="p-1.5 hover:bg-gray-700 rounded-lg">
-                <X className="w-5 h-5 text-gray-400" />
+        <div className="fixed inset-0 ls-modal-overlay flex items-center justify-center z-50 p-4">
+          <div className="ls-modal w-full max-w-lg max-h-[85vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-[rgba(255,255,255,0.06)]">
+              <h3 className="text-lg font-semibold text-white">Revisar Reporte</h3>
+              <button onClick={() => { setReviewingReport(null); setReviewComment(''); }} className="p-1.5 hover:bg-white/[0.06] rounded-lg">
+                <X className="w-5 h-5 text-[#64748b]" />
               </button>
             </div>
             <div className="p-5 overflow-y-auto max-h-[calc(85vh-140px)] space-y-4">
               {/* Report Info */}
-              <div className="bg-gray-800 rounded-xl p-4 space-y-3">
+              <div className="ls-card-elevated p-4 space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-indigo-500/30 rounded-full flex items-center justify-center text-indigo-300 font-bold">
+                  <div className="w-10 h-10 bg-[rgba(0,245,255,0.12)] rounded-full flex items-center justify-center text-cyan-300 font-bold">
                     {reviewingReport.userName.charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <p className="text-white font-medium">{reviewingReport.userName}</p>
-                    <p className="text-xs text-gray-500">{reviewingReport.userEmail}</p>
+                    <p className="text-xs text-[#64748b]">{reviewingReport.userEmail}</p>
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase mb-1">Título</p>
+                  <p className="text-xs text-[#64748b] uppercase tracking-wider mb-1">Título</p>
                   <p className="text-white">{reviewingReport.title}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase mb-1">Descripción</p>
+                  <p className="text-xs text-[#64748b] uppercase tracking-wider mb-1">Descripción</p>
                   <p className="text-white text-sm">{reviewingReport.description || 'Sin descripción'}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   {getFileIcon(reviewingReport.fileType)}
                   <span className="text-white text-sm">{reviewingReport.fileName}</span>
-                  <span className="text-gray-500 text-xs">({formatFileSize(reviewingReport.fileSize)})</span>
+                  <span className="text-[#64748b] text-xs">({formatFileSize(reviewingReport.fileSize)})</span>
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-[#64748b]">
                   Enviado: {new Date(reviewingReport.submittedAt).toLocaleString('es-CO')}
                 </div>
               </div>
 
               {/* Image Preview */}
               {reviewingReport.fileType.startsWith('image/') && reviewingReport.fileData && (
-                <div className="rounded-xl overflow-hidden border border-gray-700">
+                <div className="rounded-xl overflow-hidden border border-[rgba(255,255,255,0.06)]">
                   <img src={reviewingReport.fileData} alt={reviewingReport.title} className="w-full" />
                 </div>
               )}
@@ -440,7 +442,7 @@ export function AdminReportsView() {
               {(reviewingReport.status === 'submitted' || reviewingReport.status === 'under_review') && (
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                    <label className="block text-sm font-medium text-[#94a3b8] mb-1.5">
                       Comentario de Revisión
                     </label>
                     <textarea
@@ -448,21 +450,21 @@ export function AdminReportsView() {
                       onChange={(e) => setReviewComment(e.target.value)}
                       placeholder="Escribe un comentario (obligatorio para rechazar)..."
                       rows={3}
-                      className="w-full px-4 py-2.5 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                      className="ls-input w-full resize-none"
                     />
                   </div>
                   <div className="flex gap-3">
                     <button
                       onClick={() => handleReject(reviewingReport)}
                       disabled={!reviewComment.trim()}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[rgba(248,113,113,0.15)] text-red-400 border border-[rgba(248,113,113,0.3)] rounded-xl hover:bg-[rgba(248,113,113,0.25)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <XCircle className="w-4 h-4" />
                       Rechazar
                     </button>
                     <button
                       onClick={() => handleApprove(reviewingReport)}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors"
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl hover:from-emerald-600 hover:to-green-700 transition-colors shadow-[0_0_20px_rgba(74,222,128,0.15)]"
                     >
                       <Check className="w-4 h-4" />
                       Aprobar
@@ -475,8 +477,8 @@ export function AdminReportsView() {
               {(reviewingReport.status === 'approved' || reviewingReport.status === 'rejected') && (
                 <div className={`p-4 rounded-xl border ${
                   reviewingReport.status === 'approved'
-                    ? 'bg-green-500/10 border-green-500/30'
-                    : 'bg-red-500/10 border-red-500/30'
+                    ? 'bg-[rgba(74,222,128,0.1)] border-[rgba(74,222,128,0.25)]'
+                    : 'bg-[rgba(248,113,113,0.1)] border-[rgba(248,113,113,0.25)]'
                 }`}>
                   <div className="flex items-center gap-2 mb-1">
                     {getStatusIcon(reviewingReport.status)}
@@ -484,11 +486,11 @@ export function AdminReportsView() {
                       {reviewingReport.status === 'approved' ? 'Aprobado' : 'Rechazado'}
                     </span>
                     {reviewingReport.reviewedBy && (
-                      <span className="text-xs text-gray-400">por {reviewingReport.reviewedBy}</span>
+                      <span className="text-xs text-[#94a3b8]">por {reviewingReport.reviewedBy}</span>
                     )}
                   </div>
                   {reviewingReport.adminComment && (
-                    <p className="text-sm text-gray-300 mt-1">{reviewingReport.adminComment}</p>
+                    <p className="text-sm text-[#f1f5f9] mt-1">{reviewingReport.adminComment}</p>
                   )}
                 </div>
               )}

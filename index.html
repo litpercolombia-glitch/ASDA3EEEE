@@ -143,6 +143,14 @@
               'premium': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 20px 25px -5px rgba(0, 0, 0, 0.1)',
               'card': '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
               'card-hover': '0 14px 28px rgba(0,0,0,0.15), 0 10px 10px rgba(0,0,0,0.12)',
+              'ls-1': '0 1px 3px rgba(14,165,233,0.04), 0 1px 2px rgba(0,0,0,0.08)',
+              'ls-2': '0 3px 6px rgba(14,165,233,0.06), 0 2px 4px rgba(0,0,0,0.10)',
+              'ls-3': '0 6px 12px rgba(14,165,233,0.08), 0 3px 6px rgba(0,0,0,0.12)',
+              'ls-4': '0 10px 24px rgba(14,165,233,0.10), 0 6px 12px rgba(0,0,0,0.14)',
+              'ls-5': '0 20px 40px rgba(14,165,233,0.12), 0 8px 16px rgba(0,0,0,0.18)',
+              'ls-modal': '0 25px 50px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05)',
+              'ls-glow-cyan': '0 0 20px rgba(0,245,255,0.15)',
+              'ls-glow-amber': '0 0 20px rgba(255,184,0,0.15)',
             }
           }
         }
@@ -178,6 +186,43 @@
         --shadow-glow-blue: 0 0 20px rgba(59, 130, 246, 0.3);
         --shadow-card: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
         --shadow-card-hover: 0 14px 28px rgba(0,0,0,0.15), 0 10px 10px rgba(0,0,0,0.12);
+
+        /* === LITPER DESIGN SYSTEM V2: Linear meets Stripe === */
+
+        /* Surface Elevation System (Grafana-inspired layers) */
+        --ls-canvas:          #0a0e17;
+        --ls-surface-1:       #111827;
+        --ls-surface-2:       #1a1f2e;
+        --ls-surface-3:       #252b3b;
+        --ls-surface-overlay: rgba(0, 0, 0, 0.6);
+
+        /* Border Tokens (Linear-style rgba white) */
+        --ls-border-subtle:   rgba(255, 255, 255, 0.06);
+        --ls-border-default:  rgba(255, 255, 255, 0.10);
+        --ls-border-emphasis: rgba(255, 255, 255, 0.16);
+        --ls-border-active:   rgba(0, 245, 255, 0.3);
+
+        /* Text Tokens (Shopify Polaris semantic naming) */
+        --ls-text-primary:    #f1f5f9;
+        --ls-text-secondary:  #94a3b8;
+        --ls-text-tertiary:   #64748b;
+        --ls-text-accent:     #00f5ff;
+
+        /* Stripe-Quality Shadow System (5 levels, blue-tinted) */
+        --ls-shadow-1: 0 1px 3px rgba(14, 165, 233, 0.04), 0 1px 2px rgba(0, 0, 0, 0.08);
+        --ls-shadow-2: 0 3px 6px rgba(14, 165, 233, 0.06), 0 2px 4px rgba(0, 0, 0, 0.10);
+        --ls-shadow-3: 0 6px 12px rgba(14, 165, 233, 0.08), 0 3px 6px rgba(0, 0, 0, 0.12);
+        --ls-shadow-4: 0 10px 24px rgba(14, 165, 233, 0.10), 0 6px 12px rgba(0, 0, 0, 0.14);
+        --ls-shadow-5: 0 20px 40px rgba(14, 165, 233, 0.12), 0 8px 16px rgba(0, 0, 0, 0.18);
+        --ls-shadow-modal: 0 25px 50px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
+
+        /* Stripe Payment UI Tokens */
+        --ls-stripe-bg:       #0a0e17;
+        --ls-stripe-surface:  #111827;
+        --ls-stripe-text:     #f1f5f9;
+        --ls-stripe-primary:  #00f5ff;
+        --ls-stripe-danger:   #f87171;
+        --ls-stripe-radius:   10px;
       }
 
       /* Premium scrollbar */
@@ -1960,6 +2005,295 @@
       .cc-content-bg .bg-gray-100.rounded-full {
         background: rgba(0, 245, 255, 0.08) !important;
         border: 1px solid rgba(0, 245, 255, 0.1);
+      }
+
+      /* ============================================
+         LITPER V2: LINEAR MEETS STRIPE ON DARK
+         Design System Classes (.ls-*)
+         ============================================ */
+
+      /* --- Card System (3 niveles) --- */
+      .ls-card {
+        background: var(--ls-surface-1);
+        border: 1px solid var(--ls-border-subtle);
+        border-radius: 12px;
+        box-shadow: var(--ls-shadow-1);
+        transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .ls-card:hover {
+        border-color: var(--ls-border-default);
+        box-shadow: var(--ls-shadow-2);
+        transform: translateY(-1px);
+      }
+
+      .ls-card-elevated {
+        background: var(--ls-surface-2);
+        border: 1px solid var(--ls-border-default);
+        border-radius: 12px;
+        box-shadow: var(--ls-shadow-2);
+        transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .ls-card-elevated:hover {
+        border-color: var(--ls-border-emphasis);
+        box-shadow: var(--ls-shadow-3);
+        transform: translateY(-1px);
+      }
+
+      .ls-card-glass {
+        background: rgba(17, 24, 39, 0.75);
+        backdrop-filter: blur(12px) saturate(150%);
+        -webkit-backdrop-filter: blur(12px) saturate(150%);
+        border: 1px solid var(--ls-border-subtle);
+        border-radius: 12px;
+        box-shadow: var(--ls-shadow-2);
+        transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .ls-card-glass:hover {
+        border-color: var(--ls-border-default);
+        box-shadow: var(--ls-shadow-3);
+      }
+
+      /* --- KPI Metric Card (Bento-ready) --- */
+      .ls-metric-card {
+        background: linear-gradient(135deg, var(--ls-surface-1) 0%, var(--ls-surface-2) 100%);
+        border: 1px solid var(--ls-border-subtle);
+        border-radius: 12px;
+        box-shadow: var(--ls-shadow-1);
+        padding: 1.25rem;
+        transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .ls-metric-card:hover {
+        border-color: var(--ls-border-default);
+        box-shadow: var(--ls-shadow-2);
+        transform: translateY(-2px);
+      }
+
+      /* --- Modal System --- */
+      .ls-modal-overlay {
+        background: var(--ls-surface-overlay);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+      }
+      .ls-modal {
+        background: linear-gradient(135deg, rgba(17,24,39,0.95) 0%, rgba(10,14,23,0.98) 100%);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        border: 1px solid var(--ls-border-default);
+        border-radius: 16px;
+        box-shadow: var(--ls-shadow-modal);
+        animation: ls-modal-enter 250ms var(--easing-smooth);
+      }
+      @keyframes ls-modal-enter {
+        0% { opacity: 0; transform: scale(0.96) translateY(8px); }
+        100% { opacity: 1; transform: scale(1) translateY(0); }
+      }
+
+      /* --- Input System --- */
+      .ls-input {
+        background: var(--ls-surface-1);
+        border: 1px solid var(--ls-border-default);
+        border-radius: 10px;
+        color: var(--ls-text-primary);
+        padding: 0.625rem 1rem;
+        transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .ls-input::placeholder { color: var(--ls-text-tertiary); }
+      .ls-input:focus {
+        outline: none;
+        border-color: rgba(0, 245, 255, 0.4);
+        box-shadow: 0 0 0 3px rgba(0, 245, 255, 0.1), var(--ls-shadow-1);
+      }
+
+      /* --- Select System --- */
+      .ls-select {
+        background: var(--ls-surface-1);
+        border: 1px solid var(--ls-border-default);
+        border-radius: 10px;
+        color: var(--ls-text-primary);
+        padding: 0.625rem 1rem;
+        transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .ls-select:focus {
+        outline: none;
+        border-color: rgba(0, 245, 255, 0.4);
+        box-shadow: 0 0 0 3px rgba(0, 245, 255, 0.1), var(--ls-shadow-1);
+      }
+
+      /* --- Button System --- */
+      .ls-btn-primary {
+        background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+        color: white;
+        font-weight: 500;
+        border-radius: 10px;
+        padding: 0.625rem 1.25rem;
+        border: none;
+        box-shadow: var(--ls-shadow-2), 0 0 20px rgba(14, 165, 233, 0.15);
+        transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+      }
+      .ls-btn-primary:hover {
+        box-shadow: var(--ls-shadow-3), 0 0 30px rgba(14, 165, 233, 0.25);
+        transform: translateY(-1px);
+      }
+      .ls-btn-primary:active { transform: translateY(0) scale(0.98); }
+      .ls-btn-primary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .ls-btn-secondary {
+        background: var(--ls-surface-2);
+        color: var(--ls-text-secondary);
+        border: 1px solid var(--ls-border-default);
+        border-radius: 10px;
+        padding: 0.625rem 1.25rem;
+        transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+      }
+      .ls-btn-secondary:hover {
+        color: var(--ls-text-primary);
+        border-color: var(--ls-border-emphasis);
+        background: var(--ls-surface-3);
+      }
+
+      /* --- Status Badges (semantic) --- */
+      .ls-badge {
+        display: inline-flex; align-items: center; gap: 0.375rem;
+        padding: 0.25rem 0.625rem; font-size: 0.75rem; font-weight: 500;
+        border-radius: 9999px; border: 1px solid transparent;
+      }
+      .ls-badge-blue   { background: rgba(96,165,250,0.15);  color: #60a5fa; border-color: rgba(96,165,250,0.25); }
+      .ls-badge-green  { background: rgba(74,222,128,0.15);  color: #4ade80; border-color: rgba(74,222,128,0.25); }
+      .ls-badge-amber  { background: rgba(251,191,36,0.15);  color: #fbbf24; border-color: rgba(251,191,36,0.25); }
+      .ls-badge-red    { background: rgba(248,113,113,0.15); color: #f87171; border-color: rgba(248,113,113,0.25); }
+      .ls-badge-purple { background: rgba(168,85,247,0.15);  color: #a855f7; border-color: rgba(168,85,247,0.25); }
+      .ls-badge-cyan   { background: rgba(0,245,255,0.12);   color: #00f5ff; border-color: rgba(0,245,255,0.20); }
+      .ls-badge-gray   { background: rgba(148,163,184,0.12); color: #94a3b8; border-color: rgba(148,163,184,0.20); }
+
+      /* --- Bento Grid --- */
+      .ls-bento { display: grid; gap: 1rem; grid-template-columns: repeat(4, 1fr); }
+      .ls-bento-2x2 { grid-column: span 2; grid-row: span 2; }
+      .ls-bento-2x1 { grid-column: span 2; }
+      .ls-bento-1x2 { grid-row: span 2; }
+      @media (max-width: 1024px) {
+        .ls-bento { grid-template-columns: repeat(2, 1fr); }
+        .ls-bento-2x2 { grid-column: span 2; grid-row: span 1; }
+      }
+      @media (max-width: 640px) {
+        .ls-bento { grid-template-columns: 1fr; }
+        .ls-bento-2x2, .ls-bento-2x1 { grid-column: span 1; }
+        .ls-bento-1x2 { grid-row: span 1; }
+      }
+
+      /* --- Pricing Card (Linear/Vercel-inspired) --- */
+      .ls-pricing-card {
+        background: var(--ls-surface-1);
+        border: 1px solid var(--ls-border-subtle);
+        border-radius: 16px;
+        box-shadow: var(--ls-shadow-2);
+        padding: 2rem;
+        transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+      }
+      .ls-pricing-card:hover {
+        border-color: var(--ls-border-emphasis);
+        box-shadow: var(--ls-shadow-4);
+        transform: translateY(-4px);
+      }
+      .ls-pricing-card.recommended {
+        border-color: rgba(0, 245, 255, 0.4);
+        box-shadow: var(--ls-shadow-3), 0 0 40px rgba(0, 245, 255, 0.08);
+      }
+      .ls-pricing-card.recommended::before {
+        content: 'Mas Popular';
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 0.25rem 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #0a0e17;
+        background: linear-gradient(135deg, #00f5ff, #0ea5e9);
+        border-radius: 9999px;
+      }
+
+      /* --- Feature Gate (Lock overlay) --- */
+      .ls-feature-gate {
+        position: relative;
+        overflow: hidden;
+      }
+      .ls-feature-gate::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: rgba(10, 14, 23, 0.7);
+        backdrop-filter: blur(4px);
+        border-radius: inherit;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 200ms;
+        pointer-events: none;
+      }
+      .ls-feature-gate.locked::after {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      /* --- Dropzone --- */
+      .ls-dropzone {
+        border: 2px dashed var(--ls-border-default);
+        border-radius: 12px; padding: 2rem; text-align: center;
+        cursor: pointer; transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .ls-dropzone:hover { border-color: rgba(0,245,255,0.3); background: rgba(0,245,255,0.03); }
+      .ls-dropzone.dragging { border-color: rgba(0,245,255,0.5); background: rgba(0,245,255,0.06); transform: scale(1.01); }
+      .ls-dropzone.has-file { border-color: rgba(74,222,128,0.4); border-style: solid; background: rgba(74,222,128,0.04); }
+
+      /* --- Progress Track --- */
+      .ls-progress-track { background: var(--ls-surface-2); border-radius: 9999px; height: 8px; overflow: hidden; }
+      .ls-progress-fill { height: 100%; border-radius: 9999px; transition: width 500ms cubic-bezier(0.4, 0, 0.2, 1); }
+
+      /* --- Table Row --- */
+      .ls-table-row { background: transparent; border-bottom: 1px solid var(--ls-border-subtle); transition: background 150ms; }
+      .ls-table-row:hover { background: rgba(255, 255, 255, 0.02); }
+
+      /* --- Divider --- */
+      .ls-divider { height: 1px; background: var(--ls-border-subtle); }
+
+      /* --- Status Pill (for filter tabs) --- */
+      .ls-pill {
+        display: inline-flex; align-items: center; gap: 0.375rem;
+        padding: 0.375rem 0.75rem; font-size: 0.875rem; font-weight: 500;
+        border-radius: 9999px;
+        transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+      }
+      .ls-pill.active {
+        background: rgba(0, 245, 255, 0.12);
+        color: #00f5ff;
+      }
+
+      /* --- Tab System --- */
+      .ls-tab {
+        display: inline-flex; align-items: center; gap: 0.5rem;
+        padding: 0.5rem 1rem; font-size: 0.875rem;
+        border-radius: 8px;
+        transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        color: var(--ls-text-secondary);
+      }
+      .ls-tab:hover {
+        color: var(--ls-text-primary);
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .ls-tab.active {
+        background: rgba(0, 245, 255, 0.12);
+        color: #00f5ff;
       }
 
     </style>

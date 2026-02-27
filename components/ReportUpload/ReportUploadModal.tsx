@@ -1,5 +1,6 @@
 // components/ReportUpload/ReportUploadModal.tsx
 // Modal emergente profesional para subir reportes individuales
+// Design System: Linear meets Stripe on Dark Logistics (LS V2)
 
 import React, { useState, useRef, useCallback } from 'react';
 import {
@@ -173,42 +174,42 @@ export function ReportUploadModal({ isOpen, onClose }: ReportUploadModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 ls-modal-overlay flex items-center justify-center z-50 p-4">
       <div
-        className="bg-gray-900 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden border border-gray-700 shadow-2xl"
+        className="ls-modal w-full max-w-2xl max-h-[90vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-gray-700 bg-gradient-to-r from-indigo-600/20 to-purple-600/20">
+        <div className="flex items-center justify-between p-5 border-b border-[rgba(255,255,255,0.06)] bg-[rgba(0,245,255,0.04)]">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-500/30 rounded-xl">
-              <Upload className="w-6 h-6 text-indigo-400" />
+            <div className="p-2 bg-[rgba(0,245,255,0.12)] rounded-xl">
+              <Upload className="w-6 h-6 text-cyan-400" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">Subir Reporte</h2>
-              <p className="text-sm text-gray-400">Sube tu reporte para que quede registrado</p>
+              <h2 className="text-lg font-semibold text-white">Subir Reporte</h2>
+              <p className="text-sm text-[#94a3b8]">Sube tu reporte para que quede registrado</p>
             </div>
           </div>
-          <button onClick={handleClose} className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-gray-400" />
+          <button onClick={handleClose} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors">
+            <X className="w-5 h-5 text-[#64748b]" />
           </button>
         </div>
 
         {/* Success State */}
         {success ? (
           <div className="p-12 flex flex-col items-center justify-center gap-4">
-            <div className="p-4 bg-green-500/20 rounded-full animate-bounce">
+            <div className="p-4 bg-[rgba(74,222,128,0.15)] rounded-full animate-bounce">
               <CheckCircle className="w-12 h-12 text-green-400" />
             </div>
-            <h3 className="text-xl font-bold text-white">Reporte Enviado</h3>
-            <p className="text-gray-400 text-center">Tu reporte ha sido enviado exitosamente y está pendiente de revisión.</p>
+            <h3 className="text-xl font-semibold text-white">Reporte Enviado</h3>
+            <p className="text-[#94a3b8] text-center">Tu reporte ha sido enviado exitosamente y está pendiente de revisión.</p>
           </div>
         ) : (
           /* Form */
           <div className="p-5 overflow-y-auto max-h-[calc(90vh-160px)] space-y-5">
             {/* Error */}
             {error && (
-              <div className="flex items-center gap-2 p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-300 text-sm">
+              <div className="flex items-center gap-2 p-3 bg-[rgba(248,113,113,0.15)] border border-[rgba(248,113,113,0.3)] rounded-xl text-red-300 text-sm">
                 <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                 {error}
               </div>
@@ -220,12 +221,12 @@ export function ReportUploadModal({ isOpen, onClose }: ReportUploadModalProps) {
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
+              className={`ls-dropzone ${
                 isDragging
-                  ? 'border-indigo-500 bg-indigo-500/10 scale-[1.02]'
+                  ? 'dragging'
                   : file
-                  ? 'border-green-500/50 bg-green-500/5'
-                  : 'border-gray-600 hover:border-indigo-500/50 hover:bg-gray-800/50'
+                  ? 'has-file'
+                  : ''
               }`}
             >
               <input
@@ -245,7 +246,7 @@ export function ReportUploadModal({ isOpen, onClose }: ReportUploadModalProps) {
                   )}
                   <div className="flex-1 text-left">
                     <p className="text-white font-medium truncate">{file.name}</p>
-                    <p className="text-sm text-gray-400">{formatFileSize(file.size)}</p>
+                    <p className="text-sm text-[#94a3b8]">{formatFileSize(file.size)}</p>
                   </div>
                   <button
                     onClick={(e) => {
@@ -253,25 +254,25 @@ export function ReportUploadModal({ isOpen, onClose }: ReportUploadModalProps) {
                       setFile(null);
                       setFilePreview(null);
                     }}
-                    className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
+                    className="p-2 hover:bg-[rgba(248,113,113,0.15)] rounded-lg transition-colors"
                   >
                     <Trash2 className="w-4 h-4 text-red-400" />
                   </button>
                 </div>
               ) : (
                 <>
-                  <Upload className={`w-10 h-10 mx-auto mb-3 ${isDragging ? 'text-indigo-400' : 'text-gray-500'}`} />
+                  <Upload className={`w-10 h-10 mx-auto mb-3 ${isDragging ? 'text-cyan-400' : 'text-[#64748b]'}`} />
                   <p className="text-white font-medium">
                     {isDragging ? 'Suelta tu archivo aquí' : 'Arrastra tu archivo o haz click'}
                   </p>
-                  <p className="text-sm text-gray-500 mt-1">PDF, Excel, imágenes o texto (máx. 10MB)</p>
+                  <p className="text-sm text-[#64748b] mt-1">PDF, Excel, imágenes o texto (máx. 10MB)</p>
                 </>
               )}
             </div>
 
             {/* Title */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">
+              <label className="block text-sm font-medium text-[#94a3b8] mb-1.5">
                 Título del Reporte *
               </label>
               <input
@@ -279,13 +280,13 @@ export function ReportUploadModal({ isOpen, onClose }: ReportUploadModalProps) {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Ej: Reporte de entregas semana 8"
-                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="ls-input w-full"
               />
             </div>
 
             {/* Category */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">
+              <label className="block text-sm font-medium text-[#94a3b8] mb-1.5">
                 Tipo de Reporte
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -296,8 +297,8 @@ export function ReportUploadModal({ isOpen, onClose }: ReportUploadModalProps) {
                       onClick={() => setCategory(key)}
                       className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition-all ${
                         category === key
-                          ? 'border-indigo-500 bg-indigo-500/20 text-white'
-                          : 'border-gray-700 bg-gray-800/50 text-gray-400 hover:border-gray-500'
+                          ? 'border-[rgba(0,245,255,0.4)] bg-[rgba(0,245,255,0.08)] text-white'
+                          : 'border-[rgba(255,255,255,0.06)] bg-white/[0.02] text-[#94a3b8] hover:border-[rgba(255,255,255,0.16)]'
                       }`}
                     >
                       <span className="text-xs">{config.label}</span>
@@ -309,7 +310,7 @@ export function ReportUploadModal({ isOpen, onClose }: ReportUploadModalProps) {
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">
+              <label className="block text-sm font-medium text-[#94a3b8] mb-1.5">
                 Descripción
               </label>
               <textarea
@@ -317,14 +318,14 @@ export function ReportUploadModal({ isOpen, onClose }: ReportUploadModalProps) {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe brevemente el contenido de tu reporte..."
                 rows={3}
-                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                className="ls-input w-full resize-none"
               />
             </div>
 
             {/* Period */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="flex items-center gap-1.5 text-sm font-medium text-gray-300 mb-1.5">
+                <label className="flex items-center gap-1.5 text-sm font-medium text-[#94a3b8] mb-1.5">
                   <Calendar className="w-3.5 h-3.5" />
                   Fecha Inicio
                 </label>
@@ -332,11 +333,11 @@ export function ReportUploadModal({ isOpen, onClose }: ReportUploadModalProps) {
                   type="date"
                   value={periodStart}
                   onChange={(e) => setPeriodStart(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="ls-input w-full"
                 />
               </div>
               <div>
-                <label className="flex items-center gap-1.5 text-sm font-medium text-gray-300 mb-1.5">
+                <label className="flex items-center gap-1.5 text-sm font-medium text-[#94a3b8] mb-1.5">
                   <Calendar className="w-3.5 h-3.5" />
                   Fecha Fin
                 </label>
@@ -344,14 +345,14 @@ export function ReportUploadModal({ isOpen, onClose }: ReportUploadModalProps) {
                   type="date"
                   value={periodEnd}
                   onChange={(e) => setPeriodEnd(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="ls-input w-full"
                 />
               </div>
             </div>
 
             {/* Tags */}
             <div>
-              <label className="flex items-center gap-1.5 text-sm font-medium text-gray-300 mb-1.5">
+              <label className="flex items-center gap-1.5 text-sm font-medium text-[#94a3b8] mb-1.5">
                 <Tag className="w-3.5 h-3.5" />
                 Etiquetas (separadas por coma)
               </label>
@@ -360,7 +361,7 @@ export function ReportUploadModal({ isOpen, onClose }: ReportUploadModalProps) {
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
                 placeholder="Ej: urgente, semanal, entregas"
-                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="ls-input w-full"
               />
             </div>
           </div>
@@ -368,17 +369,17 @@ export function ReportUploadModal({ isOpen, onClose }: ReportUploadModalProps) {
 
         {/* Footer */}
         {!success && (
-          <div className="flex items-center justify-between gap-3 p-5 border-t border-gray-700 bg-gray-800/50">
+          <div className="flex items-center justify-between gap-3 p-5 border-t border-[rgba(255,255,255,0.06)] bg-[rgba(17,24,39,0.5)]">
             <button
               onClick={handleClose}
-              className="px-5 py-2.5 border border-gray-600 text-gray-300 rounded-xl hover:bg-gray-700 transition-colors"
+              className="ls-btn-secondary"
             >
               Cancelar
             </button>
             <button
               onClick={handleSubmit}
               disabled={isSubmitting || !title.trim() || !file}
-              className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium shadow-lg shadow-indigo-500/25"
+              className="ls-btn-primary flex items-center gap-2"
             >
               {isSubmitting ? (
                 <>
