@@ -198,7 +198,7 @@ function ExpandableSidebarItem({
 }: ExpandableSidebarItemProps) {
   const handleClick = () => {
     onClick();
-    if (hasSubItems && !isExpanded) {
+    if (hasSubItems) {
       onToggleExpand();
     }
   };

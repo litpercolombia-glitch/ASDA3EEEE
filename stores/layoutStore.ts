@@ -111,13 +111,7 @@ export const useLayoutStore = create<LayoutState>()(
       expandSidebar: () => set({ sidebarCollapsed: false }),
       setHovered: (hovered) => set({ sidebarHovered: hovered }),
 
-      setActiveSection: (section) => set((state) => {
-        // Al cambiar de sección, expandir automáticamente
-        const newExpanded = state.expandedSections.includes(section)
-          ? state.expandedSections
-          : [...state.expandedSections, section];
-        return { activeSection: section, expandedSections: newExpanded };
-      }),
+      setActiveSection: (section) => set({ activeSection: section }),
       setMarketingTab: (tab) => set({ activeMarketingTab: tab }),
 
       // Sub-tab setters
