@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="es" data-lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Litper Pro - Rastreo Logístico Inteligente | Intelligent Logistics Tracking</title>
+  <meta name="description" content="Plataforma de rastreo logístico potenciada por IA para empresas colombianas. AI-powered logistics tracking platform.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ===== CSS RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: #1a1a2e;
+      background: #ffffff;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    img { max-width: 100%; display: block; }
+    a { text-decoration: none; color: inherit; }
+    ul { list-style: none; }
+
+    /* ===== CSS VARIABLES ===== */
+    :root {
+      --navy: #0a1628;
+      --navy-light: #1a2744;
+      --blue: #2563eb;
+      --blue-light: #3b82f6;
+      --blue-dark: #1d4ed8;
+      --orange: #f97316;
+      --orange-light: #fb923c;
+      --white: #ffffff;
+      --gray-50: #f8fafc;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-300: #cbd5e1;
+      --gray-400: #94a3b8;
+      --gray-500: #64748b;
+      --gray-600: #475569;
+      --gray-700: #334155;
+      --gray-800: #1e293b;
+      --gray-900: #0f172a;
+      --gradient-primary: linear-gradient(135deg, var(--blue) 0%, #7c3aed 100%);
+      --gradient-hero: linear-gradient(135deg, var(--navy) 0%, #1e3a5f 50%, var(--navy-light) 100%);
+      --gradient-orange: linear-gradient(135deg, var(--orange) 0%, #ef4444 100%);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+      --shadow-md: 0 4px 20px rgba(0,0,0,0.08);
+      --shadow-lg: 0 10px 40px rgba(0,0,0,0.12);
+      --shadow-xl: 0 20px 60px rgba(0,0,0,0.15);
+      --radius: 12px;
+      --radius-lg: 20px;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ===== UTILITIES ===== */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    .section { padding: 100px 0; }
+    .section-dark { background: var(--navy); color: var(--white); }
+    .section-light { background: var(--gray-50); }
+    .text-center { text-align: center; }
+    .text-gradient {
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .text-orange {
+      background: var(--gradient-orange);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 32px;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: var(--transition);
+      border: none;
+      font-family: inherit;
+    }
+    .btn-primary {
+      background: var(--gradient-primary);
+      color: white;
+      box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(37, 99, 235, 0.5);
+    }
+    .btn-orange {
+      background: var(--gradient-orange);
+      color: white;
+      box-shadow: 0 4px 20px rgba(249, 115, 22, 0.4);
+    }
+    .btn-orange:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(249, 115, 22, 0.5);
+    }
+    .btn-outline {
+      background: transparent;
+      color: white;
+      border: 2px solid rgba(255,255,255,0.3);
+    }
+    .btn-outline:hover {
+      border-color: white;
+      background: rgba(255,255,255,0.1);
+    }
+
+    /* ===== NAVBAR ===== */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      padding: 16px 0;
+      transition: var(--transition);
+    }
+    .navbar.scrolled {
+      background: rgba(10, 22, 40, 0.95);
+      backdrop-filter: blur(20px);
+      padding: 10px 0;
+      box-shadow: 0 4px 30px rgba(0,0,0,0.2);
+    }
+    .navbar .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--gradient-primary);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+    .nav-links a {
+      color: rgba(255,255,255,0.8);
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: var(--transition);
+    }
+    .nav-links a:hover { color: white; }
+    .lang-switch {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      font-family: inherit;
+      transition: var(--transition);
+    }
+    .lang-switch:hover { background: rgba(255,255,255,0.25); }
+    .mobile-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      background: var(--gradient-hero);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      padding-top: 80px;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 50%, rgba(37, 99, 235, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(124, 58, 237, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 60% 80%, rgba(249, 115, 22, 0.08) 0%, transparent 50%);
+    }
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+    .hero .container {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+    .hero-content { color: white; }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(249, 115, 22, 0.15);
+      border: 1px solid rgba(249, 115, 22, 0.3);
+      color: var(--orange-light);
+      padding: 8px 20px;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+    .hero-badge .pulse {
+      width: 8px;
+      height: 8px;
+      background: var(--orange);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    .hero h1 {
+      font-size: 3.5rem;
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 24px;
+    }
+    .hero p {
+      font-size: 1.2rem;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 40px;
+      max-width: 500px;
+      line-height: 1.7;
+    }
+    .hero-buttons { display: flex; gap: 16px; flex-wrap: wrap; }
+    .hero-stats {
+      display: flex;
+      gap: 40px;
+      margin-top: 50px;
+    }
+    .hero-stat h3 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--orange-light);
+    }
+    .hero-stat span {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.5);
+    }
+    .hero-visual {
+      position: relative;
+    }
+    .hero-card {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      animation: float 6s ease-in-out infinite;
+    }
+    .hero-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .hero-card-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .hero-card-bar {
+      height: 8px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+    .tracking-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+    .tracking-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+    .tracking-info { flex: 1; }
+    .tracking-info h4 { font-size: 0.9rem; color: white; font-weight: 600; }
+    .tracking-info span { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
+    .tracking-status {
+      padding: 4px 12px;
+      border-radius: 50px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+
+    /* ===== FEATURES ===== */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 30px;
+      margin-top: 60px;
+    }
+    .feature-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 40px 32px;
+      transition: var(--transition);
+      border: 1px solid var(--gray-200);
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--gradient-primary);
+      transform: scaleX(0);
+      transition: var(--transition);
+    }
+    .feature-card:hover {
+      transform: translateY(-8px);
+      box-shadow: var(--shadow-xl);
+      border-color: transparent;
+    }
+    .feature-card:hover::before { transform: scaleX(1); }
+    .feature-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 24px;
+    }
+    .feature-card h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .feature-card p {
+      color: var(--gray-500);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+
+    /* ===== HOW IT WORKS ===== */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 30px;
+      margin-top: 60px;
+    }
+    .step-card {
+      text-align: center;
+      position: relative;
+    }
+    .step-number {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: var(--gradient-primary);
+      color: white;
+      font-size: 1.5rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
+    }
+    .step-card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: white;
+    }
+    .step-card p {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.6;
+    }
+
+    /* ===== CARRIERS ===== */
+    .carriers-row {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      flex-wrap: wrap;
+      margin-top: 50px;
+    }
+    .carrier-badge {
+      background: white;
+      padding: 20px 36px;
+      border-radius: var(--radius);
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--gray-700);
+      box-shadow: var(--shadow-md);
+      transition: var(--transition);
+      border: 2px solid transparent;
+    }
+    .carrier-badge:hover {
+      transform: translateY(-4px);
+      border-color: var(--blue-light);
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* ===== PRICING ===== */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 30px;
+      margin-top: 60px;
+    }
+    .pricing-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 44px 36px;
+      border: 2px solid var(--gray-200);
+      transition: var(--transition);
+      position: relative;
+    }
+    .pricing-card.popular {
+      border-color: var(--blue);
+      transform: scale(1.05);
+      box-shadow: var(--shadow-xl);
+    }
+    .pricing-card.popular .popular-badge {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--gradient-primary);
+      color: white;
+      padding: 6px 24px;
+      border-radius: 50px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .pricing-card h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .pricing-card .price {
+      font-size: 3rem;
+      font-weight: 900;
+      margin: 20px 0;
+    }
+    .pricing-card .price span {
+      font-size: 1rem;
+      font-weight: 400;
+      color: var(--gray-500);
+    }
+    .pricing-card .features-list {
+      margin: 30px 0;
+    }
+    .pricing-card .features-list li {
+      padding: 10px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.95rem;
+      color: var(--gray-600);
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .pricing-card .features-list li .check {
+      color: #10b981;
+      font-weight: 700;
+    }
+    .pricing-card .btn { width: 100%; justify-content: center; }
+
+    /* ===== CTA ===== */
+    .cta {
+      background: var(--gradient-hero);
+      padding: 100px 0;
+      text-align: center;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.2) 0%, transparent 70%);
+    }
+    .cta .container { position: relative; z-index: 1; }
+    .cta h2 {
+      font-size: 2.8rem;
+      font-weight: 900;
+      margin-bottom: 20px;
+    }
+    .cta p {
+      font-size: 1.2rem;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 40px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      background: var(--gray-900);
+      color: var(--gray-400);
+      padding: 60px 0 30px;
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 40px;
+    }
+    .footer-brand p {
+      margin-top: 16px;
+      font-size: 0.9rem;
+      line-height: 1.7;
+    }
+    .footer h4 {
+      color: white;
+      font-weight: 700;
+      margin-bottom: 20px;
+      font-size: 1rem;
+    }
+    .footer ul li {
+      margin-bottom: 10px;
+    }
+    .footer ul li a {
+      font-size: 0.9rem;
+      transition: var(--transition);
+    }
+    .footer ul li a:hover { color: var(--blue-light); }
+    .footer-bottom {
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+
+    /* ===== SECTION TITLES ===== */
+    .section-title {
+      font-size: 2.5rem;
+      font-weight: 900;
+      margin-bottom: 16px;
+    }
+    .section-subtitle {
+      font-size: 1.1rem;
+      color: var(--gray-500);
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+    .section-dark .section-subtitle { color: rgba(255,255,255,0.6); }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.5); }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .animate-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1024px) {
+      .hero .container { grid-template-columns: 1fr; }
+      .hero-visual { display: none; }
+      .hero h1 { font-size: 2.8rem; }
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .steps-grid { grid-template-columns: repeat(2, 1fr); }
+      .pricing-grid { grid-template-columns: 1fr; max-width: 440px; margin-left: auto; margin-right: auto; }
+      .pricing-card.popular { transform: scale(1); }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .mobile-toggle { display: block; }
+      .nav-links.open {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: rgba(10, 22, 40, 0.98);
+        backdrop-filter: blur(20px);
+        padding: 24px;
+        gap: 16px;
+      }
+      .hero { min-height: auto; padding: 120px 0 80px; }
+      .hero h1 { font-size: 2.2rem; }
+      .hero-stats { gap: 24px; }
+      .hero-stat h3 { font-size: 1.5rem; }
+      .section { padding: 70px 0; }
+      .section-title { font-size: 2rem; }
+      .features-grid { grid-template-columns: 1fr; }
+      .steps-grid { grid-template-columns: 1fr; }
+      .cta h2 { font-size: 2rem; }
+      .footer-grid { grid-template-columns: 1fr; }
+      .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="#" class="logo">
+        <div class="logo-icon">&#x1F4E6;</div>
+        <span>Litper <span class="text-orange">Pro</span></span>
+      </a>
+      <div class="nav-links" id="navLinks">
+        <a href="#features" data-es="Funciones" data-en="Features">Funciones</a>
+        <a href="#how-it-works" data-es="Cómo Funciona" data-en="How It Works">Cómo Funciona</a>
+        <a href="#carriers" data-es="Transportadoras" data-en="Carriers">Transportadoras</a>
+        <a href="#pricing" data-es="Precios" data-en="Pricing">Precios</a>
+        <button class="lang-switch" id="langSwitch" onclick="toggleLang()">EN / ES</button>
+        <a href="#cta" class="btn btn-primary btn-sm" data-es="Empezar Gratis" data-en="Start Free">Empezar Gratis</a>
+      </div>
+      <button class="mobile-toggle" onclick="toggleMenu()">&#9776;</button>
+    </div>
+  </nav>
+
+  <!-- ===== HERO ===== -->
+  <section class="hero" id="hero">
+    <div class="hero-grid"></div>
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="pulse"></span>
+          <span data-es="Potenciado por IA" data-en="AI-Powered">Potenciado por IA</span>
+        </div>
+        <h1>
+          <span data-es="Rastreo Logístico" data-en="Logistics Tracking">Rastreo Logístico</span><br>
+          <span class="text-gradient" data-es="Inteligente" data-en="Made Intelligent">Inteligente</span>
+        </h1>
+        <p data-es="Controla todos tus envíos desde una sola plataforma. Detección automática de transportadoras, análisis de riesgo con IA y alertas en tiempo real para empresas colombianas." data-en="Control all your shipments from a single platform. Automatic carrier detection, AI-powered risk analysis, and real-time alerts for Colombian logistics companies.">
+          Controla todos tus envíos desde una sola plataforma. Detección automática de transportadoras, análisis de riesgo con IA y alertas en tiempo real para empresas colombianas.
+        </p>
+        <div class="hero-buttons">
+          <a href="#cta" class="btn btn-orange" data-es="Comenzar Ahora" data-en="Get Started">Comenzar Ahora &#x2192;</a>
+          <a href="#features" class="btn btn-outline" data-es="Ver Demo" data-en="See Demo">Ver Demo &#x25B6;</a>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <h3>5+</h3>
+            <span data-es="Transportadoras" data-en="Carriers">Transportadoras</span>
+          </div>
+          <div class="hero-stat">
+            <h3>99.9%</h3>
+            <span data-es="Uptime" data-en="Uptime">Uptime</span>
+          </div>
+          <div class="hero-stat">
+            <h3>&lt;2s</h3>
+            <span data-es="Tiempo de respuesta" data-en="Response Time">Tiempo de respuesta</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="hero-card">
+          <div class="hero-card-header">
+            <div class="hero-card-dot" style="background:#ef4444;"></div>
+            <div class="hero-card-dot" style="background:#f59e0b;"></div>
+            <div class="hero-card-dot" style="background:#10b981;"></div>
+            <span style="color:rgba(255,255,255,0.5);font-size:0.8rem;margin-left:auto;" data-es="Panel de Control" data-en="Dashboard">Panel de Control</span>
+          </div>
+          <div class="tracking-item">
+            <div class="tracking-icon" style="background:rgba(37,99,235,0.2);">&#x1F69A;</div>
+            <div class="tracking-info">
+              <h4>Envío #CO-48291</h4>
+              <span>Servientrega - Bogotá → Medellín</span>
+            </div>
+            <span class="tracking-status" style="background:rgba(16,185,129,0.15);color:#10b981;" data-es="Entregado" data-en="Delivered">Entregado</span>
+          </div>
+          <div class="tracking-item">
+            <div class="tracking-icon" style="background:rgba(249,115,22,0.2);">&#x1F4E6;</div>
+            <div class="tracking-info">
+              <h4>Envío #CO-48292</h4>
+              <span>Inter Rapidísimo - Cali → Barranquilla</span>
+            </div>
+            <span class="tracking-status" style="background:rgba(59,130,246,0.15);color:#3b82f6;" data-es="En tránsito" data-en="In Transit">En tránsito</span>
+          </div>
+          <div class="tracking-item">
+            <div class="tracking-icon" style="background:rgba(239,68,68,0.2);">&#x26A0;&#xFE0F;</div>
+            <div class="tracking-info">
+              <h4>Envío #CO-48293</h4>
+              <span>Coordinadora - Bucaramanga → Pereira</span>
+            </div>
+            <span class="tracking-status" style="background:rgba(239,68,68,0.15);color:#ef4444;" data-es="Urgente" data-en="Urgent">Urgente</span>
+          </div>
+          <div class="hero-card-bar" style="background:linear-gradient(90deg, #10b981 60%, var(--gray-700) 60%); margin-top:20px;"></div>
+          <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:rgba(255,255,255,0.4);">
+            <span data-es="60% entregados hoy" data-en="60% delivered today">60% entregados hoy</span>
+            <span data-es="3 alertas activas" data-en="3 active alerts">3 alertas activas</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FEATURES ===== -->
+  <section class="section section-light" id="features">
+    <div class="container text-center">
+      <h2 class="section-title animate-in">
+        <span data-es="Todo lo que necesitas para" data-en="Everything You Need for">Todo lo que necesitas para</span>
+        <span class="text-gradient" data-es="tu logística" data-en="Your Logistics">tu logística</span>
+      </h2>
+      <p class="section-subtitle animate-in" data-es="Herramientas inteligentes que transforman el caos logístico en control total." data-en="Intelligent tools that transform logistics chaos into total control.">
+        Herramientas inteligentes que transforman el caos logístico en control total.
+      </p>
+      <div class="features-grid">
+        <div class="feature-card animate-in">
+          <div class="feature-icon" style="background: rgba(37,99,235,0.1); color: var(--blue);">&#x1F916;</div>
+          <h3 data-es="IA Avanzada" data-en="Advanced AI">IA Avanzada</h3>
+          <p data-es="Análisis de riesgo automático con Claude AI. Predice retrasos, identifica problemas y sugiere acciones antes de que ocurran." data-en="Automatic risk analysis with Claude AI. Predict delays, identify issues, and suggest actions before they happen.">
+            Análisis de riesgo automático con Claude AI. Predice retrasos, identifica problemas y sugiere acciones antes de que ocurran.
+          </p>
+        </div>
+        <div class="feature-card animate-in">
+          <div class="feature-icon" style="background: rgba(249,115,22,0.1); color: var(--orange);">&#x1F4CA;</div>
+          <h3 data-es="Dashboard en Tiempo Real" data-en="Real-Time Dashboard">Dashboard en Tiempo Real</h3>
+          <p data-es="Visualiza el estado de todos tus envíos en un solo lugar. Alertas inteligentes, métricas clave y reportes automáticos." data-en="View the status of all your shipments in one place. Smart alerts, key metrics, and automatic reports.">
+            Visualiza el estado de todos tus envíos en un solo lugar. Alertas inteligentes, métricas clave y reportes automáticos.
+          </p>
+        </div>
+        <div class="feature-card animate-in">
+          <div class="feature-icon" style="background: rgba(16,185,129,0.1); color: #10b981;">&#x1F69A;</div>
+          <h3 data-es="Multi-Transportadora" data-en="Multi-Carrier">Multi-Transportadora</h3>
+          <p data-es="Detecta automáticamente la transportadora de cada guía. Compatible con Servientrega, Inter Rapidísimo, Coordinadora, TCC y más." data-en="Automatically detect the carrier for each tracking number. Compatible with Servientrega, Inter Rapidísimo, Coordinadora, TCC, and more.">
+            Detecta automáticamente la transportadora de cada guía. Compatible con Servientrega, Inter Rapidísimo, Coordinadora, TCC y más.
+          </p>
+        </div>
+        <div class="feature-card animate-in">
+          <div class="feature-icon" style="background: rgba(124,58,237,0.1); color: #7c3aed;">&#x1F4F1;</div>
+          <h3 data-es="WhatsApp Integrado" data-en="WhatsApp Integration">WhatsApp Integrado</h3>
+          <p data-es="Contacta a tus clientes directamente por WhatsApp con un clic. Notificaciones automáticas de estado de envío." data-en="Contact your customers directly via WhatsApp with one click. Automatic shipment status notifications.">
+            Contacta a tus clientes directamente por WhatsApp con un clic. Notificaciones automáticas de estado de envío.
+          </p>
+        </div>
+        <div class="feature-card animate-in">
+          <div class="feature-icon" style="background: rgba(236,72,153,0.1); color: #ec4899;">&#x1F4C4;</div>
+          <h3 data-es="Importación Masiva" data-en="Bulk Import">Importación Masiva</h3>
+          <p data-es="Carga miles de guías desde Excel o CSV en segundos. Procesamiento paralelo para máxima velocidad." data-en="Upload thousands of tracking numbers from Excel or CSV in seconds. Parallel processing for maximum speed.">
+            Carga miles de guías desde Excel o CSV en segundos. Procesamiento paralelo para máxima velocidad.
+          </p>
+        </div>
+        <div class="feature-card animate-in">
+          <div class="feature-icon" style="background: rgba(20,184,166,0.1); color: #14b8a6;">&#x1F50D;</div>
+          <h3 data-es="Análisis de Evidencia" data-en="Evidence Analysis">Análisis de Evidencia</h3>
+          <p data-es="Verificación visual de entregas con IA. Analiza fotos de entrega para confirmar cumplimiento y detectar anomalías." data-en="Visual delivery verification with AI. Analyze delivery photos to confirm compliance and detect anomalies.">
+            Verificación visual de entregas con IA. Analiza fotos de entrega para confirmar cumplimiento y detectar anomalías.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== HOW IT WORKS ===== -->
+  <section class="section section-dark" id="how-it-works">
+    <div class="container text-center">
+      <h2 class="section-title animate-in">
+        <span data-es="Cómo" data-en="How It">Cómo</span>
+        <span class="text-orange" data-es="Funciona" data-en="Works">Funciona</span>
+      </h2>
+      <p class="section-subtitle animate-in" data-es="En 4 simples pasos, transforma tu operación logística." data-en="In 4 simple steps, transform your logistics operation.">
+        En 4 simples pasos, transforma tu operación logística.
+      </p>
+      <div class="steps-grid">
+        <div class="step-card animate-in">
+          <div class="step-number">1</div>
+          <h3 data-es="Carga tus guías" data-en="Upload Your Tracking Numbers">Carga tus guías</h3>
+          <p data-es="Importa desde Excel, CSV o ingresa manualmente. Soporta miles de guías simultáneas." data-en="Import from Excel, CSV, or enter manually. Supports thousands of simultaneous tracking numbers.">
+            Importa desde Excel, CSV o ingresa manualmente. Soporta miles de guías simultáneas.
+          </p>
+        </div>
+        <div class="step-card animate-in">
+          <div class="step-number">2</div>
+          <h3 data-es="Detección Automática" data-en="Automatic Detection">Detección Automática</h3>
+          <p data-es="Litper identifica la transportadora de cada guía y comienza el rastreo automático." data-en="Litper identifies the carrier for each tracking number and begins automatic tracking.">
+            Litper identifica la transportadora de cada guía y comienza el rastreo automático.
+          </p>
+        </div>
+        <div class="step-card animate-in">
+          <div class="step-number">3</div>
+          <h3 data-es="Análisis con IA" data-en="AI Analysis">Análisis con IA</h3>
+          <p data-es="Claude AI analiza cada envío, asigna niveles de riesgo y genera recomendaciones." data-en="Claude AI analyzes each shipment, assigns risk levels, and generates recommendations.">
+            Claude AI analiza cada envío, asigna niveles de riesgo y genera recomendaciones.
+          </p>
+        </div>
+        <div class="step-card animate-in">
+          <div class="step-number">4</div>
+          <h3 data-es="Control Total" data-en="Total Control">Control Total</h3>
+          <p data-es="Recibe alertas, exporta reportes y gestiona todo desde un dashboard unificado." data-en="Receive alerts, export reports, and manage everything from a unified dashboard.">
+            Recibe alertas, exporta reportes y gestiona todo desde un dashboard unificado.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CARRIERS ===== -->
+  <section class="section" id="carriers">
+    <div class="container text-center">
+      <h2 class="section-title animate-in">
+        <span data-es="Transportadoras" data-en="Carriers">Transportadoras</span>
+        <span class="text-gradient" data-es="Compatibles" data-en="Supported">Compatibles</span>
+      </h2>
+      <p class="section-subtitle animate-in" data-es="Integración directa con las principales transportadoras de Colombia." data-en="Direct integration with Colombia's top carriers.">
+        Integración directa con las principales transportadoras de Colombia.
+      </p>
+      <div class="carriers-row">
+        <div class="carrier-badge animate-in">Servientrega</div>
+        <div class="carrier-badge animate-in">Inter Rapidísimo</div>
+        <div class="carrier-badge animate-in">Coordinadora</div>
+        <div class="carrier-badge animate-in">TCC</div>
+        <div class="carrier-badge animate-in">Envia</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PRICING ===== -->
+  <section class="section section-light" id="pricing">
+    <div class="container text-center">
+      <h2 class="section-title animate-in">
+        <span data-es="Planes y" data-en="Plans &">Planes y</span>
+        <span class="text-gradient" data-es="Precios" data-en="Pricing">Precios</span>
+      </h2>
+      <p class="section-subtitle animate-in" data-es="Elige el plan perfecto para tu operación." data-en="Choose the perfect plan for your operation.">
+        Elige el plan perfecto para tu operación.
+      </p>
+      <div class="pricing-grid">
+        <!-- Starter -->
+        <div class="pricing-card animate-in">
+          <h3 data-es="Inicio" data-en="Starter">Inicio</h3>
+          <p style="color:var(--gray-500);font-size:0.9rem;" data-es="Para pequeños negocios" data-en="For small businesses">Para pequeños negocios</p>
+          <div class="price" data-es="Gratis" data-en="Free">Gratis</div>
+          <ul class="features-list">
+            <li><span class="check">&#x2713;</span> <span data-es="50 guías/mes" data-en="50 tracking numbers/month">50 guías/mes</span></li>
+            <li><span class="check">&#x2713;</span> <span data-es="1 transportadora" data-en="1 carrier">1 transportadora</span></li>
+            <li><span class="check">&#x2713;</span> <span data-es="Dashboard básico" data-en="Basic dashboard">Dashboard básico</span></li>
+            <li><span class="check">&#x2713;</span> <span data-es="Exportar a Excel" data-en="Export to Excel">Exportar a Excel</span></li>
+          </ul>
+          <a href="#cta" class="btn btn-outline" style="color:var(--blue);border-color:var(--blue);" data-es="Comenzar Gratis" data-en="Start Free">Comenzar Gratis</a>
+        </div>
+        <!-- Pro -->
+        <div class="pricing-card popular animate-in">
+          <div class="popular-badge" data-es="Más Popular" data-en="Most Popular">Más Popular</div>
+          <h3 data-es="Profesional" data-en="Professional">Profesional</h3>
+          <p style="color:var(--gray-500);font-size:0.9rem;" data-es="Para empresas en crecimiento" data-en="For growing businesses">Para empresas en crecimiento</p>
+          <div class="price">$99K <span data-es="COP/mes" data-en="COP/mo">COP/mes</span></div>
+          <ul class="features-list">
+            <li><span class="check">&#x2713;</span> <span data-es="Guías ilimitadas" data-en="Unlimited tracking">Guías ilimitadas</span></li>
+            <li><span class="check">&#x2713;</span> <span data-es="5 transportadoras" data-en="5 carriers">5 transportadoras</span></li>
+            <li><span class="check">&#x2713;</span> <span data-es="IA completa (Claude)" data-en="Full AI (Claude)">IA completa (Claude)</span></li>
+            <li><span class="check">&#x2713;</span> <span data-es="WhatsApp integrado" data-en="WhatsApp integration">WhatsApp integrado</span></li>
+            <li><span class="check">&#x2713;</span> <span data-es="Análisis de riesgo" data-en="Risk analysis">Análisis de riesgo</span></li>
+            <li><span class="check">&#x2713;</span> <span data-es="Reportes avanzados" data-en="Advanced reports">Reportes avanzados</span></li>
+          </ul>
+          <a href="#cta" class="btn btn-primary" data-es="Elegir Plan" data-en="Choose Plan">Elegir Plan</a>
+        </div>
+        <!-- Enterprise -->
+        <div class="pricing-card animate-in">
+          <h3 data-es="Empresa" data-en="Enterprise">Empresa</h3>
+          <p style="color:var(--gray-500);font-size:0.9rem;" data-es="Para grandes operaciones" data-en="For large operations">Para grandes operaciones</p>
+          <div class="price" data-es="Contactar" data-en="Contact Us">Contactar</div>
+          <ul class="features-list">
+            <li><span class="check">&#x2713;</span> <span data-es="Todo lo del plan Pro" data-en="Everything in Pro">Todo lo del plan Pro</span></li>
+            <li><span class="check">&#x2713;</span> <span data-es="API dedicada" data-en="Dedicated API">API dedicada</span></li>
+            <li><span class="check">&#x2713;</span> <span data-es="SLA personalizado" data-en="Custom SLA">SLA personalizado</span></li>
+            <li><span class="check">&#x2713;</span> <span data-es="Soporte prioritario 24/7" data-en="24/7 priority support">Soporte prioritario 24/7</span></li>
+            <li><span class="check">&#x2713;</span> <span data-es="Integraciones custom" data-en="Custom integrations">Integraciones custom</span></li>
+          </ul>
+          <a href="#cta" class="btn btn-outline" style="color:var(--gray-700);border-color:var(--gray-300);" data-es="Contactar Ventas" data-en="Contact Sales">Contactar Ventas</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA ===== -->
+  <section class="cta" id="cta">
+    <div class="container">
+      <h2 class="animate-in" data-es="Empieza a rastrear con IA hoy" data-en="Start AI-powered tracking today">
+        Empieza a rastrear con IA hoy
+      </h2>
+      <p class="animate-in" data-es="Únete a cientos de empresas colombianas que ya optimizan su logística con Litper Pro." data-en="Join hundreds of Colombian companies already optimizing their logistics with Litper Pro.">
+        Únete a cientos de empresas colombianas que ya optimizan su logística con Litper Pro.
+      </p>
+      <div class="animate-in" style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
+        <a href="#" class="btn btn-orange" data-es="Crear Cuenta Gratis" data-en="Create Free Account">Crear Cuenta Gratis &#x2192;</a>
+        <a href="#" class="btn btn-outline" data-es="Hablar con Ventas" data-en="Talk to Sales">Hablar con Ventas</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="logo" style="color:white;">
+            <div class="logo-icon">&#x1F4E6;</div>
+            <span>Litper <span style="color:var(--orange);">Pro</span></span>
+          </div>
+          <p data-es="Plataforma de rastreo logístico inteligente para empresas colombianas. Potenciada por Inteligencia Artificial." data-en="Intelligent logistics tracking platform for Colombian companies. Powered by Artificial Intelligence.">
+            Plataforma de rastreo logístico inteligente para empresas colombianas. Potenciada por Inteligencia Artificial.
+          </p>
+        </div>
+        <div>
+          <h4 data-es="Producto" data-en="Product">Producto</h4>
+          <ul>
+            <li><a href="#features" data-es="Funciones" data-en="Features">Funciones</a></li>
+            <li><a href="#pricing" data-es="Precios" data-en="Pricing">Precios</a></li>
+            <li><a href="#carriers" data-es="Transportadoras" data-en="Carriers">Transportadoras</a></li>
+            <li><a href="#" data-es="Documentación" data-en="Documentation">Documentación</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 data-es="Compañía" data-en="Company">Compañía</h4>
+          <ul>
+            <li><a href="#" data-es="Acerca de" data-en="About">Acerca de</a></li>
+            <li><a href="#" data-es="Blog" data-en="Blog">Blog</a></li>
+            <li><a href="#" data-es="Contacto" data-en="Contact">Contacto</a></li>
+            <li><a href="#" data-es="Empleos" data-en="Careers">Empleos</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 data-es="Legal" data-en="Legal">Legal</h4>
+          <ul>
+            <li><a href="#" data-es="Privacidad" data-en="Privacy">Privacidad</a></li>
+            <li><a href="#" data-es="Términos" data-en="Terms">Términos</a></li>
+            <li><a href="#" data-es="Cookies" data-en="Cookies">Cookies</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; 2026 Litper Pro. <span data-es="Todos los derechos reservados." data-en="All rights reserved.">Todos los derechos reservados.</span></span>
+        <span data-es="Hecho con &#x2764;&#xFE0F; en Colombia" data-en="Made with &#x2764;&#xFE0F; in Colombia">Hecho con &#x2764;&#xFE0F; en Colombia</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===== JAVASCRIPT ===== -->
+  <script>
+    // ===== Language Toggle =====
+    let currentLang = 'es';
+
+    function toggleLang() {
+      currentLang = currentLang === 'es' ? 'en' : 'es';
+      document.documentElement.setAttribute('data-lang', currentLang);
+      document.querySelectorAll('[data-es]').forEach(el => {
+        const text = el.getAttribute(`data-${currentLang}`);
+        if (text) el.textContent = text;
+      });
+      document.getElementById('langSwitch').textContent = currentLang === 'es' ? 'EN / ES' : 'ES / EN';
+    }
+
+    // ===== Navbar Scroll Effect =====
+    window.addEventListener('scroll', () => {
+      const navbar = document.getElementById('navbar');
+      if (window.scrollY > 50) {
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
+      }
+    });
+
+    // ===== Mobile Menu =====
+    function toggleMenu() {
+      document.getElementById('navLinks').classList.toggle('open');
+    }
+
+    // Close mobile menu on link click
+    document.querySelectorAll('.nav-links a').forEach(link => {
+      link.addEventListener('click', () => {
+        document.getElementById('navLinks').classList.remove('open');
+      });
+    });
+
+    // ===== Scroll Animations =====
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, index) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => {
+            entry.target.classList.add('visible');
+          }, index * 100);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.animate-in').forEach(el => observer.observe(el));
+
+    // ===== Smooth Scroll =====
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function(e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
