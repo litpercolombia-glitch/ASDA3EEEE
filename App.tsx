@@ -55,6 +55,8 @@ import { useLayoutStore } from './stores/layoutStore';
 import { MarketingView } from './components/marketing';
 // Auth service for logout
 import { logout as authLogout, getCurrentUser } from './services/authService';
+// URL Routing - sync browser URL with sidebar navigation
+import { useRouter } from './hooks/useRouter';
 // User Profile
 import { useUserProfileStore } from './services/userProfileService';
 import { UserProfileSettings } from './components/settings';
@@ -392,6 +394,9 @@ const App: React.FC = () => {
 
   // Report Upload Store
   const { isModalOpen: isReportModalOpen, openModal: openReportModal, closeModal: closeReportModal } = useReportUploadStore();
+
+  // URL Routing - syncs browser URL ↔ sidebar section
+  useRouter();
 
   // Obtener usuario actual
   const currentUser = getCurrentUser();

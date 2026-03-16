@@ -9,8 +9,9 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Dict
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Query
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func, Integer, cast
 from sqlalchemy.orm import Session
@@ -259,13 +260,53 @@ async def lifespan(app: FastAPI):
 
 # ==================== APP ====================
 
+# Tags para organización de endpoints
+tags_metadata = [
+    {"name": "Health", "description": "Endpoints de salud y estado del sistema"},
+    {"name": "Guías", "description": "Gestión de guías de envío y tracking"},
+    {"name": "ML/Predicciones", "description": "Machine Learning y predicciones de entrega"},
+    {"name": "Chat IA", "description": "Chat inteligente con contexto logístico"},
+    {"name": "Alertas", "description": "Sistema de alertas y notificaciones"},
+    {"name": "Reportes", "description": "Generación de reportes y exportación"},
+    {"name": "Configuración", "description": "Configuración del sistema"},
+    {"name": "Tracking", "description": "Tracking multi-transportadora en tiempo real"},
+    {"name": "WhatsApp", "description": "Integración WhatsApp para notificaciones"},
+    {"name": "Brain", "description": "Cerebro Autónomo con Claude AI"},
+    {"name": "Auth", "description": "Autenticación y autorización"},
+]
+
 app = FastAPI(
-    title="Litper ML API",
-    description="API de Machine Learning para Litper Logística Colombia",
-    version="1.0.0",
+    title="LITPER PRO API",
+    description="""
+## API Enterprise de Logística con IA
+
+**LITPER PRO** es la plataforma líder de gestión logística en Colombia con inteligencia artificial.
+
+### Funcionalidades principales:
+- 🚚 **Tracking Multi-Carrier**: Coordinadora, Servientrega, TCC, Envía, Inter Rapidísimo
+- 🤖 **IA Predictiva**: Predicción de tiempos de entrega con ML
+- 📊 **Analytics**: Reportes y métricas en tiempo real
+- 💬 **Chat Inteligente**: Asistente IA con contexto logístico
+- 🧠 **Cerebro Autónomo**: Sistema autónomo con Claude AI
+- 📱 **WhatsApp**: Notificaciones automatizadas
+
+### Autenticación:
+Usa el header `Authorization: Bearer <token>` para endpoints protegidos.
+    """,
+    version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
-    lifespan=lifespan
+    openapi_url="/openapi.json",
+    openapi_tags=tags_metadata,
+    contact={
+        "name": "LITPER PRO",
+        "url": "https://litper.co",
+        "email": "api@litper.co",
+    },
+    license_info={
+        "name": "Proprietary",
+    },
+    lifespan=lifespan,
 )
 
 # Configurar CORS con whitelist
@@ -276,6 +317,20 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Requested-With", "X-Webhook-Signature"],
 )
+
+# ==================== RATE LIMITING ====================
+# Protección contra abuso - inspirado en Stripe (100 req/min por IP)
+try:
+    from slowapi import Limiter, _rate_limit_exceeded_handler
+    from slowapi.util import get_remote_address
+    from slowapi.errors import RateLimitExceeded
+
+    limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    logger.info("🛡️ Rate limiting activado: 100 req/min por IP")
+except ImportError:
+    logger.warning("⚠️ slowapi no instalado - rate limiting desactivado. Instala con: pip install slowapi")
 
 # Incluir router del Sistema de Conocimiento
 if KNOWLEDGE_SYSTEM_AVAILABLE:
