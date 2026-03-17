@@ -580,7 +580,7 @@ async def predecir_retraso(
             "probabilidad_retraso": prediccion.get('probabilidad_retraso'),
             "nivel_riesgo": prediccion.get('nivel_riesgo'),
             "dias_estimados_entrega": prediccion.get('dias_estimados_entrega', 5),
-            "fecha_estimada_entrega": (datetime.now() + timedelta(days=5)).isoformat(),
+            "fecha_estimada_entrega": (datetime.now() + timedelta(days=prediccion.get('dias_estimados_entrega', 5))).isoformat(),
             "factores_riesgo": prediccion.get('factores_riesgo', []),
             "acciones_recomendadas": prediccion.get('acciones_recomendadas', []),
             "confianza": prediccion.get('confianza', 0.5),

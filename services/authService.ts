@@ -1,5 +1,6 @@
 // services/authService.ts
-// Sistema de Autenticación y Registro de Actividad
+// Authentication service - connects to backend JWT auth
+// SECURITY: No hardcoded credentials. All auth goes through backend API.
 
 // =====================================
 // TIPOS
@@ -61,141 +62,12 @@ export interface AuthResponse {
 // CONSTANTES
 // =====================================
 
-const USERS_KEY = 'litper_users';
 const CURRENT_USER_KEY = 'litper_current_user';
 const SESSION_LOGS_KEY = 'litper_session_logs';
 const ACTIVITY_LOGS_KEY = 'litper_activity_logs';
 const AUTH_TOKEN_KEY = 'litper_auth_token';
 
-// Usuarios productivos de Litper
-const LITPER_USERS: Array<{ user: User; password: string }> = [
-  // Chat & Atención
-  {
-    user: {
-      id: 'litper_karen_001',
-      email: 'karenlitper@gmail.com',
-      nombre: 'Karen',
-      rol: 'operador',
-      createdAt: '2024-12-01T00:00:00.000Z',
-      activo: true,
-    },
-    password: 'LP.CAROLINA_2024?Jm',
-  },
-  {
-    user: {
-      id: 'litper_dayana_002',
-      email: 'litperdayana@gmail.com',
-      nombre: 'Dayana',
-      rol: 'operador',
-      createdAt: '2024-12-01T00:00:00.000Z',
-      activo: true,
-    },
-    password: 'tELLEZ_LITper2025Angie?',
-  },
-  {
-    user: {
-      id: 'litper_david_003',
-      email: 'litperdavid@gmail.com',
-      nombre: 'David',
-      rol: 'operador',
-      createdAt: '2024-12-01T00:00:00.000Z',
-      activo: true,
-    },
-    password: '2025NORMAN_?litper',
-  },
-  // Tracking & Envíos
-  {
-    user: {
-      id: 'litper_felipe_004',
-      email: 'felipelitper@gmail.com',
-      nombre: 'Felipe',
-      rol: 'operador',
-      createdAt: '2024-12-01T00:00:00.000Z',
-      activo: true,
-    },
-    password: '2025?LITper.FELIPE',
-  },
-  {
-    user: {
-      id: 'litper_jimmy_005',
-      email: 'jimmylitper@gmail.com',
-      nombre: 'Jimmy',
-      rol: 'operador',
-      createdAt: '2024-12-01T00:00:00.000Z',
-      activo: true,
-    },
-    password: '20.25_JIMMY.LITper?',
-  },
-  {
-    user: {
-      id: 'litper_jhonnatan_006',
-      email: 'jhonnatanlitper@gmail.com',
-      nombre: 'Jhonnatan',
-      rol: 'operador',
-      createdAt: '2024-12-01T00:00:00.000Z',
-      activo: true,
-    },
-    password: '2025_EVAN10?LITper.?',
-  },
-  // Administración
-  {
-    user: {
-      id: 'litper_daniel_007',
-      email: 'daniellitper@gmail.com',
-      nombre: 'Daniel',
-      rol: 'admin',
-      createdAt: '2024-12-01T00:00:00.000Z',
-      activo: true,
-    },
-    password: 'ALEJANDRA_?2025Litper',
-  },
-  {
-    user: {
-      id: 'litper_maletas_008',
-      email: 'maletaslitper@gmail.com',
-      nombre: 'Maletas',
-      rol: 'admin',
-      createdAt: '2024-12-01T00:00:00.000Z',
-      activo: true,
-    },
-    password: '2025_KAREN.litper10?',
-  },
-  {
-    user: {
-      id: 'litper_colombia_009',
-      email: 'litpercolombia@gmail.com',
-      nombre: 'Litper Colombia',
-      rol: 'admin',
-      createdAt: '2024-12-01T00:00:00.000Z',
-      activo: true,
-    },
-    password: '?2024LP.JEferMoreno?',
-  },
-  // Usuario de Marketing
-  {
-    user: {
-      id: 'marketing_admin_001',
-      email: 'admin@marketing.com',
-      nombre: 'Marketing Admin',
-      rol: 'admin',
-      createdAt: '2026-01-07T00:00:00.000Z',
-      activo: true,
-    },
-    password: '1234',
-  },
-  // Usuario Julian
-  {
-    user: {
-      id: 'litper_julian_010',
-      email: 'julianlitper@gmail.com',
-      nombre: 'Julian',
-      rol: 'operador',
-      createdAt: '2026-02-23T00:00:00.000Z',
-      activo: true,
-    },
-    password: '2026.?JULIAN_LITper?',
-  },
-];
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // =====================================
 // FUNCIONES DE UTILIDAD
@@ -203,19 +75,6 @@ const LITPER_USERS: Array<{ user: User; password: string }> = [
 
 const generateId = (): string => {
   return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-};
-
-const generateToken = (): string => {
-  return `token_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
-};
-
-// Simular hash de password (en producción usar bcrypt)
-const hashPassword = (password: string): string => {
-  return btoa(password + '_litper_salt_2024');
-};
-
-const verifyPassword = (password: string, hash: string): boolean => {
-  return hashPassword(password) === hash;
 };
 
 const getDeviceInfo = (): string => {
@@ -235,36 +94,8 @@ const getBrowserInfo = (): string => {
 };
 
 // =====================================
-// FUNCIONES DE ALMACENAMIENTO
+// FUNCIONES DE ALMACENAMIENTO (session/activity logs only)
 // =====================================
-
-const getUsers = (): Map<string, { user: User; passwordHash: string }> => {
-  const saved = localStorage.getItem(USERS_KEY);
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      return new Map(Object.entries(parsed));
-    } catch (e) {
-      console.error('Error parsing users:', e);
-    }
-  }
-
-  // Crear usuarios productivos de Litper
-  const productionUsers = new Map<string, { user: User; passwordHash: string }>();
-  for (const userData of LITPER_USERS) {
-    productionUsers.set(userData.user.email.toLowerCase(), {
-      user: userData.user,
-      passwordHash: hashPassword(userData.password),
-    });
-  }
-  saveUsers(productionUsers);
-  return productionUsers;
-};
-
-const saveUsers = (users: Map<string, { user: User; passwordHash: string }>): void => {
-  const obj = Object.fromEntries(users);
-  localStorage.setItem(USERS_KEY, JSON.stringify(obj));
-};
 
 const getSessionLogs = (): SessionLog[] => {
   const saved = localStorage.getItem(SESSION_LOGS_KEY);
@@ -321,50 +152,69 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     return { success: false, message: 'Email y contraseña son requeridos' };
   }
 
-  const users = getUsers();
-  const userData = users.get(email.toLowerCase());
+  try {
+    // Try backend API first
+    const response = await fetch(`${API_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
 
-  if (!userData) {
-    return { success: false, message: 'Usuario no encontrado' };
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      return {
+        success: false,
+        message: data.message || 'Credenciales incorrectas',
+      };
+    }
+
+    const user: User = data.user;
+    const token: string = data.token;
+
+    // Cache token and user in localStorage
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+
+    // Registrar sesión
+    saveSessionLog({
+      id: generateId(),
+      odigo: user.id,
+      action: 'login',
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      device: getDeviceInfo(),
+    });
+
+    // Registrar actividad
+    logActivity(user.id, user.email, 'Inicio de sesión', 'Usuario inició sesión exitosamente', 'auth');
+
+    return {
+      success: true,
+      user,
+      token,
+      message: 'Inicio de sesión exitoso',
+    };
+  } catch (error) {
+    // Backend unreachable - check if we have a cached session (offline/dev mode)
+    // NOTE: This does NOT authenticate - it only restores an existing session
+    const cachedUser = getCurrentUser();
+    const cachedToken = localStorage.getItem(AUTH_TOKEN_KEY);
+
+    if (cachedUser && cachedToken) {
+      return {
+        success: true,
+        user: cachedUser,
+        token: cachedToken,
+        message: 'Sesión restaurada (modo offline)',
+      };
+    }
+
+    return {
+      success: false,
+      message: 'No se puede conectar al servidor. Intente de nuevo más tarde.',
+    };
   }
-
-  if (!verifyPassword(password, userData.passwordHash)) {
-    return { success: false, message: 'Contraseña incorrecta' };
-  }
-
-  if (!userData.user.activo) {
-    return { success: false, message: 'Usuario desactivado. Contacte al administrador.' };
-  }
-
-  // Actualizar último login
-  userData.user.lastLogin = new Date().toISOString();
-  users.set(email.toLowerCase(), userData);
-  saveUsers(users);
-
-  // Generar token
-  const token = generateToken();
-  localStorage.setItem(AUTH_TOKEN_KEY, token);
-  localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData.user));
-
-  // Registrar sesión
-  saveSessionLog({
-    id: generateId(),
-    odigo: userData.user.id,
-    action: 'login',
-    timestamp: new Date().toISOString(),
-    userAgent: navigator.userAgent,
-    device: getDeviceInfo(),
-  });
-
-  // Registrar actividad
-  logActivity(userData.user.id, userData.user.email, 'Inicio de sesión', 'Usuario inició sesión exitosamente', 'auth');
-
-  return {
-    success: true,
-    user: userData.user,
-    token,
-    message: 'Inicio de sesión exitoso',
-  };
 };
 
 /**
@@ -387,52 +237,55 @@ export const register = async (data: RegisterData): Promise<AuthResponse> => {
     return { success: false, message: 'Email inválido' };
   }
 
-  const users = getUsers();
+  try {
+    // Try backend API first
+    const response = await fetch(`${API_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, nombre, rol }),
+    });
 
-  if (users.has(email.toLowerCase())) {
-    return { success: false, message: 'El email ya está registrado' };
+    const responseData = await response.json();
+
+    if (!response.ok || !responseData.success) {
+      return {
+        success: false,
+        message: responseData.message || 'Error al registrar usuario',
+      };
+    }
+
+    const user: User = responseData.user;
+    const token: string = responseData.token;
+
+    // Cache token and user in localStorage
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+
+    // Registrar sesión
+    saveSessionLog({
+      id: generateId(),
+      odigo: user.id,
+      action: 'register',
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      device: getDeviceInfo(),
+    });
+
+    // Registrar actividad
+    logActivity(user.id, user.email, 'Registro', 'Nuevo usuario registrado', 'auth');
+
+    return {
+      success: true,
+      user,
+      token,
+      message: 'Registro exitoso',
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: 'No se puede conectar al servidor. Intente de nuevo más tarde.',
+    };
   }
-
-  // Crear nuevo usuario
-  const newUser: User = {
-    id: generateId(),
-    email: email.toLowerCase(),
-    nombre,
-    rol,
-    createdAt: new Date().toISOString(),
-    activo: true,
-  };
-
-  users.set(email.toLowerCase(), {
-    user: newUser,
-    passwordHash: hashPassword(password),
-  });
-  saveUsers(users);
-
-  // Registrar sesión
-  saveSessionLog({
-    id: generateId(),
-    odigo: newUser.id,
-    action: 'register',
-    timestamp: new Date().toISOString(),
-    userAgent: navigator.userAgent,
-    device: getDeviceInfo(),
-  });
-
-  // Auto-login después de registro
-  const token = generateToken();
-  localStorage.setItem(AUTH_TOKEN_KEY, token);
-  localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
-
-  // Registrar actividad
-  logActivity(newUser.id, newUser.email, 'Registro', 'Nuevo usuario registrado', 'auth');
-
-  return {
-    success: true,
-    user: newUser,
-    token,
-    message: 'Registro exitoso',
-  };
 };
 
 /**
@@ -494,41 +347,61 @@ export const getToken = (): string | null => {
 /**
  * Actualizar perfil de usuario
  */
-export const updateProfile = (updates: Partial<User>): AuthResponse => {
+export const updateProfile = async (updates: Partial<User>): Promise<AuthResponse> => {
   const currentUser = getCurrentUser();
   if (!currentUser) {
     return { success: false, message: 'No hay sesión activa' };
   }
 
-  const users = getUsers();
-  const userData = users.get(currentUser.email);
+  try {
+    const token = getToken();
+    const response = await fetch(`${API_URL}/api/auth/profile`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(updates),
+    });
 
-  if (!userData) {
-    return { success: false, message: 'Usuario no encontrado' };
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      return {
+        success: false,
+        message: data.message || 'Error al actualizar perfil',
+      };
+    }
+
+    const updatedUser = data.user || { ...currentUser, ...updates };
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+
+    logActivity(updatedUser.id, updatedUser.email, 'Actualización de perfil', 'Usuario actualizó su perfil', 'auth');
+
+    return {
+      success: true,
+      user: updatedUser,
+      message: 'Perfil actualizado',
+    };
+  } catch (error) {
+    // Fallback: update locally if backend is unreachable
+    const updatedUser = { ...currentUser, ...updates };
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+
+    logActivity(updatedUser.id, updatedUser.email, 'Actualización de perfil', 'Usuario actualizó su perfil (offline)', 'auth');
+
+    return {
+      success: true,
+      user: updatedUser,
+      message: 'Perfil actualizado (modo offline)',
+    };
   }
-
-  // Actualizar datos
-  const updatedUser = { ...userData.user, ...updates };
-  users.set(currentUser.email, { ...userData, user: updatedUser });
-  saveUsers(users);
-
-  // Actualizar sesión actual
-  localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
-
-  // Registrar actividad
-  logActivity(updatedUser.id, updatedUser.email, 'Actualización de perfil', 'Usuario actualizó su perfil', 'auth');
-
-  return {
-    success: true,
-    user: updatedUser,
-    message: 'Perfil actualizado',
-  };
 };
 
 /**
  * Cambiar contraseña
  */
-export const changePassword = (currentPassword: string, newPassword: string): AuthResponse => {
+export const changePassword = async (currentPassword: string, newPassword: string): Promise<AuthResponse> => {
   const currentUser = getCurrentUser();
   if (!currentUser) {
     return { success: false, message: 'No hay sesión activa' };
@@ -538,31 +411,38 @@ export const changePassword = (currentPassword: string, newPassword: string): Au
     return { success: false, message: 'La nueva contraseña debe tener al menos 6 caracteres' };
   }
 
-  const users = getUsers();
-  const userData = users.get(currentUser.email);
+  try {
+    const token = getToken();
+    const response = await fetch(`${API_URL}/api/auth/change-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
 
-  if (!userData) {
-    return { success: false, message: 'Usuario no encontrado' };
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      return {
+        success: false,
+        message: data.message || 'Error al cambiar contraseña',
+      };
+    }
+
+    logActivity(currentUser.id, currentUser.email, 'Cambio de contraseña', 'Usuario cambió su contraseña', 'auth');
+
+    return {
+      success: true,
+      message: 'Contraseña actualizada',
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: 'No se puede conectar al servidor. Intente de nuevo más tarde.',
+    };
   }
-
-  if (!verifyPassword(currentPassword, userData.passwordHash)) {
-    return { success: false, message: 'Contraseña actual incorrecta' };
-  }
-
-  // Actualizar contraseña
-  users.set(currentUser.email, {
-    ...userData,
-    passwordHash: hashPassword(newPassword),
-  });
-  saveUsers(users);
-
-  // Registrar actividad
-  logActivity(currentUser.id, currentUser.email, 'Cambio de contraseña', 'Usuario cambió su contraseña', 'auth');
-
-  return {
-    success: true,
-    message: 'Contraseña actualizada',
-  };
 };
 
 // =====================================
@@ -633,48 +513,77 @@ export const getUserActivityLogs = (userId?: string): ActivityLog[] => {
 /**
  * Obtener todos los usuarios (solo admin)
  */
-export const getAllUsers = (): User[] => {
+export const getAllUsers = async (): Promise<User[]> => {
   const currentUser = getCurrentUser();
   if (!currentUser || currentUser.rol !== 'admin') {
     return [];
   }
 
-  const users = getUsers();
-  return Array.from(users.values()).map(u => u.user);
+  try {
+    const token = getToken();
+    const response = await fetch(`${API_URL}/api/auth/users`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+    if (response.ok && data.users) {
+      return data.users;
+    }
+    return [];
+  } catch (error) {
+    return [];
+  }
 };
 
 /**
  * Activar/desactivar usuario (solo admin)
  */
-export const toggleUserStatus = (email: string): AuthResponse => {
+export const toggleUserStatus = async (email: string): Promise<AuthResponse> => {
   const currentUser = getCurrentUser();
   if (!currentUser || currentUser.rol !== 'admin') {
     return { success: false, message: 'No tienes permisos para esta acción' };
   }
 
-  const users = getUsers();
-  const userData = users.get(email.toLowerCase());
+  try {
+    const token = getToken();
+    const response = await fetch(`${API_URL}/api/auth/users/toggle-status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ email }),
+    });
 
-  if (!userData) {
-    return { success: false, message: 'Usuario no encontrado' };
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      return {
+        success: false,
+        message: data.message || 'Error al cambiar estado del usuario',
+      };
+    }
+
+    logActivity(
+      currentUser.id,
+      currentUser.email,
+      data.activo ? 'Activar usuario' : 'Desactivar usuario',
+      `Usuario ${email} ${data.activo ? 'activado' : 'desactivado'}`,
+      'admin'
+    );
+
+    return {
+      success: true,
+      message: `Usuario ${data.activo ? 'activado' : 'desactivado'}`,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: 'No se puede conectar al servidor. Intente de nuevo más tarde.',
+    };
   }
-
-  userData.user.activo = !userData.user.activo;
-  users.set(email.toLowerCase(), userData);
-  saveUsers(users);
-
-  logActivity(
-    currentUser.id,
-    currentUser.email,
-    userData.user.activo ? 'Activar usuario' : 'Desactivar usuario',
-    `Usuario ${email} ${userData.user.activo ? 'activado' : 'desactivado'}`,
-    'admin'
-  );
-
-  return {
-    success: true,
-    message: `Usuario ${userData.user.activo ? 'activado' : 'desactivado'}`,
-  };
 };
 
 export default {

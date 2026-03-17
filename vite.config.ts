@@ -13,9 +13,9 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [react()],
     define: {
-      // Legacy support - to be removed after migration
-      'process.env.API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY || env.GEMINI_API_KEY),
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY || env.GEMINI_API_KEY),
+      // SECURITY: API keys removed from frontend build
+      // All AI calls should go through the backend proxy at /api/ai/*
+      // See: backend/routes/ai_proxy_routes.py
     },
     resolve: {
       alias: {
