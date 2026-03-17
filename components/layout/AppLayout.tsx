@@ -203,7 +203,7 @@ function NotificationsPanel({
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className="absolute right-0 top-full mt-2 w-96 cc-glass-elevated rounded-2xl shadow-2xl z-50 overflow-hidden modal-enter cc-corner-tl cc-corner-br">
+      <div aria-live="polite" role="region" aria-label="Panel de notificaciones" className="absolute right-0 top-full mt-2 w-96 cc-glass-elevated rounded-2xl shadow-2xl z-50 overflow-hidden modal-enter cc-corner-tl cc-corner-br">
         {/* Header */}
         <div className="p-4 border-b border-cyan-500/20 bg-gradient-to-r from-cyan-500/10 to-amber-500/5">
           <div className="flex items-center justify-between mb-2">
@@ -465,7 +465,7 @@ function TopBar({
   const hasCritical = notifications.some(n => n.priority === 'critical');
 
   return (
-    <header className="h-14 cc-topbar flex items-center justify-between px-4 sticky top-0 z-40">
+    <header role="banner" aria-label="Barra superior" className="h-14 cc-topbar flex items-center justify-between px-4 sticky top-0 z-40">
       {/* Search */}
       <div className="flex-1 max-w-md">
         <div className="relative cc-search flex items-center">
@@ -473,6 +473,7 @@ function TopBar({
           <input
             type="text"
             placeholder="Buscar guías, clientes, campañas... (Ctrl+K)"
+            aria-label="Buscar guías, clientes, campañas"
             className="w-full pl-10 pr-4 py-2.5 bg-transparent text-sm text-white placeholder-gray-500 focus:outline-none transition-all duration-200"
           />
         </div>
@@ -672,7 +673,7 @@ export function AppLayout({
         />
 
         {/* Content Area */}
-        <main className={`flex-1 overflow-auto ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
+        <main role="main" aria-label="Contenido principal" className={`flex-1 overflow-auto ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
           {children}
         </main>
       </div>

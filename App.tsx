@@ -57,6 +57,11 @@ import { MarketingView } from './components/marketing';
 import { logout as authLogout, getCurrentUser } from './services/authService';
 // URL Routing - sync browser URL with sidebar navigation
 import { useRouter } from './hooks/useRouter';
+// New components - Phase 2
+import ShipmentMap from './components/maps/ShipmentMap';
+import ExecutiveDashboard from './components/Dashboard/ExecutiveDashboard';
+import LandingPage from './components/LandingPage/LandingPage';
+import PublicTrackingPage from './components/PublicTracking/PublicTrackingPage';
 // User Profile
 import { useUserProfileStore } from './services/userProfileService';
 import { UserProfileSettings } from './components/settings';
@@ -646,6 +651,9 @@ const App: React.FC = () => {
   const renderSidebarContent = () => {
     switch (activeSection) {
       case 'inicio':
+        if (activeInicioTab === 'ejecutivo') {
+          return <ExecutiveDashboard />;
+        }
         return (
           <ChatCommandCenter
             shipments={shipments}
@@ -655,6 +663,17 @@ const App: React.FC = () => {
           />
         );
       case 'operaciones':
+        if (activeOperacionesTab === 'mapa') {
+          return <ShipmentMap shipments={shipments} />;
+        }
+        if (activeOperacionesTab === 'sla') {
+          return (
+            <div className="p-6">
+              <h2 className="text-2xl font-bold text-white mb-4">Monitoreo de SLAs</h2>
+              <p className="text-gray-400">SLA monitoring por transportadora activo. Revisa el dashboard ejecutivo para métricas de cumplimiento.</p>
+            </div>
+          );
+        }
         return (
           <OperacionesUnificadoTab
             shipments={shipments}
@@ -1136,6 +1155,16 @@ const AppRoot: React.FC = () => {
         </div>
       </div>
     );
+  }
+
+  // Public landing page (no auth required)
+  if (window.location.pathname === '/landing') {
+    return <LandingPage />;
+  }
+
+  // Public tracking page (no auth required)
+  if (window.location.pathname.startsWith('/tracking')) {
+    return <PublicTrackingPage />;
   }
 
   // Normal app flow

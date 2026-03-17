@@ -24,8 +24,8 @@ export type MarketingTab =
   | 'reglas';
 
 // Sub-tabs para cada sección
-export type InicioTab = 'resumen' | 'actividad' | 'estadisticas';
-export type OperacionesTab = 'envios' | 'tracking' | 'historial' | 'rutas';
+export type InicioTab = 'resumen' | 'actividad' | 'estadisticas' | 'ejecutivo';
+export type OperacionesTab = 'envios' | 'tracking' | 'historial' | 'rutas' | 'mapa' | 'sla';
 export type InteligenciaTab = 'analisis' | 'reportes' | 'predicciones' | 'insights';
 export type CerebroIATab = 'asistente' | 'configuracion-ia' | 'historial-chat';
 export type NegocioTab = 'metricas' | 'clientes' | 'ventas' | 'rendimiento';

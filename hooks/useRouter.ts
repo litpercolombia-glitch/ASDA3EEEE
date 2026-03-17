@@ -5,6 +5,9 @@
 import { useEffect, useCallback } from 'react';
 import { useLayoutStore, MainSection } from '../stores/layoutStore';
 
+// Public routes handled by AppRoot (no auth required)
+const PUBLIC_ROUTES = ['landing', 'tracking'];
+
 const SECTION_ROUTES: Record<string, MainSection> = {
   '': 'inicio',
   'inicio': 'inicio',
@@ -30,6 +33,8 @@ const SECTION_TO_PATH: Record<MainSection, string> = {
 
 function getSectionFromPath(pathname: string): MainSection {
   const clean = pathname.replace(/^\//, '').split('/')[0];
+  // Don't interfere with public routes
+  if (PUBLIC_ROUTES.includes(clean)) return 'inicio';
   return SECTION_ROUTES[clean] || 'inicio';
 }
 

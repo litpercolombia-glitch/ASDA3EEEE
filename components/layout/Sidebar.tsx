@@ -109,12 +109,15 @@ interface MenuItem {
 const SUB_MENUS: Record<MainSection, SubMenuItem[]> = {
   'inicio': [
     { id: 'resumen', icon: LayoutDashboard, label: 'Resumen' },
+    { id: 'ejecutivo', icon: BarChart2, label: 'Dashboard Ejecutivo' },
     { id: 'actividad', icon: Activity, label: 'Actividad' },
     { id: 'estadisticas', icon: BarChart3, label: 'Estadísticas' },
   ],
   'operaciones': [
     { id: 'envios', icon: Truck, label: 'Envíos' },
     { id: 'tracking', icon: MapPin, label: 'Tracking' },
+    { id: 'mapa', icon: Route, label: 'Mapa de Envíos' },
+    { id: 'sla', icon: ShieldCheck, label: 'SLA Monitor' },
     { id: 'historial', icon: History, label: 'Historial' },
     { id: 'rutas', icon: Route, label: 'Rutas' },
   ],
@@ -580,6 +583,8 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, onUploadReport, user
   return (
     <>
       <aside
+        role="navigation"
+        aria-label="Navegación principal"
         className={`
           flex flex-col h-full cc-sidebar relative
           transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]
@@ -604,6 +609,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, onUploadReport, user
                 onClick={toggleSidebar}
                 className="p-1.5 text-gray-400 hover:text-cyan-400 cc-btn rounded-lg transition-all duration-300"
                 title="Colapsar panel"
+                aria-label="Colapsar panel de navegación"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
@@ -613,6 +619,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, onUploadReport, user
               onClick={toggleSidebar}
               className="p-2 text-gray-400 hover:text-cyan-400 cc-btn rounded-lg transition-all duration-300"
               title="Expandir panel"
+              aria-label="Expandir panel de navegación"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -690,6 +697,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, onUploadReport, user
                 !isExpanded ? 'justify-center' : ''
               }`}
               title="Chat IA"
+              aria-label="Abrir asistente de chat IA"
             >
               <Bot className="w-5 h-5 text-cyan-400" />
               {isExpanded && <span className="text-sm font-medium text-gray-300">Chat IA</span>}
@@ -701,6 +709,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, onUploadReport, user
                 !isExpanded ? 'justify-center' : ''
               }`}
               title="Ayuda"
+              aria-label="Abrir centro de ayuda"
             >
               <HelpCircle className="w-5 h-5 text-amber-400" />
               {isExpanded && <span className="text-sm font-medium text-gray-300">Ayuda</span>}
