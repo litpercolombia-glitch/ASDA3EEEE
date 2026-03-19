@@ -9,31 +9,16 @@ import { Shipment, ShipmentStatus, CarrierName } from '../types';
 // TAB NAVIGATION TYPES
 // ============================================
 
-// Nueva navegación simplificada con todos los tabs
+// Legacy tab type - kept for backward compatibility with components that still reference it
+// Navigation is now handled by MainSection in stores/layoutStore.ts
 export type MainTabNew =
   | 'operaciones'
-  | 'inteligencia-ia'
-  | 'analisis'
-  | 'procesos-litper'
-  | 'admin'
-  | 'negocio'
-  | 'dashboard-legacy' // Dashboard clásico (para usuarios que prefieran el estilo antiguo)
-  | 'cerebro-ia'  // Dashboard Cerebro IA con Chatea Pro, Webhooks y Analytics
-  // Legacy tabs (para compatibilidad)
   | 'seguimiento'
-  | 'demanda'
-  | 'gamificacion'
-  | 'inteligencia-logistica'
   | 'semaforo'
-  | 'predicciones'
-  | 'asistente'
-  | 'ml'
-  | 'ciudad-agentes'
-  | 'mcp-connections'
-  | 'conexiones'
-  | 'reporte'
-  | 'aprendizaje-ia'
-  | 'tracking-ordenes';
+  | 'reportes'
+  | 'analisis'
+  | 'config'
+  | 'admin';
 
 // ============================================
 // GUIA RETRASADA (DELAYED SHIPMENT)

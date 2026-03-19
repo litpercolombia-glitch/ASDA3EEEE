@@ -3,10 +3,8 @@
 // Exportaciones del Panel de Administración
 // ============================================
 
-// Panels principales
-export { AdminPanel } from './AdminPanel';
+// Panel principal
 export { AdminPanelPro } from './AdminPanelPro';
-export { AdminPanelUltimate } from './AdminPanelUltimate';
 
 // Layout
 export { AdminLayout } from './AdminLayout';
@@ -57,5 +55,5 @@ export {
   UniversalImporter,
 } from './FinanceModules';
 
-// Default export - El panel más reciente
-export { AdminPanelUltimate as default } from './AdminPanelUltimate';
+// Default export
+export { AdminPanelPro as default } from './AdminPanelPro';

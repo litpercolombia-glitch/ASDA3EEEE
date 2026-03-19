@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Shipment, ShipmentStatus, CarrierName, AITrackingResult } from './types';
-import { MainTabNew, SemaforoExcelData } from './types/logistics';
+import { SemaforoExcelData } from './types/logistics';
 import { Country } from './types/country';
 import {
   detectCarrier,
@@ -17,42 +17,21 @@ import {
 import { getSelectedCountry, hasSelectedCountry } from './services/countryService';
 import { getUserProfile } from './services/gamificationService';
 import { useShipmentExcelParser } from './hooks/useShipmentExcelParser';
-import {
-  TabNavigationNew,
-  SeguimientoTab,
-  SemaforoTabNew,
-  PrediccionesTab,
-  MLSystemTab,
-  DemandTab,
-  GamificationTab,
-  ProcesosLitperTab,
-  CentroNegocioTab,
-} from './components/tabs';
-import { CiudadAgentesTab } from './components/tabs/CiudadAgentesTab';
-import { InteligenciaLogisticaTab } from './components/tabs/InteligenciaLogisticaTab';
-import { TrackingOrdenesTab } from './components/tabs/TrackingOrdenesTab';
-import { AsistenteIAUnificado } from './components/tabs/AsistenteIAUnificado';
+import { SemaforoTabNew } from './components/tabs';
 // Nuevos tabs unificados
 import { OperacionesUnificadoTab } from './components/tabs/OperacionesUnificadoTab';
 import { InteligenciaIAUnificadoTab } from './components/tabs/InteligenciaIAUnificadoTab';
-import { AnalisisUnificadoTab } from './components/tabs/AnalisisUnificadoTab';
 import { ProBubbleV4 } from './components/ProAssistant';
 import UniversalSearch from './components/search/UniversalSearch';
-// Cerebro IA - Dashboard con Chatea Pro, Webhooks y Analytics
-import { AIBrainDashboard } from './components/brain/AIBrainDashboard';
-import { AuthWrapper, UserProfilePanel } from './components/auth';
-import { EnhancedGuideTable } from './components/tables';
+import { AuthWrapper } from './components/auth';
 import { AdminPanelPro } from './components/Admin/AdminPanelPro';
-import { EnterpriseAdminDashboard } from './components/Admin/EnterpriseAdminDashboard';
 import CountrySelector from './components/CountrySelector';
 // Chat-First Design System
 import { ChatCommandCenter } from './components/ChatFirst';
 import { detectarGuiasRetrasadas } from './utils/patternDetection';
 // Nuevo Layout con Sidebar estilo ChatGPT
 import { AppLayout } from './components/layout';
-import { useLayoutStore } from './stores/layoutStore';
-// Marketing Tracking System
-import { MarketingView } from './components/marketing';
+import { useLayoutStore, MainSection } from './stores/layoutStore';
 // Auth service for logout
 import { logout as authLogout, getCurrentUser } from './services/authService';
 // URL Routing - sync browser URL with sidebar navigation
@@ -64,296 +43,21 @@ import LandingPage from './components/LandingPage/LandingPage';
 import PublicTrackingPage from './components/PublicTracking/PublicTrackingPage';
 // User Profile
 import { useUserProfileStore } from './services/userProfileService';
-import { UserProfileSettings } from './components/settings';
 // Enhanced Excel Upload with column config
 import { EnhancedExcelUpload } from './components/upload';
 // Report Upload System
-import { ReportUploadModal, MyReportsPanel, AdminReportsView, PublicUploadPage } from './components/ReportUpload';
+import { ReportUploadModal, MyReportsPanel, PublicUploadPage } from './components/ReportUpload';
 import { useReportUploadStore } from './stores/reportUploadStore';
 import { getTokenFromUrl, getUploadLinkByToken } from './services/reportUploadService';
 import {
-  Crown,
-  Search,
-  Moon,
-  Sun,
-  Download,
-  Save,
-  Upload,
-  Wifi,
-  WifiOff,
-  List,
-  FileText,
-  Smartphone,
-  LayoutList,
-  FileSpreadsheet,
-  FileUp,
-  AlertTriangle,
   CheckCircle,
   X,
-  Home,
-  Globe,
-  Trophy,
-  Package,
-  TrendingUp,
-  ChevronDown,
-  Menu,
-  Bell,
-  User,
-  Settings,
-  HelpCircle,
-  BarChart3,
-  Clock,
-  MapPin,
-  Shield,
-  Sparkles,
-  ArrowRight,
-  Activity,
-  Target,
-  Brain,
-  Bot,
-  Truck,
-  Box,
-  DollarSign,
-  Users,
-  Star,
-  ChevronRight,
-  Layers,
-  PieChart,
-  LineChart,
-  Calendar,
+  AlertTriangle,
+  Smartphone,
+  FileText,
+  LayoutList,
+  FileSpreadsheet,
 } from 'lucide-react';
-
-// ============================================
-// PREMIUM HOMEPAGE DASHBOARD COMPONENT
-// ============================================
-interface DashboardProps {
-  shipments: Shipment[];
-  onNavigate: (tab: MainTabNew) => void;
-  country: Country;
-  userProfile: any;
-}
-
-const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, country, userProfile }) => {
-  const stats = useMemo(() => {
-    const total = shipments.length;
-    const delivered = shipments.filter(s => s.status === ShipmentStatus.DELIVERED).length;
-    const inTransit = shipments.filter(s => s.status === ShipmentStatus.IN_TRANSIT).length;
-    const pending = shipments.filter(s => s.status === ShipmentStatus.PENDING).length;
-    const issues = shipments.filter(s => s.status === ShipmentStatus.EXCEPTION || s.status === ShipmentStatus.RETURNED).length;
-    const deliveryRate = total > 0 ? Math.round((delivered / total) * 100) : 0;
-
-    return { total, delivered, inTransit, pending, issues, deliveryRate };
-  }, [shipments]);
-
-  const quickActions = [
-    { id: 'seguimiento', icon: Package, label: 'Seguimiento', desc: 'Rastrear envíos', color: 'from-emerald-500 to-teal-600', emoji: '📦' },
-    { id: 'demanda', icon: TrendingUp, label: 'Predicción IA', desc: 'Análisis predictivo', color: 'from-purple-500 to-violet-600', emoji: '📈', isNew: true },
-    { id: 'inteligencia-logistica', icon: BarChart3, label: 'Intel. Logística', desc: 'Inteligencia operativa', color: 'from-cyan-500 to-blue-600', emoji: '📊', isNew: true },
-    { id: 'ml', icon: Brain, label: 'Sistema ML', desc: 'Machine Learning', color: 'from-cyan-600 to-indigo-600', emoji: '🧠' },
-  ];
-
-  const features = [
-    { id: 'semaforo', icon: Activity, label: 'Semáforo', desc: 'Control de entregas en tiempo real', color: 'bg-amber-500' },
-    { id: 'predicciones', icon: Target, label: 'Análisis', desc: 'Estadísticas y métricas avanzadas', color: 'bg-teal-500' },
-    { id: 'reporte', icon: BarChart3, label: 'Reporte IA', desc: 'Informes inteligentes automatizados', color: 'bg-blue-500' },
-    { id: 'asistente', icon: Bot, label: 'Asistente IA', desc: 'Soporte inteligente 24/7', color: 'bg-pink-500' },
-    { id: 'gamificacion', icon: Trophy, label: 'Logros', desc: 'Sistema de recompensas', color: 'bg-indigo-500' },
-  ];
-
-  return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Welcome Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-navy-900 via-navy-800 to-corporate-900 p-8 text-white shadow-2xl">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-accent-500/20 to-transparent rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-corporate-500/20 to-transparent rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
-
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <span className="text-4xl">👑</span>
-              <div>
-                <h1 className="text-3xl lg:text-4xl font-bold">
-                  Bienvenido a <span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent">LITPER PRO</span>
-                </h1>
-                <p className="text-slate-300 text-lg">Plataforma Enterprise de Logística con IA</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 mt-4">
-              <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full backdrop-blur">
-                <MapPin className="w-4 h-4 text-accent-400" />
-                <span className="font-medium">{country}</span>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full">
-                <Trophy className="w-4 h-4 text-yellow-400" />
-                <span className="font-bold">{userProfile.totalXP} XP</span>
-                <span className="text-xs text-slate-300">Nivel {userProfile.level}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <div className="text-center px-6 py-4 bg-white/10 rounded-2xl backdrop-blur">
-              <p className="text-4xl font-bold text-accent-400">{stats.total}</p>
-              <p className="text-sm text-slate-300">Envíos Totales</p>
-            </div>
-            <div className="text-center px-6 py-4 bg-white/10 rounded-2xl backdrop-blur">
-              <p className="text-4xl font-bold text-emerald-400">{stats.deliveryRate}%</p>
-              <p className="text-sm text-slate-300">Tasa de Entrega</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {[
-          { label: 'Total Envíos', value: stats.total, icon: Box, color: 'bg-slate-600', textColor: 'text-slate-600', emoji: '📊' },
-          { label: 'Entregados', value: stats.delivered, icon: CheckCircle, color: 'bg-emerald-500', textColor: 'text-emerald-600', emoji: '✅' },
-          { label: 'En Tránsito', value: stats.inTransit, icon: Truck, color: 'bg-blue-500', textColor: 'text-blue-600', emoji: '🚚' },
-          { label: 'Pendientes', value: stats.pending, icon: Clock, color: 'bg-amber-500', textColor: 'text-amber-600', emoji: '⏳' },
-          { label: 'Incidencias', value: stats.issues, icon: AlertTriangle, color: 'bg-red-500', textColor: 'text-red-600', emoji: '⚠️' },
-        ].map((stat, idx) => (
-          <div key={idx} className="card-premium bg-white dark:bg-navy-900 rounded-2xl p-5 shadow-card border border-slate-100 dark:border-navy-800">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">{stat.label}</p>
-                <p className={`text-3xl font-bold ${stat.textColor} dark:text-white`}>{stat.value}</p>
-              </div>
-              <div className={`${stat.color} p-3 rounded-xl text-white`}>
-                <stat.icon className="w-5 h-5" />
-              </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1 text-xs text-slate-400">
-              <span>{stat.emoji}</span>
-              <span>Actualizado ahora</span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Quick Actions - Main Features */}
-      <div>
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-accent-500" />
-              Acciones Rápidas
-            </h2>
-            <p className="text-slate-500 dark:text-slate-400">Accede a las funciones principales</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickActions.map((action) => (
-            <button
-              key={action.id}
-              onClick={() => onNavigate(action.id as MainTabNew)}
-              className="group relative overflow-hidden rounded-2xl p-6 text-left transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
-            >
-              <div className={`absolute inset-0 bg-gradient-to-br ${action.color} opacity-90 group-hover:opacity-100 transition-opacity`} />
-              <div className="relative z-10 text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-white/20 rounded-xl backdrop-blur">
-                    <action.icon className="w-7 h-7" />
-                  </div>
-                  {action.isNew && (
-                    <span className="px-3 py-1 bg-white text-xs font-bold rounded-full text-slate-800 animate-bounce-subtle">
-                      ✨ NUEVO
-                    </span>
-                  )}
-                </div>
-                <h3 className="text-xl font-bold mb-1">{action.emoji} {action.label}</h3>
-                <p className="text-sm text-white/80">{action.desc}</p>
-                <div className="mt-4 flex items-center gap-2 text-sm font-medium">
-                  <span>Acceder</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* All Features Grid */}
-      <div>
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <Layers className="w-6 h-6 text-corporate-500" />
-              Todas las Herramientas
-            </h2>
-            <p className="text-slate-500 dark:text-slate-400">Explora todas las funcionalidades disponibles</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {features.map((feature) => (
-            <button
-              key={feature.id}
-              onClick={() => onNavigate(feature.id as MainTabNew)}
-              className="card-premium group bg-white dark:bg-navy-900 rounded-2xl p-5 text-left shadow-card border border-slate-100 dark:border-navy-800 hover:border-corporate-300 dark:hover:border-corporate-700"
-            >
-              <div className={`${feature.color} w-12 h-12 rounded-xl flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform`}>
-                <feature.icon className="w-6 h-6" />
-              </div>
-              <h3 className="font-bold text-slate-800 dark:text-white mb-1">{feature.label}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{feature.desc}</p>
-              <div className="mt-3 flex items-center gap-1 text-corporate-500 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                <span>Abrir</span>
-                <ChevronRight className="w-3 h-3" />
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Info Banner */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-gradient-to-r from-corporate-600 to-corporate-700 rounded-2xl p-6 text-white">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-white/20 rounded-xl">
-              <Shield className="w-8 h-8" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold mb-2">🔒 Plataforma Segura y Confiable</h3>
-              <p className="text-corporate-100 text-sm">
-                LITPER utiliza tecnología de punta con inteligencia artificial para garantizar
-                el seguimiento preciso de tus envíos. Más de 10,000 empresas confían en nosotros.
-              </p>
-              <div className="mt-4 flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                  <span className="text-sm font-medium">4.9/5 Rating</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  <span className="text-sm font-medium">10K+ Usuarios</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-accent-500 to-accent-600 rounded-2xl p-6 text-white">
-          <div className="flex flex-col h-full justify-between">
-            <div>
-              <p className="text-accent-100 text-sm font-medium mb-1">💎 LITPER PREMIUM</p>
-              <h3 className="text-2xl font-bold">Sistema Pro v4.0</h3>
-            </div>
-            <div className="mt-4 flex items-center gap-2">
-              <div className="flex -space-x-2">
-                <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-sm">🚀</div>
-                <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-sm">🤖</div>
-                <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-sm">📊</div>
-              </div>
-              <span className="text-sm">+50 funciones IA</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ============================================
 // MAIN APP COMPONENT
@@ -366,8 +70,6 @@ const App: React.FC = () => {
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [showCountrySelector, setShowCountrySelector] = useState(false);
 
-  // Main tab navigation (legacy support)
-  const [currentTab, setCurrentTab] = useState<MainTabNew | 'home'>('home');
   const [showDataInput, setShowDataInput] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
@@ -377,22 +79,15 @@ const App: React.FC = () => {
     setActiveSection,
     activeOperacionesTab,
     setOperacionesTab,
-    activeInteligenciaTab,
-    setInteligenciaTab,
-    activeCerebroIATab,
-    setCerebroIATab,
-    activeNegocioTab,
-    setNegocioTab,
+    activeReportesTab,
+    setReportesTab,
     activeInicioTab,
     setInicioTab,
-    activeEnterpriseTab,
-    setEnterpriseTab,
   } = useLayoutStore();
 
   // Estado para mostrar/ocultar el chat IA (ProBubble)
   const [showProBubble, setShowProBubble] = useState(false);
   const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
-  const [showUserSettings, setShowUserSettings] = useState(false);
 
   // User Profile Store
   const { profile, isOnboardingComplete } = useUserProfileStore();
@@ -400,7 +95,7 @@ const App: React.FC = () => {
   // Report Upload Store
   const { isModalOpen: isReportModalOpen, openModal: openReportModal, closeModal: closeReportModal } = useReportUploadStore();
 
-  // URL Routing - syncs browser URL ↔ sidebar section
+  // URL Routing - syncs browser URL <-> sidebar section
   useRouter();
 
   // Obtener usuario actual
@@ -478,9 +173,8 @@ const App: React.FC = () => {
       saveShipments(shipments);
     } catch (error) {
       console.error('Error guardando shipments:', error);
-      // Si el almacenamiento está lleno, mostrar notificación
       if (error instanceof Error && error.message.includes('lleno')) {
-        setNotification('⚠️ Almacenamiento lleno. Exporta tus datos para liberar espacio.');
+        setNotification('Almacenamiento lleno. Exporta tus datos para liberar espacio.');
       }
     }
   }, [shipments]);
@@ -502,20 +196,20 @@ const App: React.FC = () => {
   const guiasRetrasadas = detectarGuiasRetrasadas(shipments);
   const alertasCriticas = guiasRetrasadas.filter((g) => g.nivelAlerta === 'CRITICO').length;
 
-  const tabNotifications = {
-    seguimiento: alertasCriticas,
-    demanda: 0,
-    gamificacion: userProfile.activeChallenges.filter(c => !c.completed).length,
-    'inteligencia-logistica': guiasRetrasadas.filter(g => g.diasSinMovimiento > 5).length,
-    semaforo: 0,
-    predicciones: 0,
-    reporte: 0,
-    asistente: 0,
-    ml: 0,
-    'procesos-litper': 0,
-    'ciudad-agentes': 0,
-    'aprendizaje-ia': 0,
-    'cerebro-ia': 0,
+  // Legacy tab navigation mapping -> sidebar sections
+  const handleLegacyNavigate = (tab: string) => {
+    const mapping: Record<string, MainSection> = {
+      'seguimiento': 'operaciones',
+      'semaforo': 'semaforo',
+      'operaciones': 'operaciones',
+      'analisis': 'reportes',
+      'reportes': 'reportes',
+      'inteligencia-ia': 'reportes',
+      'config': 'config',
+      'admin': 'config',
+    };
+    const section = mapping[tab] || 'inicio';
+    setActiveSection(section);
   };
 
   const handleProcessInput = () => {
@@ -531,11 +225,11 @@ const App: React.FC = () => {
       setShipments(mergedShipments);
 
       if (Object.keys(newPhones).length > 0) {
-        setNotification(`✅ ${Object.keys(newPhones).length} celulares registrados. ${countDiff > 0 ? countDiff + ' guías actualizadas.' : ''}`);
+        setNotification(`${Object.keys(newPhones).length} celulares registrados. ${countDiff > 0 ? countDiff + ' guías actualizadas.' : ''}`);
         setInputText('');
         setActiveInputTab('REPORT');
       } else {
-        setNotification('⚠️ No se encontraron celulares válidos.');
+        setNotification('No se encontraron celulares válidos.');
       }
     } else if (activeInputTab === 'REPORT') {
       const { shipments: newShipments } = parseDetailedInput(inputText, phoneRegistry, forcedCarrier);
@@ -544,21 +238,21 @@ const App: React.FC = () => {
           const ids = new Set(newShipments.map((s) => s.id));
           return [...prev.filter((s) => !ids.has(s.id)), ...newShipments];
         });
-        setNotification(`✅ ${newShipments.length} guías cargadas exitosamente`);
+        setNotification(`${newShipments.length} guías cargadas exitosamente`);
         setInputText('');
         setActiveInputTab('SUMMARY');
       } else {
-        setNotification('⚠️ No se detectaron guías en el reporte');
+        setNotification('No se detectaron guías en el reporte');
       }
     } else if (activeInputTab === 'SUMMARY') {
       const { shipments: newSummaryShipments } = parseSummaryInput(inputText, phoneRegistry, shipments, forcedCarrier);
       if (newSummaryShipments.length > 0) {
         setShipments((prev) => [...prev, ...newSummaryShipments]);
-        setNotification(`✅ ${newSummaryShipments.length} guías nuevas añadidas`);
+        setNotification(`${newSummaryShipments.length} guías nuevas añadidas`);
         setInputText('');
         setShowDataInput(false);
       } else {
-        setNotification('ℹ️ No se encontraron guías nuevas');
+        setNotification('No se encontraron guías nuevas');
         setInputText('');
       }
     }
@@ -572,12 +266,11 @@ const App: React.FC = () => {
       const result = await parseExcelFile(file, phoneRegistry);
 
       if (result.success && result.shipments.length > 0) {
-        // Limitar la cantidad de guías para evitar problemas de memoria
         const maxGuias = 5000;
         const guiasToAdd = result.shipments.slice(0, maxGuias);
 
         if (result.shipments.length > maxGuias) {
-          setNotification(`⚠️ Se cargaron las primeras ${maxGuias} guías de ${result.shipments.length}. Exporta los datos antes de cargar más.`);
+          setNotification(`Se cargaron las primeras ${maxGuias} guías de ${result.shipments.length}. Exporta los datos antes de cargar más.`);
         }
 
         setShipments((prev) => {
@@ -586,15 +279,15 @@ const App: React.FC = () => {
         });
 
         if (result.shipments.length <= maxGuias) {
-          setNotification(`✅ ${guiasToAdd.length} guías cargadas desde Excel`);
+          setNotification(`${guiasToAdd.length} guías cargadas desde Excel`);
         }
         setShowDataInput(false);
       } else if (result.error) {
-        setNotification(`❌ Error: ${result.error}`);
+        setNotification(`Error: ${result.error}`);
       }
     } catch (error) {
       console.error('Error cargando Excel:', error);
-      setNotification('❌ Error inesperado al procesar el archivo. Intenta con un archivo más pequeño.');
+      setNotification('Error inesperado al procesar el archivo. Intenta con un archivo más pequeño.');
     } finally {
       e.target.value = '';
     }
@@ -609,15 +302,15 @@ const App: React.FC = () => {
       try {
         const loadedData = await importSessionData(file);
         setShipments(loadedData);
-        setNotification(`✅ Sesión cargada: ${loadedData.length} guías`);
+        setNotification(`Sesión cargada: ${loadedData.length} guías`);
       } catch (err) {
-        setNotification('❌ Error cargando sesión');
+        setNotification('Error cargando sesión');
       }
     }
   };
 
   const handleSemaforoDataLoaded = (data: SemaforoExcelData) => {
-    setNotification('✅ Datos del semáforo cargados');
+    setNotification('Datos del semáforo cargados');
   };
 
   // Handler para logout
@@ -639,7 +332,7 @@ const App: React.FC = () => {
   // Handler para notificaciones
   const handleNotificationsClick = () => {
     setShowNotificationsPanel(!showNotificationsPanel);
-    setNotification('📬 Panel de notificaciones');
+    setNotification('Panel de notificaciones');
   };
 
   // Mostrar selector de país si no hay país seleccionado
@@ -658,21 +351,13 @@ const App: React.FC = () => {
           <ChatCommandCenter
             shipments={shipments}
             criticalCities={[]}
-            onNavigateToTab={(tab) => setCurrentTab(tab as MainTabNew)}
+            onNavigateToTab={handleLegacyNavigate}
             onRefreshData={() => setNotification('Datos actualizados')}
           />
         );
       case 'operaciones':
         if (activeOperacionesTab === 'mapa') {
           return <ShipmentMap shipments={shipments} />;
-        }
-        if (activeOperacionesTab === 'sla') {
-          return (
-            <div className="p-6">
-              <h2 className="text-2xl font-bold text-white mb-4">Monitoreo de SLAs</h2>
-              <p className="text-gray-400">SLA monitoring por transportadora activo. Revisa el dashboard ejecutivo para métricas de cumplimiento.</p>
-            </div>
-          );
         }
         return (
           <OperacionesUnificadoTab
@@ -683,8 +368,10 @@ const App: React.FC = () => {
             onSubTabChange={setOperacionesTab}
           />
         );
-      case 'inteligencia':
-        if (activeInteligenciaTab === 'reportes') {
+      case 'semaforo':
+        return <SemaforoTabNew onDataLoaded={handleSemaforoDataLoaded} />;
+      case 'reportes':
+        if (activeReportesTab === 'reportes') {
           return (
             <div className="p-6">
               <MyReportsPanel onOpenUploadModal={openReportModal} />
@@ -695,36 +382,18 @@ const App: React.FC = () => {
           <InteligenciaIAUnificadoTab
             shipments={shipments}
             selectedCountry={selectedCountry}
-            activeSubTab={activeInteligenciaTab}
-            onSubTabChange={setInteligenciaTab}
+            activeSubTab={activeReportesTab}
+            onSubTabChange={setReportesTab}
           />
         );
-      case 'cerebro-ia':
-        return (
-          <AIBrainDashboard
-            activeSubTab={activeCerebroIATab}
-            onSubTabChange={setCerebroIATab}
-          />
-        );
-      case 'negocio':
-        return (
-          <CentroNegocioTab
-            activeSubTab={activeNegocioTab}
-            onSubTabChange={setNegocioTab}
-          />
-        );
-      case 'marketing':
-        return <MarketingView />;
       case 'config':
         return <AdminPanelPro />;
-      case 'enterprise':
-        return <EnterpriseAdminDashboard />;
       default:
         return (
           <ChatCommandCenter
             shipments={shipments}
             criticalCities={[]}
-            onNavigateToTab={(tab) => setCurrentTab(tab as MainTabNew)}
+            onNavigateToTab={handleLegacyNavigate}
             onRefreshData={() => setNotification('Datos actualizados')}
           />
         );
@@ -758,19 +427,9 @@ const App: React.FC = () => {
         <div className="fixed top-4 right-4 z-50 max-w-sm animate-slide-up">
           <div className="flex items-center gap-3 px-5 py-4 bg-gray-800 rounded-xl shadow-2xl border border-gray-700">
             <div className="flex-shrink-0">
-              {notification.includes('✅') ? (
-                <div className="w-10 h-10 rounded-full bg-emerald-900/30 flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-emerald-400" />
-                </div>
-              ) : notification.includes('❌') ? (
-                <div className="w-10 h-10 rounded-full bg-red-900/30 flex items-center justify-center">
-                  <X className="w-5 h-5 text-red-400" />
-                </div>
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-amber-900/30 flex items-center justify-center">
-                  <AlertTriangle className="w-5 h-5 text-amber-400" />
-                </div>
-              )}
+              <div className="w-10 h-10 rounded-full bg-amber-900/30 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-amber-400" />
+              </div>
             </div>
             <p className="text-sm font-medium text-white">{notification}</p>
             <button
@@ -789,7 +448,7 @@ const App: React.FC = () => {
           <div className="bg-gray-900 rounded-2xl max-w-2xl w-full border border-gray-700 shadow-2xl max-h-[90vh] overflow-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
               <div>
-                <h2 className="font-bold text-lg text-white">📥 Cargar Guías</h2>
+                <h2 className="font-bold text-lg text-white">Cargar Guías</h2>
                 <p className="text-sm text-gray-400">Importa tus guías desde múltiples fuentes</p>
               </div>
               <button
@@ -826,7 +485,6 @@ const App: React.FC = () => {
             {activeInputTab === 'EXCEL' ? (
               <EnhancedExcelUpload
                 onUploadComplete={({ sessionName, rows, columnMapping }) => {
-                  // Procesar los datos mapeados
                   const processedShipments = rows.map((row, idx) => {
                     const shipment: Partial<Shipment> = {
                       id: `upload_${Date.now()}_${idx}`,
@@ -862,7 +520,6 @@ const App: React.FC = () => {
                             shipment.lastUpdate = String(value);
                             break;
                           case 'lastMovement':
-                            // Store in history if exists
                             if (!shipment.history) shipment.history = [];
                             shipment.history.push({ description: String(value), timestamp: new Date() });
                             break;
@@ -880,15 +537,14 @@ const App: React.FC = () => {
                     });
 
                     return shipment as Shipment;
-                  }).filter(s => s.trackingNumber); // Solo guías con número válido
+                  }).filter(s => s.trackingNumber);
 
-                  // Agregar al estado
                   setShipments((prev) => {
                     const ids = new Set(processedShipments.map((s) => s.id));
                     return [...prev.filter((s) => !ids.has(s.id)), ...processedShipments];
                   });
 
-                  setNotification(`✅ ${sessionName}: ${processedShipments.length} guías cargadas`);
+                  setNotification(`${sessionName}: ${processedShipments.length} guías cargadas`);
                   setShowDataInput(false);
                 }}
                 onCancel={() => setShowDataInput(false)}
@@ -906,7 +562,7 @@ const App: React.FC = () => {
                           : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                       }`}
                     >
-                      🔄 AUTO
+                      AUTO
                     </button>
                     {Object.values(CarrierName)
                       .filter((c) => c !== CarrierName.UNKNOWN)
@@ -931,10 +587,10 @@ const App: React.FC = () => {
                     className="w-full h-48 border border-gray-700 rounded-xl p-4 font-mono text-sm text-white bg-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-none"
                     placeholder={
                       activeInputTab === 'PHONES'
-                        ? '📱 Pegue aquí las columnas: [Guía] [Celular]...'
+                        ? 'Pegue aquí las columnas: [Guía] [Celular]...'
                         : activeInputTab === 'REPORT'
-                          ? '📄 Pegue aquí el texto del reporte detallado...'
-                          : '📋 Pegue aquí el resumen de 17TRACK...'
+                          ? 'Pegue aquí el texto del reporte detallado...'
+                          : 'Pegue aquí el resumen de 17TRACK...'
                     }
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
@@ -951,11 +607,11 @@ const App: React.FC = () => {
                             : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
                       }`}
                     >
-                      {activeInputTab === 'PHONES' ? '📱 Guardar Celulares' : activeInputTab === 'REPORT' ? '📄 Cargar Reporte' : '📋 Procesar Resumen'}
+                      {activeInputTab === 'PHONES' ? 'Guardar Celulares' : activeInputTab === 'REPORT' ? 'Cargar Reporte' : 'Procesar Resumen'}
                     </button>
                     {activeInputTab === 'PHONES' && (
                       <div className="text-sm text-gray-400">
-                        📊 Registrados: <span className="text-white font-bold">{Object.keys(phoneRegistry).length}</span>
+                        Registrados: <span className="text-white font-bold">{Object.keys(phoneRegistry).length}</span>
                       </div>
                     )}
                   </div>
@@ -971,49 +627,18 @@ const App: React.FC = () => {
         {renderSidebarContent()}
       </main>
 
-      {/* Legacy tabs support - these can still be triggered via links */}
-      {currentTab !== 'home' && currentTab === 'seguimiento' && (
-        <div className="p-6">
-          <SeguimientoTab
-            shipments={shipments}
-            onRestoreShipments={(restoredShipments) => setShipments(restoredShipments)}
-          />
-        </div>
-      )}
-      {currentTab === 'demanda' && <div className="p-6"><DemandTab country={selectedCountry} /></div>}
-      {currentTab === 'gamificacion' && <div className="p-6"><GamificationTab /></div>}
-      {currentTab === 'semaforo' && <div className="p-6"><SemaforoTabNew onDataLoaded={handleSemaforoDataLoaded} /></div>}
-      {currentTab === 'predicciones' && <div className="p-6"><PrediccionesTab shipments={shipments} /></div>}
-      {currentTab === 'asistente' && <div className="p-6"><AsistenteIAUnificado shipments={shipments} /></div>}
-      {currentTab === 'ml' && <div className="p-6"><MLSystemTab /></div>}
-      {currentTab === 'ciudad-agentes' && <div className="p-6"><CiudadAgentesTab selectedCountry={selectedCountry} /></div>}
-      {currentTab === 'inteligencia-logistica' && <div className="p-6"><InteligenciaLogisticaTab /></div>}
-      {currentTab === 'tracking-ordenes' && <div className="p-6"><TrackingOrdenesTab /></div>}
-
-      {/* Legacy Dashboard - can be accessed from quick actions */}
-      {currentTab === 'dashboard-legacy' && (
-        <div className="p-6">
-          <PremiumDashboard
-            shipments={shipments}
-            onNavigate={(tab) => setCurrentTab(tab)}
-            country={selectedCountry}
-            userProfile={userProfile}
-          />
-        </div>
-      )}
-
       {/* Búsqueda Universal (Ctrl+K) */}
       <UniversalSearch
         shipments={shipments}
         isOpen={showUniversalSearch}
         onClose={() => setShowUniversalSearch(false)}
-        onNavigate={(tab) => setCurrentTab(tab as MainTabNew | 'home')}
+        onNavigate={handleLegacyNavigate}
       />
 
       {/* Floating AI Assistant PRO Button - V4 con Chat IA y Modos */}
       <ProBubbleV4
         shipments={shipments}
-        onNavigateToTab={(tab) => setCurrentTab(tab as MainTabNew)}
+        onNavigateToTab={handleLegacyNavigate}
         onExportData={handleDownloadExcel}
         forceOpen={showProBubble}
         onForceOpenHandled={() => setShowProBubble(false)}

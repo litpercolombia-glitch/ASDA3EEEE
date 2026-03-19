@@ -1,26 +1,16 @@
 // components/layout/Sidebar.tsx
-// COMMAND CENTER - Sidebar Futurista con diseño sci-fi
+// COMMAND CENTER - Sidebar simplificado a 5 secciones
 
 import React, { useState } from 'react';
 import {
   Home,
   Package,
-  Brain,
-  TrendingUp,
-  Briefcase,
   Settings,
-  MessageCircle,
   HelpCircle,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  BarChart3,
-  Facebook,
-  Chrome,
-  Music2,
-  Link2,
-  Webhook,
-  Zap,
+  BarChart2,
   LogOut,
   User,
   Sparkles,
@@ -30,47 +20,32 @@ import {
   X,
   Crown,
   Activity,
-  Clock,
   Truck,
   MapPin,
-  History,
   Route,
-  Building2,
-  ShieldCheck,
-  BarChart2,
-  Workflow,
-  LineChart,
   FileText,
-  Lightbulb,
-  Target,
+  LineChart,
   Users,
-  DollarSign,
   Cog,
   Key,
   Shield,
   Layers,
   LayoutDashboard,
   Bot,
-  MessageSquare,
   Radio,
-  Satellite,
   Cpu,
-  Hexagon,
   CircuitBoard,
+  Satellite,
   Wifi,
   Upload,
 } from 'lucide-react';
 import {
   useLayoutStore,
   MainSection,
-  MarketingTab,
   InicioTab,
   OperacionesTab,
-  InteligenciaTab,
-  CerebroIATab,
-  NegocioTab,
+  ReportesTab,
   ConfigTab,
-  EnterpriseTab,
 } from '../../stores/layoutStore';
 
 // ============================================
@@ -103,40 +78,23 @@ interface MenuItem {
 }
 
 // ============================================
-// DEFINICIÓN DE SUB-MENÚS
+// DEFINICIÓN DE SUB-MENÚS - 5 SECCIONES
 // ============================================
 
 const SUB_MENUS: Record<MainSection, SubMenuItem[]> = {
   'inicio': [
     { id: 'resumen', icon: LayoutDashboard, label: 'Resumen' },
     { id: 'ejecutivo', icon: BarChart2, label: 'Dashboard Ejecutivo' },
-    { id: 'actividad', icon: Activity, label: 'Actividad' },
-    { id: 'estadisticas', icon: BarChart3, label: 'Estadísticas' },
   ],
   'operaciones': [
     { id: 'envios', icon: Truck, label: 'Envíos' },
     { id: 'tracking', icon: MapPin, label: 'Tracking' },
     { id: 'mapa', icon: Route, label: 'Mapa de Envíos' },
-    { id: 'sla', icon: ShieldCheck, label: 'SLA Monitor' },
-    { id: 'historial', icon: History, label: 'Historial' },
-    { id: 'rutas', icon: Route, label: 'Rutas' },
   ],
-  'inteligencia': [
+  'semaforo': [],
+  'reportes': [
     { id: 'analisis', icon: LineChart, label: 'Análisis' },
     { id: 'reportes', icon: FileText, label: 'Reportes' },
-    { id: 'predicciones', icon: Target, label: 'Predicciones' },
-    { id: 'insights', icon: Lightbulb, label: 'Insights' },
-  ],
-  'cerebro-ia': [
-    { id: 'asistente', icon: Bot, label: 'Asistente IA' },
-    { id: 'configuracion-ia', icon: Cog, label: 'Config. IA' },
-    { id: 'historial-chat', icon: MessageSquare, label: 'Historial' },
-  ],
-  'negocio': [
-    { id: 'metricas', icon: BarChart3, label: 'Métricas' },
-    { id: 'clientes', icon: Users, label: 'Clientes' },
-    { id: 'ventas', icon: DollarSign, label: 'Ventas' },
-    { id: 'rendimiento', icon: TrendingUp, label: 'Rendimiento' },
   ],
   'config': [
     { id: 'general', icon: Cog, label: 'General' },
@@ -144,24 +102,6 @@ const SUB_MENUS: Record<MainSection, SubMenuItem[]> = {
     { id: 'integraciones', icon: Layers, label: 'Integraciones' },
     { id: 'usuarios', icon: Users, label: 'Usuarios' },
     { id: 'admin', icon: Shield, label: 'Seguridad' },
-  ],
-  'marketing': [
-    { id: 'dashboard', icon: BarChart3, label: 'Dashboard' },
-    { id: 'meta', icon: Facebook, label: 'Meta Ads' },
-    { id: 'google', icon: Chrome, label: 'Google Ads' },
-    { id: 'tiktok', icon: Music2, label: 'TikTok Ads' },
-    { id: 'utm', icon: Link2, label: 'UTMs' },
-    { id: 'integraciones', icon: Webhook, label: 'Integraciones' },
-    { id: 'reglas', icon: Zap, label: 'Reglas' },
-  ],
-  'enterprise': [
-    { id: 'command-center', icon: LayoutDashboard, label: 'Command Center' },
-    { id: 'empresas', icon: Building2, label: 'Multi-Empresa' },
-    { id: 'analytics', icon: BarChart2, label: 'Analytics Global' },
-    { id: 'compliance', icon: ShieldCheck, label: 'Compliance' },
-    { id: 'security', icon: Shield, label: 'Security SOC' },
-    { id: 'users', icon: Users, label: 'Usuarios' },
-    { id: 'automation', icon: Workflow, label: 'Automatizacion' },
   ],
 };
 
@@ -507,26 +447,18 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, onUploadReport, user
     sidebarCollapsed,
     sidebarHovered,
     activeSection,
-    activeMarketingTab,
     activeInicioTab,
     activeOperacionesTab,
-    activeInteligenciaTab,
-    activeCerebroIATab,
-    activeNegocioTab,
+    activeReportesTab,
     activeConfigTab,
-    activeEnterpriseTab,
     expandedSections,
     toggleSidebar,
     setHovered,
     setActiveSection,
-    setMarketingTab,
     setInicioTab,
     setOperacionesTab,
-    setInteligenciaTab,
-    setCerebroIATab,
-    setNegocioTab,
+    setReportesTab,
     setConfigTab,
-    setEnterpriseTab,
     toggleSectionExpanded,
   } = useLayoutStore();
 
@@ -535,15 +467,13 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, onUploadReport, user
 
   const isExpanded = !sidebarCollapsed || sidebarHovered;
 
-  // Menu principal con colores de acento
-  // NOTA: Modo Admin (config) ha sido migrado a Enterprise Global
+  // Menu principal - 5 secciones
   const mainMenuItems: MenuItem[] = [
-    { id: 'inicio', icon: Home, label: 'Centro de Control', subItems: SUB_MENUS['inicio'] },
-    { id: 'operaciones', icon: Package, label: 'Operaciones', subItems: SUB_MENUS['operaciones'] },
-    { id: 'inteligencia', icon: Sparkles, label: 'Inteligencia', subItems: SUB_MENUS['inteligencia'] },
-    { id: 'cerebro-ia', icon: Brain, label: 'Cerebro IA', isNew: true, subItems: SUB_MENUS['cerebro-ia'] },
-    { id: 'negocio', icon: Briefcase, label: 'Centro Negocio', subItems: SUB_MENUS['negocio'] },
-    { id: 'enterprise', icon: Crown, label: 'Enterprise Global', isNew: true, subItems: SUB_MENUS['enterprise'] },
+    { id: 'inicio', icon: Home, label: 'Dashboard', subItems: SUB_MENUS['inicio'] },
+    { id: 'operaciones', icon: Package, label: 'Seguimiento', subItems: SUB_MENUS['operaciones'] },
+    { id: 'semaforo', icon: Activity, label: 'Semáforo', subItems: SUB_MENUS['semaforo'] },
+    { id: 'reportes', icon: FileText, label: 'Reportes', subItems: SUB_MENUS['reportes'] },
+    { id: 'config', icon: Settings, label: 'Admin', subItems: SUB_MENUS['config'] },
   ];
 
   // Obtener el sub-item activo según la sección
@@ -551,12 +481,8 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, onUploadReport, user
     switch (section) {
       case 'inicio': return activeInicioTab;
       case 'operaciones': return activeOperacionesTab;
-      case 'inteligencia': return activeInteligenciaTab;
-      case 'cerebro-ia': return activeCerebroIATab;
-      case 'negocio': return activeNegocioTab;
+      case 'reportes': return activeReportesTab;
       case 'config': return activeConfigTab;
-      case 'marketing': return activeMarketingTab;
-      case 'enterprise': return activeEnterpriseTab;
       default: return undefined;
     }
   };
@@ -566,12 +492,8 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, onUploadReport, user
     switch (section) {
       case 'inicio': setInicioTab(subItemId as InicioTab); break;
       case 'operaciones': setOperacionesTab(subItemId as OperacionesTab); break;
-      case 'inteligencia': setInteligenciaTab(subItemId as InteligenciaTab); break;
-      case 'cerebro-ia': setCerebroIATab(subItemId as CerebroIATab); break;
-      case 'negocio': setNegocioTab(subItemId as NegocioTab); break;
+      case 'reportes': setReportesTab(subItemId as ReportesTab); break;
       case 'config': setConfigTab(subItemId as ConfigTab); break;
-      case 'marketing': setMarketingTab(subItemId as MarketingTab); break;
-      case 'enterprise': setEnterpriseTab(subItemId as EnterpriseTab); break;
     }
   };
 
@@ -633,7 +555,6 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, onUploadReport, user
 
         {/* Navigation */}
         <nav className="relative z-10 flex-1 overflow-y-auto py-2 px-2 space-y-1 cc-scrollbar">
-          {/* Main Menu */}
           <SidebarSection isCollapsed={!isExpanded}>
             {mainMenuItems.map((item) => (
               <ExpandableSidebarItem
@@ -652,24 +573,6 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, onUploadReport, user
                 onSubItemClick={(subId) => handleSubItemClick(item.id, subId)}
               />
             ))}
-          </SidebarSection>
-
-          {/* Marketing Section */}
-          <SidebarSection title="Marketing Hub" isCollapsed={!isExpanded}>
-            <ExpandableSidebarItem
-              icon={TrendingUp}
-              label="Marketing Central"
-              isActive={activeSection === 'marketing'}
-              isExpanded={expandedSections.includes('marketing')}
-              isCollapsed={!isExpanded}
-              hasSubItems={true}
-              isNew
-              onClick={() => setActiveSection('marketing')}
-              onToggleExpand={() => toggleSectionExpanded('marketing')}
-              subItems={SUB_MENUS['marketing']}
-              activeSubItem={activeMarketingTab}
-              onSubItemClick={(subId) => setMarketingTab(subId as MarketingTab)}
-            />
           </SidebarSection>
         </nav>
 

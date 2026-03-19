@@ -1,6 +1,5 @@
 // hooks/useRouter.ts
 // Lightweight URL routing - syncs browser URL with layout store
-// Inspired by Linear's clean URL structure
 
 import { useEffect, useCallback } from 'react';
 import { useLayoutStore, MainSection } from '../stores/layoutStore';
@@ -12,23 +11,17 @@ const SECTION_ROUTES: Record<string, MainSection> = {
   '': 'inicio',
   'inicio': 'inicio',
   'operaciones': 'operaciones',
-  'inteligencia': 'inteligencia',
-  'cerebro-ia': 'cerebro-ia',
-  'negocio': 'negocio',
-  'marketing': 'marketing',
+  'semaforo': 'semaforo',
+  'reportes': 'reportes',
   'config': 'config',
-  'enterprise': 'enterprise',
 };
 
 const SECTION_TO_PATH: Record<MainSection, string> = {
   'inicio': '/',
   'operaciones': '/operaciones',
-  'inteligencia': '/inteligencia',
-  'cerebro-ia': '/cerebro-ia',
-  'negocio': '/negocio',
-  'marketing': '/marketing',
+  'semaforo': '/semaforo',
+  'reportes': '/reportes',
   'config': '/config',
-  'enterprise': '/enterprise',
 };
 
 function getSectionFromPath(pathname: string): MainSection {

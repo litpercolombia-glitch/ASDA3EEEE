@@ -1,5 +1,5 @@
 // stores/layoutStore.ts
-// Estado del layout y sidebar
+// Estado del layout y sidebar - Simplificado a 5 secciones
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -7,30 +7,15 @@ import { persist } from 'zustand/middleware';
 export type MainSection =
   | 'inicio'
   | 'operaciones'
-  | 'inteligencia'
-  | 'cerebro-ia'
-  | 'negocio'
-  | 'marketing'
-  | 'config'
-  | 'enterprise';
-
-export type MarketingTab =
-  | 'dashboard'
-  | 'meta'
-  | 'google'
-  | 'tiktok'
-  | 'utm'
-  | 'integraciones'
-  | 'reglas';
+  | 'semaforo'
+  | 'reportes'
+  | 'config';
 
 // Sub-tabs para cada sección
-export type InicioTab = 'resumen' | 'actividad' | 'estadisticas' | 'ejecutivo';
-export type OperacionesTab = 'envios' | 'tracking' | 'historial' | 'rutas' | 'mapa' | 'sla';
-export type InteligenciaTab = 'analisis' | 'reportes' | 'predicciones' | 'insights';
-export type CerebroIATab = 'asistente' | 'configuracion-ia' | 'historial-chat';
-export type NegocioTab = 'metricas' | 'clientes' | 'ventas' | 'rendimiento';
+export type InicioTab = 'resumen' | 'ejecutivo';
+export type OperacionesTab = 'envios' | 'tracking' | 'mapa';
+export type ReportesTab = 'analisis' | 'reportes';
 export type ConfigTab = 'general' | 'api-keys' | 'integraciones' | 'usuarios' | 'admin';
-export type EnterpriseTab = 'command-center' | 'empresas' | 'analytics' | 'compliance' | 'security' | 'users' | 'automation';
 
 interface LayoutState {
   // Sidebar
@@ -39,16 +24,12 @@ interface LayoutState {
 
   // Navegación
   activeSection: MainSection;
-  activeMarketingTab: MarketingTab;
 
   // Sub-tabs activas
   activeInicioTab: InicioTab;
   activeOperacionesTab: OperacionesTab;
-  activeInteligenciaTab: InteligenciaTab;
-  activeCerebroIATab: CerebroIATab;
-  activeNegocioTab: NegocioTab;
+  activeReportesTab: ReportesTab;
   activeConfigTab: ConfigTab;
-  activeEnterpriseTab: EnterpriseTab;
 
   // Secciones expandidas
   expandedSections: MainSection[];
@@ -64,16 +45,12 @@ interface LayoutState {
   setHovered: (hovered: boolean) => void;
 
   setActiveSection: (section: MainSection) => void;
-  setMarketingTab: (tab: MarketingTab) => void;
 
   // Sub-tab actions
   setInicioTab: (tab: InicioTab) => void;
   setOperacionesTab: (tab: OperacionesTab) => void;
-  setInteligenciaTab: (tab: InteligenciaTab) => void;
-  setCerebroIATab: (tab: CerebroIATab) => void;
-  setNegocioTab: (tab: NegocioTab) => void;
+  setReportesTab: (tab: ReportesTab) => void;
   setConfigTab: (tab: ConfigTab) => void;
-  setEnterpriseTab: (tab: EnterpriseTab) => void;
 
   // Expandir/colapsar secciones
   toggleSectionExpanded: (section: MainSection) => void;
@@ -83,22 +60,21 @@ interface LayoutState {
   toggleNotifications: () => void;
 }
 
+// Valid sections for migration from old persisted state
+const VALID_SECTIONS: MainSection[] = ['inicio', 'operaciones', 'semaforo', 'reportes', 'config'];
+
 export const useLayoutStore = create<LayoutState>()(
   persist(
     (set) => ({
       sidebarCollapsed: false,
       sidebarHovered: false,
       activeSection: 'inicio',
-      activeMarketingTab: 'dashboard',
 
       // Sub-tabs por defecto
       activeInicioTab: 'resumen',
       activeOperacionesTab: 'envios',
-      activeInteligenciaTab: 'analisis',
-      activeCerebroIATab: 'asistente',
-      activeNegocioTab: 'metricas',
+      activeReportesTab: 'analisis',
       activeConfigTab: 'general',
-      activeEnterpriseTab: 'command-center',
 
       // Secciones expandidas
       expandedSections: [],
@@ -112,22 +88,19 @@ export const useLayoutStore = create<LayoutState>()(
       setHovered: (hovered) => set({ sidebarHovered: hovered }),
 
       setActiveSection: (section) => set((state) => {
-        // Al cambiar de sección, expandir automáticamente
-        const newExpanded = state.expandedSections.includes(section)
+        // Validate section (handles old persisted values)
+        const validSection = VALID_SECTIONS.includes(section) ? section : 'inicio';
+        const newExpanded = state.expandedSections.includes(validSection)
           ? state.expandedSections
-          : [...state.expandedSections, section];
-        return { activeSection: section, expandedSections: newExpanded };
+          : [...state.expandedSections, validSection];
+        return { activeSection: validSection, expandedSections: newExpanded };
       }),
-      setMarketingTab: (tab) => set({ activeMarketingTab: tab }),
 
       // Sub-tab setters
       setInicioTab: (tab) => set({ activeInicioTab: tab }),
       setOperacionesTab: (tab) => set({ activeOperacionesTab: tab }),
-      setInteligenciaTab: (tab) => set({ activeInteligenciaTab: tab }),
-      setCerebroIATab: (tab) => set({ activeCerebroIATab: tab }),
-      setNegocioTab: (tab) => set({ activeNegocioTab: tab }),
+      setReportesTab: (tab) => set({ activeReportesTab: tab }),
       setConfigTab: (tab) => set({ activeConfigTab: tab }),
-      setEnterpriseTab: (tab) => set({ activeEnterpriseTab: tab }),
 
       // Toggle expandir sección
       toggleSectionExpanded: (section) => set((state) => {
@@ -155,6 +128,20 @@ export const useLayoutStore = create<LayoutState>()(
         activeSection: state.activeSection,
         expandedSections: state.expandedSections,
       }),
+      // Migration: if persisted activeSection is invalid, reset to 'inicio'
+      merge: (persistedState: any, currentState) => {
+        const merged = { ...currentState, ...persistedState };
+        if (!VALID_SECTIONS.includes(merged.activeSection)) {
+          merged.activeSection = 'inicio';
+        }
+        // Filter out old sections from expandedSections
+        if (Array.isArray(merged.expandedSections)) {
+          merged.expandedSections = merged.expandedSections.filter(
+            (s: string) => VALID_SECTIONS.includes(s as MainSection)
+          );
+        }
+        return merged;
+      },
     }
   )
 );
