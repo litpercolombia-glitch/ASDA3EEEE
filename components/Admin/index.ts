@@ -6,10 +6,6 @@
 // Panel principal
 export { AdminPanelPro } from './AdminPanelPro';
 
-// Layout
-export { AdminLayout } from './AdminLayout';
-export type { AdminSection } from './AdminLayout';
-
 // Command Center
 export { CommandCenter } from './CommandCenter';
 
@@ -40,9 +36,6 @@ export { SecurityDashboard } from './SecurityCenter';
 
 // CRM Center
 export { CRMDashboard } from './CRMCenter';
-
-// Enterprise Admin Dashboard - TOP GLOBAL
-export { EnterpriseAdminDashboard } from './EnterpriseAdminDashboard';
 
 // Finance Modules PRO
 export {

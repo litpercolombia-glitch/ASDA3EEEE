@@ -2,9 +2,6 @@
 // TABS PRINCIPALES - USAR ESTOS
 // ============================================
 
-// Navegacion (version consolidada)
-export { TabNavigationNew as TabNavigation } from './TabNavigationNew';
-
 // Semaforo (version consolidada)
 export { SemaforoTabNew as SemaforoTab } from './SemaforoTabNew';
 
@@ -69,16 +66,5 @@ export {
   LazyAnalisisUnificadoTab,
 } from './LazyTabs';
 
-// ============================================
-// DEPRECADOS - NO USAR
-// ============================================
-
-/**
- * @deprecated Usar TabNavigation en su lugar
- */
-export { TabNavigationNew } from './TabNavigationNew';
-
-/**
- * @deprecated Usar SemaforoTab en su lugar
- */
+// Re-export SemaforoTabNew for direct imports
 export { SemaforoTabNew } from './SemaforoTabNew';

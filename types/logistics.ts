@@ -6,21 +6,6 @@
 import { Shipment, ShipmentStatus, CarrierName } from '../types';
 
 // ============================================
-// TAB NAVIGATION TYPES
-// ============================================
-
-// Legacy tab type - kept for backward compatibility with components that still reference it
-// Navigation is now handled by MainSection in stores/layoutStore.ts
-export type MainTabNew =
-  | 'operaciones'
-  | 'seguimiento'
-  | 'semaforo'
-  | 'reportes'
-  | 'analisis'
-  | 'config'
-  | 'admin';
-
-// ============================================
 // GUIA RETRASADA (DELAYED SHIPMENT)
 // ============================================
 
