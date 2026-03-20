@@ -262,7 +262,9 @@ export type DropshipperView =
   | 'cod_analytics'
   | 'profit_calculator'
   | 'product_scorecard'
-  | 'supplier_monitor';
+  | 'supplier_monitor'
+  | 'ads_import'
+  | 'alerts';
 
 export interface DropshipperDashboardState {
   // Data

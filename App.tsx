@@ -41,6 +41,7 @@ import { useRouter } from './hooks/useRouter';
 import ShipmentMap from './components/maps/ShipmentMap';
 import ExecutiveDashboard from './components/Dashboard/ExecutiveDashboard';
 import LandingPage from './components/LandingPage/LandingPage';
+import { DropshipperLanding } from './components/LandingPage/DropshipperLanding';
 import PublicTrackingPage from './components/PublicTracking/PublicTrackingPage';
 // User Profile
 import { useUserProfileStore } from './services/userProfileService';
@@ -788,6 +789,16 @@ const AppRoot: React.FC = () => {
   // Public landing page (no auth required)
   if (window.location.pathname === '/landing') {
     return <LandingPage />;
+  }
+
+  // Dropshipper landing page
+  if (window.location.pathname === '/dropshipper-landing') {
+    return (
+      <DropshipperLanding
+        onLogin={() => { window.location.href = '/'; }}
+        onRegister={() => { window.location.href = '/'; }}
+      />
+    );
   }
 
   // Public tracking page (no auth required)

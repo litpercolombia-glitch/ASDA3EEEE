@@ -18,6 +18,9 @@ import {
   DollarSign,
   AlertTriangle,
   FileSpreadsheet,
+  Bell,
+  Target,
+  RefreshCw,
 } from 'lucide-react';
 import { useDropshippingStore, formatCOP } from '../../../services/dropshippingService';
 import type { DropshipperView } from '../../../types/dropshipping';
@@ -27,6 +30,9 @@ import { CODAnalytics } from './CODAnalytics';
 import { ProfitCalculator } from './ProfitCalculator';
 import { ProductScorecard } from './ProductScorecard';
 import { SupplierMonitor } from './SupplierMonitor';
+import { AdsImporter } from './AdsImporter';
+import { AlertsPanel } from './AlertsPanel';
+import { syncDropiOrders, isAutoSyncRunning, startAutoSync, stopAutoSync, getLastSyncResult } from '../../../services/dropiSyncService';
 
 // ============================================
 // TIPOS
@@ -48,8 +54,26 @@ interface ModuleCard {
 
 export const DropshipperHub: React.FC = () => {
   const [activeModule, setActiveModule] = useState<DropshipperView>('hub');
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState('');
   const { pedidos, selectedMonth, setSelectedMonth, importPedidos } = useDropshippingStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDropiSync = async () => {
+    setSyncing(true);
+    setSyncMsg('');
+    try {
+      const result = await syncDropiOrders();
+      setSyncMsg(result.success
+        ? `Sync OK: ${result.newOrders} nuevos, ${result.updatedOrders} actualizados`
+        : `Error: ${result.errors.join(', ')}`
+      );
+    } catch {
+      setSyncMsg('Error de conexion con Dropi/Chatea Pro');
+    }
+    setSyncing(false);
+    setTimeout(() => setSyncMsg(''), 5000);
+  };
 
   const currentMonthPedidos = pedidos.filter((p) => p.mes === selectedMonth);
   const entregados = currentMonthPedidos.filter((p) => p.estadoCOD === 'entregado');
@@ -93,6 +117,24 @@ export const DropshipperHub: React.FC = () => {
       gradient: 'from-purple-500 to-violet-500',
       stats: `${new Set(currentMonthPedidos.filter(p => p.proveedorNombre).map(p => p.proveedorNombre)).size} proveedores`,
     },
+    {
+      id: 'ads_import',
+      title: 'Import de Ads',
+      description: 'Importa CSV de Facebook/TikTok Ads. Atribuye gasto por producto y calcula ROAS real.',
+      icon: Target,
+      color: 'cyan',
+      gradient: 'from-cyan-500 to-blue-500',
+      stats: 'Facebook, TikTok, Google',
+    },
+    {
+      id: 'alerts',
+      title: 'Alertas Inteligentes',
+      description: 'Alertas automaticas de rechazos altos, productos perdedores, margen bajo. Envio por WhatsApp.',
+      icon: Bell,
+      color: 'red',
+      gradient: 'from-red-500 to-pink-500',
+      stats: 'Monitoreo continuo',
+    },
   ];
 
   // Handle Excel import
@@ -126,6 +168,10 @@ export const DropshipperHub: React.FC = () => {
         return <ProductScorecard />;
       case 'supplier_monitor':
         return <SupplierMonitor />;
+      case 'ads_import':
+        return <AdsImporter />;
+      case 'alerts':
+        return <AlertsPanel />;
       default:
         return null;
     }
@@ -211,8 +257,21 @@ export const DropshipperHub: React.FC = () => {
           className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-medium transition-all shadow-lg shadow-blue-500/30"
         >
           <FileSpreadsheet className="w-4 h-4" />
-          Importar Pedidos (Excel)
+          Importar Excel
         </button>
+        <button
+          onClick={handleDropiSync}
+          disabled={syncing}
+          className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition-all shadow-lg shadow-orange-500/30 disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+          {syncing ? 'Sincronizando...' : 'Sync Dropi'}
+        </button>
+        {syncMsg && (
+          <span className={`text-xs font-medium px-3 py-1 rounded-full ${syncMsg.includes('Error') ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+            {syncMsg}
+          </span>
+        )}
         <input
           ref={fileInputRef}
           type="file"
@@ -253,7 +312,7 @@ export const DropshipperHub: React.FC = () => {
       </div>
 
       {/* Module cards */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {modules.map((module) => {
           const Icon = module.icon;
           return (
