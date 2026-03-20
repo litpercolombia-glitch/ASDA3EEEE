@@ -25,6 +25,7 @@ import { ProBubbleV4 } from './components/ProAssistant';
 import UniversalSearch from './components/search/UniversalSearch';
 import { AuthWrapper } from './components/auth';
 import { AdminPanelPro } from './components/Admin/AdminPanelPro';
+import { DropshipperHub } from './components/Admin/DropshipperCenter';
 import CountrySelector from './components/CountrySelector';
 // Chat-First Design System
 import { ChatCommandCenter } from './components/ChatFirst';
@@ -386,6 +387,8 @@ const App: React.FC = () => {
             onSubTabChange={setReportesTab}
           />
         );
+      case 'dropshipper':
+        return <DropshipperHub />;
       case 'config':
         return <AdminPanelPro />;
       default:

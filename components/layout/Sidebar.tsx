@@ -38,6 +38,7 @@ import {
   Satellite,
   Wifi,
   Upload,
+  TrendingUp,
 } from 'lucide-react';
 import {
   useLayoutStore,
@@ -96,6 +97,7 @@ const SUB_MENUS: Record<MainSection, SubMenuItem[]> = {
     { id: 'analisis', icon: LineChart, label: 'Análisis' },
     { id: 'reportes', icon: FileText, label: 'Reportes' },
   ],
+  'dropshipper': [],
   'config': [
     { id: 'general', icon: Cog, label: 'General' },
     { id: 'api-keys', icon: Key, label: 'API Keys' },
@@ -473,6 +475,7 @@ export function Sidebar({ onLogout, onOpenChat, onOpenHelp, onUploadReport, user
     { id: 'operaciones', icon: Package, label: 'Seguimiento', subItems: SUB_MENUS['operaciones'] },
     { id: 'semaforo', icon: Activity, label: 'Semáforo', subItems: SUB_MENUS['semaforo'] },
     { id: 'reportes', icon: FileText, label: 'Reportes', subItems: SUB_MENUS['reportes'] },
+    { id: 'dropshipper', icon: TrendingUp, label: 'Dropshipper', subItems: SUB_MENUS['dropshipper'] },
     { id: 'config', icon: Settings, label: 'Admin', subItems: SUB_MENUS['config'] },
   ];
 

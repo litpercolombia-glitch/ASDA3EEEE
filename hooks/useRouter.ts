@@ -13,6 +13,7 @@ const SECTION_ROUTES: Record<string, MainSection> = {
   'operaciones': 'operaciones',
   'semaforo': 'semaforo',
   'reportes': 'reportes',
+  'dropshipper': 'dropshipper',
   'config': 'config',
 };
 
@@ -21,6 +22,7 @@ const SECTION_TO_PATH: Record<MainSection, string> = {
   'operaciones': '/operaciones',
   'semaforo': '/semaforo',
   'reportes': '/reportes',
+  'dropshipper': '/dropshipper',
   'config': '/config',
 };
 

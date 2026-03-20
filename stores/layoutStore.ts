@@ -9,6 +9,7 @@ export type MainSection =
   | 'operaciones'
   | 'semaforo'
   | 'reportes'
+  | 'dropshipper'
   | 'config';
 
 // Sub-tabs para cada sección
@@ -61,7 +62,7 @@ interface LayoutState {
 }
 
 // Valid sections for migration from old persisted state
-const VALID_SECTIONS: MainSection[] = ['inicio', 'operaciones', 'semaforo', 'reportes', 'config'];
+const VALID_SECTIONS: MainSection[] = ['inicio', 'operaciones', 'semaforo', 'reportes', 'dropshipper', 'config'];
 
 export const useLayoutStore = create<LayoutState>()(
   persist(
