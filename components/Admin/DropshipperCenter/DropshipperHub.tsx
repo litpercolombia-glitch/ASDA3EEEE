@@ -26,6 +26,7 @@ import type { DropshipperView } from '../../../types/dropshipping';
 import { CODAnalytics } from './CODAnalytics';
 import { ProfitCalculator } from './ProfitCalculator';
 import { ProductScorecard } from './ProductScorecard';
+import { SupplierMonitor } from './SupplierMonitor';
 
 // ============================================
 // TIPOS
@@ -124,14 +125,7 @@ export const DropshipperHub: React.FC = () => {
       case 'product_scorecard':
         return <ProductScorecard />;
       case 'supplier_monitor':
-        // TODO: Build dedicated supplier monitor component
-        return (
-          <div className="text-center py-16 bg-white dark:bg-navy-800 rounded-2xl border border-slate-200 dark:border-navy-700">
-            <Truck className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-500 dark:text-slate-400">Monitor de Proveedores - Proximamente</p>
-            <p className="text-xs text-slate-400 mt-2">Los datos del supplier score ya se calculan en el servicio</p>
-          </div>
-        );
+        return <SupplierMonitor />;
       default:
         return null;
     }
