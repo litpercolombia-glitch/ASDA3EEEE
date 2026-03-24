@@ -35,6 +35,7 @@ import {
 import { LoginSelector } from '../analisis-rondas/LoginSelector';
 import { OperadorDashboard } from '../analisis-rondas/OperadorDashboard';
 import { AdminDashboard } from '../analisis-rondas/AdminDashboard';
+import { timerDataDisponible, importarRondasComoCSV } from '../../services/timerIntegrationService';
 
 // ===== HELPERS =====
 const loadFromStorage = <T,>(key: string, defaultValue: T): T => {
@@ -510,7 +511,7 @@ const calcularMetricasUsuario = (rondas: RondaCSV[], usuario: string): MetricasU
     tiempoTotal,
     estado,
     alertas,
-    tendencia: 'estable', // TODO: Calcular con histórico
+    tendencia: 'estable', // Se actualiza después con calcularTendenciaDesdeHistorico
     avanzadas,
   };
 };
@@ -737,6 +738,55 @@ const generarRecomendaciones = (metricas: MetricasGlobales): Recomendacion[] => 
   return recomendaciones;
 };
 
+// ===== TENDENCIA DESDE HISTÓRICO =====
+const calcularTendenciaDesdeHistorico = (
+  usuario: string,
+  tasaActual: number,
+  historico: ReporteHistorico[]
+): 'mejorando' | 'estable' | 'empeorando' => {
+  // Tomar últimos 3-5 reportes que contengan este usuario
+  const reportesConUsuario = historico
+    .filter(r => r.metricas.ranking.some(u => u.usuario === usuario))
+    .slice(0, 5);
+
+  if (reportesConUsuario.length < 2) return 'estable';
+
+  const tasasAnteriores = reportesConUsuario.map(r => {
+    const u = r.metricas.ranking.find(u => u.usuario === usuario);
+    return u?.tasaExito || 0;
+  });
+
+  const promedioAnterior = tasasAnteriores.reduce((s, t) => s + t, 0) / tasasAnteriores.length;
+  const diferencia = tasaActual - promedioAnterior;
+
+  if (diferencia > 5) return 'mejorando';
+  if (diferencia < -5) return 'empeorando';
+  return 'estable';
+};
+
+// Aplicar tendencias al ranking usando histórico
+const aplicarTendencias = (metricas: MetricasGlobales, historico: ReporteHistorico[]): MetricasGlobales => {
+  if (historico.length < 2) return metricas;
+
+  const rankingConTendencia = metricas.ranking.map(u => ({
+    ...u,
+    tendencia: calcularTendenciaDesdeHistorico(u.usuario, u.tasaExito, historico),
+  }));
+
+  return { ...metricas, ranking: rankingConTendencia };
+};
+
+// Yield al hilo principal para no bloquear UI (fix INP)
+const yieldToMain = (): Promise<void> => {
+  return new Promise(resolve => {
+    if ('scheduler' in window && 'yield' in (window as any).scheduler) {
+      (window as any).scheduler.yield().then(resolve);
+    } else {
+      setTimeout(resolve, 0);
+    }
+  });
+};
+
 // ===== COMPONENTE PRINCIPAL =====
 export const AnalisisRondasTab: React.FC = () => {
   // Estados
@@ -757,6 +807,7 @@ export const AnalisisRondasTab: React.FC = () => {
   const [recomendaciones, setRecomendaciones] = useState<Recomendacion[]>([]);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasTimerData] = useState(() => timerDataDisponible());
 
   // Persistir sesión
   useEffect(() => {
@@ -854,8 +905,14 @@ export const AnalisisRondasTab: React.FC = () => {
         throw new Error('No se encontraron datos válidos en el archivo');
       }
 
-      // Calcular métricas
-      const metricas = calcularMetricasGlobales(rondas, duplicadosEliminados);
+      // Calcular métricas (con yields para no bloquear UI - fix INP)
+      await yieldToMain();
+      const metricasBase = calcularMetricasGlobales(rondas, duplicadosEliminados);
+
+      await yieldToMain();
+      const metricas = aplicarTendencias(metricasBase, historico);
+
+      await yieldToMain();
       const alertas = generarAlertasGlobales(metricas);
       const recs = generarRecomendaciones(metricas);
 
@@ -881,7 +938,7 @@ export const AnalisisRondasTab: React.FC = () => {
     } finally {
       setCargando(false);
     }
-  }, []);
+  }, [historico]);
 
   // Exportar a Excel
   const exportarExcel = useCallback(() => {
@@ -960,6 +1017,46 @@ export const AnalisisRondasTab: React.FC = () => {
     }
   }, [exportarExcel, exportarPDF]);
 
+  // Importar datos del timer
+  const importarDesdeTimer = useCallback(async () => {
+    setCargando(true);
+    setError(null);
+    try {
+      const rondas = importarRondasComoCSV();
+      if (rondas.length === 0) {
+        throw new Error('No se encontraron rondas en la app del timer');
+      }
+
+      await yieldToMain();
+      const metricasBase = calcularMetricasGlobales(rondas, 0);
+
+      await yieldToMain();
+      const metricas = aplicarTendencias(metricasBase, historico);
+
+      await yieldToMain();
+      const alertas = generarAlertasGlobales(metricas);
+      const recs = generarRecomendaciones(metricas);
+
+      setDatos(metricas);
+      setAlertasGlobales(alertas);
+      setRecomendaciones(recs);
+
+      const nuevoReporte: ReporteHistorico = {
+        id: Date.now().toString(),
+        fecha: new Date().toISOString(),
+        archivoNombre: `Timer Import (${rondas.length} rondas)`,
+        metricas,
+        alertas,
+        recomendaciones: recs,
+      };
+      setHistorico(prev => [nuevoReporte, ...prev].slice(0, 30));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al importar del timer');
+    } finally {
+      setCargando(false);
+    }
+  }, [historico]);
+
   // ===== RENDER =====
 
   // Si hay error, mostrarlo
@@ -997,6 +1094,8 @@ export const AnalisisRondasTab: React.FC = () => {
         alertas={alertasGlobales}
         recomendaciones={recomendaciones}
         onCargarCSV={procesarArchivo}
+        onImportarTimer={importarDesdeTimer}
+        timerDisponible={hasTimerData}
         onLogout={handleLogout}
         onExportar={handleExportar}
         cargando={cargando}
@@ -1010,6 +1109,8 @@ export const AnalisisRondasTab: React.FC = () => {
       usuario={authState.usuario!}
       datos={datos}
       onCargarCSV={procesarArchivo}
+      onImportarTimer={importarDesdeTimer}
+      timerDisponible={hasTimerData}
       onLogout={handleLogout}
       cargando={cargando}
     />
