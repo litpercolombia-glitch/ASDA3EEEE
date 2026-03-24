@@ -14,10 +14,6 @@ import {
   getAllReports,
   getReportStats,
   getComplianceByUser,
-  getAllPedidosReports,
-  getPedidosMetrics,
-  getPedidosRanking,
-  getPedidosTrend,
 } from '../services/reportUploadService';
 
 interface ReportUploadState {
@@ -48,12 +44,6 @@ interface ReportUploadState {
   getAll: () => UserReport[];
   getStats: () => ReturnType<typeof getReportStats>;
   getCompliance: () => ReturnType<typeof getComplianceByUser>;
-
-  // Pedidos Queries
-  getAllPedidos: () => ReturnType<typeof getAllPedidosReports>;
-  getPedidosMetrics: (filters?: Parameters<typeof getPedidosMetrics>[0]) => ReturnType<typeof getPedidosMetrics>;
-  getPedidosRanking: () => ReturnType<typeof getPedidosRanking>;
-  getPedidosTrend: (userId?: string, days?: number) => ReturnType<typeof getPedidosTrend>;
 }
 
 export const useReportUploadStore = create<ReportUploadState>()((set) => ({
@@ -98,10 +88,4 @@ export const useReportUploadStore = create<ReportUploadState>()((set) => ({
   getAll: () => getAllReports(),
   getStats: () => getReportStats(),
   getCompliance: () => getComplianceByUser(),
-
-  // Pedidos Queries
-  getAllPedidos: () => getAllPedidosReports(),
-  getPedidosMetrics: (filters) => getPedidosMetrics(filters),
-  getPedidosRanking: () => getPedidosRanking(),
-  getPedidosTrend: (userId, days) => getPedidosTrend(userId, days),
 }));

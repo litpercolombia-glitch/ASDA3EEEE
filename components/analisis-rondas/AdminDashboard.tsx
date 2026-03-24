@@ -68,9 +68,6 @@ import {
   COLORES_SEMAFORO,
   METRICAS_AVANZADAS,
 } from '../../constants/analisis-rondas';
-import { WeeklyScorecard } from './WeeklyScorecard';
-import { OperadorManager } from './OperadorManager';
-import { RondaClosureLinkManager } from './RondaClosureLinkManager';
 
 interface AdminDashboardProps {
   datos: MetricasGlobales | null;
@@ -78,6 +75,8 @@ interface AdminDashboardProps {
   alertas: AlertaGlobal[];
   recomendaciones: Recomendacion[];
   onCargarCSV: (file: File) => Promise<void>;
+  onImportarTimer?: () => void;
+  timerDisponible?: boolean;
   onLogout: () => void;
   onExportar: (tipo: 'excel' | 'pdf') => void;
   cargando: boolean;
@@ -101,6 +100,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   alertas,
   recomendaciones,
   onCargarCSV,
+  onImportarTimer,
+  timerDisponible,
   onLogout,
   onExportar,
   cargando,
@@ -110,8 +111,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [showHistorico, setShowHistorico] = useState(false);
   const [expandedRecs, setExpandedRecs] = useState(true);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [expandedHistorico, setExpandedHistorico] = useState<string | null>(null);
   const [linkCopiado, setLinkCopiado] = useState(false);
-  const [adminTab, setAdminTab] = useState<'dashboard' | 'scorecard' | 'closures' | 'operators'>('dashboard');
 
   // Generar link para compartir con el equipo
   const shareLink = `${window.location.origin}${window.location.pathname}?view=analisis-rondas`;
@@ -194,106 +195,76 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   ].filter(d => d.value > 0) : [];
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #0a0a1a 0%, #0f172a 50%, #1e1b4b 100%)' }}>
-      {/* Subtle grid overlay */}
-      <svg className="fixed inset-0 w-full h-full opacity-[0.02] pointer-events-none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <pattern id="admin-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#admin-grid)" />
-      </svg>
-
-      <div className="relative z-10 space-y-6 p-4 sm:p-6">
-      {/* Premium Header */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/[0.06]"
-        style={{
-          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(234, 88, 12, 0.05) 50%, rgba(139, 92, 246, 0.05) 100%)',
-          backdropFilter: 'blur(20px)',
-        }}
-      >
-        {/* Top accent line */}
-        <div className="absolute top-0 left-0 right-0 h-[2px]"
-          style={{ background: 'linear-gradient(90deg, #f59e0b, #ea580c, #8b5cf6, #06b6d4)' }}
-        />
-
-        <div className="p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{
-                    background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
-                    boxShadow: '0 0 20px rgba(245, 158, 11, 0.3)',
-                  }}
-                >
-                  <Crown className="w-6 h-6 text-white" />
-                </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 flex items-center justify-center" style={{ borderColor: 'rgba(15, 23, 42, 0.95)' }}>
-                  <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                </div>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-                  Panel de Control
-                  <span className="px-2 py-0.5 text-[10px] uppercase tracking-wider font-medium rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                    Admin
-                  </span>
-                </h1>
-                <p className="text-sm text-white/40">
-                  Vista completa del equipo en tiempo real
-                </p>
-              </div>
+    <div className="space-y-6 p-4 sm:p-6 animate-fade-in">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-2xl border border-amber-200 dark:border-amber-800 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
+              <Crown className="w-7 h-7 text-white" />
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={cargando}
-                className="px-4 py-2.5 rounded-xl font-medium text-sm text-white transition-all flex items-center gap-2 disabled:opacity-50 hover:shadow-lg"
-                style={{
-                  background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
-                  boxShadow: '0 2px 10px rgba(245, 158, 11, 0.3)',
-                }}
-              >
-                {cargando ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Upload className="w-4 h-4" />
-                )}
-                Subir Reporte
-              </button>
-              <button
-                onClick={() => setShowHistorico(!showHistorico)}
-                className="px-4 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white transition-all flex items-center gap-2 border border-white/[0.08] hover:border-white/[0.15] bg-white/[0.03] hover:bg-white/[0.06]"
-              >
-                <History className="w-4 h-4" />
-                Historico
-              </button>
-              <button
-                onClick={() => setShowShareModal(!showShareModal)}
-                className="px-4 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white transition-all flex items-center gap-2 border border-white/[0.08] hover:border-cyan-500/30 bg-white/[0.03] hover:bg-cyan-500/[0.06]"
-              >
-                <Share2 className="w-4 h-4" />
-                Compartir
-              </button>
-              {datos && (
-                <button
-                  onClick={() => onExportar('excel')}
-                  className="px-4 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white transition-all flex items-center gap-2 border border-white/[0.08] hover:border-emerald-500/30 bg-white/[0.03] hover:bg-emerald-500/[0.06]"
-                >
-                  <Download className="w-4 h-4" />
-                  Exportar
-                </button>
+            <div>
+              <h1 className="text-xl font-bold text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                {ICONOS.ADMIN} Panel de Control Admin
+              </h1>
+              <p className="text-sm text-amber-700 dark:text-amber-400">
+                Vista completa del equipo
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={cargando}
+              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl font-medium hover:from-amber-600 hover:to-orange-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2 disabled:opacity-50"
+            >
+              {cargando ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4" />
               )}
+              Subir Reporte
+            </button>
+            {timerDisponible && onImportarTimer && (
               <button
-                onClick={onLogout}
-                className="px-4 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-red-400 transition-all flex items-center gap-2 border border-white/[0.06] hover:border-red-500/20 bg-white/[0.02] hover:bg-red-500/[0.06]"
+                onClick={onImportarTimer}
+                disabled={cargando}
+                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-medium hover:from-indigo-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2 disabled:opacity-50"
               >
-                <LogOut className="w-4 h-4" />
-                Salir
+                <Zap className="w-4 h-4" />
+                Importar Timer
               </button>
-            </div>
+            )}
+            <button
+              onClick={() => setShowHistorico(!showHistorico)}
+              className="px-4 py-2 bg-white dark:bg-navy-800 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 rounded-xl font-medium hover:bg-amber-50 dark:hover:bg-navy-700 transition-all flex items-center gap-2"
+            >
+              <History className="w-4 h-4" />
+              Histórico
+            </button>
+            <button
+              onClick={() => setShowShareModal(!showShareModal)}
+              className="px-4 py-2 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition-all flex items-center gap-2"
+            >
+              <Share2 className="w-4 h-4" />
+              Compartir
+            </button>
+            {datos && (
+              <button
+                onClick={() => onExportar('excel')}
+                className="px-4 py-2 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-all flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Exportar
+              </button>
+            )}
+            <button
+              onClick={onLogout}
+              className="px-4 py-2 bg-slate-100 dark:bg-navy-700 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-navy-600 transition-all flex items-center gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Salir
+            </button>
           </div>
         </div>
         <input
@@ -305,43 +276,130 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         />
       </div>
 
-      {/* Panel de Historico */}
+      {/* Panel de Histórico */}
       {showHistorico && (
-        <div className="rounded-xl border border-white/[0.06] p-6" style={{ background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(10px)' }}>
-          <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-            <History className="w-5 h-5 text-purple-400" />
-            Historico de Reportes ({historico.length})
+        <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-6">
+          <h3 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+            <History className="w-5 h-5 text-purple-500" />
+            Histórico de Reportes ({historico.length})
           </h3>
           {historico.length === 0 ? (
-            <p className="text-white/40 text-center py-4">
+            <p className="text-slate-500 dark:text-slate-400 text-center py-4">
               No hay reportes anteriores
             </p>
           ) : (
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {historico.slice(0, 10).map((reporte) => (
-                <div
-                  key={reporte.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-white/[0.04] bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-white/30" />
-                    <div>
-                      <p className="font-medium text-white/80">
-                        {reporte.archivoNombre}
-                      </p>
-                      <p className="text-xs text-white/30">
-                        {new Date(reporte.fecha).toLocaleString()}
-                      </p>
+            <div className="space-y-2 max-h-[500px] overflow-y-auto">
+              {historico.slice(0, 10).map((reporte, idx) => (
+                <div key={reporte.id}>
+                  <button
+                    onClick={() => setExpandedHistorico(expandedHistorico === reporte.id ? null : reporte.id)}
+                    className="w-full flex items-center justify-between p-3 bg-slate-50 dark:bg-navy-700 rounded-lg hover:bg-slate-100 dark:hover:bg-navy-600 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-5 h-5 text-slate-400" />
+                      <div className="text-left">
+                        <p className="font-medium text-slate-700 dark:text-slate-300">
+                          {reporte.archivoNombre}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {new Date(reporte.fecha).toLocaleString()}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-white/80">
-                      {reporte.metricas.tasaExitoEquipo.toFixed(1)}%
-                    </p>
-                    <p className="text-xs text-white/30">
-                      {reporte.metricas.usuariosActivos} usuarios
-                    </p>
-                  </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="font-semibold text-slate-700 dark:text-slate-300">
+                          {reporte.metricas.tasaExitoEquipo.toFixed(1)}%
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {reporte.metricas.usuariosActivos} usuarios
+                        </p>
+                      </div>
+                      {expandedHistorico === reporte.id
+                        ? <ChevronUp className="w-4 h-4 text-slate-400" />
+                        : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                    </div>
+                  </button>
+
+                  {/* Detalle expandible */}
+                  {expandedHistorico === reporte.id && (
+                    <div className="mt-2 p-4 bg-slate-100 dark:bg-navy-900/50 rounded-lg border border-slate-200 dark:border-navy-600 space-y-3">
+                      {/* KPIs del reporte */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div className="text-center p-2 bg-white dark:bg-navy-800 rounded-lg">
+                          <p className="text-xs text-slate-500">Tasa Éxito</p>
+                          <p className={`text-lg font-bold ${
+                            reporte.metricas.tasaExitoEquipo >= 85 ? 'text-emerald-600' :
+                            reporte.metricas.tasaExitoEquipo >= 70 ? 'text-blue-600' :
+                            reporte.metricas.tasaExitoEquipo >= 50 ? 'text-amber-600' : 'text-red-600'
+                          }`}>
+                            {reporte.metricas.tasaExitoEquipo.toFixed(1)}%
+                          </p>
+                        </div>
+                        <div className="text-center p-2 bg-white dark:bg-navy-800 rounded-lg">
+                          <p className="text-xs text-slate-500">Guías</p>
+                          <p className="text-lg font-bold text-slate-700 dark:text-white">
+                            {reporte.metricas.totalGuiasRealizadas}/{reporte.metricas.totalGuiasProcesadas}
+                          </p>
+                        </div>
+                        <div className="text-center p-2 bg-white dark:bg-navy-800 rounded-lg">
+                          <p className="text-xs text-slate-500">Rondas</p>
+                          <p className="text-lg font-bold text-slate-700 dark:text-white">
+                            {reporte.metricas.totalRondas}
+                          </p>
+                        </div>
+                        <div className="text-center p-2 bg-white dark:bg-navy-800 rounded-lg">
+                          <p className="text-xs text-slate-500">Eficiencia</p>
+                          <p className="text-lg font-bold text-indigo-600">
+                            {reporte.metricas.eficienciaEquipo?.toFixed(0) || '--'}%
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Ranking del día */}
+                      <div>
+                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Ranking</p>
+                        <div className="space-y-1">
+                          {reporte.metricas.ranking.slice(0, 5).map((u, i) => (
+                            <div key={u.usuario} className="flex items-center justify-between px-2 py-1.5 bg-white dark:bg-navy-800 rounded text-sm">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-400 w-5">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}</span>
+                                <span className="font-medium text-slate-700 dark:text-slate-300">{u.usuario}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className={`font-bold ${
+                                  u.tasaExito >= 85 ? 'text-emerald-600' :
+                                  u.tasaExito >= 70 ? 'text-blue-600' :
+                                  u.tasaExito >= 50 ? 'text-amber-600' : 'text-red-600'
+                                }`}>
+                                  {u.tasaExito.toFixed(1)}%
+                                </span>
+                                <span className="text-xs text-slate-400">{u.guiasRealizadas} guías</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Comparativa vs anterior */}
+                      {idx < historico.length - 1 && (() => {
+                        const anterior = historico[idx + 1];
+                        const diff = reporte.metricas.tasaExitoEquipo - anterior.metricas.tasaExitoEquipo;
+                        return (
+                          <div className={`flex items-center gap-2 p-2 rounded-lg text-sm ${
+                            diff > 0 ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' :
+                            diff < 0 ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' :
+                            'bg-slate-50 dark:bg-navy-800 text-slate-600 dark:text-slate-400'
+                          }`}>
+                            <span>{diff > 0 ? '📈' : diff < 0 ? '📉' : '➡️'}</span>
+                            <span>
+                              vs reporte anterior: {diff > 0 ? '+' : ''}{diff.toFixed(1)}% tasa de éxito
+                            </span>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -351,43 +409,39 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* Modal de Compartir */}
       {showShareModal && (
-        <div className="rounded-xl border border-cyan-500/20 p-6" style={{ background: 'rgba(6, 182, 212, 0.04)', backdropFilter: 'blur(10px)' }}>
+        <div className="bg-white dark:bg-navy-800 rounded-xl border border-blue-200 dark:border-blue-800 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-white flex items-center gap-2">
-              <Share2 className="w-5 h-5 text-cyan-400" />
+            <h3 className="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+              <Share2 className="w-5 h-5 text-blue-500" />
               Compartir con el Equipo
             </h3>
             <button
               onClick={() => setShowShareModal(false)}
-              className="text-white/30 hover:text-white/60 transition-colors"
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
             >
               <XCircle className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-sm text-white/40 mb-4">
-            Comparte este link con tu equipo para que accedan al analisis y vean su rendimiento.
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Comparte este link con tu equipo para que puedan acceder al análisis de rondas y ver su rendimiento individual.
           </p>
           <div className="flex items-center gap-2">
-            <div className="flex-1 flex items-center gap-2 px-4 py-3 rounded-lg border border-white/[0.08] bg-white/[0.03]">
-              <Link2 className="w-4 h-4 text-white/30" />
+            <div className="flex-1 flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-navy-900 rounded-lg border border-slate-200 dark:border-navy-600">
+              <Link2 className="w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 value={shareLink}
                 readOnly
-                className="flex-1 bg-transparent text-sm text-white/60 outline-none"
+                className="flex-1 bg-transparent text-sm text-slate-700 dark:text-slate-300 outline-none"
               />
             </div>
             <button
               onClick={copiarLinkEquipo}
-              className={`px-4 py-3 rounded-lg font-medium flex items-center gap-2 transition-all text-sm ${
+              className={`px-4 py-3 rounded-lg font-medium flex items-center gap-2 transition-all ${
                 linkCopiado
-                  ? 'text-white'
-                  : 'text-white hover:shadow-lg'
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-blue-500 text-white hover:bg-blue-600'
               }`}
-              style={{
-                background: linkCopiado ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #06b6d4, #3b82f6)',
-                boxShadow: linkCopiado ? '0 2px 10px rgba(16, 185, 129, 0.3)' : '0 2px 10px rgba(6, 182, 212, 0.3)',
-              }}
             >
               {linkCopiado ? (
                 <>
@@ -402,59 +456,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               )}
             </button>
           </div>
-          <div className="mt-4 p-3 rounded-lg border border-cyan-500/10 bg-cyan-500/5">
-            <p className="text-xs text-cyan-400/70">
-              Cada operador selecciona su nombre al ingresar para ver sus metricas personalizadas.
+          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <p className="text-xs text-blue-700 dark:text-blue-400">
+              💡 <strong>Tip:</strong> Cada operador podrá seleccionar su nombre al ingresar para ver sus propias métricas personalizadas.
             </p>
           </div>
         </div>
       )}
 
-      {/* Admin Tabs - Premium pill design */}
-      <div className="flex gap-1 rounded-xl p-1 overflow-x-auto border border-white/[0.06]" style={{ background: 'rgba(255,255,255,0.02)' }}>
-        {[
-          { id: 'dashboard' as const, label: 'Dashboard', icon: '📊', color: '#f59e0b' },
-          { id: 'scorecard' as const, label: 'Scorecard Semanal', icon: '🏆', color: '#8b5cf6' },
-          { id: 'closures' as const, label: 'Cierres de Ronda', icon: '📋', color: '#06b6d4' },
-          { id: 'operators' as const, label: 'Operadores', icon: '👥', color: '#10b981' },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setAdminTab(tab.id)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
-              adminTab === tab.id
-                ? 'text-white shadow-lg'
-                : 'text-white/40 hover:text-white/60 hover:bg-white/[0.03]'
-            }`}
-            style={adminTab === tab.id ? {
-              background: `linear-gradient(135deg, ${tab.color}40, ${tab.color}20)`,
-              border: `1px solid ${tab.color}30`,
-              boxShadow: `0 2px 10px ${tab.color}15`,
-            } : {}}
-          >
-            <span>{tab.icon}</span>
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Scorecard Tab */}
-      {adminTab === 'scorecard' && (
-        <WeeklyScorecard datos={datos} />
-      )}
-
-      {/* Closures Tab */}
-      {adminTab === 'closures' && (
-        <RondaClosureLinkManager />
-      )}
-
-      {/* Operators Tab */}
-      {adminTab === 'operators' && (
-        <OperadorManager />
-      )}
-
-      {/* Dashboard Tab - Original content */}
-      {adminTab === 'dashboard' && !datos && (
+      {/* Zona de carga si no hay datos */}
+      {!datos && (
         <div
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
@@ -462,181 +473,191 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           onDrop={handleDrop}
           className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all ${
             dragActive
-              ? 'border-amber-500/50 bg-amber-500/5'
-              : 'border-white/[0.08] hover:border-amber-500/30'
+              ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
+              : 'border-slate-300 dark:border-navy-600 hover:border-amber-400'
           }`}
-          style={{ background: dragActive ? undefined : 'rgba(255,255,255,0.01)' }}
         >
-          <FileSpreadsheet className="w-16 h-16 mx-auto mb-4 text-white/20" />
-          <h3 className="text-lg font-semibold text-white/60 mb-2">
+          <FileSpreadsheet className="w-16 h-16 mx-auto mb-4 text-slate-400" />
+          <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">
             Sube un archivo CSV o Excel
           </h3>
-          <p className="text-sm text-white/30 mb-4">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
             Arrastra y suelta o haz clic en "Subir Reporte"
           </p>
-          <p className="text-xs text-white/20">
+          <p className="text-xs text-slate-400 dark:text-slate-500">
             Formatos soportados: .csv, .xlsx, .xls
           </p>
         </div>
       )}
 
-      {adminTab === 'dashboard' && datos && (
+      {datos && (
         <>
-          {/* Metricas globales */}
+          {/* Métricas globales */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {/* Total Guias */}
-            <div className="rounded-xl border border-white/[0.06] p-4" style={{ background: 'rgba(255,255,255,0.03)' }}>
+            {/* Total Guías */}
+            <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
               <div className="flex items-center justify-between mb-2">
-                <Package className="w-5 h-5 text-blue-400" />
+                <Package className="w-5 h-5 text-blue-500" />
               </div>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-2xl font-bold text-slate-800 dark:text-white">
                 {datos.totalGuiasProcesadas}
               </div>
-              <div className="text-sm text-white/40">Guias Totales</div>
-              <div className="text-xs text-emerald-400 mt-1">
+              <div className="text-sm text-slate-600 dark:text-slate-400">Guías Totales</div>
+              <div className="text-xs text-emerald-600 mt-1">
                 {datos.totalGuiasRealizadas} realizadas
               </div>
             </div>
 
             {/* Total Rondas */}
-            <div className="rounded-xl border border-white/[0.06] p-4" style={{ background: 'rgba(255,255,255,0.03)' }}>
+            <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
               <div className="flex items-center justify-between mb-2">
-                <Activity className="w-5 h-5 text-purple-400" />
+                <Activity className="w-5 h-5 text-purple-500" />
               </div>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-2xl font-bold text-slate-800 dark:text-white">
                 {datos.totalRondas}
               </div>
-              <div className="text-sm text-white/40">Rondas</div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">Rondas</div>
             </div>
 
-            {/* Tasa de Exito */}
-            <div className="rounded-xl border p-4"
-              style={{
-                background: datos.tasaExitoEquipo >= UMBRALES.META_EXITO_EQUIPO
-                  ? 'rgba(16, 185, 129, 0.08)' : datos.tasaExitoEquipo >= UMBRALES.REGULAR
-                  ? 'rgba(245, 158, 11, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-                borderColor: datos.tasaExitoEquipo >= UMBRALES.META_EXITO_EQUIPO
-                  ? 'rgba(16, 185, 129, 0.2)' : datos.tasaExitoEquipo >= UMBRALES.REGULAR
-                  ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-              }}
-            >
+            {/* Tasa de Éxito */}
+            <div className={`rounded-xl border p-4 ${
+              datos.tasaExitoEquipo >= UMBRALES.META_EXITO_EQUIPO
+                ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700'
+                : datos.tasaExitoEquipo >= UMBRALES.REGULAR
+                ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700'
+                : 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
+            }`}>
               <div className="flex items-center justify-between mb-2">
                 <Target className={`w-5 h-5 ${
-                  datos.tasaExitoEquipo >= UMBRALES.META_EXITO_EQUIPO ? 'text-emerald-400' :
-                  datos.tasaExitoEquipo >= UMBRALES.REGULAR ? 'text-amber-400' : 'text-red-400'
+                  datos.tasaExitoEquipo >= UMBRALES.META_EXITO_EQUIPO
+                    ? 'text-emerald-500'
+                    : datos.tasaExitoEquipo >= UMBRALES.REGULAR
+                    ? 'text-amber-500'
+                    : 'text-red-500'
                 }`} />
-                <span className="text-xs text-white/30">Meta: {datos.metaEquipo}%</span>
+                <span className="text-sm text-slate-500">Meta: {datos.metaEquipo}%</span>
               </div>
               <div className={`text-2xl font-bold ${
-                datos.tasaExitoEquipo >= UMBRALES.META_EXITO_EQUIPO ? 'text-emerald-400' :
-                datos.tasaExitoEquipo >= UMBRALES.REGULAR ? 'text-amber-400' : 'text-red-400'
+                datos.tasaExitoEquipo >= UMBRALES.META_EXITO_EQUIPO
+                  ? 'text-emerald-700 dark:text-emerald-400'
+                  : datos.tasaExitoEquipo >= UMBRALES.REGULAR
+                  ? 'text-amber-700 dark:text-amber-400'
+                  : 'text-red-700 dark:text-red-400'
               }`}>
                 {datos.tasaExitoEquipo.toFixed(1)}%
               </div>
-              <div className="text-sm text-white/40">Tasa de Exito</div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">Tasa de Éxito</div>
             </div>
 
             {/* Usuarios Activos */}
-            <div className="rounded-xl border border-white/[0.06] p-4" style={{ background: 'rgba(255,255,255,0.03)' }}>
+            <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
               <div className="flex items-center justify-between mb-2">
-                <Users className="w-5 h-5 text-cyan-400" />
+                <Users className="w-5 h-5 text-cyan-500" />
               </div>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-2xl font-bold text-slate-800 dark:text-white">
                 {datos.usuariosActivos}
               </div>
-              <div className="text-sm text-white/40">Usuarios Activos</div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">Usuarios Activos</div>
             </div>
 
             {/* Novedades */}
-            <div className="rounded-xl border p-4"
-              style={{
-                background: datos.ratioNovedades > UMBRALES.ALERTA_NOVEDADES ? 'rgba(249, 115, 22, 0.08)' : 'rgba(255,255,255,0.03)',
-                borderColor: datos.ratioNovedades > UMBRALES.ALERTA_NOVEDADES ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255,255,255,0.06)',
-              }}
-            >
+            <div className={`rounded-xl border p-4 ${
+              datos.ratioNovedades > UMBRALES.ALERTA_NOVEDADES
+                ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-700'
+                : 'bg-white dark:bg-navy-800 border-slate-200 dark:border-navy-700'
+            }`}>
               <div className="flex items-center justify-between mb-2">
                 <AlertTriangle className={`w-5 h-5 ${
-                  datos.ratioNovedades > UMBRALES.ALERTA_NOVEDADES ? 'text-orange-400' : 'text-white/30'
+                  datos.ratioNovedades > UMBRALES.ALERTA_NOVEDADES
+                    ? 'text-orange-500'
+                    : 'text-slate-400'
                 }`} />
               </div>
               <div className={`text-2xl font-bold ${
-                datos.ratioNovedades > UMBRALES.ALERTA_NOVEDADES ? 'text-orange-400' : 'text-white'
+                datos.ratioNovedades > UMBRALES.ALERTA_NOVEDADES
+                  ? 'text-orange-700 dark:text-orange-400'
+                  : 'text-slate-800 dark:text-white'
               }`}>
                 {datos.ratioNovedades.toFixed(1)}%
               </div>
-              <div className="text-sm text-white/40">Novedades</div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">Novedades</div>
             </div>
           </div>
 
-          {/* SEMAFORO + EFICIENCIA + TOP 3 PROBLEMAS */}
+          {/* SEMÁFORO DEL EQUIPO + EFICIENCIA + TOP 3 PROBLEMAS */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Semaforo del Equipo */}
+            {/* Semáforo del Equipo */}
             {datos.semaforoEquipo && (
-              <div className="rounded-xl border border-white/[0.06] p-6" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-cyan-400" />
-                  Semaforo del Equipo
+              <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-6">
+                <h3 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-cyan-500" />
+                  Semáforo del Equipo
                 </h3>
                 <div className="grid grid-cols-4 gap-2 text-center">
-                  <div className="p-3 rounded-lg" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
+                  <div className={`p-3 rounded-lg ${COLORES_SEMAFORO.verde.bg}`}>
                     <div className="text-2xl">🟢</div>
-                    <div className="text-xl font-bold text-emerald-400">{datos.semaforoEquipo.verde}</div>
-                    <div className="text-xs text-white/30">Excelente</div>
+                    <div className={`text-xl font-bold ${COLORES_SEMAFORO.verde.text}`}>
+                      {datos.semaforoEquipo.verde}
+                    </div>
+                    <div className="text-xs text-slate-500">Excelente</div>
                   </div>
-                  <div className="p-3 rounded-lg" style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.15)' }}>
+                  <div className={`p-3 rounded-lg ${COLORES_SEMAFORO.amarillo.bg}`}>
                     <div className="text-2xl">🟡</div>
-                    <div className="text-xl font-bold text-amber-400">{datos.semaforoEquipo.amarillo}</div>
-                    <div className="text-xs text-white/30">Atencion</div>
+                    <div className={`text-xl font-bold ${COLORES_SEMAFORO.amarillo.text}`}>
+                      {datos.semaforoEquipo.amarillo}
+                    </div>
+                    <div className="text-xs text-slate-500">Atención</div>
                   </div>
-                  <div className="p-3 rounded-lg" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.15)' }}>
+                  <div className={`p-3 rounded-lg ${COLORES_SEMAFORO.rojo.bg}`}>
                     <div className="text-2xl">🔴</div>
-                    <div className="text-xl font-bold text-red-400">{datos.semaforoEquipo.rojo}</div>
-                    <div className="text-xs text-white/30">Critico</div>
+                    <div className={`text-xl font-bold ${COLORES_SEMAFORO.rojo.text}`}>
+                      {datos.semaforoEquipo.rojo}
+                    </div>
+                    <div className="text-xs text-slate-500">Crítico</div>
                   </div>
-                  <div className="p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className={`p-3 rounded-lg ${COLORES_SEMAFORO.gris.bg}`}>
                     <div className="text-2xl">⚪</div>
-                    <div className="text-xl font-bold text-white/50">{datos.semaforoEquipo.gris}</div>
-                    <div className="text-xs text-white/30">Sin datos</div>
+                    <div className={`text-xl font-bold ${COLORES_SEMAFORO.gris.text}`}>
+                      {datos.semaforoEquipo.gris}
+                    </div>
+                    <div className="text-xs text-slate-500">Sin datos</div>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Eficiencia del Equipo */}
-            <div className="rounded-xl border p-6"
-              style={{
-                background: (datos.eficienciaEquipo || 0) >= 100 ? 'rgba(16, 185, 129, 0.06)' :
-                  (datos.eficienciaEquipo || 0) >= 80 ? 'rgba(59, 130, 246, 0.06)' : 'rgba(239, 68, 68, 0.06)',
-                borderColor: (datos.eficienciaEquipo || 0) >= 100 ? 'rgba(16, 185, 129, 0.15)' :
-                  (datos.eficienciaEquipo || 0) >= 80 ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-              }}
-            >
-              <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+            <div className={`rounded-xl border p-6 ${
+              (datos.eficienciaEquipo || 0) >= 100
+                ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700'
+                : (datos.eficienciaEquipo || 0) >= 80
+                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700'
+                : 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
+            }`}>
+              <h3 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
                 <Zap className={`w-5 h-5 ${
-                  (datos.eficienciaEquipo || 0) >= 100 ? 'text-emerald-400' :
-                  (datos.eficienciaEquipo || 0) >= 80 ? 'text-blue-400' : 'text-red-400'
+                  (datos.eficienciaEquipo || 0) >= 100 ? 'text-emerald-500' :
+                  (datos.eficienciaEquipo || 0) >= 80 ? 'text-blue-500' : 'text-red-500'
                 }`} />
                 Eficiencia del Equipo
               </h3>
               <div className="text-center">
                 <div className={`text-4xl font-bold mb-2 ${
-                  (datos.eficienciaEquipo || 0) >= 100 ? 'text-emerald-400' :
-                  (datos.eficienciaEquipo || 0) >= 80 ? 'text-blue-400' : 'text-red-400'
+                  (datos.eficienciaEquipo || 0) >= 100 ? 'text-emerald-700 dark:text-emerald-300' :
+                  (datos.eficienciaEquipo || 0) >= 80 ? 'text-blue-700 dark:text-blue-300' : 'text-red-700 dark:text-red-300'
                 }`}>
                   {(datos.eficienciaEquipo || 0).toFixed(0)}%
                 </div>
-                <div className="text-sm text-white/30">
-                  Base: {METRICAS_AVANZADAS.TIEMPO_POR_GUIA} min/guia
+                <div className="text-sm text-slate-500 dark:text-slate-400">
+                  Base: {METRICAS_AVANZADAS.TIEMPO_POR_GUIA} min/guía
                 </div>
-                <div className="mt-3 h-3 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                <div className="mt-3 h-3 bg-slate-200 dark:bg-navy-600 rounded-full overflow-hidden">
                   <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${Math.min(datos.eficienciaEquipo || 0, 150)}%`,
-                      maxWidth: '100%',
-                      background: (datos.eficienciaEquipo || 0) >= 100 ? 'linear-gradient(90deg, #10b981, #059669)' :
-                        (datos.eficienciaEquipo || 0) >= 80 ? 'linear-gradient(90deg, #3b82f6, #2563eb)' : 'linear-gradient(90deg, #ef4444, #dc2626)',
-                    }}
+                    className={`h-full rounded-full transition-all ${
+                      (datos.eficienciaEquipo || 0) >= 100 ? 'bg-emerald-500' :
+                      (datos.eficienciaEquipo || 0) >= 80 ? 'bg-blue-500' : 'bg-red-500'
+                    }`}
+                    style={{ width: `${Math.min(datos.eficienciaEquipo || 0, 150)}%`, maxWidth: '100%' }}
                   />
                 </div>
               </div>
@@ -644,38 +665,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             {/* Top 3 Problemas */}
             {datos.top3Problemas && datos.top3Problemas.length > 0 && (
-              <div className="rounded-xl border p-6" style={{ background: 'rgba(239, 68, 68, 0.04)', borderColor: 'rgba(239, 68, 68, 0.15)' }}>
-                <h3 className="font-semibold text-red-400 mb-4 flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-400" />
-                  Top 3 Problemas del Dia
+              <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-xl border border-red-200 dark:border-red-800 p-6">
+                <h3 className="font-semibold text-red-800 dark:text-red-300 mb-4 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-500" />
+                  Top 3 Problemas del Día
                 </h3>
                 <div className="space-y-3">
-                  {datos.top3Problemas.map((problema) => (
+                  {datos.top3Problemas.map((problema, index) => (
                     <div
                       key={problema.id}
-                      className="flex items-start gap-3 rounded-lg p-3 border border-white/[0.04]"
-                      style={{ background: 'rgba(255,255,255,0.02)' }}
+                      className="flex items-start gap-3 bg-white/50 dark:bg-navy-800/50 rounded-lg p-3"
                     >
                       <span className="text-xl">{problema.icono}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-white/80 text-sm truncate">{problema.titulo}</p>
-                        <p className="text-xs text-white/30">{problema.descripcion}</p>
+                        <p className="font-medium text-slate-800 dark:text-slate-200 text-sm truncate">
+                          {problema.titulo}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {problema.descripcion}
+                        </p>
                         {problema.usuariosAfectados.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
                             {problema.usuariosAfectados.slice(0, 3).map(u => (
-                              <span key={u} className="px-1.5 py-0.5 rounded text-xs text-red-300" style={{ background: 'rgba(239, 68, 68, 0.15)' }}>{u}</span>
+                              <span key={u} className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded text-xs">
+                                {u}
+                              </span>
                             ))}
                             {problema.usuariosAfectados.length > 3 && (
-                              <span className="text-xs text-white/30">+{problema.usuariosAfectados.length - 3}</span>
+                              <span className="text-xs text-slate-500">+{problema.usuariosAfectados.length - 3}</span>
                             )}
                           </div>
                         )}
                       </div>
-                      <div className="px-2 py-1 rounded text-xs font-medium text-white"
-                        style={{
-                          background: problema.impacto >= 50 ? '#ef4444' : problema.impacto >= 25 ? '#f97316' : '#f59e0b',
-                        }}
-                      >
+                      <div className={`px-2 py-1 rounded text-xs font-medium ${
+                        problema.impacto >= 50 ? 'bg-red-500 text-white' :
+                        problema.impacto >= 25 ? 'bg-orange-500 text-white' : 'bg-amber-500 text-white'
+                      }`}>
                         {problema.impacto}%
                       </div>
                     </div>
@@ -685,12 +710,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             )}
           </div>
 
-          {/* Graficos */}
+          {/* Gráficos */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Grafico de Barras - Rendimiento por Usuario */}
-            <div className="rounded-xl border border-white/[0.06] p-6" style={{ background: 'rgba(255,255,255,0.03)' }}>
-              <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-blue-400" />
+            {/* Gráfico de Barras - Rendimiento por Usuario */}
+            <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-6">
+              <h3 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-blue-500" />
                 Rendimiento por Usuario
               </h3>
               <div className="h-64">
@@ -725,11 +750,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </div>
 
-            {/* Grafico de Pie - Distribucion de Estados */}
-            <div className="rounded-xl border border-white/[0.06] p-6" style={{ background: 'rgba(255,255,255,0.03)' }}>
-              <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-                <PieChart className="w-5 h-5 text-purple-400" />
-                Distribucion de Estados
+            {/* Gráfico de Pie - Distribución de Estados */}
+            <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-6">
+              <h3 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                <PieChart className="w-5 h-5 text-purple-500" />
+                Distribución de Estados
               </h3>
               <div className="h-64 flex items-center justify-center">
                 {chartDataDistribucion.length > 0 ? (
@@ -751,8 +776,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </Pie>
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#0f172a',
-                          border: '1px solid rgba(255,255,255,0.1)',
+                          backgroundColor: '#1e293b',
+                          border: 'none',
                           borderRadius: '8px',
                           color: 'white',
                         }}
@@ -760,14 +785,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </RechartsPieChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-white/30">No hay datos para mostrar</p>
+                  <p className="text-slate-500">No hay datos para mostrar</p>
                 )}
               </div>
               <div className="flex flex-wrap justify-center gap-4 mt-4">
                 {chartDataDistribucion.map((item) => (
                   <div key={item.name} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-sm text-white/50">{item.name} ({item.value})</span>
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-sm text-slate-600 dark:text-slate-400">
+                      {item.name} ({item.value})
+                    </span>
                   </div>
                 ))}
               </div>
@@ -775,39 +805,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           {/* Ranking de Usuarios */}
-          <div className="rounded-xl border border-white/[0.06] p-6" style={{ background: 'rgba(255,255,255,0.03)' }}>
-            <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-              <Award className="w-5 h-5 text-amber-400" />
+          <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-6">
+            <h3 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+              <Award className="w-5 h-5 text-amber-500" />
               Ranking de Usuarios
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-white/[0.06]">
-                    <th className="text-left py-3 px-2 text-sm font-semibold text-white/40">#</th>
-                    <th className="text-left py-3 px-2 text-sm font-semibold text-white/40">Usuario</th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-white/40">Semaforo</th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-white/40">Tasa Exito</th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-white/40">Eficiencia</th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-white/40">Guias</th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-white/40">Racha</th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-white/40">Estado</th>
+                  <tr className="border-b border-slate-200 dark:border-navy-700">
+                    <th className="text-left py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">#</th>
+                    <th className="text-left py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Usuario</th>
+                    <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Semáforo</th>
+                    <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Tasa Éxito</th>
+                    <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Eficiencia</th>
+                    <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Guías</th>
+                    <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Racha</th>
+                    <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
                   {datos.ranking.map((usuario, index) => {
                     const estadoColors = getEstadoColor(usuario.estado);
                     const semaforo = usuario.avanzadas?.semaforo || 'gris';
+                    const semaforoColors = COLORES_SEMAFORO[semaforo];
                     return (
                       <tr
                         key={usuario.usuario}
-                        className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors"
+                        className="border-b border-slate-100 dark:border-navy-700 hover:bg-slate-50 dark:hover:bg-navy-700/50 transition-colors"
                       >
                         <td className="py-3 px-2">
                           <span className="text-lg">{getMedallaIcon(index)}</span>
                         </td>
                         <td className="py-3 px-2">
-                          <span className="font-medium text-white">{usuario.usuario}</span>
+                          <span className="font-medium text-slate-800 dark:text-white">
+                            {usuario.usuario}
+                          </span>
                         </td>
                         <td className="py-3 px-2 text-center">
                           <span className="text-xl">
@@ -818,23 +851,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </span>
                         </td>
                         <td className="py-3 px-2 text-center">
-                          <span className={`font-semibold ${
-                            usuario.tasaExito >= 85 ? 'text-emerald-400' :
-                            usuario.tasaExito >= 70 ? 'text-blue-400' :
-                            usuario.tasaExito >= 50 ? 'text-amber-400' : 'text-red-400'
-                          }`}>
+                          <span className={`font-semibold ${estadoColors.text}`}>
                             {usuario.tasaExito.toFixed(1)}%
                           </span>
                         </td>
                         <td className="py-3 px-2 text-center">
                           <span className={`font-medium ${
-                            (usuario.avanzadas?.eficiencia || 0) >= 100 ? 'text-emerald-400' :
-                            (usuario.avanzadas?.eficiencia || 0) >= 80 ? 'text-blue-400' : 'text-red-400'
+                            (usuario.avanzadas?.eficiencia || 0) >= 100 ? 'text-emerald-600 dark:text-emerald-400' :
+                            (usuario.avanzadas?.eficiencia || 0) >= 80 ? 'text-blue-600 dark:text-blue-400' :
+                            'text-red-600 dark:text-red-400'
                           }`}>
                             {(usuario.avanzadas?.eficiencia || 0).toFixed(0)}%
                           </span>
                         </td>
-                        <td className="py-3 px-2 text-center text-white/60">
+                        <td className="py-3 px-2 text-center text-slate-700 dark:text-slate-300">
                           {usuario.guiasRealizadas}/{usuario.totalGuiasIniciales}
                         </td>
                         <td className="py-3 px-2 text-center">
@@ -843,16 +873,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </span>
                         </td>
                         <td className="py-3 px-2 text-center">
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
-                            style={{
-                              background: usuario.estado === 'excelente' ? 'rgba(16,185,129,0.15)' :
-                                usuario.estado === 'bueno' ? 'rgba(59,130,246,0.15)' :
-                                usuario.estado === 'regular' ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)',
-                              color: usuario.estado === 'excelente' ? '#34d399' :
-                                usuario.estado === 'bueno' ? '#60a5fa' :
-                                usuario.estado === 'regular' ? '#fbbf24' : '#f87171',
-                            }}
-                          >
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${estadoColors.bg} ${estadoColors.text}`}>
                             {estadoColors.icon} {usuario.estado}
                           </span>
                         </td>
@@ -866,31 +887,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {/* Alertas Globales */}
           {alertas.length > 0 && (
-            <div className="rounded-xl border border-white/[0.06] p-6" style={{ background: 'rgba(255,255,255,0.03)' }}>
-              <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-red-400" />
+            <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-6">
+              <h3 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-red-500" />
                 Alertas del Equipo ({alertas.length})
               </h3>
               <div className="space-y-3">
                 {alertas.map((alerta) => {
-                  const colorMap: Record<string, { bg: string; border: string; text: string }> = {
-                    critico: { bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.15)', text: 'text-red-400' },
-                    urgente: { bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.15)', text: 'text-orange-400' },
-                    atencion: { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.15)', text: 'text-amber-400' },
-                    info: { bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.15)', text: 'text-blue-400' },
-                  };
-                  const c = colorMap[alerta.tipo] || colorMap.info;
+                  const alertaColors = COLORES_ALERTA[alerta.tipo];
                   return (
-                    <div key={alerta.id} className="p-4 rounded-xl" style={{ background: c.bg, border: `1px solid ${c.border}` }}>
+                    <div
+                      key={alerta.id}
+                      className={`p-4 rounded-xl border ${alertaColors.bg} ${alertaColors.border}`}
+                    >
                       <div className="flex items-start gap-3">
                         <span className="text-xl">{alerta.icono}</span>
                         <div className="flex-1">
-                          <p className={`font-semibold ${c.text}`}>{alerta.titulo}</p>
-                          <p className={`text-sm mt-1 ${c.text} opacity-70`}>{alerta.descripcion}</p>
+                          <p className={`font-semibold ${alertaColors.text}`}>
+                            {alerta.titulo}
+                          </p>
+                          <p className={`text-sm mt-1 ${alertaColors.text} opacity-80`}>
+                            {alerta.descripcion}
+                          </p>
                           {alerta.usuariosAfectados && alerta.usuariosAfectados.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-2">
                               {alerta.usuariosAfectados.map((u) => (
-                                <span key={u} className="px-2 py-0.5 rounded text-xs text-white/60" style={{ background: 'rgba(255,255,255,0.06)' }}>{u}</span>
+                                <span
+                                  key={u}
+                                  className="px-2 py-0.5 bg-white/50 dark:bg-black/20 rounded text-xs"
+                                >
+                                  {u}
+                                </span>
                               ))}
                             </div>
                           )}
@@ -905,79 +932,96 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {/* Recomendaciones */}
           {recomendaciones.length > 0 && (
-            <div className="rounded-xl border p-6" style={{ background: 'rgba(99, 102, 241, 0.04)', borderColor: 'rgba(99, 102, 241, 0.12)' }}>
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800 p-6">
               <button
                 onClick={() => setExpandedRecs(!expandedRecs)}
                 className="w-full flex items-center justify-between mb-4"
               >
-                <h3 className="font-semibold text-indigo-300 flex items-center gap-2">
-                  <Lightbulb className="w-5 h-5 text-indigo-400" />
-                  Recomendaciones IA ({recomendaciones.length})
+                <h3 className="font-semibold text-blue-800 dark:text-blue-300 flex items-center gap-2">
+                  <Lightbulb className="w-5 h-5 text-blue-500" />
+                  Recomendaciones Automáticas ({recomendaciones.length})
                 </h3>
                 {expandedRecs ? (
-                  <ChevronUp className="w-5 h-5 text-indigo-400" />
+                  <ChevronUp className="w-5 h-5 text-blue-500" />
                 ) : (
-                  <ChevronDown className="w-5 h-5 text-indigo-400" />
+                  <ChevronDown className="w-5 h-5 text-blue-500" />
                 )}
               </button>
               {expandedRecs && (
                 <div className="space-y-3">
-                  {recomendaciones.map((rec) => (
-                    <div key={rec.id} className="rounded-xl p-4 border border-white/[0.06]" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                      <div className="flex items-start gap-3">
-                        <div className="text-xl">{rec.icono || '💡'}</div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium text-white"
-                              style={{
-                                background: rec.prioridad === 'alta' ? '#ef4444' : rec.prioridad === 'media' ? '#f59e0b' : '#3b82f6',
-                              }}
-                            >
-                              {rec.prioridad.toUpperCase()}
-                            </span>
-                            <span className="font-semibold text-white">{rec.titulo}</span>
-                          </div>
-                          <p className="text-sm text-white/40 mb-2">{rec.descripcion}</p>
-                          <div className="flex items-center gap-2 text-sm text-indigo-400">
-                            <Zap className="w-4 h-4" />
-                            <span className="font-medium">Accion:</span>
-                            <span className="text-white/50">{rec.accion}</span>
+                  {recomendaciones.map((rec, index) => {
+                    const prioridadColors = COLORES_PRIORIDAD[rec.prioridad];
+                    return (
+                      <div
+                        key={rec.id}
+                        className="bg-white dark:bg-navy-800 rounded-xl p-4 border border-blue-100 dark:border-blue-900"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="text-xl">{rec.icono || '💡'}</div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${prioridadColors.badge}`}>
+                                {rec.prioridad.toUpperCase()}
+                              </span>
+                              <span className="font-semibold text-slate-800 dark:text-white">
+                                {rec.titulo}
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+                              {rec.descripcion}
+                            </p>
+                            <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+                              <Zap className="w-4 h-4" />
+                              <span className="font-medium">Acción:</span>
+                              <span>{rec.accion}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
           )}
 
-          {/* Informacion adicional */}
+          {/* Información adicional */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="rounded-xl p-4 text-center border border-white/[0.06]" style={{ background: 'rgba(255,255,255,0.02)' }}>
+            <div className="bg-slate-50 dark:bg-navy-700 rounded-xl p-4 text-center">
               <div className="text-2xl mb-1">📊</div>
-              <div className="text-lg font-bold text-white">{datos.duplicadosDetectados}</div>
-              <div className="text-sm text-white/40">Duplicados eliminados</div>
+              <div className="text-lg font-bold text-slate-800 dark:text-white">
+                {datos.duplicadosDetectados}
+              </div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                Duplicados eliminados
+              </div>
             </div>
-            <div className="rounded-xl p-4 text-center border border-white/[0.06]" style={{ background: 'rgba(255,255,255,0.02)' }}>
+            <div className="bg-slate-50 dark:bg-navy-700 rounded-xl p-4 text-center">
               <div className="text-2xl mb-1">⏱️</div>
-              <div className="text-lg font-bold text-white">{datos.rondasConTiempoCero}</div>
-              <div className="text-sm text-white/40">Rondas con tiempo = 0</div>
+              <div className="text-lg font-bold text-slate-800 dark:text-white">
+                {datos.rondasConTiempoCero}
+              </div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                Rondas con tiempo = 0
+              </div>
             </div>
-            <div className="rounded-xl p-4 text-center border border-white/[0.06]" style={{ background: 'rgba(255,255,255,0.02)' }}>
+            <div className="bg-slate-50 dark:bg-navy-700 rounded-xl p-4 text-center">
               <div className="text-2xl mb-1">❌</div>
-              <div className="text-lg font-bold text-white">{datos.ratioCancelaciones.toFixed(1)}%</div>
-              <div className="text-sm text-white/40">Ratio cancelaciones</div>
+              <div className="text-lg font-bold text-slate-800 dark:text-white">
+                {datos.ratioCancelaciones.toFixed(1)}%
+              </div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                Ratio cancelaciones
+              </div>
             </div>
           </div>
 
           {/* Fecha del reporte */}
-          <div className="text-center text-sm text-white/30">
+          <div className="text-center text-sm text-slate-500 dark:text-slate-400">
             Reporte generado: {new Date(datos.fecha).toLocaleString()}
           </div>
         </>
       )}
-      </div>
     </div>
   );
 };

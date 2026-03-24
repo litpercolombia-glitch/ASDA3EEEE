@@ -4,4 +4,3 @@ export { MyReportsPanel } from './MyReportsPanel';
 export { AdminReportsView } from './AdminReportsView';
 export { PublicUploadPage } from './PublicUploadPage';
 export { ShareableLinkManager } from './ShareableLinkManager';
-export { PedidosMetricsDashboard } from './PedidosMetricsDashboard';

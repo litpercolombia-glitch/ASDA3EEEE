@@ -33,7 +33,6 @@ import {
 import { useReportUploadStore } from '../../stores/reportUploadStore';
 import { useAuthStore } from '../../stores/authStore';
 import { ShareableLinkManager } from './ShareableLinkManager';
-import { PedidosMetricsDashboard } from './PedidosMetricsDashboard';
 import {
   UserReport,
   ReportCategory,
@@ -47,7 +46,7 @@ export function AdminReportsView() {
   const { user } = useAuthStore();
   const { getAll, getStats, getCompliance, updateStatus } = useReportUploadStore();
 
-  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'compliance' | 'links' | 'pedidos'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'compliance' | 'links'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<ReportStatus | 'all'>('all');
   const [filterCategory, setFilterCategory] = useState<ReportCategory | 'all'>('all');
@@ -181,7 +180,6 @@ export function AdminReportsView() {
           { id: 'all', label: 'Todos los Reportes', icon: FileText, count: stats.total },
           { id: 'pending', label: 'Pendientes de Revisión', icon: Clock, count: stats.pendingReview },
           { id: 'compliance', label: 'Cumplimiento por Persona', icon: Users, count: compliance.length },
-          { id: 'pedidos', label: 'Métricas Pedidos', icon: BarChart3, count: 0 },
           { id: 'links', label: 'Links Compartibles', icon: Link2, count: 0 },
         ].map(tab => (
           <button
@@ -206,10 +204,8 @@ export function AdminReportsView() {
         ))}
       </div>
 
-      {/* Content by Tab */}
-      {activeTab === 'pedidos' ? (
-        <PedidosMetricsDashboard />
-      ) : activeTab === 'links' ? (
+      {/* Compliance Tab */}
+      {activeTab === 'links' ? (
         <ShareableLinkManager />
       ) : activeTab === 'compliance' ? (
         <div className="space-y-3">

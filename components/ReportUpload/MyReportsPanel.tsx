@@ -1,5 +1,5 @@
 // components/ReportUpload/MyReportsPanel.tsx
-// Panel donde cada usuario ve sus reportes subidos + métricas personales de pedidos
+// Panel donde cada usuario ve sus reportes subidos
 
 import React, { useState, useMemo } from 'react';
 import {
@@ -22,22 +22,7 @@ import {
   Image,
   FileSpreadsheet,
   Inbox,
-  Package,
-  TrendingUp,
-  Target,
-  Flame,
-  Trophy,
-  Zap,
 } from 'lucide-react';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-  ReferenceLine,
-  Tooltip,
-} from 'recharts';
 import { useAuthStore } from '../../stores/authStore';
 import { useReportUploadStore } from '../../stores/reportUploadStore';
 import {
@@ -47,13 +32,6 @@ import {
   REPORT_CATEGORIES,
   STATUS_CONFIG,
   formatFileSize,
-  META_MINUTOS_POR_PEDIDO,
-  getSemaforoColor,
-  SEMAFORO_CONFIG,
-  getPedidosReportsByUser,
-  getPedidosTrend,
-  getPedidosRanking,
-  getPedidosMetrics,
 } from '../../services/reportUploadService';
 
 interface MyReportsPanelProps {
@@ -66,33 +44,6 @@ export function MyReportsPanel({ onOpenUploadModal }: MyReportsPanelProps) {
 
   const [viewingReport, setViewingReport] = useState<UserReport | null>(null);
   const [sortBy, setSortBy] = useState<'date' | 'status'>('date');
-
-  // Pedidos metrics for current user
-  const pedidosData = useMemo(() => {
-    if (!user) return null;
-    const reports = getPedidosReportsByUser(user.id);
-    if (reports.length === 0) return null;
-
-    const metrics = getPedidosMetrics({ userId: user.id, days: 30 });
-    const trend = getPedidosTrend(user.id, 7);
-    const ranking = getPedidosRanking();
-    const myRank = ranking.findIndex(r => r.colaboradorId === user.id) + 1;
-    const myData = ranking.find(r => r.colaboradorId === user.id);
-
-    // Today's data
-    const today = new Date().toISOString().split('T')[0];
-    const todayMetrics = getPedidosMetrics({ userId: user.id, fecha: today });
-
-    return {
-      metrics,
-      trend,
-      myRank,
-      totalRanked: ranking.length,
-      streak: myData?.streak || 0,
-      todayPedidos: todayMetrics.totalPedidos,
-      todayTiempo: todayMetrics.tiempoPromedioPorPedido,
-    };
-  }, [user]);
 
   const reports = useMemo(() => {
     if (!user) return [];
@@ -170,118 +121,6 @@ export function MyReportsPanel({ onOpenUploadModal }: MyReportsPanelProps) {
           Subir Reporte
         </button>
       </div>
-
-      {/* Pedidos Metrics Section */}
-      {pedidosData && (
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-2">
-            <Package className="w-4 h-4 text-orange-400" />
-            Mi Rendimiento en Pedidos
-          </h3>
-
-          {/* Today's Performance Card */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-            {/* Tiempo/Pedido */}
-            {(() => {
-              const tiempo = pedidosData.metrics.tiempoPromedioPorPedido;
-              const color = tiempo > 0 ? getSemaforoColor(tiempo) : 'green';
-              const config = SEMAFORO_CONFIG[color];
-              return (
-                <div className={`rounded-xl border p-3 ${config.bgColor} ${config.borderColor}`}>
-                  <p className="text-[10px] text-gray-400 uppercase">Tiempo/Pedido</p>
-                  <p className={`text-2xl font-bold ${config.color}`}>
-                    {tiempo > 0 ? `${tiempo}` : '--'}
-                  </p>
-                  <p className="text-[10px] text-gray-500">min (meta: {META_MINUTOS_POR_PEDIDO})</p>
-                </div>
-              );
-            })()}
-
-            {/* Total Pedidos */}
-            <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-3">
-              <p className="text-[10px] text-gray-400 uppercase">Total Pedidos</p>
-              <p className="text-2xl font-bold text-white">{pedidosData.metrics.totalPedidos}</p>
-              <p className="text-[10px] text-gray-500">{pedidosData.metrics.pedidosPorHora} /hora</p>
-            </div>
-
-            {/* Cumplimiento */}
-            <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-3">
-              <p className="text-[10px] text-gray-400 uppercase">En Meta</p>
-              <p className={`text-2xl font-bold ${
-                pedidosData.metrics.porcentajeCumplimientoMeta >= 80 ? 'text-green-400' :
-                pedidosData.metrics.porcentajeCumplimientoMeta >= 50 ? 'text-yellow-400' : 'text-red-400'
-              }`}>
-                {pedidosData.metrics.porcentajeCumplimientoMeta}%
-              </p>
-              <p className="text-[10px] text-gray-500">rondas cumpliendo</p>
-            </div>
-
-            {/* Ranking */}
-            <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-3">
-              <p className="text-[10px] text-gray-400 uppercase">Mi Ranking</p>
-              <p className="text-2xl font-bold text-amber-400 flex items-center gap-1">
-                <Trophy className="w-4 h-4" />
-                #{pedidosData.myRank || '--'}
-              </p>
-              <p className="text-[10px] text-gray-500">de {pedidosData.totalRanked}</p>
-            </div>
-
-            {/* Streak */}
-            <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-3">
-              <p className="text-[10px] text-gray-400 uppercase">Streak</p>
-              <p className="text-2xl font-bold text-orange-400 flex items-center gap-1">
-                {pedidosData.streak > 0 && <Flame className="w-4 h-4" />}
-                {pedidosData.streak}
-              </p>
-              <p className="text-[10px] text-gray-500">días en meta</p>
-            </div>
-          </div>
-
-          {/* Mini Trend Chart */}
-          {pedidosData.trend.length > 1 && (
-            <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-4">
-              <p className="text-xs font-medium text-gray-400 mb-3 flex items-center gap-1.5">
-                <TrendingUp className="w-3.5 h-3.5 text-indigo-400" />
-                Mi tendencia (últimos 7 días)
-              </p>
-              <ResponsiveContainer width="100%" height={120}>
-                <LineChart data={pedidosData.trend}>
-                  <XAxis
-                    dataKey="fecha"
-                    stroke="#6b7280"
-                    fontSize={9}
-                    tickFormatter={(v) => {
-                      const d = new Date(v + 'T12:00:00');
-                      return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
-                    }}
-                  />
-                  <YAxis stroke="#6b7280" fontSize={9} hide />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px', fontSize: '12px' }}
-                    formatter={(value: number) => [`${value} min`, 'Tiempo/Pedido']}
-                  />
-                  <ReferenceLine
-                    y={META_MINUTOS_POR_PEDIDO}
-                    stroke="#22c55e"
-                    strokeDasharray="4 4"
-                    strokeWidth={1}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="tiempoPromedio"
-                    stroke="#818cf8"
-                    strokeWidth={2}
-                    dot={{ fill: '#818cf8', r: 3 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-              <p className="text-[10px] text-gray-600 text-center mt-1">
-                Línea verde = meta {META_MINUTOS_POR_PEDIDO} min/pedido
-              </p>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Status Pills */}
       <div className="flex flex-wrap gap-2">
