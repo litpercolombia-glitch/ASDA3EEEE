@@ -82,27 +82,27 @@ export const SEMAFORO = {
 // ===== COLORES SEMÁFORO =====
 export const COLORES_SEMAFORO = {
   verde: {
-    bg: 'bg-emerald-100 dark:bg-emerald-900/30',
-    text: 'text-emerald-700 dark:text-emerald-400',
-    border: 'border-emerald-500',
+    bg: 'bg-emerald-500/15',
+    text: 'text-emerald-400',
+    border: 'border-emerald-500/30',
     gradient: 'from-emerald-400 to-emerald-600',
   },
   amarillo: {
-    bg: 'bg-amber-100 dark:bg-amber-900/30',
-    text: 'text-amber-700 dark:text-amber-400',
-    border: 'border-amber-500',
+    bg: 'bg-amber-500/15',
+    text: 'text-amber-400',
+    border: 'border-amber-500/30',
     gradient: 'from-amber-400 to-amber-600',
   },
   rojo: {
-    bg: 'bg-red-100 dark:bg-red-900/30',
-    text: 'text-red-700 dark:text-red-400',
-    border: 'border-red-500',
-    gradient: 'from-red-400 to-red-600',
+    bg: 'bg-rose-500/15',
+    text: 'text-rose-400',
+    border: 'border-rose-500/30',
+    gradient: 'from-rose-400 to-rose-600',
   },
   gris: {
-    bg: 'bg-slate-100 dark:bg-slate-900/30',
-    text: 'text-slate-500 dark:text-slate-400',
-    border: 'border-slate-400',
+    bg: 'bg-slate-500/15',
+    text: 'text-slate-400',
+    border: 'border-slate-500/30',
     gradient: 'from-slate-400 to-slate-500',
   },
 };
@@ -110,31 +110,31 @@ export const COLORES_SEMAFORO = {
 // ===== COLORES POR ESTADO =====
 export const COLORES_ESTADO = {
   excelente: {
-    bg: 'bg-emerald-100 dark:bg-emerald-900/30',
-    text: 'text-emerald-700 dark:text-emerald-400',
-    border: 'border-emerald-500',
-    badge: 'bg-emerald-500',
+    bg: 'bg-emerald-500/10',
+    text: 'text-emerald-400',
+    border: 'border-emerald-500/30',
+    badge: 'bg-emerald-500/20 text-emerald-400',
     icon: '🟢',
   },
   bueno: {
-    bg: 'bg-blue-100 dark:bg-blue-900/30',
-    text: 'text-blue-700 dark:text-blue-400',
-    border: 'border-blue-500',
-    badge: 'bg-blue-500',
+    bg: 'bg-blue-500/10',
+    text: 'text-blue-400',
+    border: 'border-blue-500/30',
+    badge: 'bg-blue-500/20 text-blue-400',
     icon: '🔵',
   },
   regular: {
-    bg: 'bg-amber-100 dark:bg-amber-900/30',
-    text: 'text-amber-700 dark:text-amber-400',
-    border: 'border-amber-500',
-    badge: 'bg-amber-500',
+    bg: 'bg-amber-500/10',
+    text: 'text-amber-400',
+    border: 'border-amber-500/30',
+    badge: 'bg-amber-500/20 text-amber-400',
     icon: '🟡',
   },
   bajo: {
-    bg: 'bg-red-100 dark:bg-red-900/30',
-    text: 'text-red-700 dark:text-red-400',
-    border: 'border-red-500',
-    badge: 'bg-red-500',
+    bg: 'bg-rose-500/10',
+    text: 'text-rose-400',
+    border: 'border-rose-500/30',
+    badge: 'bg-rose-500/20 text-rose-400',
     icon: '🔴',
   },
 };
@@ -142,27 +142,27 @@ export const COLORES_ESTADO = {
 // ===== COLORES ALERTAS =====
 export const COLORES_ALERTA = {
   critico: {
-    bg: 'bg-red-100 dark:bg-red-900/30',
-    text: 'text-red-700 dark:text-red-400',
-    border: 'border-red-500',
+    bg: 'bg-rose-500/10',
+    text: 'text-rose-400',
+    border: 'border-l-rose-500',
     icon: '🔴',
   },
   urgente: {
-    bg: 'bg-orange-100 dark:bg-orange-900/30',
-    text: 'text-orange-700 dark:text-orange-400',
-    border: 'border-orange-500',
+    bg: 'bg-orange-500/10',
+    text: 'text-orange-400',
+    border: 'border-l-orange-500',
     icon: '🟠',
   },
   atencion: {
-    bg: 'bg-amber-100 dark:bg-amber-900/30',
-    text: 'text-amber-700 dark:text-amber-400',
-    border: 'border-amber-500',
+    bg: 'bg-amber-500/10',
+    text: 'text-amber-400',
+    border: 'border-l-amber-500',
     icon: '🟡',
   },
   info: {
-    bg: 'bg-blue-100 dark:bg-blue-900/30',
-    text: 'text-blue-700 dark:text-blue-400',
-    border: 'border-blue-500',
+    bg: 'bg-blue-500/10',
+    text: 'text-blue-400',
+    border: 'border-l-blue-500',
     icon: '🔵',
   },
 };
@@ -170,22 +170,22 @@ export const COLORES_ALERTA = {
 // ===== PRIORIDAD RECOMENDACIONES =====
 export const COLORES_PRIORIDAD = {
   alta: {
-    bg: 'bg-red-100 dark:bg-red-900/30',
-    text: 'text-red-700 dark:text-red-400',
-    border: 'border-red-500',
-    badge: 'bg-red-500 text-white',
+    bg: 'bg-rose-500/10',
+    text: 'text-rose-400',
+    border: 'border-rose-500/30',
+    badge: 'bg-rose-500/20 text-rose-300 border border-rose-500/30',
   },
   media: {
-    bg: 'bg-amber-100 dark:bg-amber-900/30',
-    text: 'text-amber-700 dark:text-amber-400',
-    border: 'border-amber-500',
-    badge: 'bg-amber-500 text-white',
+    bg: 'bg-amber-500/10',
+    text: 'text-amber-400',
+    border: 'border-amber-500/30',
+    badge: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
   },
   baja: {
-    bg: 'bg-blue-100 dark:bg-blue-900/30',
-    text: 'text-blue-700 dark:text-blue-400',
-    border: 'border-blue-500',
-    badge: 'bg-blue-500 text-white',
+    bg: 'bg-blue-500/10',
+    text: 'text-blue-400',
+    border: 'border-blue-500/30',
+    badge: 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
   },
 };
 

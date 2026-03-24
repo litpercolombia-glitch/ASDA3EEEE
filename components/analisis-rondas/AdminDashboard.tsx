@@ -85,12 +85,12 @@ const CHART_COLORS = {
   excelente: '#10b981',
   bueno: '#3b82f6',
   regular: '#f59e0b',
-  bajo: '#ef4444',
+  bajo: '#f43f5e',
   primary: '#06b6d4',
   secondary: '#8b5cf6',
 };
 
-const PIE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
+const PIE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#f43f5e'];
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   datos,
@@ -192,17 +192,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   return (
     <div className="space-y-6 p-4 sm:p-6 animate-fade-in">
       {/* Header */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-2xl border border-amber-200 dark:border-amber-800 p-4 sm:p-6">
+      <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl border border-slate-700/50 p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
               <Crown className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-amber-800 dark:text-amber-300 flex items-center gap-2">
+              <h1 className="text-xl font-bold text-white flex items-center gap-2">
                 {ICONOS.ADMIN} Panel de Control Admin
               </h1>
-              <p className="text-sm text-amber-700 dark:text-amber-400">
+              <p className="text-sm text-slate-400">
                 Vista completa del equipo
               </p>
             </div>
@@ -211,7 +211,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={cargando}
-              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl font-medium hover:from-amber-600 hover:to-orange-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2 disabled:opacity-50"
+              className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl font-medium hover:from-cyan-400 hover:to-blue-500 transition-all shadow-md shadow-cyan-500/20 hover:shadow-lg flex items-center gap-2 disabled:opacity-50"
             >
               {cargando ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />
@@ -222,14 +222,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </button>
             <button
               onClick={() => setShowHistorico(!showHistorico)}
-              className="px-4 py-2 bg-white dark:bg-navy-800 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 rounded-xl font-medium hover:bg-amber-50 dark:hover:bg-navy-700 transition-all flex items-center gap-2"
+              className="px-4 py-2 bg-slate-700/50 text-slate-300 border border-slate-600/50 rounded-xl font-medium hover:bg-slate-600/50 transition-all flex items-center gap-2"
             >
               <History className="w-4 h-4" />
               Histórico
             </button>
             <button
               onClick={() => setShowShareModal(!showShareModal)}
-              className="px-4 py-2 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition-all flex items-center gap-2"
+              className="px-4 py-2 bg-slate-700/50 text-slate-300 border border-slate-600/50 rounded-xl font-medium hover:bg-slate-600/50 transition-all flex items-center gap-2"
             >
               <Share2 className="w-4 h-4" />
               Compartir
@@ -237,7 +237,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {datos && (
               <button
                 onClick={() => onExportar('excel')}
-                className="px-4 py-2 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-all flex items-center gap-2"
+                className="px-4 py-2 bg-emerald-600/80 text-white rounded-xl font-medium hover:bg-emerald-500 transition-all flex items-center gap-2"
               >
                 <Download className="w-4 h-4" />
                 Exportar
@@ -245,7 +245,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             )}
             <button
               onClick={onLogout}
-              className="px-4 py-2 bg-slate-100 dark:bg-navy-700 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-navy-600 transition-all flex items-center gap-2"
+              className="px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-xl font-medium transition-all flex items-center gap-2"
             >
               <LogOut className="w-4 h-4" />
               Salir
@@ -263,13 +263,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* Panel de Histórico */}
       {showHistorico && (
-        <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-6">
-          <h3 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-            <History className="w-5 h-5 text-purple-500" />
+        <div className="bg-slate-800/60 rounded-xl border border-slate-700/50 p-6">
+          <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+            <History className="w-5 h-5 text-purple-400" />
             Histórico de Reportes ({historico.length})
           </h3>
           {historico.length === 0 ? (
-            <p className="text-slate-500 dark:text-slate-400 text-center py-4">
+            <p className="text-slate-500 text-center py-4">
               No hay reportes anteriores
             </p>
           ) : (
@@ -277,12 +277,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {historico.slice(0, 10).map((reporte) => (
                 <div
                   key={reporte.id}
-                  className="flex items-center justify-between p-3 bg-slate-50 dark:bg-navy-700 rounded-lg"
+                  className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg"
                 >
                   <div className="flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-slate-400" />
+                    <FileText className="w-5 h-5 text-slate-500" />
                     <div>
-                      <p className="font-medium text-slate-700 dark:text-slate-300">
+                      <p className="font-medium text-slate-300">
                         {reporte.archivoNombre}
                       </p>
                       <p className="text-xs text-slate-500">
@@ -291,7 +291,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-slate-700 dark:text-slate-300">
+                    <p className="font-semibold text-white">
                       {reporte.metricas.tasaExitoEquipo.toFixed(1)}%
                     </p>
                     <p className="text-xs text-slate-500">
@@ -307,30 +307,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* Modal de Compartir */}
       {showShareModal && (
-        <div className="bg-white dark:bg-navy-800 rounded-xl border border-blue-200 dark:border-blue-800 p-6">
+        <div className="bg-slate-800/90 rounded-xl border border-slate-700/50 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
-              <Share2 className="w-5 h-5 text-blue-500" />
+            <h3 className="font-semibold text-white flex items-center gap-2">
+              <Share2 className="w-5 h-5 text-blue-400" />
               Compartir con el Equipo
             </h3>
             <button
               onClick={() => setShowShareModal(false)}
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              className="text-slate-500 hover:text-slate-300"
             >
               <XCircle className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+          <p className="text-sm text-slate-400 mb-4">
             Comparte este link con tu equipo para que puedan acceder al análisis de rondas y ver su rendimiento individual.
           </p>
           <div className="flex items-center gap-2">
-            <div className="flex-1 flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-navy-900 rounded-lg border border-slate-200 dark:border-navy-600">
-              <Link2 className="w-4 h-4 text-slate-400" />
+            <div className="flex-1 flex items-center gap-2 px-4 py-3 bg-slate-900/50 rounded-lg border border-slate-600/50">
+              <Link2 className="w-4 h-4 text-slate-500" />
               <input
                 type="text"
                 value={shareLink}
                 readOnly
-                className="flex-1 bg-transparent text-sm text-slate-700 dark:text-slate-300 outline-none"
+                className="flex-1 bg-transparent text-sm text-slate-300 outline-none"
               />
             </div>
             <button
@@ -338,7 +338,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               className={`px-4 py-3 rounded-lg font-medium flex items-center gap-2 transition-all ${
                 linkCopiado
                   ? 'bg-emerald-500 text-white'
-                  : 'bg-blue-500 text-white hover:bg-blue-600'
+                  : 'bg-cyan-600 text-white hover:bg-cyan-500'
               }`}
             >
               {linkCopiado ? (
@@ -354,8 +354,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               )}
             </button>
           </div>
-          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <p className="text-xs text-blue-700 dark:text-blue-400">
+          <div className="mt-4 p-3 bg-blue-500/10 rounded-lg">
+            <p className="text-xs text-blue-400">
               💡 <strong>Tip:</strong> Cada operador podrá seleccionar su nombre al ingresar para ver sus propias métricas personalizadas.
             </p>
           </div>
@@ -371,18 +371,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           onDrop={handleDrop}
           className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all ${
             dragActive
-              ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
-              : 'border-slate-300 dark:border-navy-600 hover:border-amber-400'
+              ? 'border-cyan-500 bg-cyan-500/5'
+              : 'border-slate-600/50 bg-slate-800/30 hover:border-cyan-500/50'
           }`}
         >
-          <FileSpreadsheet className="w-16 h-16 mx-auto mb-4 text-slate-400" />
-          <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">
+          <FileSpreadsheet className="w-16 h-16 mx-auto mb-4 text-slate-500" />
+          <h3 className="text-lg font-semibold text-white mb-2">
             Sube un archivo CSV o Excel
           </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-            Arrastra y suelta o haz clic en "Subir Reporte"
+          <p className="text-sm text-slate-400 mb-4">
+            Arrastra y suelta o haz clic en &quot;Subir Reporte&quot;
           </p>
-          <p className="text-xs text-slate-400 dark:text-slate-500">
+          <p className="text-xs text-slate-500">
             Formatos soportados: .csv, .xlsx, .xls
           </p>
         </div>
@@ -393,167 +393,180 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {/* Métricas globales */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {/* Total Guías */}
-            <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
+            <div className="bg-slate-800/60 rounded-xl border border-slate-700/50 p-4">
               <div className="flex items-center justify-between mb-2">
-                <Package className="w-5 h-5 text-blue-500" />
+                <div className="p-2 rounded-lg bg-blue-500/10">
+                  <Package className="w-5 h-5 text-blue-400" />
+                </div>
               </div>
-              <div className="text-2xl font-bold text-slate-800 dark:text-white">
+              <div className="text-2xl font-bold text-white">
                 {datos.totalGuiasProcesadas}
               </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">Guías Totales</div>
-              <div className="text-xs text-emerald-600 mt-1">
+              <div className="text-sm text-slate-400">Guías Totales</div>
+              <div className="text-xs text-emerald-400 mt-1">
                 {datos.totalGuiasRealizadas} realizadas
               </div>
             </div>
 
             {/* Total Rondas */}
-            <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
+            <div className="bg-slate-800/60 rounded-xl border border-slate-700/50 p-4">
               <div className="flex items-center justify-between mb-2">
-                <Activity className="w-5 h-5 text-purple-500" />
+                <div className="p-2 rounded-lg bg-purple-500/10">
+                  <Activity className="w-5 h-5 text-purple-400" />
+                </div>
               </div>
-              <div className="text-2xl font-bold text-slate-800 dark:text-white">
+              <div className="text-2xl font-bold text-white">
                 {datos.totalRondas}
               </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">Rondas</div>
+              <div className="text-sm text-slate-400">Rondas</div>
             </div>
 
             {/* Tasa de Éxito */}
-            <div className={`rounded-xl border p-4 ${
+            <div className={`rounded-xl border p-4 bg-slate-800/60 ${
               datos.tasaExitoEquipo >= UMBRALES.META_EXITO_EQUIPO
-                ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700'
+                ? 'border-emerald-500/30'
                 : datos.tasaExitoEquipo >= UMBRALES.REGULAR
-                ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700'
-                : 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
+                ? 'border-amber-500/30'
+                : 'border-rose-500/30'
             }`}>
               <div className="flex items-center justify-between mb-2">
-                <Target className={`w-5 h-5 ${
+                <div className={`p-2 rounded-lg ${
                   datos.tasaExitoEquipo >= UMBRALES.META_EXITO_EQUIPO
-                    ? 'text-emerald-500'
-                    : datos.tasaExitoEquipo >= UMBRALES.REGULAR
-                    ? 'text-amber-500'
-                    : 'text-red-500'
-                }`} />
+                    ? 'bg-emerald-500/10' : datos.tasaExitoEquipo >= UMBRALES.REGULAR
+                    ? 'bg-amber-500/10' : 'bg-rose-500/10'
+                }`}>
+                  <Target className={`w-5 h-5 ${
+                    datos.tasaExitoEquipo >= UMBRALES.META_EXITO_EQUIPO
+                      ? 'text-emerald-400'
+                      : datos.tasaExitoEquipo >= UMBRALES.REGULAR
+                      ? 'text-amber-400'
+                      : 'text-rose-400'
+                  }`} />
+                </div>
                 <span className="text-sm text-slate-500">Meta: {datos.metaEquipo}%</span>
               </div>
               <div className={`text-2xl font-bold ${
                 datos.tasaExitoEquipo >= UMBRALES.META_EXITO_EQUIPO
-                  ? 'text-emerald-700 dark:text-emerald-400'
+                  ? 'text-emerald-400'
                   : datos.tasaExitoEquipo >= UMBRALES.REGULAR
-                  ? 'text-amber-700 dark:text-amber-400'
-                  : 'text-red-700 dark:text-red-400'
+                  ? 'text-amber-400'
+                  : 'text-rose-400'
               }`}>
                 {datos.tasaExitoEquipo.toFixed(1)}%
               </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">Tasa de Éxito</div>
+              <div className="text-sm text-slate-400">Tasa de Éxito</div>
             </div>
 
             {/* Usuarios Activos */}
-            <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-4">
+            <div className="bg-slate-800/60 rounded-xl border border-slate-700/50 p-4">
               <div className="flex items-center justify-between mb-2">
-                <Users className="w-5 h-5 text-cyan-500" />
+                <div className="p-2 rounded-lg bg-cyan-500/10">
+                  <Users className="w-5 h-5 text-cyan-400" />
+                </div>
               </div>
-              <div className="text-2xl font-bold text-slate-800 dark:text-white">
+              <div className="text-2xl font-bold text-white">
                 {datos.usuariosActivos}
               </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">Usuarios Activos</div>
+              <div className="text-sm text-slate-400">Usuarios Activos</div>
             </div>
 
             {/* Novedades */}
-            <div className={`rounded-xl border p-4 ${
+            <div className={`rounded-xl border p-4 bg-slate-800/60 ${
               datos.ratioNovedades > UMBRALES.ALERTA_NOVEDADES
-                ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-700'
-                : 'bg-white dark:bg-navy-800 border-slate-200 dark:border-navy-700'
+                ? 'border-orange-500/30'
+                : 'border-slate-700/50'
             }`}>
               <div className="flex items-center justify-between mb-2">
-                <AlertTriangle className={`w-5 h-5 ${
+                <div className={`p-2 rounded-lg ${
                   datos.ratioNovedades > UMBRALES.ALERTA_NOVEDADES
-                    ? 'text-orange-500'
-                    : 'text-slate-400'
-                }`} />
+                    ? 'bg-orange-500/10' : 'bg-slate-700/50'
+                }`}>
+                  <AlertTriangle className={`w-5 h-5 ${
+                    datos.ratioNovedades > UMBRALES.ALERTA_NOVEDADES
+                      ? 'text-orange-400'
+                      : 'text-slate-400'
+                  }`} />
+                </div>
               </div>
               <div className={`text-2xl font-bold ${
                 datos.ratioNovedades > UMBRALES.ALERTA_NOVEDADES
-                  ? 'text-orange-700 dark:text-orange-400'
-                  : 'text-slate-800 dark:text-white'
+                  ? 'text-orange-400'
+                  : 'text-white'
               }`}>
                 {datos.ratioNovedades.toFixed(1)}%
               </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">Novedades</div>
+              <div className="text-sm text-slate-400">Novedades</div>
             </div>
           </div>
 
           {/* SEMÁFORO DEL EQUIPO + EFICIENCIA + TOP 3 PROBLEMAS */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Semáforo del Equipo */}
-            {datos.semaforoEquipo && (
-              <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-6">
-                <h3 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-cyan-500" />
-                  Semáforo del Equipo
-                </h3>
-                <div className="grid grid-cols-4 gap-2 text-center">
-                  <div className={`p-3 rounded-lg ${COLORES_SEMAFORO.verde.bg}`}>
-                    <div className="text-2xl">🟢</div>
-                    <div className={`text-xl font-bold ${COLORES_SEMAFORO.verde.text}`}>
-                      {datos.semaforoEquipo.verde}
-                    </div>
-                    <div className="text-xs text-slate-500">Excelente</div>
-                  </div>
-                  <div className={`p-3 rounded-lg ${COLORES_SEMAFORO.amarillo.bg}`}>
-                    <div className="text-2xl">🟡</div>
-                    <div className={`text-xl font-bold ${COLORES_SEMAFORO.amarillo.text}`}>
-                      {datos.semaforoEquipo.amarillo}
-                    </div>
-                    <div className="text-xs text-slate-500">Atención</div>
-                  </div>
-                  <div className={`p-3 rounded-lg ${COLORES_SEMAFORO.rojo.bg}`}>
-                    <div className="text-2xl">🔴</div>
-                    <div className={`text-xl font-bold ${COLORES_SEMAFORO.rojo.text}`}>
-                      {datos.semaforoEquipo.rojo}
-                    </div>
-                    <div className="text-xs text-slate-500">Crítico</div>
-                  </div>
-                  <div className={`p-3 rounded-lg ${COLORES_SEMAFORO.gris.bg}`}>
-                    <div className="text-2xl">⚪</div>
-                    <div className={`text-xl font-bold ${COLORES_SEMAFORO.gris.text}`}>
-                      {datos.semaforoEquipo.gris}
-                    </div>
-                    <div className="text-xs text-slate-500">Sin datos</div>
+            {datos.semaforoEquipo && (() => {
+              const semaforoTotal = datos.semaforoEquipo.verde + datos.semaforoEquipo.amarillo + datos.semaforoEquipo.rojo + datos.semaforoEquipo.gris;
+              const semaforoItems = [
+                { label: 'Excelente', value: datos.semaforoEquipo.verde, barColor: 'bg-emerald-500' },
+                { label: 'Atención', value: datos.semaforoEquipo.amarillo, barColor: 'bg-amber-500' },
+                { label: 'Crítico', value: datos.semaforoEquipo.rojo, barColor: 'bg-rose-500' },
+                { label: 'Sin datos', value: datos.semaforoEquipo.gris, barColor: 'bg-slate-500' },
+              ];
+              return (
+                <div className="bg-slate-800/60 rounded-xl border border-slate-700/50 p-6">
+                  <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                    <Activity className="w-5 h-5 text-cyan-400" />
+                    Semáforo del Equipo
+                  </h3>
+                  <div className="space-y-3">
+                    {semaforoItems.map(item => {
+                      const pct = semaforoTotal > 0 ? (item.value / semaforoTotal) * 100 : 0;
+                      return (
+                        <div key={item.label} className="flex items-center gap-3">
+                          <span className="text-sm text-slate-400 w-20 text-right">{item.label}</span>
+                          <div className="flex-1 h-2.5 bg-slate-700/50 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full ${item.barColor} rounded-full transition-all`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-bold text-white w-6 text-right">{item.value}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Eficiencia del Equipo */}
-            <div className={`rounded-xl border p-6 ${
+            <div className={`rounded-xl border p-6 bg-slate-800/60 ${
               (datos.eficienciaEquipo || 0) >= 100
-                ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700'
+                ? 'border-emerald-500/30'
                 : (datos.eficienciaEquipo || 0) >= 80
-                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700'
-                : 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
+                ? 'border-blue-500/30'
+                : 'border-rose-500/30'
             }`}>
-              <h3 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+              <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
                 <Zap className={`w-5 h-5 ${
-                  (datos.eficienciaEquipo || 0) >= 100 ? 'text-emerald-500' :
-                  (datos.eficienciaEquipo || 0) >= 80 ? 'text-blue-500' : 'text-red-500'
+                  (datos.eficienciaEquipo || 0) >= 100 ? 'text-emerald-400' :
+                  (datos.eficienciaEquipo || 0) >= 80 ? 'text-blue-400' : 'text-rose-400'
                 }`} />
                 Eficiencia del Equipo
               </h3>
               <div className="text-center">
                 <div className={`text-4xl font-bold mb-2 ${
-                  (datos.eficienciaEquipo || 0) >= 100 ? 'text-emerald-700 dark:text-emerald-300' :
-                  (datos.eficienciaEquipo || 0) >= 80 ? 'text-blue-700 dark:text-blue-300' : 'text-red-700 dark:text-red-300'
+                  (datos.eficienciaEquipo || 0) >= 100 ? 'text-emerald-400' :
+                  (datos.eficienciaEquipo || 0) >= 80 ? 'text-blue-400' : 'text-rose-400'
                 }`}>
                   {(datos.eficienciaEquipo || 0).toFixed(0)}%
                 </div>
-                <div className="text-sm text-slate-500 dark:text-slate-400">
+                <div className="text-sm text-slate-500">
                   Base: {METRICAS_AVANZADAS.TIEMPO_POR_GUIA} min/guía
                 </div>
-                <div className="mt-3 h-3 bg-slate-200 dark:bg-navy-600 rounded-full overflow-hidden">
+                <div className="mt-3 h-3 bg-slate-700/50 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all ${
                       (datos.eficienciaEquipo || 0) >= 100 ? 'bg-emerald-500' :
-                      (datos.eficienciaEquipo || 0) >= 80 ? 'bg-blue-500' : 'bg-red-500'
+                      (datos.eficienciaEquipo || 0) >= 80 ? 'bg-blue-500' : 'bg-rose-500'
                     }`}
                     style={{ width: `${Math.min(datos.eficienciaEquipo || 0, 150)}%`, maxWidth: '100%' }}
                   />
@@ -563,29 +576,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             {/* Top 3 Problemas */}
             {datos.top3Problemas && datos.top3Problemas.length > 0 && (
-              <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-xl border border-red-200 dark:border-red-800 p-6">
-                <h3 className="font-semibold text-red-800 dark:text-red-300 mb-4 flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-500" />
+              <div className="bg-slate-800/60 rounded-xl border border-rose-500/20 p-6">
+                <h3 className="font-semibold text-rose-400 mb-4 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-rose-400" />
                   Top 3 Problemas del Día
                 </h3>
                 <div className="space-y-3">
-                  {datos.top3Problemas.map((problema, index) => (
+                  {datos.top3Problemas.map((problema) => (
                     <div
                       key={problema.id}
-                      className="flex items-start gap-3 bg-white/50 dark:bg-navy-800/50 rounded-lg p-3"
+                      className="flex items-start gap-3 bg-slate-700/30 rounded-lg p-3"
                     >
                       <span className="text-xl">{problema.icono}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-800 dark:text-slate-200 text-sm truncate">
+                        <p className="font-medium text-slate-200 text-sm truncate">
                           {problema.titulo}
                         </p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                        <p className="text-xs text-slate-500">
                           {problema.descripcion}
                         </p>
                         {problema.usuariosAfectados.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
                             {problema.usuariosAfectados.slice(0, 3).map(u => (
-                              <span key={u} className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded text-xs">
+                              <span key={u} className="px-1.5 py-0.5 bg-rose-500/15 text-rose-300 rounded text-xs">
                                 {u}
                               </span>
                             ))}
@@ -596,8 +609,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         )}
                       </div>
                       <div className={`px-2 py-1 rounded text-xs font-medium ${
-                        problema.impacto >= 50 ? 'bg-red-500 text-white' :
-                        problema.impacto >= 25 ? 'bg-orange-500 text-white' : 'bg-amber-500 text-white'
+                        problema.impacto >= 50 ? 'bg-rose-500/20 text-rose-300' :
+                        problema.impacto >= 25 ? 'bg-orange-500/20 text-orange-300' : 'bg-amber-500/20 text-amber-300'
                       }`}>
                         {problema.impacto}%
                       </div>
@@ -611,21 +624,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {/* Gráficos */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Gráfico de Barras - Rendimiento por Usuario */}
-            <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-6">
-              <h3 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-blue-500" />
+            <div className="bg-slate-800/60 rounded-xl border border-slate-700/50 p-6">
+              <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-blue-400" />
                 Rendimiento por Usuario
               </h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartDataRendimiento} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12 }} />
-                    <YAxis dataKey="nombre" type="category" width={80} tick={{ fontSize: 12 }} />
+                    <defs>
+                      <linearGradient id="barGradient" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#2dd4bf" />
+                        <stop offset="100%" stopColor="#06b6d4" />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12, fill: '#94a3b8' }} />
+                    <YAxis dataKey="nombre" type="category" width={80} tick={{ fontSize: 12, fill: '#94a3b8' }} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#1e293b',
-                        border: 'none',
+                        backgroundColor: '#0f172a',
+                        border: '1px solid #334155',
                         borderRadius: '8px',
                         color: 'white',
                       }}
@@ -633,15 +652,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     />
                     <Bar
                       dataKey="tasaExito"
-                      fill={CHART_COLORS.primary}
-                      radius={[0, 4, 4, 0]}
+                      fill="url(#barGradient)"
+                      radius={[0, 6, 6, 0]}
                     />
                     <Line
                       type="monotone"
                       dataKey="meta"
-                      stroke="#ef4444"
+                      stroke="#f43f5e"
                       strokeDasharray="5 5"
-                      strokeWidth={2}
+                      strokeWidth={1.5}
                     />
                   </BarChart>
                 </ResponsiveContainer>
@@ -649,9 +668,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
 
             {/* Gráfico de Pie - Distribución de Estados */}
-            <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-6">
-              <h3 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                <PieChart className="w-5 h-5 text-purple-500" />
+            <div className="bg-slate-800/60 rounded-xl border border-slate-700/50 p-6">
+              <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                <PieChart className="w-5 h-5 text-purple-400" />
                 Distribución de Estados
               </h3>
               <div className="h-64 flex items-center justify-center">
@@ -666,6 +685,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         outerRadius={90}
                         paddingAngle={2}
                         dataKey="value"
+                        stroke="#1e293b"
+                        strokeWidth={2}
                         label={({ name, value }) => `${name}: ${value}`}
                       >
                         {chartDataDistribucion.map((entry, index) => (
@@ -674,8 +695,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </Pie>
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#1e293b',
-                          border: 'none',
+                          backgroundColor: '#0f172a',
+                          border: '1px solid #334155',
                           borderRadius: '8px',
                           color: 'white',
                         }}
@@ -693,7 +714,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: item.color }}
                     />
-                    <span className="text-sm text-slate-600 dark:text-slate-400">
+                    <span className="text-sm text-slate-400">
                       {item.name} ({item.value})
                     </span>
                   </div>
@@ -703,40 +724,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           {/* Ranking de Usuarios */}
-          <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-6">
-            <h3 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-              <Award className="w-5 h-5 text-amber-500" />
+          <div className="bg-slate-800/60 rounded-xl border border-slate-700/50 p-6">
+            <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+              <Award className="w-5 h-5 text-amber-400" />
               Ranking de Usuarios
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-slate-200 dark:border-navy-700">
-                    <th className="text-left py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">#</th>
-                    <th className="text-left py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Usuario</th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Semáforo</th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Tasa Éxito</th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Eficiencia</th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Guías</th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Racha</th>
-                    <th className="text-center py-3 px-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Estado</th>
+                  <tr className="bg-slate-700/30 border-b border-slate-700/30">
+                    <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">#</th>
+                    <th className="text-left py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Usuario</th>
+                    <th className="text-center py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Semáforo</th>
+                    <th className="text-center py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tasa Éxito</th>
+                    <th className="text-center py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Eficiencia</th>
+                    <th className="text-center py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Guías</th>
+                    <th className="text-center py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Racha</th>
+                    <th className="text-center py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
                   {datos.ranking.map((usuario, index) => {
                     const estadoColors = getEstadoColor(usuario.estado);
                     const semaforo = usuario.avanzadas?.semaforo || 'gris';
-                    const semaforoColors = COLORES_SEMAFORO[semaforo];
+                    const eficiencia = usuario.avanzadas?.eficiencia || 0;
+                    const tasaBarColor = usuario.tasaExito >= 85 ? 'bg-emerald-500' : usuario.tasaExito >= 70 ? 'bg-blue-500' : usuario.tasaExito >= 50 ? 'bg-amber-500' : 'bg-rose-500';
+                    const eficBarColor = eficiencia >= 100 ? 'bg-emerald-500' : eficiencia >= 80 ? 'bg-blue-500' : 'bg-rose-500';
                     return (
                       <tr
                         key={usuario.usuario}
-                        className="border-b border-slate-100 dark:border-navy-700 hover:bg-slate-50 dark:hover:bg-navy-700/50 transition-colors"
+                        className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors"
                       >
                         <td className="py-3 px-2">
                           <span className="text-lg">{getMedallaIcon(index)}</span>
                         </td>
                         <td className="py-3 px-2">
-                          <span className="font-medium text-slate-800 dark:text-white">
+                          <span className="font-medium text-white">
                             {usuario.usuario}
                           </span>
                         </td>
@@ -752,21 +775,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <span className={`font-semibold ${estadoColors.text}`}>
                             {usuario.tasaExito.toFixed(1)}%
                           </span>
+                          <div className="w-16 h-1.5 bg-slate-700/50 rounded-full mt-1 mx-auto">
+                            <div className={`h-full rounded-full ${tasaBarColor}`} style={{ width: `${Math.min(usuario.tasaExito, 100)}%` }} />
+                          </div>
                         </td>
                         <td className="py-3 px-2 text-center">
                           <span className={`font-medium ${
-                            (usuario.avanzadas?.eficiencia || 0) >= 100 ? 'text-emerald-600 dark:text-emerald-400' :
-                            (usuario.avanzadas?.eficiencia || 0) >= 80 ? 'text-blue-600 dark:text-blue-400' :
-                            'text-red-600 dark:text-red-400'
+                            eficiencia >= 100 ? 'text-emerald-400' :
+                            eficiencia >= 80 ? 'text-blue-400' :
+                            'text-rose-400'
                           }`}>
-                            {(usuario.avanzadas?.eficiencia || 0).toFixed(0)}%
+                            {eficiencia.toFixed(0)}%
                           </span>
+                          <div className="w-16 h-1.5 bg-slate-700/50 rounded-full mt-1 mx-auto">
+                            <div className={`h-full rounded-full ${eficBarColor}`} style={{ width: `${Math.min(eficiencia, 100)}%` }} />
+                          </div>
                         </td>
-                        <td className="py-3 px-2 text-center text-slate-700 dark:text-slate-300">
+                        <td className="py-3 px-2 text-center text-slate-300">
                           {usuario.guiasRealizadas}/{usuario.totalGuiasIniciales}
                         </td>
                         <td className="py-3 px-2 text-center">
-                          <span className="text-sm">
+                          <span className="text-sm text-slate-300">
                             {usuario.avanzadas?.racha.icono || '💤'} {usuario.avanzadas?.racha.dias || 0}
                           </span>
                         </td>
@@ -785,9 +814,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {/* Alertas Globales */}
           {alertas.length > 0 && (
-            <div className="bg-white dark:bg-navy-800 rounded-xl border border-slate-200 dark:border-navy-700 p-6">
-              <h3 className="font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-red-500" />
+            <div className="bg-slate-800/60 rounded-xl border border-slate-700/50 p-6">
+              <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-rose-400" />
                 Alertas del Equipo ({alertas.length})
               </h3>
               <div className="space-y-3">
@@ -796,15 +825,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   return (
                     <div
                       key={alerta.id}
-                      className={`p-4 rounded-xl border ${alertaColors.bg} ${alertaColors.border}`}
+                      className={`p-4 rounded-lg border-l-4 bg-slate-700/20 ${alertaColors.border}`}
                     >
                       <div className="flex items-start gap-3">
                         <span className="text-xl">{alerta.icono}</span>
                         <div className="flex-1">
-                          <p className={`font-semibold ${alertaColors.text}`}>
+                          <p className="font-semibold text-white">
                             {alerta.titulo}
                           </p>
-                          <p className={`text-sm mt-1 ${alertaColors.text} opacity-80`}>
+                          <p className="text-sm mt-1 text-slate-400">
                             {alerta.descripcion}
                           </p>
                           {alerta.usuariosAfectados && alerta.usuariosAfectados.length > 0 && (
@@ -812,7 +841,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               {alerta.usuariosAfectados.map((u) => (
                                 <span
                                   key={u}
-                                  className="px-2 py-0.5 bg-white/50 dark:bg-black/20 rounded text-xs"
+                                  className="px-2 py-0.5 bg-slate-600/50 text-slate-300 rounded text-xs"
                                 >
                                   {u}
                                 </span>
@@ -830,29 +859,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {/* Recomendaciones */}
           {recomendaciones.length > 0 && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800 p-6">
+            <div className="bg-slate-800/60 rounded-xl border border-slate-700/50 p-6">
               <button
                 onClick={() => setExpandedRecs(!expandedRecs)}
                 className="w-full flex items-center justify-between mb-4"
               >
-                <h3 className="font-semibold text-blue-800 dark:text-blue-300 flex items-center gap-2">
-                  <Lightbulb className="w-5 h-5 text-blue-500" />
+                <h3 className="font-semibold text-white flex items-center gap-2">
+                  <Lightbulb className="w-5 h-5 text-cyan-400" />
                   Recomendaciones Automáticas ({recomendaciones.length})
                 </h3>
                 {expandedRecs ? (
-                  <ChevronUp className="w-5 h-5 text-blue-500" />
+                  <ChevronUp className="w-5 h-5 text-slate-400" />
                 ) : (
-                  <ChevronDown className="w-5 h-5 text-blue-500" />
+                  <ChevronDown className="w-5 h-5 text-slate-400" />
                 )}
               </button>
               {expandedRecs && (
                 <div className="space-y-3">
-                  {recomendaciones.map((rec, index) => {
+                  {recomendaciones.map((rec) => {
                     const prioridadColors = COLORES_PRIORIDAD[rec.prioridad];
                     return (
                       <div
                         key={rec.id}
-                        className="bg-white dark:bg-navy-800 rounded-xl p-4 border border-blue-100 dark:border-blue-900"
+                        className="bg-slate-700/20 rounded-xl p-4 border border-slate-700/30"
                       >
                         <div className="flex items-start gap-3">
                           <div className="text-xl">{rec.icono || '💡'}</div>
@@ -861,14 +890,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${prioridadColors.badge}`}>
                                 {rec.prioridad.toUpperCase()}
                               </span>
-                              <span className="font-semibold text-slate-800 dark:text-white">
+                              <span className="font-semibold text-white">
                                 {rec.titulo}
                               </span>
                             </div>
-                            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+                            <p className="text-sm text-slate-400 mb-2">
                               {rec.descripcion}
                             </p>
-                            <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+                            <div className="flex items-center gap-2 text-sm text-cyan-400">
                               <Zap className="w-4 h-4" />
                               <span className="font-medium">Acción:</span>
                               <span>{rec.accion}</span>
@@ -883,39 +912,41 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           )}
 
-          {/* Información adicional */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-slate-50 dark:bg-navy-700 rounded-xl p-4 text-center">
-              <div className="text-2xl mb-1">📊</div>
-              <div className="text-lg font-bold text-slate-800 dark:text-white">
-                {datos.duplicadosDetectados}
+          {/* Métricas de Limpieza */}
+          <div className="bg-slate-800/60 rounded-xl border border-slate-700/50 p-4">
+            <div className="grid grid-cols-3 divide-x divide-slate-700/30">
+              <div className="text-center px-4">
+                <BarChart3 className="w-5 h-5 text-blue-400 mx-auto mb-1" />
+                <div className="text-lg font-bold text-white">
+                  {datos.duplicadosDetectados}
+                </div>
+                <div className="text-xs text-slate-500">
+                  Duplicados eliminados
+                </div>
               </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">
-                Duplicados eliminados
+              <div className="text-center px-4">
+                <Clock className="w-5 h-5 text-amber-400 mx-auto mb-1" />
+                <div className="text-lg font-bold text-white">
+                  {datos.rondasConTiempoCero}
+                </div>
+                <div className="text-xs text-slate-500">
+                  Rondas tiempo = 0
+                </div>
               </div>
-            </div>
-            <div className="bg-slate-50 dark:bg-navy-700 rounded-xl p-4 text-center">
-              <div className="text-2xl mb-1">⏱️</div>
-              <div className="text-lg font-bold text-slate-800 dark:text-white">
-                {datos.rondasConTiempoCero}
-              </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">
-                Rondas con tiempo = 0
-              </div>
-            </div>
-            <div className="bg-slate-50 dark:bg-navy-700 rounded-xl p-4 text-center">
-              <div className="text-2xl mb-1">❌</div>
-              <div className="text-lg font-bold text-slate-800 dark:text-white">
-                {datos.ratioCancelaciones.toFixed(1)}%
-              </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">
-                Ratio cancelaciones
+              <div className="text-center px-4">
+                <XCircle className="w-5 h-5 text-rose-400 mx-auto mb-1" />
+                <div className="text-lg font-bold text-white">
+                  {datos.ratioCancelaciones.toFixed(1)}%
+                </div>
+                <div className="text-xs text-slate-500">
+                  Ratio cancelaciones
+                </div>
               </div>
             </div>
           </div>
 
           {/* Fecha del reporte */}
-          <div className="text-center text-sm text-slate-500 dark:text-slate-400">
+          <div className="text-center text-sm text-slate-500">
             Reporte generado: {new Date(datos.fecha).toLocaleString()}
           </div>
         </>
