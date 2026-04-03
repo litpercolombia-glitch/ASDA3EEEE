@@ -365,8 +365,6 @@ const App: React.FC = () => {
   // Main tab navigation (legacy support)
   const [currentTab, setCurrentTab] = useState<MainTabNew | 'home'>('home');
   const [showDataInput, setShowDataInput] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
-
   // Nuevo sistema de navegación con Sidebar
   const {
     activeSection,

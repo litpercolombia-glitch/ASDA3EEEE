@@ -1,5 +1,5 @@
 // stores/layoutStore.ts
-// Estado del layout y sidebar
+// Estado del layout y sidebar - Simplificado (patrón Stripe/Vercel)
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -11,7 +11,6 @@ export type MainSection =
   | 'cerebro-ia'
   | 'negocio'
   | 'marketing'
-  | 'config'
   | 'enterprise';
 
 export type MarketingTab =
@@ -23,7 +22,7 @@ export type MarketingTab =
   | 'integraciones'
   | 'reglas';
 
-// Sub-tabs para cada sección
+// Sub-tabs para cada sección (manejadas por los componentes de contenido)
 export type InicioTab = 'resumen' | 'actividad' | 'estadisticas';
 export type OperacionesTab = 'envios' | 'tracking' | 'historial' | 'rutas';
 export type InteligenciaTab = 'analisis' | 'reportes' | 'predicciones' | 'insights';
@@ -35,13 +34,15 @@ export type EnterpriseTab = 'command-center' | 'empresas' | 'analytics' | 'compl
 interface LayoutState {
   // Sidebar
   sidebarCollapsed: boolean;
-  sidebarHovered: boolean;
 
-  // Navegación
+  // Mobile
+  mobileMenuOpen: boolean;
+
+  // Navegación - 1 click directo
   activeSection: MainSection;
-  activeMarketingTab: MarketingTab;
 
-  // Sub-tabs activas
+  // Sub-tabs (manejadas por contenido, persistidas aquí)
+  activeMarketingTab: MarketingTab;
   activeInicioTab: InicioTab;
   activeOperacionesTab: OperacionesTab;
   activeInteligenciaTab: InteligenciaTab;
@@ -49,9 +50,6 @@ interface LayoutState {
   activeNegocioTab: NegocioTab;
   activeConfigTab: ConfigTab;
   activeEnterpriseTab: EnterpriseTab;
-
-  // Secciones expandidas
-  expandedSections: MainSection[];
 
   // UI
   showChatAssistant: boolean;
@@ -61,12 +59,16 @@ interface LayoutState {
   toggleSidebar: () => void;
   collapseSidebar: () => void;
   expandSidebar: () => void;
-  setHovered: (hovered: boolean) => void;
 
+  // Mobile
+  toggleMobileMenu: () => void;
+  closeMobileMenu: () => void;
+
+  // Navegación directa
   setActiveSection: (section: MainSection) => void;
-  setMarketingTab: (tab: MarketingTab) => void;
 
-  // Sub-tab actions
+  // Sub-tab setters
+  setMarketingTab: (tab: MarketingTab) => void;
   setInicioTab: (tab: InicioTab) => void;
   setOperacionesTab: (tab: OperacionesTab) => void;
   setInteligenciaTab: (tab: InteligenciaTab) => void;
@@ -74,10 +76,6 @@ interface LayoutState {
   setNegocioTab: (tab: NegocioTab) => void;
   setConfigTab: (tab: ConfigTab) => void;
   setEnterpriseTab: (tab: EnterpriseTab) => void;
-
-  // Expandir/colapsar secciones
-  toggleSectionExpanded: (section: MainSection) => void;
-  setSectionExpanded: (section: MainSection, expanded: boolean) => void;
 
   toggleChatAssistant: () => void;
   toggleNotifications: () => void;
@@ -87,7 +85,7 @@ export const useLayoutStore = create<LayoutState>()(
   persist(
     (set) => ({
       sidebarCollapsed: false,
-      sidebarHovered: false,
+      mobileMenuOpen: false,
       activeSection: 'inicio',
       activeMarketingTab: 'dashboard',
 
@@ -100,27 +98,21 @@ export const useLayoutStore = create<LayoutState>()(
       activeConfigTab: 'general',
       activeEnterpriseTab: 'command-center',
 
-      // Secciones expandidas
-      expandedSections: [],
-
       showChatAssistant: false,
       showNotifications: false,
 
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       collapseSidebar: () => set({ sidebarCollapsed: true }),
       expandSidebar: () => set({ sidebarCollapsed: false }),
-      setHovered: (hovered) => set({ sidebarHovered: hovered }),
 
-      setActiveSection: (section) => set((state) => {
-        // Al cambiar de sección, expandir automáticamente
-        const newExpanded = state.expandedSections.includes(section)
-          ? state.expandedSections
-          : [...state.expandedSections, section];
-        return { activeSection: section, expandedSections: newExpanded };
-      }),
-      setMarketingTab: (tab) => set({ activeMarketingTab: tab }),
+      toggleMobileMenu: () => set((state) => ({ mobileMenuOpen: !state.mobileMenuOpen })),
+      closeMobileMenu: () => set({ mobileMenuOpen: false }),
+
+      // 1 click = navega directo. Sin expandedSections.
+      setActiveSection: (section) => set({ activeSection: section }),
 
       // Sub-tab setters
+      setMarketingTab: (tab) => set({ activeMarketingTab: tab }),
       setInicioTab: (tab) => set({ activeInicioTab: tab }),
       setOperacionesTab: (tab) => set({ activeOperacionesTab: tab }),
       setInteligenciaTab: (tab) => set({ activeInteligenciaTab: tab }),
@@ -129,31 +121,22 @@ export const useLayoutStore = create<LayoutState>()(
       setConfigTab: (tab) => set({ activeConfigTab: tab }),
       setEnterpriseTab: (tab) => set({ activeEnterpriseTab: tab }),
 
-      // Toggle expandir sección
-      toggleSectionExpanded: (section) => set((state) => {
-        const isExpanded = state.expandedSections.includes(section);
-        return {
-          expandedSections: isExpanded
-            ? state.expandedSections.filter(s => s !== section)
-            : [...state.expandedSections, section]
-        };
-      }),
-
-      setSectionExpanded: (section, expanded) => set((state) => ({
-        expandedSections: expanded
-          ? [...state.expandedSections.filter(s => s !== section), section]
-          : state.expandedSections.filter(s => s !== section)
-      })),
-
       toggleChatAssistant: () => set((state) => ({ showChatAssistant: !state.showChatAssistant })),
       toggleNotifications: () => set((state) => ({ showNotifications: !state.showNotifications })),
     }),
     {
       name: 'litper-layout-store',
+      version: 2,
+      migrate: (persistedState: any, version: number) => {
+        if (version < 2) {
+          const { expandedSections, sidebarHovered, ...clean } = persistedState;
+          return { ...clean, mobileMenuOpen: false };
+        }
+        return persistedState as LayoutState;
+      },
       partialize: (state) => ({
         sidebarCollapsed: state.sidebarCollapsed,
         activeSection: state.activeSection,
-        expandedSections: state.expandedSections,
       }),
     }
   )
