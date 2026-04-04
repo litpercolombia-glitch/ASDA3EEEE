@@ -32,6 +32,7 @@ import {
   type ConnectionProvider,
   type ProviderInfo,
 } from '../../../services/mcpConnectionsService';
+import { useStitchStore, STITCH_TEMPLATES } from '../../../services/mcpStitchService';
 
 // ============================================
 // COMPONENTES AUXILIARES
@@ -328,6 +329,77 @@ const ConnectModal: React.FC<{
 };
 
 // ============================================
+// STITCH QUICK PANEL
+// ============================================
+
+const StitchQuickPanel: React.FC = () => {
+  const { pipelines, getActiveCount, getTotalRuns, getOverallSuccessRate } = useStitchStore();
+  const activeCount = getActiveCount();
+  const totalRuns = getTotalRuns();
+  const successRate = getOverallSuccessRate();
+
+  return (
+    <div className="mt-6 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/10 dark:to-red-900/10 rounded-xl p-5 border border-orange-200 dark:border-orange-800/50">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Zap className="w-5 h-5 text-orange-500" />
+          <h3 className="font-semibold text-slate-800 dark:text-white">Stitch MCP - Pipelines</h3>
+        </div>
+        <span className="text-xs px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full font-medium">
+          {activeCount} activos
+        </span>
+      </div>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
+        Automatiza flujos de datos entre tus plataformas conectadas
+      </p>
+
+      <div className="grid grid-cols-3 gap-3 mb-3">
+        <div className="bg-white/80 dark:bg-navy-800/80 rounded-lg p-3 text-center">
+          <p className="text-lg font-bold text-slate-800 dark:text-white">{pipelines.length}</p>
+          <p className="text-xs text-slate-400">Pipelines</p>
+        </div>
+        <div className="bg-white/80 dark:bg-navy-800/80 rounded-lg p-3 text-center">
+          <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{totalRuns}</p>
+          <p className="text-xs text-slate-400">Ejecuciones</p>
+        </div>
+        <div className="bg-white/80 dark:bg-navy-800/80 rounded-lg p-3 text-center">
+          <p className="text-lg font-bold text-green-600 dark:text-green-400">{successRate}%</p>
+          <p className="text-xs text-slate-400">Éxito</p>
+        </div>
+      </div>
+
+      {pipelines.length === 0 && (
+        <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+          Ve a la pestaña &quot;Stitch MCP&quot; para crear tu primer pipeline de automatización
+        </p>
+      )}
+
+      {pipelines.length > 0 && (
+        <div className="space-y-1.5">
+          {pipelines.slice(0, 3).map((p) => (
+            <div key={p.id} className="flex items-center justify-between p-2 bg-white/60 dark:bg-navy-800/60 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span>{p.icon}</span>
+                <span className="text-sm text-slate-700 dark:text-slate-300 truncate max-w-[200px]">{p.name}</span>
+              </div>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                p.status === 'active'
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                  : p.status === 'paused'
+                    ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+              }`}>
+                {p.status === 'active' ? 'Activo' : p.status === 'paused' ? 'Pausado' : 'Borrador'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================
 // COMPONENTE PRINCIPAL
 // ============================================
 
@@ -504,6 +576,9 @@ export const MCPDashboard: React.FC = () => {
           </p>
         </div>
       )}
+
+      {/* Stitch MCP Panel */}
+      <StitchQuickPanel />
 
       {/* Connect Modal */}
       {connectingProvider && (

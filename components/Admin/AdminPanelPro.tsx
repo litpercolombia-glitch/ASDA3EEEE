@@ -58,6 +58,7 @@ import {
   Settings,
   Bell,
   History,
+  Workflow,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { DateFilter, FiltroFecha, calcularRangoFecha } from '../ui/DateFilter';
@@ -70,7 +71,7 @@ import { SemaforoExcelData, CiudadSemaforo, STORAGE_KEYS } from '../../types/log
 import { saveTabData, loadTabData } from '../../utils/tabStorage';
 import { FinanceDashboard } from './FinanceCenter';
 import { ApiDashboard } from './ApiCenter';
-import { MCPDashboard } from './MCPCenter';
+import { MCPDashboard, StitchDashboard } from './MCPCenter';
 import { LearningDashboard } from './LearningCenter';
 import { ReportsDashboard } from './ReportsCenter';
 import { CRMDashboard } from './CRMCenter';
@@ -168,7 +169,7 @@ export const AdminPanelPro: React.FC = () => {
 
   // Estados de UI
   const [filtroFecha, setFiltroFecha] = useState<FiltroFecha>('todo');
-  const [activeTab, setActiveTab] = useState<'procesamiento' | 'documentos' | 'financial' | 'centro-financiero' | 'finanzas-pro' | 'conocimiento' | 'integraciones' | 'predicciones' | 'info-logistica' | 'api-publica' | 'mcp-conexiones' | 'aprendizaje' | 'reportes' | 'crm' | 'pedidos' | 'marketing' | 'soporte' | 'notificaciones' | 'seguridad'>('procesamiento');
+  const [activeTab, setActiveTab] = useState<'procesamiento' | 'documentos' | 'financial' | 'centro-financiero' | 'finanzas-pro' | 'conocimiento' | 'integraciones' | 'predicciones' | 'info-logistica' | 'api-publica' | 'mcp-conexiones' | 'stitch-mcp' | 'aprendizaje' | 'reportes' | 'crm' | 'pedidos' | 'marketing' | 'soporte' | 'notificaciones' | 'seguridad'>('procesamiento');
 
   // Estados de documentos
   const [documentos, setDocumentos] = useState<DocumentoCargado[]>([]);
@@ -621,6 +622,7 @@ export const AdminPanelPro: React.FC = () => {
             { id: 'info-logistica', label: 'Info Logística', icon: Truck, color: 'cyan', badge: logisticsData.length },
             { id: 'api-publica', label: 'API Pública', icon: Globe, color: 'indigo' },
             { id: 'mcp-conexiones', label: 'Conexiones MCP', icon: Link, color: 'violet' },
+            { id: 'stitch-mcp', label: 'Stitch MCP', icon: Workflow, color: 'orange' },
             { id: 'aprendizaje', label: 'IA Learning', icon: Brain, color: 'fuchsia' },
             { id: 'reportes', label: 'Reportes', icon: BarChart3, color: 'sky' },
             { id: 'crm', label: 'CRM Clientes', icon: Target, color: 'rose' },
@@ -1137,6 +1139,15 @@ export const AdminPanelPro: React.FC = () => {
           {activeTab === 'mcp-conexiones' && (
             <div className="p-6">
               <MCPDashboard />
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: STITCH MCP */}
+          {/* ============================================ */}
+          {activeTab === 'stitch-mcp' && (
+            <div className="p-6">
+              <StitchDashboard />
             </div>
           )}
 
