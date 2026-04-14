@@ -4,9 +4,98 @@
  * Este archivo contiene TODA la logica de parseo de Excel.
  * NUNCA crees parsers de Excel en otros archivos.
  * Siempre usa: import { parseExcel, parseShipmentExcel } from '@/utils/excelParser'
+ *
+ * FIX 2026-04-14: Added UTF-8 codepage + mojibake repair for Dropi exports
  */
 
 import * as XLSX from 'xlsx';
+
+// ============================================
+// ENCODING FIX - MOJIBAKE REPAIR
+// ============================================
+
+/**
+ * Repairs mojibake (double-encoded UTF-8) in a string.
+ * When Dropi exports Excel as .xls with UTF-8 data, SheetJS reads it
+ * with Latin-1 codepage, causing "Bogotá" → "BogotÃ¡".
+ *
+ * Uses two methods:
+ * 1. TextDecoder (most reliable for fully mojibaked strings)
+ * 2. Manual pattern replacement (fallback for mixed encoding)
+ *
+ * Example: "BogotÃ¡" → "Bogotá", "MedellÃ­n" → "Medellín"
+ */
+export function fixMojibake(text: string): string {
+  if (!text || typeof text !== 'string') return text;
+
+  let fixed = text;
+
+  // Method 1: Try TextDecoder approach (most reliable for full mojibake)
+  try {
+    // Check if string likely contains mojibake (Ã character is the telltale sign)
+    if (fixed.includes('\u00C3') || fixed.includes('\u00C2')) {
+      const bytes = new Uint8Array(fixed.length);
+      for (let i = 0; i < fixed.length; i++) {
+        bytes[i] = fixed.charCodeAt(i) & 0xFF;
+      }
+      const decoded = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      // Verify the decoded string doesn't contain replacement characters
+      if (!decoded.includes('\uFFFD')) {
+        return decoded;
+      }
+    }
+  } catch {
+    // TextDecoder failed (mixed encoding), fall through to manual replacement
+  }
+
+  // Method 2: Manual replacement of known mojibake patterns
+  const MOJIBAKE_MAP: [string, string][] = [
+    // Lowercase accented vowels
+    ['\u00C3\u00A1', 'á'],  // Ã¡ -> á
+    ['\u00C3\u00A9', 'é'],  // Ã© -> é
+    ['\u00C3\u00AD', 'í'],  // Ã­ -> í
+    ['\u00C3\u00B3', 'ó'],  // Ã³ -> ó
+    ['\u00C3\u00BA', 'ú'],  // Ãº -> ú
+    // Uppercase accented vowels
+    ['\u00C3\u0081', 'Á'],
+    ['\u00C3\u0089', 'É'],
+    ['\u00C3\u008D', 'Í'],
+    ['\u00C3\u0093', 'Ó'],
+    ['\u00C3\u009A', 'Ú'],
+    // Ñ / ñ
+    ['\u00C3\u00B1', 'ñ'],
+    ['\u00C3\u0091', 'Ñ'],
+    // Dieresis
+    ['\u00C3\u00BC', 'ü'],
+    ['\u00C3\u009C', 'Ü'],
+    // Additional common patterns
+    ['\u00C2\u00B0', '°'],
+    ['\u00C2\u00B7', '·'],
+    ['\u00C2\u00BF', '¿'],
+    ['\u00C2\u00A1', '¡'],
+  ];
+
+  for (const [broken, correct] of MOJIBAKE_MAP) {
+    if (fixed.includes(broken)) {
+      fixed = fixed.split(broken).join(correct);
+    }
+  }
+
+  return fixed;
+}
+
+/**
+ * Apply mojibake fix to all string values in a row.
+ * Also fixes column names (headers) that may be corrupted.
+ */
+function fixRowEncoding(row: Record<string, unknown>): Record<string, unknown> {
+  const fixed: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(row)) {
+    const fixedKey = fixMojibake(key);
+    fixed[fixedKey] = typeof value === 'string' ? fixMojibake(value) : value;
+  }
+  return fixed;
+}
 
 // ============================================
 // TIPOS GENERICOS
@@ -69,9 +158,13 @@ export async function parseExcel<T = Record<string, unknown>>(
   const warnings: string[] = [];
 
   try {
-    // Leer archivo
+    // Leer archivo con codepage UTF-8
     const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: 'array' });
+    const workbook = XLSX.read(buffer, {
+      type: 'array',
+      codepage: 65001,  // ← FIX: Force UTF-8 encoding for .xls files from Dropi
+      raw: false,        // Parse values as formatted strings
+    });
 
     // Seleccionar hoja
     const selectedSheet = sheetName || workbook.SheetNames[0];
@@ -103,8 +196,11 @@ export async function parseExcel<T = Record<string, unknown>>(
       };
     }
 
-    // Obtener headers
-    const headers = Object.keys(rawData[0]);
+    // ═══ ENCODING FIX: Repair mojibake in ALL rows ═══
+    const cleanData = rawData.map(row => fixRowEncoding(row));
+
+    // Obtener headers (from cleaned data)
+    const headers = Object.keys(cleanData[0]);
 
     // Validar columnas requeridas
     const missingColumns = requiredColumns.filter(
@@ -123,7 +219,7 @@ export async function parseExcel<T = Record<string, unknown>>(
 
     // Procesar filas
     const processedData: T[] = [];
-    const rowsToProcess = maxRows ? rawData.slice(0, maxRows) : rawData;
+    const rowsToProcess = maxRows ? cleanData.slice(0, maxRows) : cleanData;
 
     for (let i = 0; i < rowsToProcess.length; i++) {
       const row = rowsToProcess[i];
@@ -484,4 +580,5 @@ export default {
   isExcelFile,
   validateFileSize,
   normalizeString,
+  fixMojibake,
 };
