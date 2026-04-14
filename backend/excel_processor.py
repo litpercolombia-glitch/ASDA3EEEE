@@ -1,9 +1,12 @@
 """
 Procesador de archivos Excel para el sistema ML de Litper Logística.
 Maneja la validación, limpieza y carga de datos de guías desde archivos Excel.
+
+FIX 2026-04-14: Added encoding repair for mojibake from Dropi exports.
 """
 
 import hashlib
+import re
 import time
 from datetime import datetime
 from typing import Optional, Dict, List, Tuple, Any
@@ -18,6 +21,50 @@ from database.models import (
     ArchivoCargado,
     EstadoArchivo,
 )
+
+
+# ==================== ENCODING REPAIR ====================
+
+# Mojibake repair: when UTF-8 bytes are misread as Latin-1
+# "BogotÃ¡" → "Bogotá", "MedellÃ­n" → "Medellín"
+MOJIBAKE_MAP = {
+    'Ã¡': 'á', 'Ã©': 'é', 'Ã\xad': 'í', 'Ã³': 'ó', 'Ãº': 'ú',
+    'Ã\x81': 'Á', 'Ã\x89': 'É', 'Ã\x8d': 'Í', 'Ã\x93': 'Ó', 'Ã\x9a': 'Ú',
+    'Ã±': 'ñ', 'Ã\x91': 'Ñ',
+    'Ã¼': 'ü', 'Ã\x9c': 'Ü',
+    'Â°': '°', 'Â¿': '¿', 'Â¡': '¡',
+}
+
+
+def reparar_encoding(texto: Any) -> Optional[str]:
+    """
+    Repara texto con mojibake (double-encoded UTF-8).
+    Ejemplo: "BogotÃ¡" → "Bogotá"
+
+    Method 1: Re-encode as Latin-1, decode as UTF-8 (most reliable)
+    Method 2: Manual pattern replacement (fallback for mixed encoding)
+    """
+    if texto is None or not isinstance(texto, str):
+        return texto
+
+    if not texto.strip():
+        return texto
+
+    # Method 1: encode/decode approach
+    try:
+        if 'Ã' in texto or 'Â' in texto:
+            decoded = texto.encode('latin-1').decode('utf-8')
+            return decoded
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        pass  # Mixed encoding, fall through
+
+    # Method 2: Manual pattern replacement
+    fixed = texto
+    for broken, correct in MOJIBAKE_MAP.items():
+        if broken in fixed:
+            fixed = fixed.replace(broken, correct)
+
+    return fixed
 
 
 # ==================== CONFIGURACIÓN ====================
@@ -112,7 +159,7 @@ COLUMN_MAPPING = {
 
 # Columnas requeridas (al menos una de cada grupo)
 REQUIRED_COLUMNS = [
-    ['Número de Guía', 'Numero de Guia', 'Guía', 'Guia'],  # Al menos una columna de guía
+    ['Número de Guía', 'Numero de Guia', 'Guía', 'Guia'],
 ]
 
 # Columnas opcionales importantes
@@ -130,7 +177,6 @@ class ExcelProcessor:
     """
 
     def __init__(self):
-        """Inicializa el procesador"""
         self.errores: List[Dict[str, Any]] = []
         self.warnings: List[str] = []
         self.stats = {
@@ -141,7 +187,6 @@ class ExcelProcessor:
         }
 
     def reset(self):
-        """Reinicia el estado del procesador"""
         self.errores = []
         self.warnings = []
         self.stats = {
@@ -152,32 +197,12 @@ class ExcelProcessor:
         }
 
     def calcular_hash(self, contenido: bytes) -> str:
-        """
-        Calcula el hash MD5 del contenido del archivo.
-        Usado para detectar archivos duplicados.
-
-        Args:
-            contenido: Bytes del archivo.
-
-        Returns:
-            str: Hash MD5 del archivo.
-        """
         return hashlib.md5(contenido).hexdigest()
 
     def validar_formato(self, df: pd.DataFrame) -> Tuple[bool, List[str]]:
-        """
-        Valida que el DataFrame tenga las columnas requeridas.
-
-        Args:
-            df: DataFrame de pandas con los datos.
-
-        Returns:
-            Tuple[bool, List[str]]: (es_válido, lista_de_errores)
-        """
         errores = []
         columnas_excel = set(df.columns.tolist())
 
-        # Verificar que tenga al menos una columna de guía
         tiene_guia = False
         for grupo in REQUIRED_COLUMNS:
             if any(col in columnas_excel for col in grupo):
@@ -190,7 +215,6 @@ class ExcelProcessor:
                 "(Número de Guía, Guía, etc.)"
             )
 
-        # Verificar columnas importantes (solo warning)
         columnas_encontradas = []
         for col in IMPORTANT_COLUMNS:
             if col in columnas_excel:
@@ -205,50 +229,41 @@ class ExcelProcessor:
         return len(errores) == 0, errores
 
     def normalizar_columnas(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Normaliza los nombres de columnas según el mapeo definido.
-
-        Args:
-            df: DataFrame original.
-
-        Returns:
-            DataFrame con columnas normalizadas.
-        """
-        # Crear copia para no modificar original
+        """Normaliza nombres de columnas. Repara mojibake en headers."""
         df_normalizado = df.copy()
 
-        # Mapear nombres de columnas
-        columnas_nuevas = {}
+        # First, repair encoding in column names
+        columnas_reparadas = {}
         for col in df.columns:
+            col_reparado = reparar_encoding(str(col).strip())
+            if col_reparado != str(col).strip():
+                columnas_reparadas[col] = col_reparado
+                logger.debug(f"Columna reparada: '{col}' -> '{col_reparado}'")
+
+        if columnas_reparadas:
+            df_normalizado = df_normalizado.rename(columns=columnas_reparadas)
+
+        # Now map to internal names
+        columnas_nuevas = {}
+        for col in df_normalizado.columns:
             col_str = str(col).strip()
             if col_str in COLUMN_MAPPING:
                 columnas_nuevas[col] = COLUMN_MAPPING[col_str]
             else:
-                # Mantener nombre original en minúsculas y sin espacios
                 columnas_nuevas[col] = col_str.lower().replace(' ', '_')
 
         df_normalizado = df_normalizado.rename(columns=columnas_nuevas)
-
         return df_normalizado
 
     def limpiar_datos(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Limpia y normaliza los datos del DataFrame.
-
-        Args:
-            df: DataFrame con datos crudos.
-
-        Returns:
-            DataFrame limpio.
-        """
+        """Limpia datos. Incluye reparación de encoding mojibake."""
         df_limpio = df.copy()
 
-        # Limpiar strings
+        # Limpiar strings AND repair encoding
         for col in df_limpio.select_dtypes(include=['object']).columns:
             df_limpio[col] = df_limpio[col].apply(
-                lambda x: str(x).strip() if pd.notna(x) else None
+                lambda x: reparar_encoding(str(x).strip()) if pd.notna(x) else None
             )
-            # Reemplazar valores vacíos por None
             df_limpio[col] = df_limpio[col].replace(['', 'nan', 'None', 'null'], None)
 
         # Convertir fechas
@@ -259,9 +274,7 @@ class ExcelProcessor:
         for col in columnas_fecha:
             if col in df_limpio.columns:
                 df_limpio[col] = pd.to_datetime(
-                    df_limpio[col],
-                    errors='coerce',
-                    dayfirst=True  # Formato DD/MM/YYYY común en Colombia
+                    df_limpio[col], errors='coerce', dayfirst=True
                 )
 
         # Convertir valores numéricos
@@ -271,24 +284,20 @@ class ExcelProcessor:
         ]
         for col in columnas_numericas:
             if col in df_limpio.columns:
-                # Remover caracteres no numéricos (excepto punto y coma)
                 df_limpio[col] = df_limpio[col].apply(
                     lambda x: self._limpiar_numero(x) if pd.notna(x) else None
                 )
 
-        # Convertir booleanos
         columnas_bool = ['fue_solucionada']
         for col in columnas_bool:
             if col in df_limpio.columns:
                 df_limpio[col] = df_limpio[col].apply(self._convertir_bool)
 
-        # Normalizar nombres de ciudades
         if 'ciudad_destino' in df_limpio.columns:
             df_limpio['ciudad_destino'] = df_limpio['ciudad_destino'].apply(
                 self._normalizar_ciudad
             )
 
-        # Normalizar transportadoras
         if 'transportadora' in df_limpio.columns:
             df_limpio['transportadora'] = df_limpio['transportadora'].apply(
                 self._normalizar_transportadora
@@ -297,56 +306,74 @@ class ExcelProcessor:
         return df_limpio
 
     def _limpiar_numero(self, valor: Any) -> Optional[float]:
-        """Convierte un valor a número flotante"""
         try:
             if valor is None:
                 return None
-            # Remover caracteres de moneda y separadores
             valor_str = str(valor).replace('$', '').replace(',', '').replace(' ', '')
             return float(valor_str) if valor_str else None
         except (ValueError, TypeError):
             return None
 
     def _convertir_bool(self, valor: Any) -> bool:
-        """Convierte un valor a booleano"""
         if pd.isna(valor) or valor is None:
             return False
         valor_str = str(valor).lower().strip()
         return valor_str in ('si', 'sí', 'yes', 'true', '1', 'x', 'verdadero')
 
     def _normalizar_ciudad(self, ciudad: Optional[str]) -> Optional[str]:
-        """Normaliza el nombre de una ciudad"""
         if not ciudad:
             return None
 
-        ciudad = str(ciudad).strip().upper()
+        # Repair encoding first, then normalize
+        ciudad = reparar_encoding(str(ciudad).strip().upper())
 
-        # Correcciones comunes
         correcciones = {
             'BOGOTA': 'BOGOTÁ D.C.',
             'BOGOTÁ': 'BOGOTÁ D.C.',
             'BOGOTA D.C': 'BOGOTÁ D.C.',
             'BOGOTA DC': 'BOGOTÁ D.C.',
+            'BOGOTÁ D.C': 'BOGOTÁ D.C.',
             'MEDELLIN': 'MEDELLÍN',
+            'MEDELLÍN': 'MEDELLÍN',
             'CALI': 'CALI',
             'BARRANQUILLA': 'BARRANQUILLA',
             'BUCARAMANGA': 'BUCARAMANGA',
+            'CARTAGENA': 'CARTAGENA',
+            'PEREIRA': 'PEREIRA',
+            'MANIZALES': 'MANIZALES',
+            'SANTA MARTA': 'SANTA MARTA',
+            'IBAGUE': 'IBAGUÉ',
+            'IBAGUÉ': 'IBAGUÉ',
+            'CUCUTA': 'CÚCUTA',
+            'CÚCUTA': 'CÚCUTA',
+            'VILLAVICENCIO': 'VILLAVICENCIO',
+            'PASTO': 'PASTO',
+            'NEIVA': 'NEIVA',
+            'ARMENIA': 'ARMENIA',
+            'POPAYAN': 'POPAYÁN',
+            'POPAYÁN': 'POPAYÁN',
+            'TUNJA': 'TUNJA',
+            'MONTERIA': 'MONTERÍA',
+            'MONTERÍA': 'MONTERÍA',
+            'VALLEDUPAR': 'VALLEDUPAR',
+            'SINCELEJO': 'SINCELEJO',
+            'RIOHACHA': 'RIOHACHA',
         }
 
         return correcciones.get(ciudad, ciudad.title())
 
     def _normalizar_transportadora(self, transportadora: Optional[str]) -> Optional[str]:
-        """Normaliza el nombre de una transportadora"""
         if not transportadora:
             return None
 
-        transportadora = str(transportadora).strip().upper()
+        transportadora = reparar_encoding(str(transportadora).strip().upper())
 
-        # Mapeo de nombres comunes
         mapeo = {
             'INTER': 'INTERRAPIDISIMO',
             'INTERRAPIDISIMO': 'INTERRAPIDISIMO',
+            'INTERRAPIDÍSIMO': 'INTERRAPIDISIMO',
             'INTER RAPIDÍSIMO': 'INTERRAPIDISIMO',
+            'INTER RAPIDISIMO': 'INTERRAPIDISIMO',
             'ENVIA': 'ENVÍA',
             'ENVÍA': 'ENVÍA',
             'COORDINADORA': 'COORDINADORA',
@@ -360,34 +387,19 @@ class ExcelProcessor:
         return mapeo.get(transportadora, transportadora.title())
 
     def calcular_metricas(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Calcula métricas derivadas para cada guía.
-
-        Args:
-            df: DataFrame con datos limpios.
-
-        Returns:
-            DataFrame con métricas calculadas.
-        """
         df_metricas = df.copy()
 
-        # Calcular días en tránsito
         if 'fecha_generacion_guia' in df_metricas.columns:
             fecha_referencia = df_metricas.get(
                 'fecha_ultimo_movimiento',
                 pd.Series([datetime.now()] * len(df_metricas))
             )
-            # Usar fecha actual si no hay fecha de último movimiento
             fecha_referencia = fecha_referencia.fillna(datetime.now())
-
             df_metricas['dias_transito'] = (
                 fecha_referencia - df_metricas['fecha_generacion_guia']
             ).dt.days
-
-            # Valores negativos a 0
             df_metricas['dias_transito'] = df_metricas['dias_transito'].clip(lower=0)
 
-        # Determinar si tiene retraso (más de 5 días)
         umbral_retraso = 5
         if 'dias_transito' in df_metricas.columns:
             df_metricas['tiene_retraso'] = df_metricas['dias_transito'] > umbral_retraso
@@ -398,7 +410,6 @@ class ExcelProcessor:
             df_metricas['tiene_retraso'] = False
             df_metricas['dias_retraso'] = 0
 
-        # Determinar si tiene novedad
         if 'tipo_novedad' in df_metricas.columns:
             df_metricas['tiene_novedad'] = df_metricas['tipo_novedad'].notna()
         else:
@@ -413,27 +424,13 @@ class ExcelProcessor:
         session: Session,
         usuario: str = 'sistema'
     ) -> Dict[str, Any]:
-        """
-        Procesa un archivo Excel completo y carga los datos en la BD.
-
-        Args:
-            archivo_bytes: Contenido del archivo en bytes.
-            nombre_archivo: Nombre del archivo original.
-            session: Sesión de SQLAlchemy.
-            usuario: Usuario que realiza la carga.
-
-        Returns:
-            Dict con estadísticas del procesamiento.
-        """
         self.reset()
         inicio = time.time()
 
         logger.info(f"Iniciando procesamiento de archivo: {nombre_archivo}")
 
-        # Calcular hash para detectar duplicados
         hash_archivo = self.calcular_hash(archivo_bytes)
 
-        # Verificar si el archivo ya fue cargado
         archivo_existente = session.query(ArchivoCargado).filter_by(
             hash_archivo=hash_archivo
         ).first()
@@ -451,7 +448,6 @@ class ExcelProcessor:
                 'mensaje': f"Este archivo ya fue cargado el {archivo_existente.fecha_carga.strftime('%Y-%m-%d %H:%M')}"
             }
 
-        # Crear registro del archivo
         archivo_cargado = ArchivoCargado(
             nombre_archivo=nombre_archivo,
             estado=EstadoArchivo.PROCESANDO,
@@ -460,19 +456,28 @@ class ExcelProcessor:
             tamanio_bytes=len(archivo_bytes)
         )
         session.add(archivo_cargado)
-        session.flush()  # Obtener ID
+        session.flush()
 
         try:
-            # Leer Excel
             logger.debug("Leyendo archivo Excel...")
-            df = pd.read_excel(BytesIO(archivo_bytes))
+
+            # FIX: Use appropriate engine based on file extension
+            if nombre_archivo.lower().endswith('.xls'):
+                df = pd.read_excel(BytesIO(archivo_bytes), engine='xlrd')
+            else:
+                df = pd.read_excel(BytesIO(archivo_bytes), engine='openpyxl')
 
             self.stats['total'] = len(df)
             archivo_cargado.total_registros = len(df)
+            logger.info(f"Archivo leído: {len(df)} registros, {len(df.columns)} columnas")
 
-            logger.info(f"Archivo leído: {len(df)} registros encontrados")
+            # FIX: Repair encoding in column names BEFORE validation
+            columnas_originales = df.columns.tolist()
+            columnas_reparadas = [reparar_encoding(str(c)) for c in columnas_originales]
+            if columnas_originales != columnas_reparadas:
+                df.columns = columnas_reparadas
+                logger.info("Encoding de columnas reparado (mojibake detectado)")
 
-            # Validar formato
             es_valido, errores_formato = self.validar_formato(df)
             if not es_valido:
                 archivo_cargado.estado = EstadoArchivo.ERROR
@@ -489,17 +494,15 @@ class ExcelProcessor:
                     'mensaje': "El archivo no tiene el formato esperado"
                 }
 
-            # Normalizar y limpiar
             logger.debug("Normalizando columnas...")
             df = self.normalizar_columnas(df)
 
-            logger.debug("Limpiando datos...")
+            logger.debug("Limpiando datos (incluye reparación de encoding)...")
             df = self.limpiar_datos(df)
 
             logger.debug("Calculando métricas...")
             df = self.calcular_metricas(df)
 
-            # Procesar registros por lotes
             batch_size = 100
             guias_existentes = set(
                 g[0] for g in session.query(GuiaHistorica.numero_guia).all()
@@ -514,7 +517,7 @@ class ExcelProcessor:
 
                         if not numero_guia:
                             self.errores.append({
-                                'fila': idx + 2,  # +2 por header y base 1
+                                'fila': idx + 2,
                                 'columna': 'numero_guia',
                                 'valor': 'vacío',
                                 'error': 'Número de guía requerido'
@@ -522,12 +525,10 @@ class ExcelProcessor:
                             self.stats['errores'] += 1
                             continue
 
-                        # Verificar duplicado
                         if numero_guia in guias_existentes:
                             self.stats['duplicados'] += 1
                             continue
 
-                        # Crear registro
                         guia = self._crear_guia_desde_fila(row, archivo_cargado.id)
                         session.add(guia)
                         guias_existentes.add(numero_guia)
@@ -543,17 +544,15 @@ class ExcelProcessor:
                         self.stats['errores'] += 1
                         logger.error(f"Error en fila {idx + 2}: {e}")
 
-                # Commit por lote
                 session.flush()
                 logger.debug(f"Procesadas {min(i + batch_size, len(df))}/{len(df)} filas")
 
-            # Actualizar registro del archivo
             tiempo_total = time.time() - inicio
             archivo_cargado.registros_procesados = self.stats['procesados']
             archivo_cargado.registros_errores = self.stats['errores']
             archivo_cargado.registros_duplicados = self.stats['duplicados']
             archivo_cargado.tiempo_procesamiento_segundos = tiempo_total
-            archivo_cargado.errores_detalle = self.errores[:100]  # Guardar primeros 100 errores
+            archivo_cargado.errores_detalle = self.errores[:100]
 
             if self.stats['errores'] > 0 and self.stats['procesados'] > 0:
                 archivo_cargado.estado = EstadoArchivo.PARCIAL
@@ -577,7 +576,7 @@ class ExcelProcessor:
                 'registros_errores': self.stats['errores'],
                 'registros_duplicados': self.stats['duplicados'],
                 'tiempo_procesamiento_segundos': tiempo_total,
-                'errores_detalle': self.errores[:50],  # Primeros 50 errores
+                'errores_detalle': self.errores[:50],
                 'warnings': self.warnings,
                 'mensaje': f"Archivo procesado: {self.stats['procesados']} registros cargados"
             }
@@ -600,73 +599,44 @@ class ExcelProcessor:
             }
 
     def _crear_guia_desde_fila(self, row: pd.Series, archivo_id: int) -> GuiaHistorica:
-        """
-        Crea un objeto GuiaHistorica desde una fila del DataFrame.
-
-        Args:
-            row: Fila del DataFrame.
-            archivo_id: ID del archivo de origen.
-
-        Returns:
-            Instancia de GuiaHistorica.
-        """
         guia = GuiaHistorica(
             archivo_origen_id=archivo_id,
-
-            # Identificadores
             id_orden=row.get('id_orden'),
             numero_guia=str(row.get('numero_guia')),
             numero_factura=row.get('numero_factura'),
-
-            # Fechas
             fecha_reporte=row.get('fecha_reporte'),
             fecha_generacion_guia=row.get('fecha_generacion_guia'),
             fecha_ultimo_movimiento=row.get('fecha_ultimo_movimiento'),
             fecha_novedad=row.get('fecha_novedad'),
             fecha_solucion=row.get('fecha_solucion'),
-
-            # Cliente
             nombre_cliente=row.get('nombre_cliente'),
             telefono=row.get('telefono'),
             email=row.get('email'),
-
-            # Ubicación
             departamento_destino=row.get('departamento_destino'),
             ciudad_destino=row.get('ciudad_destino'),
             direccion=row.get('direccion'),
             codigo_postal=row.get('codigo_postal'),
-
-            # Tracking
             estatus=row.get('estatus'),
             transportadora=row.get('transportadora'),
             ultimo_movimiento=row.get('ultimo_movimiento'),
-
-            # Novedades
             tiene_novedad=bool(row.get('tiene_novedad', False)),
             tipo_novedad=row.get('tipo_novedad'),
             descripcion_novedad=row.get('descripcion_novedad'),
             fue_solucionada=bool(row.get('fue_solucionada', False)),
             solucion=row.get('solucion'),
-
-            # Financiero
             valor_facturado=row.get('valor_facturado'),
             valor_compra_productos=row.get('valor_compra_productos'),
             ganancia=row.get('ganancia'),
             precio_flete=row.get('precio_flete'),
             costo_devolucion=row.get('costo_devolucion'),
-
-            # Comercial
             vendedor=row.get('vendedor'),
             tipo_tienda=row.get('tipo_tienda'),
             tienda=row.get('tienda'),
             categorias=row.get('categorias'),
-
-            # Métricas calculadas
             dias_transito=int(row.get('dias_transito', 0)) if pd.notna(row.get('dias_transito')) else None,
             tiene_retraso=bool(row.get('tiene_retraso', False)),
             dias_retraso=int(row.get('dias_retraso', 0)) if pd.notna(row.get('dias_retraso')) else None,
         )
-
         return guia
 
 
