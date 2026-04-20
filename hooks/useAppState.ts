@@ -136,7 +136,8 @@ export function useAppState() {
   }, [shipmentStore.shipments]);
 
   // ========== Computed values ==========
-  const userProfile = useMemo(() => getUserProfile(), []);
+  // getUserProfile needs to be called fresh to get updated profile data
+  const userProfile = getUserProfile();
 
   const guiasRetrasadas = useMemo(
     () => detectarGuiasRetrasadas(shipmentStore.shipments),
