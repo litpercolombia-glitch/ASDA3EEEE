@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html, body, #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: transparent;
+    color: theme('colors.litper-cream.DEFAULT');
+    font-family: theme('fontFamily.sans');
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+
+  /* Permitir seleccion solo en inputs y zonas marcadas */
+  input, textarea, [data-selectable] {
+    user-select: text;
+  }
+
+  /* Drag region para mover la ventana flotante */
+  .app-drag {
+    -webkit-app-region: drag;
+  }
+
+  .app-no-drag,
+  button, input, select, textarea, a {
+    -webkit-app-region: no-drag;
+  }
+
+  /* Container queries: cada widget se reorganiza segun su contenedor padre,
+     NO segun el viewport. Resuelve el "no se adapta a la forma". */
+  .cq-halo {
+    container-type: inline-size;
+    container-name: halo;
+  }
+
+  /* Tipografia brand */
+  .font-brand {
+    font-family: theme('fontFamily.brand');
+    letter-spacing: 0.04em;
+  }
+
+  /* Animaciones */
+  @keyframes pulse-gold {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.6); }
+    50% { box-shadow: 0 0 0 8px rgba(212, 175, 55, 0); }
+  }
+
+  @keyframes pulse-red {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.7); }
+    50% { box-shadow: 0 0 0 10px rgba(192, 57, 43, 0); }
+  }
+
+  .animate-pulse-gold { animation: pulse-gold 2s ease-out infinite; }
+  .animate-pulse-red { animation: pulse-red 1.2s ease-out infinite; }
+
+  /* Scrollbar dorada sutil */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(212, 175, 55, 0.2);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(212, 175, 55, 0.4);
+  }
+}
+
+@layer components {
+  .halo-panel {
+    @apply rounded-panel bg-litper-navy-900/95 backdrop-blur-xl shadow-halo;
+    border: 1px solid rgba(212, 175, 55, 0.15);
+  }
+
+  .gold-btn {
+    @apply font-medium text-litper-navy-950 bg-litper-gold-500
+           hover:bg-litper-gold-400 active:bg-litper-gold-600
+           transition-colors duration-150 rounded-lg
+           shadow-gold-glow;
+  }
+
+  .ghost-btn {
+    @apply text-litper-cream-muted hover:text-litper-cream
+           hover:bg-litper-navy-800/60 transition-colors duration-150
+           rounded-lg;
+  }
+
+  .counter-cell {
+    @apply flex items-center justify-between gap-2 px-3 py-2
+           bg-litper-navy-800/50 rounded-lg
+           border border-transparent hover:border-litper-gold-500/20
+           transition-colors;
+  }
+
+  .timer-display {
+    @apply font-mono font-bold tabular-nums tracking-tight;
+  }
+}
