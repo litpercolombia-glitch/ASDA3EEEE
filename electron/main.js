@@ -13,13 +13,16 @@ const { z } = require('zod');
 
 // ===== CONFIG =====
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
-const VITE_DEV_URL = 'http://localhost:5173';
+// El renderer del desktop vive en electron/renderer y se sirve en :5174
+// (separado del web app principal en :5173 — ver BRAND_KIT y plan).
+const RENDERER_DEV_URL = process.env.LITPER_RENDERER_URL || 'http://localhost:5174';
+const RENDERER_PROD_PATH = path.join(__dirname, 'renderer', 'dist', 'index.html');
 
 const WINDOW_CONFIG = {
   width: 380,
-  height: 520,
+  height: 560,
   minWidth: 320,
-  minHeight: 400,
+  minHeight: 420,
   maxWidth: 600,
   maxHeight: 800,
 };
@@ -30,6 +33,7 @@ const WEBVIEW_ALLOWED_HOSTS = new Set([
   'litper-semaforo.vercel.app',
   'gtsivwbnhcawvmsfujby.supabase.co',
   'localhost',
+  '127.0.0.1',
 ]);
 
 // Hosts permitidos para shell.openExternal (hardening control #10).
@@ -53,10 +57,11 @@ function setupCSP() {
   const csp = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline'",
-    "style-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: blob: https://*.supabase.co",
-    "font-src 'self' data:",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co " +
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "connect-src 'self' http://localhost:5174 ws://localhost:5174 " +
+      "https://*.supabase.co wss://*.supabase.co " +
       "https://litper-semaforo.vercel.app https://api.anthropic.com " +
       "https://generativelanguage.googleapis.com",
     "frame-src https://litper-semaforo.vercel.app",
@@ -122,7 +127,8 @@ function createWindow() {
   mainWindow.webContents.on('will-navigate', (event, url) => {
     try {
       const target = new URL(url);
-      const isLocalhost = isDev && target.hostname === 'localhost';
+      const isLocalhost = isDev &&
+        (target.hostname === 'localhost' || target.hostname === '127.0.0.1');
       if (!isLocalhost && !WEBVIEW_ALLOWED_HOSTS.has(target.hostname)) {
         event.preventDefault();
         console.warn('[security] blocked navigation to', url);
@@ -147,12 +153,12 @@ function createWindow() {
   });
 
   if (isDev) {
-    mainWindow.loadURL(VITE_DEV_URL);
+    mainWindow.loadURL(RENDERER_DEV_URL);
     if (process.env.LITPER_DEVTOOLS === '1') {
       mainWindow.webContents.openDevTools({ mode: 'detach' });
     }
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    mainWindow.loadFile(RENDERER_PROD_PATH);
   }
 
   // Cerrar = ocultar (la app vive en tray).
@@ -263,10 +269,11 @@ function createTray() {
 function createDefaultIcon() {
   const size = 16;
   const buf = Buffer.alloc(size * size * 4);
+  // Color gold del brand kit (#D4AF37) para el tray icon por defecto.
   for (let i = 0; i < size * size; i++) {
-    buf[i * 4] = 6;
-    buf[i * 4 + 1] = 182;
-    buf[i * 4 + 2] = 212;
+    buf[i * 4] = 212;
+    buf[i * 4 + 1] = 175;
+    buf[i * 4 + 2] = 55;
     buf[i * 4 + 3] = 255;
   }
   return nativeImage.createFromBuffer(buf, { width: size, height: size });
