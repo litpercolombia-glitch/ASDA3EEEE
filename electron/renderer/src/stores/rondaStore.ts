@@ -1,9 +1,11 @@
 /**
- * rondaStore — estado de la ronda actual del operador.
+ * rondaStore — estado de la ronda actual + histórico del día.
  *
- * Mantiene timer regresivo, contadores y permite guardar la ronda.
- * Estado local persistido en localStorage; en Fase 2 sincroniza con
- * Supabase (`rondas.events`) via Realtime.
+ * Mantiene timer regresivo, 8 contadores (incluida Novedades), y un
+ * histórico de rondas guardadas con su timestamp para sparklines y
+ * cálculo de tasa/CPA/racha.
+ *
+ * En Fase 2 sincroniza con Supabase (`rondas.events`) via Realtime.
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -15,7 +17,8 @@ export type CounterKey =
   | 'agendado'
   | 'dificiles'
   | 'pendientes'
-  | 'revisado';
+  | 'revisado'
+  | 'novedades';
 
 export interface Counters {
   iniciales: number;
@@ -25,9 +28,31 @@ export interface Counters {
   dificiles: number;
   pendientes: number;
   revisado: number;
+  novedades: number;
 }
 
 export type TimerState = 'idle' | 'running' | 'paused' | 'finished';
+
+export interface RondaSnapshot {
+  id: string;
+  numero: number;
+  userId: string;
+  fecha: string;
+  startedAt: string;
+  endedAt: string;
+  counters: Counters;
+  notas?: string;
+}
+
+export interface DiaCerrado {
+  fecha: string;
+  cerradoEn: string;
+  totalRondas: number;
+  totalIniciales: number;
+  totalRealizado: number;
+  tasaFinal: number;
+  cumplioMeta: boolean;
+}
 
 interface RondaState {
   rondaNumero: number;
@@ -36,6 +61,11 @@ interface RondaState {
   state: TimerState;
   counters: Counters;
   lastTickAt: number | null;
+  startedAt: string | null;
+
+  fechaActual: string;
+  rondasHoy: RondaSnapshot[];
+  diasCerrados: DiaCerrado[];
 
   startTimer: (durationSec?: number) => void;
   pauseTimer: () => void;
@@ -47,7 +77,9 @@ interface RondaState {
   setCounter: (key: CounterKey, value: number) => void;
   resetCounters: () => void;
 
-  saveRonda: () => void;
+  saveRonda: (userId: string) => RondaSnapshot;
+  reiniciarDia: () => void;
+  finalizarDia: () => DiaCerrado;
 }
 
 const ZERO_COUNTERS: Counters = {
@@ -58,9 +90,20 @@ const ZERO_COUNTERS: Counters = {
   dificiles: 0,
   pendientes: 0,
   revisado: 0,
+  novedades: 0,
 };
 
-const DEFAULT_DURATION_SEC = 30 * 60; // 30 min
+const DEFAULT_DURATION_SEC = 30 * 60;
+const META_TASA = 0.805;
+const CPA_DIVIDEND_COP = 15000;
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function genId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 export const useRondaStore = create<RondaState>()(
   persist(
@@ -71,6 +114,11 @@ export const useRondaStore = create<RondaState>()(
       state: 'idle',
       counters: { ...ZERO_COUNTERS },
       lastTickAt: null,
+      startedAt: null,
+
+      fechaActual: todayISO(),
+      rondasHoy: [],
+      diasCerrados: [],
 
       startTimer: (durationSec) => {
         const dur = durationSec ?? get().durationSec;
@@ -79,6 +127,7 @@ export const useRondaStore = create<RondaState>()(
           remainingSec: dur,
           state: 'running',
           lastTickAt: Date.now(),
+          startedAt: get().startedAt ?? new Date().toISOString(),
         });
       },
 
@@ -97,6 +146,7 @@ export const useRondaStore = create<RondaState>()(
           remainingSec: s.durationSec,
           state: 'idle',
           lastTickAt: null,
+          startedAt: null,
         }));
       },
 
@@ -116,10 +166,7 @@ export const useRondaStore = create<RondaState>()(
 
       bumpCounter: (key, delta) => {
         set((s) => ({
-          counters: {
-            ...s.counters,
-            [key]: Math.max(0, s.counters[key] + delta),
-          },
+          counters: { ...s.counters, [key]: Math.max(0, s.counters[key] + delta) },
         }));
       },
 
@@ -131,26 +178,152 @@ export const useRondaStore = create<RondaState>()(
 
       resetCounters: () => set({ counters: { ...ZERO_COUNTERS } }),
 
-      saveRonda: () => {
-        // En Fase 2: aqui se hace upsert a Supabase rondas.events.
-        // Por ahora solo avanzamos el numero de ronda y reseteamos.
-        set((s) => ({
+      saveRonda: (userId) => {
+        const s = get();
+        const snap: RondaSnapshot = {
+          id: genId(),
+          numero: s.rondaNumero,
+          userId,
+          fecha: s.fechaActual,
+          startedAt: s.startedAt ?? new Date().toISOString(),
+          endedAt: new Date().toISOString(),
+          counters: { ...s.counters },
+        };
+        set({
           rondaNumero: s.rondaNumero + 1,
           counters: { ...ZERO_COUNTERS },
           remainingSec: s.durationSec,
           state: 'idle',
           lastTickAt: null,
-        }));
+          startedAt: null,
+          rondasHoy: [...s.rondasHoy, snap],
+        });
+        return snap;
+      },
+
+      reiniciarDia: () => {
+        set({
+          rondaNumero: 1,
+          counters: { ...ZERO_COUNTERS },
+          remainingSec: DEFAULT_DURATION_SEC,
+          state: 'idle',
+          lastTickAt: null,
+          startedAt: null,
+          fechaActual: todayISO(),
+          rondasHoy: [],
+        });
+      },
+
+      finalizarDia: () => {
+        const s = get();
+        const totales = sumarRondas(s.rondasHoy);
+        const tasa = totales.iniciales > 0 ? totales.realizado / totales.iniciales : 0;
+        const dia: DiaCerrado = {
+          fecha: s.fechaActual,
+          cerradoEn: new Date().toISOString(),
+          totalRondas: s.rondasHoy.length,
+          totalIniciales: totales.iniciales,
+          totalRealizado: totales.realizado,
+          tasaFinal: tasa,
+          cumplioMeta: tasa >= META_TASA,
+        };
+        set({
+          diasCerrados: [...s.diasCerrados, dia],
+          rondaNumero: 1,
+          counters: { ...ZERO_COUNTERS },
+          remainingSec: DEFAULT_DURATION_SEC,
+          state: 'idle',
+          lastTickAt: null,
+          startedAt: null,
+          fechaActual: todayISO(),
+          rondasHoy: [],
+        });
+        return dia;
       },
     }),
-    {
-      name: 'litper-desk:ronda',
-      version: 1,
-    },
+    { name: 'litper-desk:ronda', version: 2 },
   ),
 );
 
-/** Color del timer según el porcentaje restante. */
+export function sumarRondas(rondas: RondaSnapshot[]): Counters {
+  const total = { ...ZERO_COUNTERS };
+  for (const r of rondas) {
+    for (const k of Object.keys(ZERO_COUNTERS) as CounterKey[]) {
+      total[k] += r.counters[k];
+    }
+  }
+  return total;
+}
+
+export interface KPIsDia {
+  totalIniciales: number;
+  totalRealizado: number;
+  tasa: number;
+  cpaCOP: number;
+  cumpleMeta: boolean;
+  rachaActual: number;
+  bestHour: string | null;
+}
+
+export function computeKPIs(
+  rondasHoy: RondaSnapshot[],
+  countersActuales: Counters,
+  diasCerrados: DiaCerrado[],
+): KPIsDia {
+  const acumulado = sumarRondas(rondasHoy);
+  const total: Counters = {
+    iniciales: acumulado.iniciales + countersActuales.iniciales,
+    realizado: acumulado.realizado + countersActuales.realizado,
+    cancelado: acumulado.cancelado + countersActuales.cancelado,
+    agendado: acumulado.agendado + countersActuales.agendado,
+    dificiles: acumulado.dificiles + countersActuales.dificiles,
+    pendientes: acumulado.pendientes + countersActuales.pendientes,
+    revisado: acumulado.revisado + countersActuales.revisado,
+    novedades: acumulado.novedades + countersActuales.novedades,
+  };
+
+  const tasa = total.iniciales > 0 ? total.realizado / total.iniciales : 0;
+  const cpa = tasa > 0 ? CPA_DIVIDEND_COP / tasa : Infinity;
+  const cumpleMeta = tasa >= META_TASA;
+
+  let racha = 0;
+  for (let i = diasCerrados.length - 1; i >= 0; i--) {
+    if (diasCerrados[i].cumplioMeta) racha++;
+    else break;
+  }
+  if (cumpleMeta && total.iniciales > 0) racha += 1;
+
+  const porHora: Record<number, number> = {};
+  for (const r of rondasHoy) {
+    const h = new Date(r.endedAt).getHours();
+    porHora[h] = (porHora[h] || 0) + r.counters.realizado;
+  }
+  let bestHour: string | null = null;
+  let bestVal = 0;
+  for (const [h, v] of Object.entries(porHora)) {
+    if (v > bestVal) {
+      bestVal = v;
+      bestHour = `${h.padStart(2, '0')}:00`;
+    }
+  }
+
+  return {
+    totalIniciales: total.iniciales,
+    totalRealizado: total.realizado,
+    tasa,
+    cpaCOP: cpa,
+    cumpleMeta,
+    rachaActual: racha,
+    bestHour,
+  };
+}
+
+export function semaforoColor(tasa: number): 'verde' | 'amarillo' | 'rojo' {
+  if (tasa >= 0.805) return 'verde';
+  if (tasa >= 0.7) return 'amarillo';
+  return 'rojo';
+}
+
 export function timerColor(remainingSec: number, durationSec: number): {
   text: string;
   bg: string;
@@ -167,4 +340,11 @@ export function formatTime(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
+
+export function formatCOP(n: number): string {
+  if (!isFinite(n)) return '–';
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}k`;
+  return `$${Math.round(n)}`;
 }

@@ -15,6 +15,7 @@
     "isolatedModules": true,
     "allowSyntheticDefaultImports": true,
     "useDefineForClassFields": true,
+    "noEmit": true,
     "types": ["vite/client"]
   },
   "include": ["src"]

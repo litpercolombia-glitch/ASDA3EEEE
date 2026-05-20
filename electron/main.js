@@ -302,11 +302,31 @@ function registerShortcuts() {
   globalShortcut.register('F1', () => {
     mainWindow?.webContents.send('shortcut', 'open-semaforo');
   });
+  globalShortcut.register('CommandOrControl+Shift+1', () => {
+    mainWindow?.webContents.send('shortcut', 'mode-micro');
+  });
+  globalShortcut.register('CommandOrControl+Shift+2', () => {
+    mainWindow?.webContents.send('shortcut', 'mode-mini');
+  });
+  globalShortcut.register('CommandOrControl+Shift+3', () => {
+    mainWindow?.webContents.send('shortcut', 'mode-halo');
+  });
+  globalShortcut.register('CommandOrControl+Shift+4', () => {
+    mainWindow?.webContents.send('shortcut', 'mode-comando');
+  });
+  globalShortcut.register('CommandOrControl+Shift+C', () => {
+    mainWindow?.show(); mainWindow?.focus();
+    mainWindow?.webContents.send('shortcut', 'open-conexiones');
+  });
 }
 
 // ===== IPC con validacion zod (hardening control #7) =====
 const SetOpacitySchema = z.object({ opacity: z.number().min(0.3).max(1) });
 const SetAlwaysOnTopSchema = z.object({ pinned: z.boolean() });
+const SetSizeSchema = z.object({
+  width: z.number().min(120).max(2560),
+  height: z.number().min(60).max(1440),
+});
 const OpenExternalSchema = z.object({ url: z.string().url() });
 
 function safeHandle(channel, schema, handler) {
@@ -333,6 +353,21 @@ function setupIPC() {
   safeHandle('window:set-always-on-top', SetAlwaysOnTopSchema, ({ pinned }) => {
     mainWindow?.setAlwaysOnTop(pinned);
     return { ok: true, pinned };
+  });
+
+  safeHandle('window:set-size', SetSizeSchema, ({ width, height }) => {
+    if (!mainWindow) return { error: 'no_window' };
+    const bounds = mainWindow.getBounds();
+    // Si la ventana esta cerca de una esquina (esquina inferior derecha por default),
+    // anclamos ahi para que al cambiar tamano la esquina se mantenga.
+    const display = screen.getDisplayMatching(bounds);
+    const wa = display.workArea;
+    const nearRight = bounds.x + bounds.width >= wa.x + wa.width - 60;
+    const nearBottom = bounds.y + bounds.height >= wa.y + wa.height - 60;
+    const newX = nearRight ? wa.x + wa.width - width - 20 : bounds.x;
+    const newY = nearBottom ? wa.y + wa.height - height - 20 : bounds.y;
+    mainWindow.setBounds({ x: newX, y: newY, width, height });
+    return { ok: true, width, height };
   });
 
   safeHandle('window:get-state', null, () => ({

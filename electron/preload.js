@@ -15,6 +15,7 @@ const ALLOWED_INVOKE = new Set([
   'window:hide',
   'window:set-opacity',
   'window:set-always-on-top',
+  'window:set-size',
   'window:get-state',
   'shell:open-external',
   'app:get-platform',
