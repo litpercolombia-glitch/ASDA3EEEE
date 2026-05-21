@@ -11,6 +11,8 @@ import { MetricasInline } from './components/MetricasInline';
 import { ConexionesModal } from './components/ConexionesModal';
 import { AuroraBackground } from './components/AuroraBackground';
 import { ParticlesOverlay } from './components/ParticlesOverlay';
+import { NovedadPopup } from './components/NovedadPopup';
+import { useNovedadesStore, type TipoNovedad } from './stores/novedadesStore';
 import {
   useRondaStore, formatTime, timerColor, computeKPIs, semaforoColor,
   type CounterKey,
@@ -57,10 +59,34 @@ export function App() {
   const [pinned, setPinned] = useState(true);
 
   const activeUser = users.find((u) => u.id === activeUserId) ?? users[0];
+  const jornadaHoras = activeUser?.jornadaHoras ?? 8;
   const kpis = useMemo(
-    () => computeKPIs(ronda.rondasHoy, ronda.counters, ronda.diasCerrados),
-    [ronda.rondasHoy, ronda.counters, ronda.diasCerrados],
+    () => computeKPIs(ronda.rondasHoy, ronda.counters, ronda.diasCerrados, jornadaHoras),
+    [ronda.rondasHoy, ronda.counters, ronda.diasCerrados, jornadaHoras],
   );
+  const [novedadPopupOpen, setNovedadPopupOpen] = useState(false);
+  const addNovedad = useNovedadesStore((s) => s.addNovedad);
+
+  function handleNovedadSubmit(input: { tipo: TipoNovedad; pedidoRef?: string; nota?: string }) {
+    if (!activeUser) return;
+    addNovedad({
+      fecha: ronda.fechaActual,
+      operadorId: activeUser.id,
+      rondaNumero: ronda.rondaNumero,
+      tipo: input.tipo,
+      pedidoRef: input.pedidoRef,
+      nota: input.nota,
+    });
+    ronda.bumpCounter('novedades', 1);
+  }
+
+  function bumpCounter(key: CounterKey, delta: number) {
+    if (key === 'novedades' && delta > 0) {
+      setNovedadPopupOpen(true);
+    } else {
+      ronda.bumpCounter(key, delta);
+    }
+  }
   const semaforo = semaforoColor(kpis.tasa);
   const tcolor = timerColor(ronda.remainingSec, ronda.durationSec);
   const inRed = tcolor.pulse;
@@ -190,13 +216,18 @@ export function App() {
           )}
 
           {mode === 'micro' && <MicroBody />}
-          {mode === 'mini' && <MiniBody />}
-          {mode === 'halo' && <HaloBody activeUserId={activeUser?.id ?? ''} sparkValues={sparkValues} kpis={kpis} onSaveRonda={handleSaveRonda} onReiniciar={handleReiniciarDia} onExcel={handleExcel} onFinalizar={handleFinalizarDia} onConexiones={openConexiones} />}
-          {mode === 'comando' && <ComandoBody activeUserId={activeUser?.id ?? ''} sparkValues={sparkValues} kpis={kpis} onSaveRonda={handleSaveRonda} onReiniciar={handleReiniciarDia} onExcel={handleExcel} onFinalizar={handleFinalizarDia} onConexiones={openConexiones} />}
+          {mode === 'mini' && <MiniBody bumpCounter={bumpCounter} />}
+          {mode === 'halo' && <HaloBody activeUserId={activeUser?.id ?? ''} sparkValues={sparkValues} kpis={kpis} bumpCounter={bumpCounter} onSaveRonda={handleSaveRonda} onReiniciar={handleReiniciarDia} onExcel={handleExcel} onFinalizar={handleFinalizarDia} onConexiones={openConexiones} />}
+          {mode === 'comando' && <ComandoBody activeUserId={activeUser?.id ?? ''} sparkValues={sparkValues} kpis={kpis} bumpCounter={bumpCounter} onSaveRonda={handleSaveRonda} onReiniciar={handleReiniciarDia} onExcel={handleExcel} onFinalizar={handleFinalizarDia} onConexiones={openConexiones} />}
         </div>
       </div>
 
       <ConexionesModal />
+      <NovedadPopup
+        open={novedadPopupOpen}
+        onClose={() => setNovedadPopupOpen(false)}
+        onSubmit={handleNovedadSubmit}
+      />
     </div>
   );
 }
@@ -305,7 +336,7 @@ function MicroBody() {
 // ============================================================================
 // MINI (340×320) — timer + 4 contadores principales
 // ============================================================================
-function MiniBody() {
+function MiniBody({ bumpCounter }: { bumpCounter: (key: CounterKey, delta: number) => void }) {
   const ronda = useRondaStore();
   const tc = timerColor(ronda.remainingSec, ronda.durationSec);
   const main = COUNTERS.filter((c) => ['iniciales', 'realizado', 'cancelado', 'novedades'].includes(c.key));
@@ -336,7 +367,7 @@ function MiniBody() {
             value={ronda.counters[c.key]}
             accent={c.accent}
             compact
-            onBump={(d) => ronda.bumpCounter(c.key, d)}
+            onBump={(d) => bumpCounter(c.key, d)}
             onSet={(v) => ronda.setCounter(c.key, v)}
           />
         ))}
@@ -352,6 +383,7 @@ interface BodyProps {
   activeUserId: string;
   sparkValues: number[];
   kpis: ReturnType<typeof computeKPIs>;
+  bumpCounter: (key: CounterKey, delta: number) => void;
   onSaveRonda: () => void;
   onReiniciar: () => void;
   onExcel: () => void;
@@ -359,7 +391,7 @@ interface BodyProps {
   onConexiones: () => void;
 }
 
-function HaloBody({ kpis, sparkValues, onSaveRonda, onReiniciar, onExcel, onFinalizar, onConexiones }: BodyProps) {
+function HaloBody({ kpis, sparkValues, bumpCounter, onSaveRonda, onReiniciar, onExcel, onFinalizar, onConexiones }: BodyProps) {
   const ronda = useRondaStore();
   const tc = timerColor(ronda.remainingSec, ronda.durationSec);
 
@@ -403,7 +435,7 @@ function HaloBody({ kpis, sparkValues, onSaveRonda, onReiniciar, onExcel, onFina
             counterKey={c.key}
             value={ronda.counters[c.key]}
             accent={c.accent}
-            onBump={(d) => ronda.bumpCounter(c.key, d)}
+            onBump={(d) => bumpCounter(c.key, d)}
             onSet={(v) => ronda.setCounter(c.key, v)}
           />
         ))}
@@ -411,7 +443,7 @@ function HaloBody({ kpis, sparkValues, onSaveRonda, onReiniciar, onExcel, onFina
 
       {/* Métricas inline */}
       <div className="relative z-10 px-3 pt-2">
-        <MetricasInline kpis={kpis} sparkValues={sparkValues} />
+        <MetricasInline kpis={kpis} sparkValues={sparkValues} layout="expanded" />
       </div>
 
       {/* Acciones */}
@@ -513,14 +545,14 @@ function ComandoBody(props: BodyProps) {
               counterKey={c.key}
               value={ronda.counters[c.key]}
               accent={c.accent}
-              onBump={(d) => ronda.bumpCounter(c.key, d)}
+              onBump={(d) => props.bumpCounter(c.key, d)}
               onSet={(v) => ronda.setCounter(c.key, v)}
             />
           ))}
         </div>
 
         <div className="mb-4">
-          <MetricasInline kpis={props.kpis} sparkValues={props.sparkValues} />
+          <MetricasInline kpis={props.kpis} sparkValues={props.sparkValues} layout="expanded" />
         </div>
 
         <div className="flex items-center gap-2">

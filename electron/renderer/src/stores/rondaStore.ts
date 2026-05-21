@@ -96,6 +96,8 @@ const ZERO_COUNTERS: Counters = {
 const DEFAULT_DURATION_SEC = 30 * 60;
 const META_TASA = 0.805;
 const CPA_DIVIDEND_COP = 15000;
+const AHT_OBJETIVO_MIN = 3; // 1 pedido cada 3 min en promedio
+const JORNADA_DEFAULT_HORAS = 8;
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -256,19 +258,38 @@ export function sumarRondas(rondas: RondaSnapshot[]): Counters {
 }
 
 export interface KPIsDia {
+  // Acumulados
   totalIniciales: number;
   totalRealizado: number;
+  totalCancelado: number;
+  totalAgendado: number;
+  totalDificiles: number;
+  totalPendientes: number;
+  totalRevisado: number;
+  totalNovedades: number;
+  totalRondas: number;
+
+  // Métricas
   tasa: number;
   cpaCOP: number;
   cumpleMeta: boolean;
   rachaActual: number;
   bestHour: string | null;
+
+  // Productividad
+  minutosTrabajados: number;
+  pedidosEsperados: number;
+  score: number; // 0-100
+  velocidadPedPorMin: number;
+  estimacionCierre: number;
+  minutosRestantesJornada: number;
 }
 
 export function computeKPIs(
   rondasHoy: RondaSnapshot[],
   countersActuales: Counters,
   diasCerrados: DiaCerrado[],
+  jornadaHoras: number = JORNADA_DEFAULT_HORAS,
 ): KPIsDia {
   const acumulado = sumarRondas(rondasHoy);
   const total: Counters = {
@@ -307,14 +328,44 @@ export function computeKPIs(
     }
   }
 
+  // Productividad
+  const minutosTrabajados =
+    rondasHoy.reduce((acc, r) => {
+      const start = new Date(r.startedAt).getTime();
+      const end = new Date(r.endedAt).getTime();
+      return acc + (end - start) / 60_000;
+    }, 0);
+
+  const pedidosEsperados = minutosTrabajados / AHT_OBJETIVO_MIN;
+  const score = Math.min(
+    100,
+    pedidosEsperados > 0 ? (total.realizado / pedidosEsperados) * 100 : 0,
+  );
+  const velocidadPedPorMin = minutosTrabajados > 0 ? total.realizado / minutosTrabajados : 0;
+  const minutosRestantesJornada = Math.max(0, jornadaHoras * 60 - minutosTrabajados);
+  const estimacionCierre = total.realizado + minutosRestantesJornada * velocidadPedPorMin;
+
   return {
     totalIniciales: total.iniciales,
     totalRealizado: total.realizado,
+    totalCancelado: total.cancelado,
+    totalAgendado: total.agendado,
+    totalDificiles: total.dificiles,
+    totalPendientes: total.pendientes,
+    totalRevisado: total.revisado,
+    totalNovedades: total.novedades,
+    totalRondas: rondasHoy.length,
     tasa,
     cpaCOP: cpa,
     cumpleMeta,
     rachaActual: racha,
     bestHour,
+    minutosTrabajados,
+    pedidosEsperados,
+    score,
+    velocidadPedPorMin,
+    estimacionCierre,
+    minutosRestantesJornada,
   };
 }
 

@@ -22,6 +22,8 @@ export interface User {
   initials: string;
   active: boolean;
   createdAt: string;
+  /** Jornada laboral en horas. Default 8. */
+  jornadaHoras: number;
 }
 
 interface TeamState {
@@ -34,13 +36,13 @@ interface TeamState {
 }
 
 const SEED_USERS: User[] = [
-  { id: 'jefer',    name: 'Jefer',    role: 'admin',      color: TEAM_COLOR_PALETTE[0], initials: 'JF', active: true, createdAt: '2026-05-09' },
-  { id: 'catalina', name: 'Catalina', role: 'admin',      color: TEAM_COLOR_PALETTE[1], initials: 'CT', active: true, createdAt: '2026-05-09' },
-  { id: 'jimmy',    name: 'Jimmy',    role: 'supervisor', color: TEAM_COLOR_PALETTE[2], initials: 'JM', active: true, createdAt: '2026-05-09' },
-  { id: 'felipe',   name: 'Felipe',   role: 'operator',   color: TEAM_COLOR_PALETTE[3], initials: 'FL', active: true, createdAt: '2026-05-09' },
-  { id: 'angie',    name: 'Angie',    role: 'operator',   color: TEAM_COLOR_PALETTE[4], initials: 'AN', active: true, createdAt: '2026-05-09' },
-  { id: 'karen',    name: 'Karen',    role: 'operator',   color: TEAM_COLOR_PALETTE[5], initials: 'KR', active: true, createdAt: '2026-05-09' },
-  { id: 'erika',    name: 'Erika',    role: 'operator',   color: TEAM_COLOR_PALETTE[6], initials: 'ER', active: true, createdAt: '2026-05-09' },
+  { id: 'jefer',    name: 'Jefer',    role: 'admin',      color: TEAM_COLOR_PALETTE[0], initials: 'JF', active: true, createdAt: '2026-05-09', jornadaHoras: 8 },
+  { id: 'catalina', name: 'Catalina', role: 'admin',      color: TEAM_COLOR_PALETTE[1], initials: 'CT', active: true, createdAt: '2026-05-09', jornadaHoras: 8 },
+  { id: 'jimmy',    name: 'Jimmy',    role: 'supervisor', color: TEAM_COLOR_PALETTE[2], initials: 'JM', active: true, createdAt: '2026-05-09', jornadaHoras: 8 },
+  { id: 'felipe',   name: 'Felipe',   role: 'operator',   color: TEAM_COLOR_PALETTE[3], initials: 'FL', active: true, createdAt: '2026-05-09', jornadaHoras: 8 },
+  { id: 'angie',    name: 'Angie',    role: 'operator',   color: TEAM_COLOR_PALETTE[4], initials: 'AN', active: true, createdAt: '2026-05-09', jornadaHoras: 8 },
+  { id: 'karen',    name: 'Karen',    role: 'operator',   color: TEAM_COLOR_PALETTE[5], initials: 'KR', active: true, createdAt: '2026-05-09', jornadaHoras: 8 },
+  { id: 'erika',    name: 'Erika',    role: 'operator',   color: TEAM_COLOR_PALETTE[6], initials: 'ER', active: true, createdAt: '2026-05-09', jornadaHoras: 8 },
 ];
 
 function pickNextColor(existingColors: Set<string>): string {
@@ -83,6 +85,7 @@ export const useTeamStore = create<TeamState>()(
           initials: makeInitials(name),
           active: true,
           createdAt: new Date().toISOString().slice(0, 10),
+          jornadaHoras: 8,
         };
         set({ users: [...state.users, newUser] });
         return newUser;
@@ -108,7 +111,14 @@ export const useTeamStore = create<TeamState>()(
     }),
     {
       name: 'litper-desk:team',
-      version: 1,
+      version: 2,
+      migrate: (state: unknown, version: number) => {
+        const s = state as { users?: User[] };
+        if (version < 2 && s.users) {
+          s.users = s.users.map((u) => ({ ...u, jornadaHoras: u.jornadaHoras ?? 8 }));
+        }
+        return s as TeamState;
+      },
     },
   ),
 );
