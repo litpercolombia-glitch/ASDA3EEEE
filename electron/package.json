@@ -1,21 +1,25 @@
 {
-  "name": "litper-procesos-desktop",
-  "version": "2.0.0",
-  "description": "LITPER Procesos - App de escritorio Gaming Edition",
+  "name": "litper-desk",
+  "version": "0.3.0",
+  "description": "LITPER DESK — Centro operativo de escritorio (Electron)",
   "main": "main.js",
-  "author": "LITPER Colombia",
-  "license": "MIT",
+  "author": {
+    "name": "Litper Colombia",
+    "email": "litpercolombia@gmail.com"
+  },
+  "homepage": "https://litper.com",
+  "license": "UNLICENSED",
+  "private": true,
   "scripts": {
     "start": "electron .",
     "dev": "NODE_ENV=development electron .",
     "build": "electron-builder",
     "build:win": "electron-builder --win",
-    "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux"
   },
   "build": {
-    "appId": "com.litper.procesos",
-    "productName": "LITPER Procesos",
+    "appId": "com.litper.desk",
+    "productName": "LITPER DESK",
     "directories": {
       "output": "dist-electron"
     },
@@ -23,27 +27,36 @@
       "main.js",
       "preload.js",
       "assets/**/*",
-      "../dist/**/*"
+      "renderer/dist/**/*"
     ],
+    "asar": true,
     "win": {
-      "target": "nsis",
-      "icon": "assets/icon.ico"
-    },
-    "mac": {
-      "target": "dmg",
-      "icon": "assets/icon.icns"
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "artifactName": "LITPER-DESK-Setup-${version}-${arch}.${ext}"
     },
     "linux": {
-      "target": "AppImage",
-      "icon": "assets/icon.png"
+      "target": [
+        { "target": "AppImage", "arch": ["x64"] },
+        { "target": "deb", "arch": ["x64"] }
+      ],
+      "category": "Office",
+      "artifactName": "LITPER-DESK-${version}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
     }
   },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
   "devDependencies": {
-    "electron": "^28.0.0",
-    "electron-builder": "^24.9.1"
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
   }
 }
