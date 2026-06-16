@@ -35,6 +35,7 @@ import {
   BellRing,
   Shield,
   HelpCircle,
+  Menu,
 } from 'lucide-react';
 import { useUserProfileStore, AVATAR_COLORS } from '../../services/userProfileService';
 import { Sidebar } from './Sidebar';
@@ -92,6 +93,7 @@ interface AppLayoutProps {
   onUploadReport?: () => void;
   userName?: string;
   userEmail?: string;
+  userRol?: string;
 }
 
 // ============================================
@@ -466,6 +468,15 @@ function TopBar({
 
   return (
     <header className="h-14 cc-topbar flex items-center justify-between px-4 sticky top-0 z-40">
+      {/* Mobile Hamburger */}
+      <button
+        onClick={() => useLayoutStore.getState().toggleMobileMenu()}
+        className="md:hidden p-2 mr-2 text-gray-400 hover:text-cyan-400 cc-btn rounded-lg transition-all"
+        aria-label="Abrir menú"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
       {/* Search */}
       <div className="flex-1 max-w-md">
         <div className="relative cc-search flex items-center">
@@ -595,6 +606,36 @@ function TopBar({
 }
 
 // ============================================
+// MOBILE SIDEBAR OVERLAY
+// ============================================
+
+function MobileSidebarOverlay({
+  user,
+  onLogout,
+}: {
+  user: { nombre: string; email: string; rol: string } | null;
+  onLogout: () => void;
+}) {
+  const { mobileMenuOpen, closeMobileMenu } = useLayoutStore();
+
+  if (!mobileMenuOpen) return null;
+
+  return (
+    <div className="md:hidden fixed inset-0 z-50 flex">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={closeMobileMenu}
+      />
+      {/* Sidebar panel */}
+      <div className="relative z-10 w-64 h-full">
+        <Sidebar user={user} onLogout={onLogout} />
+      </div>
+    </div>
+  );
+}
+
+// ============================================
 // APP LAYOUT
 // ============================================
 
@@ -618,6 +659,7 @@ export function AppLayout({
   onUploadReport,
   userName,
   userEmail,
+  userRol,
 }: AppLayoutProps) {
   // Generar notificaciones inteligentes basadas en los shipments
   const [readNotifications, setReadNotifications] = useState<Set<string>>(new Set());
@@ -641,14 +683,18 @@ export function AppLayout({
 
   return (
     <div className={`flex h-screen overflow-hidden ${darkMode ? 'bg-gray-950' : 'bg-gray-100'}`}>
-      {/* Sidebar */}
-      <Sidebar
+      {/* Sidebar - Desktop: fixed, Mobile: overlay */}
+      <div className="hidden md:block">
+        <Sidebar
+          user={{ nombre: userName || 'Operador', email: userEmail || 'user@litper.co', rol: userRol || 'operator' }}
+          onLogout={onLogout}
+        />
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      <MobileSidebarOverlay
+        user={{ nombre: userName || 'Operador', email: userEmail || 'user@litper.co', rol: userRol || 'operator' }}
         onLogout={onLogout}
-        onOpenChat={onOpenChat}
-        onOpenHelp={onOpenHelp}
-        onUploadReport={onUploadReport}
-        userName={userName}
-        userEmail={userEmail}
       />
 
       {/* Main Content */}
