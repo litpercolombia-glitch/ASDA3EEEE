@@ -21,6 +21,7 @@ import {
   toggleUserStatus as authToggleUserStatus,
   logCurrentUserActivity,
 } from '../services/authService';
+import { signInWithGoogle as supabaseSignInWithGoogle } from '../services/supabaseService';
 
 // =====================================
 // TIPOS
@@ -35,6 +36,8 @@ interface AuthState {
 
   // Acciones de autenticación
   login: (credentials: LoginCredentials) => Promise<boolean>;
+  initiateGoogleLogin: () => Promise<void>;
+  loginWithGoogle: (data: { email: string; nombre: string; avatar?: string }) => Promise<boolean>;
   register: (data: RegisterData) => Promise<boolean>;
   logout: () => void;
   checkAuth: () => void;
@@ -97,6 +100,48 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
             error: 'Error de conexión',
           });
+          return false;
+        }
+      },
+
+      // Google OAuth — inicia la redirección a Google vía Supabase
+      initiateGoogleLogin: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          await supabaseSignInWithGoogle();
+          // La página se redirige a Google; no hay más ejecución aquí
+        } catch (err) {
+          set({
+            isLoading: false,
+            error: 'No se pudo iniciar sesión con Google. Verifica la configuración de Supabase.',
+          });
+        }
+      },
+
+      // Google OAuth — llamado desde AuthCallback con los datos del usuario
+      loginWithGoogle: async (data) => {
+        set({ isLoading: true, error: null });
+        try {
+          const { login: authLogin, register } = await import('../services/authService');
+          const loginResult = await authLogin({ email: data.email, password: 'oauth_authenticated' });
+          if (loginResult.success && loginResult.user) {
+            set({ user: { ...loginResult.user, avatar: data.avatar }, isAuthenticated: true, isLoading: false, error: null });
+            return true;
+          }
+          const regResult = await register({
+            email: data.email,
+            password: 'oauth_authenticated',
+            nombre: data.nombre,
+            rol: 'operador',
+          });
+          if (regResult.success && regResult.user) {
+            set({ user: { ...regResult.user, avatar: data.avatar }, isAuthenticated: true, isLoading: false, error: null });
+            return true;
+          }
+          set({ isLoading: false, error: 'No se pudo autenticar con Google.' });
+          return false;
+        } catch (err) {
+          set({ isLoading: false, error: 'Error al procesar la autenticación con Google.' });
           return false;
         }
       },

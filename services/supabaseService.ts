@@ -154,6 +154,51 @@ export const isSupabaseConfigured = (): boolean => {
 };
 
 // ============================================
+// AUTENTICACIÓN OAUTH
+// ============================================
+
+/**
+ * Inicia el flujo OAuth con Google via Supabase Auth.
+ * Redirige al usuario a Google; Supabase maneja el intercambio
+ * de tokens automáticamente al volver al redirectTo URL.
+ */
+export const signInWithGoogle = async (): Promise<void> => {
+  const client = getSupabase();
+  const { error } = await client.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    },
+  });
+  if (error) throw error;
+};
+
+/**
+ * Procesa el callback OAuth de Supabase.
+ * Supabase resuelve la sesión desde el hash (#) o el code de la URL.
+ * Devuelve los datos del usuario autenticado o null si no hay sesión.
+ */
+export const handleSupabaseAuthCallback = async (): Promise<{
+  email: string;
+  nombre: string;
+  avatar?: string;
+} | null> => {
+  const client = getSupabase();
+  const { data, error } = await client.auth.getSession();
+  if (error || !data.session) return null;
+  const { user } = data.session;
+  return {
+    email: user.email ?? '',
+    nombre:
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.email?.split('@')[0] ||
+      'Usuario',
+    avatar: user.user_metadata?.avatar_url || user.user_metadata?.picture,
+  };
+};
+
+// ============================================
 // SERVICIOS DE GUÍAS
 // ============================================
 
