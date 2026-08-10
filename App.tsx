@@ -20,7 +20,6 @@ import { useShipmentExcelParser } from './hooks/useShipmentExcelParser';
 import {
   TabNavigationNew,
   SeguimientoTab,
-  SemaforoTabNew,
   PrediccionesTab,
   MLSystemTab,
   DemandTab,
@@ -42,7 +41,7 @@ import UniversalSearch from './components/search/UniversalSearch';
 import { AIBrainDashboard } from './components/brain/AIBrainDashboard';
 import { AuthWrapper, UserProfilePanel } from './components/auth';
 import { EnhancedGuideTable } from './components/tables';
-import { AdminPanelPro } from './components/Admin/AdminPanelPro';
+import { AdminPanelV2 } from './components/AdminV2';
 import { EnterpriseAdminDashboard } from './components/Admin/EnterpriseAdminDashboard';
 import CountrySelector from './components/CountrySelector';
 // Chat-First Design System
@@ -100,7 +99,6 @@ import {
   Shield,
   Sparkles,
   ArrowRight,
-  Activity,
   Target,
   Brain,
   Bot,
@@ -146,7 +144,6 @@ const PremiumDashboard: React.FC<DashboardProps> = ({ shipments, onNavigate, cou
   ];
 
   const features = [
-    { id: 'semaforo', icon: Activity, label: 'Semáforo', desc: 'Control de entregas en tiempo real', color: 'bg-amber-500' },
     { id: 'predicciones', icon: Target, label: 'Análisis', desc: 'Estadísticas y métricas avanzadas', color: 'bg-teal-500' },
     { id: 'reporte', icon: BarChart3, label: 'Reporte IA', desc: 'Informes inteligentes automatizados', color: 'bg-blue-500' },
     { id: 'asistente', icon: Bot, label: 'Asistente IA', desc: 'Soporte inteligente 24/7', color: 'bg-pink-500' },
@@ -692,7 +689,7 @@ const App: React.FC = () => {
       case 'marketing':
         return <MarketingView />;
       case 'config':
-        return <AdminPanelPro />;
+        return <AdminPanelV2 />;
       case 'enterprise':
         return <EnterpriseAdminDashboard />;
       default:
@@ -958,7 +955,6 @@ const App: React.FC = () => {
       )}
       {currentTab === 'demanda' && <div className="p-6"><DemandTab country={selectedCountry} /></div>}
       {currentTab === 'gamificacion' && <div className="p-6"><GamificationTab /></div>}
-      {currentTab === 'semaforo' && <div className="p-6"><SemaforoTabNew onDataLoaded={handleSemaforoDataLoaded} /></div>}
       {currentTab === 'predicciones' && <div className="p-6"><PrediccionesTab shipments={shipments} /></div>}
       {currentTab === 'asistente' && <div className="p-6"><AsistenteIAUnificado shipments={shipments} /></div>}
       {currentTab === 'ml' && <div className="p-6"><MLSystemTab /></div>}
