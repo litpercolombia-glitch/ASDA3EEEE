@@ -239,6 +239,7 @@ import {
   CommandPalette,
 } from './EnterpriseModules';
 import { AdminReportsView } from '../ReportUpload';
+import { adminAuthService } from '../../services/adminAuthService';
 
 // ============================================
 // TIPOS E INTERFACES ENTERPRISE
@@ -1768,8 +1769,10 @@ type EnterpriseTab =
 
 export const EnterpriseAdminDashboard: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [activeTab, setActiveTab] = useState<EnterpriseTab>('command-center');
 
   // Datos
@@ -1779,28 +1782,36 @@ export const EnterpriseAdminDashboard: React.FC = () => {
   const [complianceRules] = useState(generarComplianceRules);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
 
-  // Autenticacion
-  const handleLogin = () => {
-    if (password === 'Enterprise2025!') {
+  // Autenticacion — validada en el servidor (api/auth/login.ts) contra
+  // ADMIN_SECRET. Ya no hay ninguna contraseña embebida en este archivo.
+  const handleLogin = async () => {
+    setIsLoggingIn(true);
+    setError('');
+    const result = await adminAuthService.login(password);
+    setIsLoggingIn(false);
+    if (result.ok === true) {
       setIsAuthenticated(true);
-      setError('');
-      localStorage.setItem('enterprise_admin_token', 'enterprise_' + Date.now());
+      setPassword('');
     } else {
-      setError('Credenciales invalidas');
+      setError(result.error);
     }
   };
 
   const handleLogout = () => {
+    adminAuthService.logout();
     setIsAuthenticated(false);
-    localStorage.removeItem('enterprise_admin_token');
   };
 
-  // Verificar token al cargar
+  // Verificar sesión al cargar (confirma con el servidor, no solo localStorage)
   useEffect(() => {
-    const token = localStorage.getItem('enterprise_admin_token');
-    if (token) {
-      setIsAuthenticated(true);
+    if (!adminAuthService.hasLocalSession()) {
+      setCheckingSession(false);
+      return;
     }
+    adminAuthService.verifySession().then((valid) => {
+      setIsAuthenticated(valid);
+      setCheckingSession(false);
+    });
   }, []);
 
   // Command Palette - Ctrl+K keyboard shortcut
@@ -1815,6 +1826,16 @@ export const EnterpriseAdminDashboard: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // Mientras se confirma la sesión con el servidor, no mostrar el form de login
+  // ni el contenido (evita un parpadeo hacia el login en cada recarga)
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 flex items-center justify-center">
+        <div className="text-indigo-300 text-sm">Verificando sesión…</div>
+      </div>
+    );
+  }
 
   // Pantalla de login
   if (!isAuthenticated) {
@@ -1872,10 +1893,11 @@ export const EnterpriseAdminDashboard: React.FC = () => {
 
               <button
                 onClick={handleLogin}
-                className="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold rounded-xl transition-all shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2"
+                disabled={isLoggingIn || !password}
+                className="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2"
               >
                 <Crown className="w-5 h-5" />
-                Acceder al Enterprise Admin
+                {isLoggingIn ? 'Verificando...' : 'Acceder al Enterprise Admin'}
               </button>
             </div>
 

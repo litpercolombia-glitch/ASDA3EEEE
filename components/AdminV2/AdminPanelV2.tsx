@@ -26,6 +26,7 @@ import {
   Star,
 } from 'lucide-react';
 import { ChatInterface } from './chat/ChatInterface';
+import { adminAuthService } from '../../services/adminAuthService';
 import SkillsRegistry from './skills/SkillsRegistry';
 import { Skill, SkillCategory, SKILL_CATEGORIES } from './skills/types';
 
@@ -80,15 +81,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticate }) => {
     setIsLoading(true);
     setError('');
 
-    // Simulate auth delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // TODO: Replace with proper JWT authentication
-    if (password === 'litperpro2024') {
-      localStorage.setItem('admin_v2_token', 'authenticated');
+    // Validación real contra el servidor (api/auth/login.ts + ADMIN_SECRET
+    // en Vercel) — antes comparaba contra un password hardcodeado en este archivo.
+    const result = await adminAuthService.login(password);
+    if (result.ok === true) {
       onAuthenticate();
     } else {
-      setError('Contrasena incorrecta');
+      setError(result.error);
     }
 
     setIsLoading(false);
@@ -357,19 +356,25 @@ const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ isOpen, onToggle, onSkill
 
 export const AdminPanelV2: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
 
-  // Check for existing auth
+  // Comparte sesión con EnterpriseAdminDashboard (mismo ADMIN_SECRET) —
+  // ya no se guarda un 'admin_v2_token' propio ni contraseña local.
   useEffect(() => {
-    const token = localStorage.getItem('admin_v2_token');
-    if (token === 'authenticated') {
-      setIsAuthenticated(true);
+    if (!adminAuthService.hasLocalSession()) {
+      setCheckingSession(false);
+      return;
     }
+    adminAuthService.verifySession().then((valid) => {
+      setIsAuthenticated(valid);
+      setCheckingSession(false);
+    });
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('admin_v2_token');
+    adminAuthService.logout();
     setIsAuthenticated(false);
   };
 
@@ -378,6 +383,14 @@ export const AdminPanelV2: React.FC = () => {
     // Could open a form dialog or add to chat input
     console.log('Selected skill:', skill.id);
   };
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: COLORS.background }}>
+        <Loader2 className="w-6 h-6 animate-spin" style={{ color: COLORS.textMuted }} />
+      </div>
+    );
+  }
 
   // Show auth screen if not authenticated
   if (!isAuthenticated) {
