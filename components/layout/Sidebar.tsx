@@ -197,10 +197,12 @@ function ExpandableSidebarItem({
   onSubItemClick,
 }: ExpandableSidebarItemProps) {
   const handleClick = () => {
+    // setActiveSection (called via onClick) ya auto-expande la seccion en
+    // stores/layoutStore.ts. Este segundo toggle era redundante y, por ser
+    // sincrono sobre el mismo estado, se cancelaba a si mismo en cada click
+    // (isExpanded llega como prop del render anterior, aun en false), dejando
+    // el submenu sin poder abrirse nunca al hacer click en el item padre.
     onClick();
-    if (hasSubItems && !isExpanded) {
-      onToggleExpand();
-    }
   };
 
   const handleChevronClick = (e: React.MouseEvent) => {
