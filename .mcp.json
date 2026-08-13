@@ -1,0 +1,56 @@
+{
+  "mcpServers": {
+    "video-audio": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["mcp-servers/video-audio-mcp/index.js"],
+      "env": {
+        "ELEVENLABS_API_KEY": "${ELEVEN_LABS_API_KEY}"
+      }
+    },
+    "meta-ads": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["mcp-servers/meta-ads-mcp/index.js"],
+      "env": {
+        "META_ACCESS_TOKEN": "${META_WHATSAPP_TOKEN}",
+        "META_AD_ACCOUNT_ID": "${META_AD_ACCOUNT_ID}"
+      }
+    },
+    "whatsapp-business": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["mcp-servers/whatsapp-business-mcp/index.js"],
+      "env": {
+        "WHATSAPP_TOKEN": "${META_WHATSAPP_TOKEN}",
+        "WHATSAPP_PHONE_NUMBER_ID": "${WHATSAPP_PHONE_NUMBER_ID}",
+        "WHATSAPP_BUSINESS_ACCOUNT_ID": "${WHATSAPP_BUSINESS_ACCOUNT_ID}",
+        "WHATSAPP_WEBHOOK_VERIFY_TOKEN": "${WHATSAPP_WEBHOOK_VERIFY_TOKEN}"
+      }
+    },
+    "supabase": {
+      "type": "url",
+      "url": "https://mcp.supabase.com/v1/mcp",
+      "headers": {
+        "Authorization": "Bearer ${SUPABASE_SERVICE_ROLE_KEY}"
+      },
+      "note": "Supabase Remote MCP - DB queries, storage, auth, edge functions"
+    },
+    "sentry": {
+      "type": "url",
+      "url": "https://mcp.sentry.dev/sse",
+      "headers": {
+        "Authorization": "Bearer ${SENTRY_AUTH_TOKEN}"
+      },
+      "note": "Sentry Remote MCP - Error tracking, performance monitoring, issue management"
+    },
+    "slack": {
+      "type": "url",
+      "url": "https://mcp.slack.com/sse",
+      "headers": {
+        "Authorization": "Bearer ${SLACK_BOT_TOKEN}"
+      },
+      "note": "Slack Remote MCP - Channels, messages, reactions, files, users"
+    }
+  }
+}
