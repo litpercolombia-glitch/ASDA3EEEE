@@ -1,7 +1,7 @@
 // hooks/usePagination.ts
 // Hook de paginación para guías
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 
 export type PageSize = 50 | 100;
 
@@ -124,7 +124,7 @@ export function usePagination<T>(
   }, [currentPage, totalPages]);
 
   // Reset a página 1 cuando cambian los items
-  useMemo(() => {
+  useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(Math.max(1, totalPages));
     }
