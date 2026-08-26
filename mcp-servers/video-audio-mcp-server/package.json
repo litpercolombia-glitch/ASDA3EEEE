@@ -1,0 +1,10 @@
+{
+  "name": "video-audio-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for video and audio processing - Litper Pro (zero dependencies)",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  }
+}

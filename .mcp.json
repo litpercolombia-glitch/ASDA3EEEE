@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "video-audio-mcp-server": {
+      "command": "node",
+      "args": ["mcp-servers/video-audio-mcp-server/index.js"],
+      "env": {}
+    },
+    "meta-ads-mcp": {
+      "command": "node",
+      "args": ["mcp-servers/meta-ads-mcp/index.js"],
+      "env": {
+        "META_ADS_ACCESS_TOKEN": "",
+        "META_ADS_APP_ID": "",
+        "META_ADS_APP_SECRET": ""
+      }
+    }
+  }
+}
