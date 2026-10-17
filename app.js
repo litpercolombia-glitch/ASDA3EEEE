@@ -590,6 +590,7 @@ function aiQuota() { // tope: 3 fotos con IA por persona al día (el servidor ta
   const k = 'vto_ai_' + new Date().toISOString().slice(0, 10); let n = 0; try { n = +localStorage.getItem(k) || 0; } catch {}
   return { left: 3 - n, use() { try { localStorage.setItem(k, n + 1); } catch {} } };
 }
+const dims = (u) => new Promise((r) => { const i = new Image(); i.onload = () => r({ w: i.naturalWidth, h: i.naturalHeight }); i.onerror = () => r({}); i.src = u; });
 async function ultra() {
   const q = aiQuota(); if (q.left <= 0) return toast('Ya usaste tus 3 fotos ultra realistas de hoy. Mañana tienes más; la cámara en vivo sigue gratis.', 5000);
   if (!lastClean) { if (mode === 'probar' && (stream || frozen)) { $('btnShot').click(); } else return toast('Toma primero la foto.'); }
@@ -597,7 +598,7 @@ async function ultra() {
   const v = P.variants[VAR], garment = new URL(v.image, location.href).href;
   const persona = PERSONA.includes(P.kind);
   try {
-    const r = await fetch(persona ? '/api/tryon' : '/api/hogar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(persona ? { person: lastClean, garment, category: P.kind } : { room: lastClean, product: garment, kind: P.kind, title: P.title }) });
+    const r = await fetch(persona ? '/api/tryon' : '/api/hogar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(Object.assign(persona ? { person: lastClean, garment, category: P.kind } : { room: lastClean, product: garment, kind: P.kind, title: P.title }, await dims(lastClean))) });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error === 'sin_llave' ? 'La versión con IA se activa cuando Litper conecte su llave de IA. Mientras tanto usa la cámara en vivo.' : d.message || 'La IA no respondió. Intenta otra vez.');
     $('shotImg').src = d.image; setCompare(lastClean); q.use();

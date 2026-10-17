@@ -39,3 +39,18 @@ export function rateOk(req, max = Number(process.env.AI_MAX_PER_IP_DAY || 6)) {
   const ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim(), day = new Date().toISOString().slice(0, 10), k = ip + '|' + day;
   const n = (hits.get(k) || 0) + 1; hits.set(k, n); if (hits.size > 5000) hits.clear(); return n <= max;
 }
+// Cloudflare Workers AI · FLUX.2 [klein] 4B (Apache-2.0): 10.000 neurons gratis al día (~68 ediciones), luego ~US$0,0016 c/u.
+export const cfReady = () => !!(process.env.CF_ACCOUNT_ID && process.env.CF_API_TOKEN);
+async function toBlob(src) {
+  if (src.startsWith('data:')) { const [, mime, b64] = src.match(/^data:([^;]+);base64,(.*)$/); return new Blob([Buffer.from(b64, 'base64')], { type: mime }); }
+  const r = await fetch(src); if (!r.ok) throw new Error('imagen'); return new Blob([Buffer.from(await r.arrayBuffer())], { type: (r.headers.get('content-type') || 'image/jpeg').split(';')[0] });
+}
+export async function cfKlein(prompt, images, w = 1024, h = 1024) {
+  const f = new FormData(); f.append('prompt', prompt);
+  const s = Math.min(1, 1024 / Math.max(w, h)); f.append('width', String(Math.max(256, Math.round(w * s / 16) * 16))); f.append('height', String(Math.max(256, Math.round(h * s / 16) * 16)));
+  for (let i = 0; i < images.length; i++) f.append('input_image_' + i, await toBlob(images[i]), 'img' + i + '.jpg');
+  const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${process.env.CF_ACCOUNT_ID}/ai/run/@cf/black-forest-labs/flux-2-klein-4b`, { method: 'POST', headers: { authorization: `Bearer ${process.env.CF_API_TOKEN}` }, body: f });
+  const d = await r.json().catch(() => ({}));
+  const img = d.result?.image; if (!r.ok || !img) throw Object.assign(new Error(d.errors?.[0]?.message || 'La IA gratis no respondió.'), { code: 502 });
+  return img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`;
+}

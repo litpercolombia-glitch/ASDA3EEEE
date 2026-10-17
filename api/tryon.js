@@ -1,18 +1,20 @@
 // Prueba ultra realista de ropa con IA (FASHN tryon). La foto se procesa y no se guarda.
-import { originOk, json, readJson, imageUrlOk, isDataImage, falRun, rateOk } from './_util.js';
+import { originOk, json, readJson, imageUrlOk, isDataImage, falRun, rateOk, cfReady, cfKlein } from './_util.js';
 const CAT = { superior: 'tops', inferior: 'bottoms', completo: 'one-pieces' };
 export default async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'metodo' });
   if (!originOk(req)) return json(res, 403, { error: 'origen' });
   if (!rateOk(req)) return json(res, 429, { error: 'tope', message: 'Llegaste al tope de fotos con IA por hoy. La cámara en vivo sigue gratis.' });
-  const key = process.env.FASHN_API_KEY, fal = process.env.FAL_KEY;
-  if (!key && !fal) return json(res, 503, { error: 'sin_llave' });
+  const key = process.env.FASHN_API_KEY, fal = process.env.FAL_KEY, cf = cfReady();
+  if (!key && !fal && !cf) return json(res, 503, { error: 'sin_llave' });
   let b; try { b = await readJson(req); } catch (e) { return json(res, e.code || 400, { error: 'cuerpo', message: e.message }); }
   const self = req.headers.host;
   if (!isDataImage(b.person)) return json(res, 400, { error: 'foto', message: 'Falta la foto de la persona.' });
   let garment = b.garment;
   if (!imageUrlOk(garment, self)) return json(res, 400, { error: 'prenda', message: 'La imagen de la prenda no es válida.' });
   if (!CAT[b.category]) return json(res, 400, { error: 'categoria', message: 'Este producto no se prueba con IA en persona.' });
+  const W = { tops: 'top (shirt, t-shirt, sweater)', bottoms: 'pants, jeans or skirt', 'one-pieces': 'dress or pajama' };
+  if (cf && !fal && !key) { try { return json(res, 200, { image: await cfKlein(`Dress the person in image 1 with the exact ${W[CAT[b.category]]} shown in image 2, same design, colors, print and fabric, natural fit and folds on the body. Keep the person's face, body, pose, hair, background and lighting exactly the same. Photorealistic smartphone photo.`, [b.person, garment], b.w, b.h), via: 'cf' }); } catch (e) { return json(res, e.code || 502, { error: 'ia', message: e.message }); } }
   if (fal) { try { return json(res, 200, { image: await falRun('fal-ai/fashn/tryon/v1.6', { model_image: b.person, garment_image: garment, category: CAT[b.category], mode: 'balanced', output_format: 'jpeg', moderation_level: 'permissive' }) }); } catch (e) { return json(res, e.code || 502, { error: 'ia', message: e.message }); } }
   try {
     const run = await fetch('https://api.fashn.ai/v1/run', { method: 'POST', headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
