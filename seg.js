@@ -1,6 +1,7 @@
 // Detección automática de la superficie (cama, mesa, ventana) con SegFormer ADE20K en el navegador.
 // El modelo (4,4 MB) se sirve desde este mismo sitio: /models/... — nada sale del celular.
 const TJS = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5/dist/transformers.min.js';
+const CDN_MODELS = 'https://cdn.jsdelivr.net/gh/litpercolombia-glitch/ASDA3EEEE@9381d9e/models/';
 const LABELS = { cama: ['bed'], mantel: ['table', 'desk'], cortina: ['curtain', 'windowpane'] };
 let segP = null;
 export function loadSeg() {
@@ -10,8 +11,12 @@ export function loadSeg() {
     T.env.allowRemoteModels = false; T.env.localModelPath = '/models/'; T.env.allowLocalModels = true;
     const opts = { dtype: 'q8' };
     let gpu = null; try { gpu = navigator.gpu && (await navigator.gpu.requestAdapter()); } catch {}
-    if (gpu) { try { return await T.pipeline('image-segmentation', 'Xenova/segformer-b0-finetuned-ade-512-512', { ...opts, device: 'webgpu' }); } catch {} }
-    return T.pipeline('image-segmentation', 'Xenova/segformer-b0-finetuned-ade-512-512', { ...opts, device: 'wasm' });
+    // el modelo se baja del CDN gratis (jsDelivr, copia fija del repo); si falla, desde este mismo sitio
+    for (const base of [CDN_MODELS, '/models/']) {
+      T.env.localModelPath = base;
+      if (gpu) { try { return await T.pipeline('image-segmentation', 'Xenova/segformer-b0-finetuned-ade-512-512', { ...opts, device: 'webgpu' }); } catch {} }
+      try { return await T.pipeline('image-segmentation', 'Xenova/segformer-b0-finetuned-ade-512-512', { ...opts, device: 'wasm' }); } catch (e) { if (base === '/models/') throw e; }
+    }
   })().catch((e) => { segP = null; throw e; });
   return segP;
 }

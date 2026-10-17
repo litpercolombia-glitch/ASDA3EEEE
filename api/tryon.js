@@ -1,9 +1,10 @@
 // Prueba ultra realista de ropa con IA (FASHN tryon). La foto se procesa y no se guarda.
-import { originOk, json, readJson, imageUrlOk, isDataImage, falRun } from './_util.js';
+import { originOk, json, readJson, imageUrlOk, isDataImage, falRun, rateOk } from './_util.js';
 const CAT = { superior: 'tops', inferior: 'bottoms', completo: 'one-pieces' };
 export default async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'metodo' });
   if (!originOk(req)) return json(res, 403, { error: 'origen' });
+  if (!rateOk(req)) return json(res, 429, { error: 'tope', message: 'Llegaste al tope de fotos con IA por hoy. La cámara en vivo sigue gratis.' });
   const key = process.env.FASHN_API_KEY, fal = process.env.FAL_KEY;
   if (!key && !fal) return json(res, 503, { error: 'sin_llave' });
   let b; try { b = await readJson(req); } catch (e) { return json(res, e.code || 400, { error: 'cuerpo', message: e.message }); }

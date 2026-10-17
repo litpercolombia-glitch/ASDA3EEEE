@@ -586,7 +586,12 @@ $('btnSave').onclick = async () => {
   if (navigator.canShare?.({ files: [f] })) { try { await navigator.share({ files: [f], title: P.title }); return; } catch {} }
   const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'probador-litper.jpg'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 };
+function aiQuota() { // tope: 3 fotos con IA por persona al día (el servidor también limita)
+  const k = 'vto_ai_' + new Date().toISOString().slice(0, 10); let n = 0; try { n = +localStorage.getItem(k) || 0; } catch {}
+  return { left: 3 - n, use() { try { localStorage.setItem(k, n + 1); } catch {} } };
+}
 async function ultra() {
+  const q = aiQuota(); if (q.left <= 0) return toast('Ya usaste tus 3 fotos ultra realistas de hoy. Mañana tienes más; la cámara en vivo sigue gratis.', 5000);
   if (!lastClean) { if (mode === 'probar' && (stream || frozen)) { $('btnShot').click(); } else return toast('Toma primero la foto.'); }
   $('shot').hidden = false; $('spin').hidden = false; $('shotT').textContent = 'Versión ultra realista';
   const v = P.variants[VAR], garment = new URL(v.image, location.href).href;
@@ -595,7 +600,7 @@ async function ultra() {
     const r = await fetch(persona ? '/api/tryon' : '/api/hogar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(persona ? { person: lastClean, garment, category: P.kind } : { room: lastClean, product: garment, kind: P.kind, title: P.title }) });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error === 'sin_llave' ? 'La versión con IA se activa cuando Litper conecte su llave de IA. Mientras tanto usa la cámara en vivo.' : d.message || 'La IA no respondió. Intenta otra vez.');
-    $('shotImg').src = d.image; setCompare(lastClean);
+    $('shotImg').src = d.image; setCompare(lastClean); q.use();
   } catch (e) { toast(e.message, 5000); }
   $('spin').hidden = true;
 }

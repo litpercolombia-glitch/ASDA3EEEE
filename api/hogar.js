@@ -1,5 +1,5 @@
 // Pone el producto de hogar (cobija, sábanas, cortina, mantel) en la foto real del cliente con IA de imagen (Gemini).
-import { originOk, json, readJson, imageUrlOk, isDataImage, falRun } from './_util.js';
+import { originOk, json, readJson, imageUrlOk, isDataImage, falRun, rateOk } from './_util.js';
 const PROMPT = {
   cama: 'Dress the bed in the FIRST photo with the exact bedding product shown in the SECOND photo (same pattern, colors, fabric and quilting). Fit it to that mattress size with natural drape, folds and tuck. Keep the room, camera angle, lighting, furniture and every other object exactly the same. Photorealistic smartphone photo, no text.',
   cortina: 'Hang the exact curtains shown in the SECOND photo on the window of the FIRST photo (same color, fabric and opacity), with natural pleats from the top of the window to the floor. Keep everything else exactly the same. Photorealistic, no text.',
@@ -8,6 +8,7 @@ const PROMPT = {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'metodo' });
   if (!originOk(req)) return json(res, 403, { error: 'origen' });
+  if (!rateOk(req)) return json(res, 429, { error: 'tope', message: 'Llegaste al tope de fotos con IA por hoy. La cámara en vivo sigue gratis.' });
   const key = process.env.GEMINI_API_KEY, fal = process.env.FAL_KEY;
   if (!key && !fal) return json(res, 503, { error: 'sin_llave' });
   let b; try { b = await readJson(req); } catch (e) { return json(res, e.code || 400, { error: 'cuerpo', message: e.message }); }

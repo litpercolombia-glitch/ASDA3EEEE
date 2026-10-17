@@ -33,3 +33,9 @@ export async function falRun(model, input) {
   const im = await fetch(url); const b = Buffer.from(await im.arrayBuffer());
   return `data:${(im.headers.get('content-type') || 'image/jpeg').split(';')[0]};base64,${b.toString('base64')}`;
 }
+// tope por IP (mejor esfuerzo, por instancia): evita que alguien gaste el saldo de IA
+const hits = new Map();
+export function rateOk(req, max = Number(process.env.AI_MAX_PER_IP_DAY || 6)) {
+  const ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim(), day = new Date().toISOString().slice(0, 10), k = ip + '|' + day;
+  const n = (hits.get(k) || 0) + 1; hits.set(k, n); if (hits.size > 5000) hits.clear(); return n <= max;
+}
