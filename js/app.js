@@ -335,12 +335,14 @@ async function usePhoto(src, fuente) {
   track('foto', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { fuente } });
   const cmp = $('#cmp');
   cmp.style.setProperty('--ar', `${fw} / ${fh}`); cmp.style.setProperty('--ar-n', String(fw / fh));
+  // foto horizontal en celular: el escenario se ajusta a la foto (sin franjas vacías) y los botones suben
+  document.body.dataset.orient = fw / fh > 1.05 ? 'h' : 'v'; $('.stage').style.setProperty('--ar-n', String(fw / fh));
   $('#imgBefore').src = data; $('#imgAfter').removeAttribute('src');
   generate();
 }
 function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i += 7) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
 function retake() {
-  photo = null; shown = null; results.clear(); setState('inicio'); renderOptions(); renderSaved();
+  photo = null; shown = null; results.clear(); delete document.body.dataset.orient; setState('inicio'); renderOptions(); renderSaved();
   $('#fileCam').value = ''; $('#fileGal').value = '';
 }
 
@@ -352,6 +354,7 @@ async function generate(retry = true) {
   if (results.has(key)) { shown = { key: photo.key, color: sel.color, src: results.get(key) }; return showResult(results.get(key), false); }
   const gen = ++genN;
   busy = true; lastErr = null; setState('procesando'); startProgress();
+  const tt = document.getElementById('toast'); if (tt && /Preparando tu foto/.test(tt.textContent)) tt.classList.remove('on'); // ya se ve el avance
   markSwatch(sel.color, 'loading');
   const t0 = performance.now();
   try {

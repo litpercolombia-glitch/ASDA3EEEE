@@ -15,7 +15,7 @@ export const OFFER = {
 // Primero estudios independientes y retailers grandes (regla de la investigación); siempre con quién lo midió y cuándo.
 // Referencias de la industria (realidad aumentada y 3D de otras empresas): se rotulan así en la landing, separadas de los resultados propios.
 export const STATS = [
-  { n: 'Casi 20 %', t: 'más alta fue la tasa de compra de quienes usaron realidad aumentada antes de comprar (160.400 clientes, app de cosméticos).', src: 'Tan, Chandukala y Reddy, Journal of Marketing (2022), estudio independiente', url: 'https://insight.kellogg.northwestern.edu/article/selling-niche-products-augmented-reality' },
-  { n: 'Hasta −40 %', t: 'de devoluciones en los pilotos del probador 3D de Zalando; sus herramientas de talla evitaron el 8 % de las devoluciones por talla en 2025.', src: 'Zalando (2026), dato propio de Zalando', url: 'https://corporate.zalando.com/en/node/11013' },
-  { n: '−36,9 %', t: 'de devoluciones en zapatos comprados con medición desde el celular (ZOZOMAT, feb–oct 2020).', src: 'ZOZO, Japón (2021), dato propio de ZOZO', url: 'https://corp.zozo.com/en/initiative/20211019-7006/' },
+  { n: 'Casi 20\u00a0%', t: 'más alta fue la tasa de compra de quienes usaron realidad aumentada antes de comprar (160.400 clientes, app de cosméticos).', src: 'Tan, Chandukala y Reddy, Journal of Marketing (2022), estudio independiente', url: 'https://insight.kellogg.northwestern.edu/article/selling-niche-products-augmented-reality' },
+  { n: 'Hasta −40\u00a0%', t: 'de devoluciones en los pilotos del probador 3D de Zalando; sus herramientas de talla evitaron el 8 % de las devoluciones por talla en 2025.', src: 'Zalando (2026), dato propio de Zalando', url: 'https://corporate.zalando.com/en/node/11013' },
+  { n: '−36,9\u00a0%', t: 'de devoluciones en zapatos comprados con medición desde el celular (ZOZOMAT, feb–oct 2020).', src: 'ZOZO, Japón (2021), dato propio de ZOZO', url: 'https://corp.zozo.com/en/initiative/20211019-7006/' },
 ];
