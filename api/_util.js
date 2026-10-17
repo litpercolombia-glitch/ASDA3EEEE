@@ -1,56 +1,96 @@
-// Utilidades comunes de las funciones: origen permitido, límites y respuestas JSON.
-const ALLOWED = (process.env.ALLOWED_ORIGINS || 'litper.store,.vercel.app,.myshopify.com').split(',').map((s) => s.trim()).filter(Boolean);
-export function originOk(req) {
-  const o = req.headers.origin || req.headers.referer || '';
-  if (!o) return true; // navegación directa / mismo origen sin cabecera
-  try { const h = new URL(o).hostname; return ALLOWED.some((a) => (a.startsWith('.') ? h.endsWith(a) : h === a || h.endsWith('.' + a))); } catch { return false; }
-}
-export function json(res, code, body, cache) {
-  res.statusCode = code;
+// Utilidades compartidas de las funciones del probador (solo lectura de catálogos públicos de Shopify).
+export function json(res, status, body, cache = 'no-store') {
+  res.statusCode = status;
   res.setHeader('content-type', 'application/json; charset=utf-8');
-  res.setHeader('cache-control', cache || 'no-store');
+  res.setHeader('cache-control', cache);
   res.setHeader('x-content-type-options', 'nosniff');
   res.end(JSON.stringify(body));
 }
-export async function readJson(req, max = 4_000_000) {
-  if (req.body && typeof req.body === 'object') return req.body;
-  let size = 0; const chunks = [];
-  for await (const c of req) { size += c.length; if (size > max) throw Object.assign(new Error('La foto es muy pesada'), { code: 413 }); chunks.push(c); }
-  return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+export const q = (req, k) => String(req.query?.[k] ?? new URL(req.url, 'http://x').searchParams.get(k) ?? '');
+
+// Dominio de tienda válido (nada de IPs, localhost ni redes internas)
+export function shopHost(raw) {
+  const h = String(raw || 'litper.store').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/:\d+$/, '');
+  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(h) || h.length > 120) return null;
+  if (/^[\d.]+$/.test(h) || /(^|\.)(localhost|local|internal|lan|home|corp)$/.test(h)) return null;
+  return h;
 }
-const IMG_HOSTS = ['cdn.shopify.com', 'litper.store'];
-export function imageUrlOk(u, selfHost) {
-  try { const x = new URL(u); return x.protocol === 'https:' && (IMG_HOSTS.includes(x.hostname) || x.hostname === selfHost); } catch { return false; }
+export const handleOk = (h) => /^[a-z0-9][a-z0-9-]{0,200}$/.test(h);
+
+export async function getJSON(url, ms = 9000) {
+  const r = await fetch(url, { headers: { accept: 'application/json', 'user-agent': 'ZynexProbador/1.0 (+https://probador.zynexapp.com)' }, redirect: 'follow', signal: AbortSignal.timeout(ms) });
+  if (!r.ok) { const e = new Error('http_' + r.status); e.status = r.status; throw e; }
+  const t = await r.text(); if (t.length > 8_000_000) throw new Error('muy_grande');
+  return JSON.parse(t);
 }
-export const isDataImage = (s) => typeof s === 'string' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(s) && s.length < 4_000_000;
-// fal.ai: una sola llave (FAL_KEY) para FASHN (ropa) y Nano Banana (hogar). sync_mode devuelve la imagen como data URI.
-export async function falRun(model, input) {
-  const r = await fetch(`https://fal.run/${model}`, { method: 'POST', headers: { authorization: `Key ${process.env.FAL_KEY}`, 'content-type': 'application/json' }, body: JSON.stringify({ ...input, sync_mode: true }) });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw Object.assign(new Error(d.detail?.[0]?.msg || d.detail || 'La IA no pudo con esta foto.'), { code: 502 });
-  const url = d.images?.[0]?.url; if (!url) throw Object.assign(new Error('La IA no devolvió imagen.'), { code: 502 });
-  if (url.startsWith('data:')) return url;
-  const im = await fetch(url); const b = Buffer.from(await im.arrayBuffer());
-  return `data:${(im.headers.get('content-type') || 'image/jpeg').split(';')[0]};base64,${b.toString('base64')}`;
+
+const cacheMeta = new Map();
+export async function shopMeta(shop) {
+  const c = cacheMeta.get(shop); if (c && Date.now() - c.t < 3600e3) return c.v;
+  let v = { name: shop, currency: 'COP' };
+  try { const m = await getJSON(`https://${shop}/meta.json`, 6000); v = { name: m.name || shop, currency: m.currency || 'COP', country: m.country || null }; } catch {}
+  cacheMeta.set(shop, { t: Date.now(), v }); return v;
 }
-// tope por IP (mejor esfuerzo, por instancia): evita que alguien gaste el saldo de IA
-const hits = new Map();
-export function rateOk(req, max = Number(process.env.AI_MAX_PER_IP_DAY || 6)) {
-  const ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim(), day = new Date().toISOString().slice(0, 10), k = ip + '|' + day;
-  const n = (hits.get(k) || 0) + 1; hits.set(k, n); if (hits.size > 5000) hits.clear(); return n <= max;
+
+export const img = (u, w) => { if (!u) return null; let s = u.startsWith('//') ? 'https:' + u : u; if (w) s += (s.includes('?') ? '&' : '?') + 'width=' + w; return s; };
+const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+// Qué es el producto: decide el tipo de prueba (cama, ventana, mesa, cuerpo, espacio)
+const TYPE_MAP = [
+  [/protector/, 'protector'], [/kit de cama|juego de s[aá]banas|s[aá]bana/, 'sabanas'], [/cortina|velo|persiana/, 'cortina'],
+  [/edred|colcha|plum[oó]n|cubrelecho|duvet/, 'edredon'], [/cobija|manta|frazada|cobertor/, 'cobija'], [/mantel/, 'mantel'],
+  [/almohada/, 'almohada'],
+];
+const WORDS = [
+  ['cortina', 'cortina'], ['blackout', 'cortina'], ['velo', 'cortina'], ['ventana', 'cortina'], ['persiana', 'cortina'],
+  ['mantel', 'mantel'], ['forro', 'forro'], ['silla', 'forro'], ['sofa', 'forro'], ['protector', 'protector'],
+  ['sabana', 'sabanas'], ['edredon', 'edredon'], ['colcha', 'edredon'], ['plumon', 'edredon'], ['cubrelecho', 'edredon'], ['duvet', 'edredon'],
+  ['cobija', 'cobija'], ['cobertor', 'cobija'], ['manta', 'cobija'], ['frazada', 'cobija'], ['almohada', 'almohada'],
+  ['zapatero', 'mueble'], ['estante', 'mueble'], ['esquinero', 'mueble'], ['armario', 'mueble'], ['perchero', 'mueble'], ['organizador', 'mueble'],
+  ['repisa', 'mueble'], ['mueble', 'mueble'], ['tapete', 'mueble'], ['alfombra', 'mueble'], ['lampara', 'mueble'], ['espejo', 'mueble'], ['cuadro', 'mueble'],
+];
+const GARMENT_WORDS = [
+  ['camiseta', 'camiseta'], ['t-shirt', 'camiseta'], ['polo', 'polo'], ['camisa', 'camisa'], ['blusa', 'blusa'], ['buzo', 'buzo'], ['hoodie', 'hoodie'],
+  ['saco', 'saco'], ['sueter', 'saco'], ['chaqueta', 'chaqueta'], ['chaleco', 'chaleco'], ['crop top', 'top'], ['top ', 'top'],
+  ['pantalon', 'pantalon'], ['jean', 'jean'], ['sudadera', 'sudadera'], ['jogger', 'jogger'], ['falda', 'falda'], ['short', 'short'], ['bermuda', 'short'],
+  ['vestido', 'vestido'], ['enterizo', 'enterizo'], ['jumpsuit', 'enterizo'], ['pijama', 'pijama'], ['conjunto', 'conjunto'], ['uniforme', 'uniforme'],
+];
+const BLOCKED = /ropa interior|brasier|sosten|panty|tanga|boxer|calzon|lenceri|bikini|traje de ba|vestido de ba|banador|trusa|cachetero|bodysuit/;
+
+export function kindOf(p) {
+  const type = norm(p.type || p.product_type), title = norm(p.title), handle = norm(p.handle).replace(/-/g, ' ');
+  const all = `${type} ${title} ${handle} ${norm((p.tags || []).join(' '))}`;
+  if (BLOCKED.test(all)) return { kind: 'bloqueado', garment: null };
+  for (const [r, k] of TYPE_MAP) if (r.test(type)) return { kind: k, garment: null };
+  // primero la prenda o el artículo que se nombra antes en el título (el principal)
+  let best = null;
+  for (const [w, k] of WORDS) { const i = (' ' + title + ' ').indexOf(' ' + w); if (i >= 0 && (!best || i < best.i)) best = { i, kind: k }; }
+  // "comedor vestido de Navidad" no es ropa: si el título habla de la casa, las palabras de ropa no cuentan
+  const home = /(^| )(comedor|cama|mesa|silla|sillas|ventana|colchon|sofa|hogar|casa|cocina|bano|sala|habitacion|cuarto|puerta)( |$)/.test(`${title} ${handle}`);
+  if (!home) for (const [w, g] of GARMENT_WORDS) { const i = (' ' + title + ' ').indexOf(' ' + w); if (i >= 0 && (!best || i < best.i)) best = { i, kind: 'ropa', garment: g }; }
+  if (best) return { kind: best.kind, garment: best.garment || null };
+  for (const [w, k] of WORDS) if (handle.includes(w)) return { kind: k, garment: null };
+  if (!home) for (const [w, g] of GARMENT_WORDS) if (`${handle} ${type}`.includes(w.trim())) return { kind: 'ropa', garment: g };
+  return { kind: 'otro', garment: null };
 }
-// Cloudflare Workers AI · FLUX.2 [klein] 4B (Apache-2.0): 10.000 neurons gratis al día (~68 ediciones), luego ~US$0,0016 c/u.
-export const cfReady = () => !!(process.env.CF_ACCOUNT_ID && process.env.CF_API_TOKEN);
-async function toBlob(src) {
-  if (src.startsWith('data:')) { const [, mime, b64] = src.match(/^data:([^;]+);base64,(.*)$/); return new Blob([Buffer.from(b64, 'base64')], { type: mime }); }
-  const r = await fetch(src); if (!r.ok) throw new Error('imagen'); return new Blob([Buffer.from(await r.arrayBuffer())], { type: (r.headers.get('content-type') || 'image/jpeg').split(';')[0] });
+
+export function optionRoles(options) {
+  const r = options.map((o) => {
+    const n = norm(o.name);
+    if (/color|dise|estampado|tono|modelo/.test(n)) return 'color';
+    if (/medid|tama|talla|size|^medi$|cama/.test(n)) return 'size';
+    if (/cant|pack|unid|x\d/.test(n)) return 'qty';
+    return 'other';
+  });
+  // sin opción de color: la primera opción "otra" con varios valores hace de color/diseño (ej. "Cortina + sábanas")
+  if (!r.includes('color')) { const i = r.findIndex((x, k) => x === 'other' && (options[k].values || []).length > 1); if (i >= 0) r[i] = 'color'; }
+  return r;
 }
-export async function cfKlein(prompt, images, w = 1024, h = 1024) {
-  const f = new FormData(); f.append('prompt', prompt);
-  const s = Math.min(1, 1024 / Math.max(w, h)); f.append('width', String(Math.max(256, Math.round(w * s / 16) * 16))); f.append('height', String(Math.max(256, Math.round(h * s / 16) * 16)));
-  for (let i = 0; i < images.length; i++) f.append('input_image_' + i, await toBlob(images[i]), 'img' + i + '.jpg');
-  const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${process.env.CF_ACCOUNT_ID}/ai/run/@cf/black-forest-labs/flux-2-klein-4b`, { method: 'POST', headers: { authorization: `Bearer ${process.env.CF_API_TOKEN}` }, body: f });
-  const d = await r.json().catch(() => ({}));
-  const img = d.result?.image; if (!r.ok || !img) throw Object.assign(new Error(d.errors?.[0]?.message || 'La IA gratis no respondió.'), { code: 502 });
-  return img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`;
+
+// Busca la foto que corresponde a un valor (ej. "6 DORADO" → ...-dorado.jpg) cuando la variante no trae imagen
+export function imageForValue(value, images) {
+  const words = norm(value).replace(/[^a-z ]/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !['con', 'para', 'del', 'las', 'los', 'navidad', 'premium'].includes(w));
+  let best = null, bs = 0;
+  for (const u of images) { const f = norm(decodeURIComponent((u.split('/').pop() || '').split('?')[0])); const s = words.reduce((a, w) => a + (f.includes(w) ? 1 : 0), 0); if (s > bs) { bs = s; best = u; } }
+  return best;
 }

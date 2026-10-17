@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Instalar el probador · Zynex</title>
+<meta name="description" content="Guía para poner el botón del probador con IA en tu tienda Shopify en 5 minutos.">
+<meta name="theme-color" content="#07080a">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/img/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css"><link rel="stylesheet" href="/css/pages.css">
+<script type="module" src="/js/instalar.js"></script>
+</head>
+<body class="pg">
+<header class="pg-nav"><a class="logo" href="/"><span class="logo-z">zynex</span><span class="logo-p">probador</span></a><a class="btn sec" id="lnkPanel" href="/panel" hidden>Mi panel</a></header>
+<main class="pg-main">
+  <div>
+    <h1 id="ttl">Instala el probador en tu tienda</h1>
+    <p class="lead2" id="sub">Son 5 minutos y no necesitas programador. Si prefieres, lo hacemos contigo por WhatsApp.</p>
+  </div>
+
+  <section class="card" id="noTenant" hidden>
+    <h2>¿Cuál es tu tienda?</h2>
+    <p class="muted">Escribe el código que te dimos al activar la prueba (por ejemplo: <b>litper</b>). Si aún no la activas, hazlo en la <a href="/#empezar">página principal</a>.</p>
+    <form class="row" id="fT"><div class="field grow"><label for="inT">Código de tu tienda</label><input id="inT" required pattern="[a-z0-9-]{2,40}" autocomplete="off"></div><button class="btn pri" type="submit">Ver mi guía</button></form>
+  </section>
+
+  <section class="card" id="guide" hidden>
+    <ol class="steps2">
+      <li><div><b>Copia este bloque</b><p>Ya trae el código de tu tienda. Sirve para todos tus productos.</p>
+        <textarea class="code2" id="snippet" readonly aria-label="Código para pegar en tu tema"></textarea>
+        <div class="row"><button class="btn pri" id="btnCopy" type="button">Copiar código</button><span class="muted small" id="copied" role="status"></span></div></div></li>
+      <li><div><b>Ábrelo en tu tema</b><p>En Shopify: <b>Tienda online → Temas → Personalizar</b>. Arriba, cambia a la plantilla <b>Productos</b>.</p>
+        <div class="row"><a class="btn sec" id="lnkEditor" target="_blank" rel="noopener">Abrir el editor de mi tema</a></div></div></li>
+      <li><div><b>Pega el bloque debajo del botón de compra</b><p>En la información del producto toca <b>Agregar bloque → Liquid personalizado</b>, pega el código, arrástralo debajo de «Agregar al carrito» o del formulario contraentrega y toca <b>Guardar</b>.</p></div></li>
+      <li><div><b>Pruébalo</b><p>Abre cualquier producto de cama, cortinas, comedor o ropa en tu tienda: verás el botón «Pruébalo». Los productos que no se pueden probar no muestran nada.</p></div></li>
+    </ol>
+  </section>
+
+  <section class="card" id="links" hidden>
+    <h2>Link del probador para WhatsApp</h2>
+    <p class="muted">Envíalo a un cliente para que se pruebe un producto sin entrar a la tienda. Elige el producto:</p>
+    <div class="field"><label for="selProd">Producto</label><select id="selProd"></select></div>
+    <div class="row"><input class="link-in" id="prodLink" readonly aria-label="Link del probador"><button class="btn sec" id="btnCopyLink" type="button">Copiar link</button><a class="btn ghost" id="btnTryLink" target="_blank" rel="noopener">Abrir</a></div>
+  </section>
+
+  <section class="note" id="help">¿Prefieres que lo instalemos nosotros? <a id="lnkWa" target="_blank" rel="noopener">Escríbenos por WhatsApp</a> y lo dejamos funcionando contigo en minutos.</section>
+</main>
+<footer class="pg-foot">Zynex · <a href="/legal">Privacidad y condiciones</a></footer>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

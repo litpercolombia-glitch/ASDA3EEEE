@@ -1,0 +1,7 @@
+{%- comment -%}
+  Zynex Probador · litper.store
+  Dónde: Tienda online → Temas → Personalizar → plantilla Productos → Agregar bloque → «Liquid personalizado».
+  Pégalo debajo del formulario contraentrega (Releasit) y guarda. El botón solo aparece en productos que se pueden probar.
+{%- endcomment -%}
+<div data-zvto data-t="litper" data-h="{{ product.handle }}" data-v="{{ product.selected_or_first_available_variant.id }}" data-title="{{ product.title | escape }}" data-type="{{ product.type | escape }}"></div>
+<script src="https://asda3eeee-git-probador-litpers-projects.vercel.app/embed.js" defer></script>

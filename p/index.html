@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Probador con IA · Pruébalo antes de comprar</title>
+<meta name="description" content="Toma una foto y mira el producto puesto en tu cama, tu ventana o en ti, en segundos.">
+<meta name="theme-color" content="#07080a">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/img/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://gtsivwbnhcawvmsfujby.supabase.co" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/app.css">
+<script type="module" src="/js/app.js"></script>
+</head>
+<body class="app" data-state="cargando">
+<svg width="0" height="0" class="sr" aria-hidden="true">
+  <symbol id="i-cam" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.6" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-img" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="2" fill="currentColor"/><path d="m4 18 5-5 4 4 3-3 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12M7 8l5-5 5 5M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6"/></symbol>
+  <symbol id="i-dl" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-q" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.6 9.3a2.5 2.5 0 1 1 3.3 2.4c-.6.2-.9.7-.9 1.3v.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.2" fill="currentColor"/></symbol>
+  <symbol id="i-cart" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h8.8a1 1 0 0 0 1-.8L20 8H6.2"/><circle cx="9" cy="20" r="1.4" fill="currentColor"/><circle cx="17" cy="20" r="1.4" fill="currentColor"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="m5 12.5 4.2 4.2L19 7"/></symbol>
+  <symbol id="i-wa" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.7 14.9L2 22l5.2-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3.1.8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.8-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.1.7a2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z"/></symbol>
+  <!-- ilustraciones de qué fotografiar -->
+  <symbol id="s-cama" viewBox="0 0 200 150"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M38 40h124v38H38z" opacity=".55"/><path d="M26 78h148l14 34H12z"/><path d="M12 112v14M188 112v14M12 126h176"/><rect x="48" y="62" width="44" height="18" rx="8"/><rect x="108" y="62" width="44" height="18" rx="8"/><path d="M26 92c40 6 108 6 148 0" opacity=".5"/></g></symbol>
+  <symbol id="s-cortina" viewBox="0 0 200 150"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M30 18h140"/><rect x="58" y="28" width="84" height="88" rx="2" opacity=".5"/><path d="M100 28v88M58 72h84" opacity=".4"/><path d="M36 18c6 30-6 60 4 110M48 18c-4 34 8 64-2 110M164 18c-6 30 6 60-4 110M152 18c4 34-8 64 2 110"/><path d="M20 136h160"/></g></symbol>
+  <symbol id="s-mesa" viewBox="0 0 200 150"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M40 64h120l18 18H22z"/><path d="M34 82v46M166 82v46M60 82v34M140 82v34"/><path d="M14 40v62h22M186 40v62h-22" opacity=".55"/><path d="M14 102v26M36 102v26M186 102v26M164 102v26" opacity=".55"/></g></symbol>
+  <symbol id="s-ropa" viewBox="0 0 200 150"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><circle cx="100" cy="22" r="11"/><path d="M82 38h36l12 8 8 34M82 38l-12 8-8 34"/><path d="M82 38v44h36V38" /><path d="M84 82l-4 56M116 82l4 56M100 92v46"/></g></symbol>
+  <symbol id="s-mueble" viewBox="0 0 200 150"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M20 128 80 98h100M80 98V14" opacity=".5"/><path d="M20 128V40l60-26" opacity=".5"/><rect x="106" y="50" width="44" height="62" rx="3"/><path d="M106 70h44M106 90h44"/><path d="M40 132h140" opacity=".4"/></g></symbol>
+</svg>
+
+<header class="bar">
+  <button class="ic" id="btnClose" aria-label="Cerrar probador" hidden><svg><use href="#i-x"/></svg></button>
+  <div class="bar-t"><b id="barT">Probador con IA</b><small id="barS">Foto real, en segundos</small></div>
+  <button class="ic" id="btnInfo" aria-label="Cómo funciona"><svg><use href="#i-q"/></svg></button>
+</header>
+
+<main class="wrap">
+  <section class="stage" id="stage" aria-label="Vista de la prueba">
+    <div class="empty" id="empty">
+      <div class="illu-w"><svg class="illu" id="illu"><use href="#s-cama"/></svg><div class="sweep" aria-hidden="true"></div></div>
+      <p class="empty-t" id="emptyT">Toma una foto de tu cama</p>
+      <p class="empty-s" id="emptyS">Que se vea completa y con buena luz. La IA hace el resto.</p>
+    </div>
+    <div class="frame" id="frame" hidden>
+      <div class="cmp" id="cmp">
+        <img id="imgBefore" alt="Tu foto">
+        <div class="after" id="after"><img id="imgAfter" alt="Tu foto con el producto puesto"></div>
+        <div class="scan" id="scan" aria-hidden="true"><div class="mesh"></div><div class="line"></div></div>
+        <div class="handle" id="handle" aria-hidden="true"><span></span></div>
+        <input type="range" class="cmp-r" id="cmpR" min="0" max="100" value="50" aria-label="Deslizar para comparar antes y después" hidden>
+        <span class="tag l" id="tagL" hidden>Antes</span><span class="tag r" id="tagR" hidden>Con el producto</span>
+      </div>
+    </div>
+    <div class="steps" id="steps" hidden aria-live="polite">
+      <ol id="stepList"></ol>
+      <div class="prog" role="progressbar" aria-label="Creando tu foto" aria-valuemin="0" aria-valuemax="100"><i id="progBar"></i></div>
+    </div>
+  </section>
+
+  <section class="side" id="side">
+    <div class="picker" id="picker" hidden>
+      <h2>Elige qué quieres probar</h2>
+      <div class="grid" id="pickGrid"></div>
+    </div>
+
+    <article class="prod" id="prod" hidden>
+      <img id="pImg" alt="" width="64" height="64">
+      <div class="prod-t"><b id="pName"></b><span id="pPrice"></span></div>
+    </article>
+
+    <div class="opt" id="optColor" hidden>
+      <div class="lab"><span id="colorLab">Color</span><b id="colorVal"></b></div>
+      <div class="sw" id="swatches" role="group" aria-label="Color o diseño"></div>
+    </div>
+    <div class="opt" id="optSize" hidden>
+      <div class="lab"><span id="sizeLab">Medida</span><button class="link" id="btnSizeHelp" type="button">¿Cuál es la mía?</button></div>
+      <div class="chips" id="sizes" role="group" aria-label="Medida o talla"></div>
+    </div>
+    <div class="opt" id="optQty" hidden>
+      <div class="lab"><span id="qtyLab">Cantidad</span></div>
+      <div class="chips" id="qtys" role="group" aria-label="Cantidad"></div>
+    </div>
+
+    <div class="acts" id="actsStart" hidden>
+      <div class="saved" id="saved" hidden><img id="savedImg" alt="Tu foto guardada"><div class="saved-t"><b>Tu foto guardada</b><small>Solo está en este celular · <button class="link" id="btnSavedDel" type="button">Borrar</button></small></div><button class="btn sec" id="btnSaved" type="button">Usarla</button></div>
+      <label class="btn pri big"><input type="file" accept="image/*" capture="environment" id="fileCam"><svg><use href="#i-cam"/></svg><span id="camLab">Tomar foto de mi cama</span></label>
+      <label class="btn sec"><input type="file" accept="image/*" id="fileGal"><svg><use href="#i-img"/></svg><span id="galLab">Subir de la galería</span></label>
+      <div class="samples"><span id="sampleLab">o usa una foto de ejemplo</span><div class="sample-row" id="samples"></div></div>
+      <p class="priv"><svg><use href="#i-lock"/></svg>Tu foto solo se usa para crear la imagen. No la guardamos.</p>
+    </div>
+
+    <div class="acts" id="actsResult" hidden>
+      <button class="btn pri big" id="btnBuy" type="button"><svg><use href="#i-cart"/></svg><span id="buyLab">Comprar</span></button>
+      <div class="row3">
+        <button class="btn sec" id="btnShare" type="button"><svg><use href="#i-share"/></svg>Compartir</button>
+        <button class="btn sec" id="btnSave" type="button"><svg><use href="#i-dl"/></svg>Guardar</button>
+        <button class="btn sec" id="btnRetake" type="button"><svg><use href="#i-redo"/></svg>Otra foto</button>
+      </div>
+      <p class="hint" id="resHint"></p>
+    </div>
+
+    <div class="err" id="errBox" hidden role="alert">
+      <b id="errT">Algo falló</b><p id="errS"></p>
+      <div class="row2"><button class="btn sec" id="btnRetry" type="button">Intentar otra vez</button><a class="btn ghost" id="btnWaErr" target="_blank" rel="noopener"><svg><use href="#i-wa"/></svg>Ayuda</a></div>
+    </div>
+
+    <section class="kit" id="kit" hidden>
+      <div class="kit-h"><b id="kitT">Completa tu cama</b><small id="kitS">Llévalo todo en un solo pedido</small></div>
+      <div class="kit-list" id="kitList"></div>
+      <button class="btn sec" id="btnKit" type="button"><svg><use href="#i-cart"/></svg><span id="kitLab">Agregar todo</span></button>
+    </section>
+
+    <footer class="by"><a href="/" target="_blank" rel="noopener" id="byLink">Probador con IA por <b>Zynex</b></a></footer>
+  </section>
+</main>
+
+<div class="sheet-bg" id="sheetBg" hidden></div>
+<section class="sheet" id="mSize" role="dialog" aria-modal="true" aria-labelledby="mSizeT" hidden>
+  <div class="sheet-h"><h3 id="mSizeT">¿Cuál es tu medida?</h3><button class="ic" data-close aria-label="Cerrar"><svg><use href="#i-x"/></svg></button></div>
+  <div id="sizeHome">
+    <p class="muted">Mide el ancho de tu colchón con un metro. Ese número define la medida.</p>
+    <div class="field"><label for="inAncho">Ancho del colchón (cm)</label><input id="inAncho" type="number" inputmode="numeric" min="60" max="220" placeholder="Ej: 140"></div>
+    <table class="sizes-t"><tbody id="sizeTable"></tbody></table>
+  </div>
+  <div id="sizeBody" hidden>
+    <p class="muted">Con tu estatura y peso te decimos la talla más probable.</p>
+    <div class="two"><div class="field"><label for="inAlto">Estatura (cm)</label><input id="inAlto" type="number" inputmode="numeric" min="120" max="220" placeholder="170"></div>
+    <div class="field"><label for="inPeso">Peso (kg)</label><input id="inPeso" type="number" inputmode="numeric" min="30" max="200" placeholder="68"></div></div>
+    <div class="chips" role="group" aria-label="Cómo te gusta que quede" id="fitChips">
+      <button class="chip" type="button" data-fit="-1" aria-pressed="false">Ajustado</button><button class="chip" type="button" data-fit="0" aria-pressed="true">Normal</button><button class="chip" type="button" data-fit="1" aria-pressed="false">Holgado</button>
+    </div>
+  </div>
+  <div class="size-res" id="sizeRes" hidden></div>
+  <button class="btn pri" id="btnSizeOk" type="button">Calcular</button>
+</section>
+
+<section class="sheet" id="mInfo" role="dialog" aria-modal="true" aria-labelledby="mInfoT" hidden>
+  <div class="sheet-h"><h3 id="mInfoT">Así funciona</h3><button class="ic" data-close aria-label="Cerrar"><svg><use href="#i-x"/></svg></button></div>
+  <ol class="how">
+    <li><b>Toma una foto</b> de tu cama, tu ventana, tu mesa o de ti, como se ve hoy.</li>
+    <li><b>La IA pone el producto real</b> de la tienda sobre tu foto, con la luz y los pliegues de tu casa.</li>
+    <li><b>Desliza para comparar</b>, cambia de color y compra el que más te guste.</li>
+  </ol>
+  <p class="muted small">Es una simulación hecha con inteligencia artificial: los colores pueden variar un poco según la luz de tu foto y tu pantalla. Tu foto no se guarda. <a href="/legal" target="_blank" rel="noopener">Privacidad y condiciones</a></p>
+</section>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

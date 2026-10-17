@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Panel de la tienda · Zynex Probador</title>
+<meta name="theme-color" content="#07080a">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/img/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css"><link rel="stylesheet" href="/css/pages.css">
+<script type="module" src="/js/panel.js"></script>
+</head>
+<body class="pg">
+<header class="pg-nav"><a class="logo" href="/"><span class="logo-z">zynex</span><span class="logo-p">panel</span></a><a class="btn sec" id="lnkIns" href="/instalar">Guía de instalación</a></header>
+<main class="pg-main">
+  <div><h1 id="ttl">Panel de tu tienda</h1><p class="lead2" id="sub">Últimos 30 días del probador.</p></div>
+
+  <section class="card" id="login" hidden>
+    <h2>Entra a tu panel</h2>
+    <p class="muted">Usa el link que te llegó al activar la prueba, o escribe el código de tu tienda y tu llave.</p>
+    <form class="row" id="fL"><div class="field grow"><label for="inT">Código de la tienda</label><input id="inT" required autocomplete="off"></div><div class="field grow"><label for="inK">Llave del panel</label><input id="inK" required autocomplete="off"></div><button class="btn pri" type="submit">Entrar</button></form>
+  </section>
+
+  <section id="dash" hidden>
+    <div class="card">
+      <div class="row"><b id="plan"></b><span class="muted" id="venc"></span></div>
+      <div class="meter2" aria-hidden="true"><i id="meter"></i></div>
+      <span class="muted small" id="uso"></span>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <div class="card">
+      <h2>Por día</h2>
+      <div class="legend"><span><i class="lg1"></i>Abrieron</span><span><i class="lg2"></i>Fotos creadas</span><span><i class="lg3"></i>Tocaron comprar</span></div>
+      <svg class="chart" id="chart" role="img" aria-label="Gráfico por día"></svg>
+    </div>
+    <div class="card"><h2>Productos más probados</h2><table class="tbl"><thead><tr><th>Producto</th><th class="n">Fotos</th><th class="n">Comprar</th></tr></thead><tbody id="top"></tbody></table></div>
+    <p class="note">Los pedidos que llegan desde el probador quedan marcados en Shopify con el atributo <b>_probador = si</b> (Pedidos → detalle del pedido). Así medimos la garantía «Vende o te devolvemos».</p>
+  </section>
+</main>
+<footer class="pg-foot">Zynex · <a href="/legal">Privacidad y condiciones</a> · <a id="lnkWa" target="_blank" rel="noopener">Soporte por WhatsApp</a></footer>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

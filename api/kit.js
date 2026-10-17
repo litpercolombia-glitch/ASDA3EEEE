@@ -1,43 +1,36 @@
-// "Completa tu cama": productos de litper.store que combinan con el que el cliente se probó (solo lectura, sin credenciales).
-import { json } from './_util.js';
-const SHOP = process.env.SHOP_URL || 'https://litper.store';
-const group = (p) => {
-  const t = `${p.product_type} ${p.title} ${p.handle}`.toLowerCase();
-  if (/almohada/.test(t)) return 'almohada';
-  if (/protector/.test(t)) return 'protector';
-  if (/s[aá]bana/.test(t)) return 'sabanas';
-  if (/edred|plum|colcha/.test(t)) return 'edredon';
-  if (/velo/.test(t) && !/cortina/.test(t)) return 'velo';
-  if (/cortina/.test(t)) return 'cortina';
-  if (/cobija|manta/.test(t)) return 'cobija';
-  if (/mantel/.test(t)) return 'mantel';
-  if (/forro/.test(t)) return 'forro';
-  return 'otro';
-};
-const sized = (u) => (u ? u + (u.includes('?') ? '&' : '?') + 'width=200' : null);
+// GET /api/kit?shop=tienda.com&handle=producto → productos que completan la compra (cama, ventana, mesa o look).
+import { json, q, shopHost, handleOk, getJSON, img, kindOf } from './_util.js';
+
 const PAIRS = {
   protector: ['sabanas', 'almohada', 'edredon', 'cobija'], sabanas: ['protector', 'almohada', 'edredon', 'cobija'],
   edredon: ['sabanas', 'protector', 'almohada', 'cobija'], cobija: ['sabanas', 'protector', 'almohada', 'edredon'],
-  cortina: ['velo', 'sabanas', 'protector'], velo: ['cortina', 'sabanas'], mantel: ['forro', 'cortina'], forro: ['mantel', 'cortina'],
-  otro: ['protector', 'sabanas', 'almohada'],
+  almohada: ['protector', 'sabanas', 'edredon'], cortina: ['sabanas', 'edredon', 'cobija'], mantel: ['forro', 'cortina'],
+  forro: ['mantel', 'cortina'], mueble: ['mueble'], ropa: ['ropa'],
 };
+const ZONE = { camiseta: 'top', polo: 'top', camisa: 'top', blusa: 'top', buzo: 'top', hoodie: 'top', saco: 'top', chaqueta: 'top', chaleco: 'top', top: 'top', pantalon: 'bottom', jean: 'bottom', sudadera: 'bottom', jogger: 'bottom', falda: 'bottom', short: 'bottom' };
+
 export default async function handler(req, res) {
-  const handle = String(req.query?.handle || new URL(req.url, 'http://x').searchParams.get('handle') || '').toLowerCase();
-  if (!/^[a-z0-9][a-z0-9-]{0,150}$/.test(handle)) return json(res, 400, { error: 'handle_invalido' });
+  const shop = shopHost(q(req, 'shop')), handle = q(req, 'handle').toLowerCase();
+  if (!shop || !handleOk(handle)) return json(res, 400, { error: 'datos_invalidos' });
   try {
-    const r = await fetch(`${SHOP}/products.json?limit=250`, { headers: { accept: 'application/json' } });
-    if (!r.ok) return json(res, 502, { error: 'tienda_no_responde' });
-    const all = (await r.json()).products || [];
-    const me = all.find((p) => p.handle === handle) || { product_type: '', title: handle, handle };
-    const want = PAIRS[group(me)] || PAIRS.otro, out = [];
-    for (const g of want) {
-      const p = all.filter((x) => x.handle !== handle && group(x) === g && !/-1$/.test(x.handle)).sort((a, b) => b.variants.length - a.variants.length)[0];
+    const all = (await getJSON(`https://${shop}/products.json?limit=250`)).products || [];
+    const info = (p) => kindOf({ type: p.product_type, title: p.title, handle: p.handle, tags: typeof p.tags === 'string' ? p.tags.split(',') : p.tags });
+    const me = all.find((p) => p.handle === handle); if (!me) return json(res, 200, { items: [] }, 'public, s-maxage=600');
+    const mi = info(me), want = PAIRS[mi.kind] || [], out = [];
+    for (const k of want) {
+      const cands = all.filter((p) => p.handle !== handle && !out.some((o) => o.handle === p.handle) && p.images?.length && p.variants?.some((v) => v.available)).filter((p) => {
+        const i = info(p); if (i.kind !== k) return false;
+        if (k === 'ropa') { const a = ZONE[mi.garment] || 'full', b = ZONE[i.garment] || 'full'; return a !== b && a !== 'full' && b !== 'full'; }
+        return true;
+      });
+      const p = cands.sort((a, b) => b.variants.length - a.variants.length)[0];
       if (!p) continue;
       out.push({
-        handle: p.handle, title: p.title, group: g, url: `${SHOP}/products/${p.handle}`, image: sized(p.images?.[0]?.src),
-        variants: p.variants.slice(0, 100).map((v) => ({ id: v.id, title: v.title, price: Math.round(parseFloat(v.price)), options: [v.option1, v.option2, v.option3].filter(Boolean), available: v.available, image: sized(v.featured_image?.src) })),
+        handle: p.handle, title: p.title, kind: k, url: `https://${shop}/products/${p.handle}`, image: img(p.images[0].src, 240),
+        variants: p.variants.slice(0, 120).map((v) => ({ id: v.id, title: v.title, options: [v.option1, v.option2, v.option3].filter(Boolean), price: Math.round(parseFloat(v.price) * 100) / 100, available: v.available, image: img(v.featured_image?.src, 240) })),
       });
+      if (out.length >= 3) break;
     }
-    json(res, 200, { for: handle, group: group(me), items: out }, 'public, s-maxage=600, stale-while-revalidate=3600');
-  } catch { json(res, 502, { error: 'tienda_no_responde' }); }
+    json(res, 200, { for: handle, kind: mi.kind, items: out }, 'public, s-maxage=900, stale-while-revalidate=86400');
+  } catch { json(res, 200, { items: [] }, 'public, s-maxage=120'); }
 }

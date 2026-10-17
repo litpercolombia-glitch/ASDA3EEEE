@@ -3,171 +3,249 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="robots" content="noindex">
+<title>Zynex Probador · Que tu cliente lo vea puesto antes de pagar</title>
+<meta name="description" content="Probador con IA para tiendas Shopify: tu cliente toma una foto de su cama, su ventana o de sí mismo y en segundos ve tu producto real puesto. Prueba gratis 14 días.">
 <meta name="theme-color" content="#07080a">
-<title>Probador Litper</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Outfit:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="/app.css">
-<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@4.4.0/dist/model-viewer.min.js" integrity="sha384-wjsPzEO+lXOf7d9csIDfAQpPt2OKuUU3m0K9qsdKIuzX4N8czSF6hdh23eAbZa3p" crossorigin="anonymous"></script>
-<script type="module" src="/app.js"></script>
+<link rel="icon" href="/img/icon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Zynex Probador · Que tu cliente lo vea puesto antes de pagar">
+<meta property="og:description" content="Probador con IA para Shopify. Foto real del cliente, tu producto real, en unos 8 segundos.">
+<meta property="og:image" content="/img/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="/img/demo/cuarto_a.webp" type="image/webp">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/landing.css">
+<script type="module" src="/js/landing.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Zynex Probador","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"Probador virtual con IA para tiendas Shopify: el cliente ve el producto real puesto en su foto.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD","description":"Prueba gratis 14 días"},"publisher":{"@type":"Organization","name":"Zynex"}}</script>
 </head>
-<body>
-<div class="app" id="app" data-mode="probar">
+<body class="lp">
+<svg width="0" height="0" class="sr" aria-hidden="true">
+  <symbol id="i-cam" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.6" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></symbol>
+  <symbol id="i-cod" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 9v.01M18 15v.01" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="m5 12.5 4.2 4.2L19 7"/></symbol>
+  <symbol id="i-wa" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.7 14.9L2 22l5.2-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3.1.8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.8-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.1.7a2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 3 4 6v6c0 4.5 3.4 8.2 8 9 4.6-.8 8-4.5 8-9V6l-8-3Z"/><path d="m8.5 12 2.4 2.4L15.5 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
 
-  <!-- Escenario -->
-  <div class="stage" id="stage">
-    <video id="vid" playsinline muted></video>
-    <canvas id="gl"></canvas>
-    <canvas id="room"></canvas>
-    <model-viewer id="mv" ar ar-modes="webxr scene-viewer quick-look" ar-scale="fixed" camera-controls touch-action="pan-y" shadow-intensity="1.1" shadow-softness="0.8" exposure="1.05" environment-image="neutral" camera-orbit="35deg 62deg auto" alt="Producto en 3D a tamaño real">
-      <button slot="ar-button" class="ar-btn" id="arBtn">Verlo en mi casa, tamaño real</button>
-    </model-viewer>
-    <div class="empty" id="empty">
-      <div class="floor" aria-hidden="true"><i></i></div><span class="glow a" aria-hidden="true"></span><span class="glow b" aria-hidden="true"></span>
-      <div class="empty-in">
-        <div class="lens" aria-hidden="true"><span></span><span></span><span></span></div>
-        <p class="empty-t" id="emptyT">Pruébatelo antes de comprarlo</p>
-        <p class="empty-s" id="emptyS">Muévete y la prenda se mueve contigo. Tu imagen no sale de tu celular.</p>
-        <div class="empty-a">
-          <button class="pill pri big" id="btnStart">Abrir la cámara</button>
-          <label class="pill ghost">Subir una foto<input type="file" id="filePhoto" accept="image/*" hidden></label>
+<header class="nav" id="nav">
+  <a class="logo" href="/" aria-label="Zynex Probador, inicio"><span class="logo-z">zynex</span><span class="logo-p">probador</span></a>
+  <nav aria-label="Secciones">
+    <a href="#resultados">Resultados</a><a href="#como">Cómo funciona</a><a href="#precios">Precios</a><a href="#preguntas">Preguntas</a>
+  </nav>
+  <a class="btn pri sm" href="#demo">Pruébalo con tu tienda</a>
+</header>
+
+<main>
+<!-- HERO -->
+<section class="hero" aria-labelledby="h1">
+  <div class="hero-copy">
+    <p class="hero-pill"><i></i>Probador con IA para tiendas Shopify</p>
+    <h1 id="h1">Que tu cliente lo vea puesto antes de pagar.</h1>
+    <p class="lead">Tu cliente toma una foto de su cama, su ventana o de sí mismo y en unos 8 segundos ve <b>tu producto real</b> puesto, con la luz de su casa. Sin apps, sin modelos 3D, sin fotógrafo.</p>
+    <div class="hero-cta">
+      <a class="btn pri big" href="#demo">Pruébalo con tu tienda</a>
+      <a class="btn sec big" href="#precios">Ver precios</a>
+    </div>
+    <ul class="facts">
+      <li><svg><use href="#i-cam"/></svg><span><b>Foto real</b> del cliente, no dibujos</span></li>
+      <li><svg><use href="#i-cod"/></svg><span><b>Sirve con contraentrega</b> (Releasit)</span></li>
+      <li><svg><use href="#i-bolt"/></svg><span><b>Se instala</b> en 5 minutos</span></li>
+    </ul>
+  </div>
+  <div class="hero-vis" aria-hidden="true">
+    <div class="scene" id="scene">
+      <div class="card3d" id="card3d">
+        <div class="phone-top"><b id="hTitle">Pruébalo en tu cama</b><span>litper.store</span></div>
+        <div class="shot">
+          <img id="hBefore" src="/img/demo/cuarto_a.webp" alt="" width="768" height="1024">
+          <div class="h-after" id="hAfterW"><img id="hAfter" src="/img/demo/r_protector.webp" alt="" width="768" height="1024"></div>
+          <div class="h-scan" id="hScan"><i></i></div>
         </div>
+        <div class="phone-bot"><span class="dot"></span><span class="dot on"></span><span class="dot"></span><span class="buy">Comprar</span></div>
+        <div class="chip3d c1"><svg><use href="#i-cam"/></svg><span id="hC1">Foto de tu cliente</span></div>
+        <div class="chip3d c2"><img id="hProd" src="/img/demo/p_protector.webp" alt="" width="40" height="40"><span id="hC2">Protector · Rojo</span></div>
+        <div class="chip3d c3"><b id="hTime">7,0 s</b><span>foto lista</span></div>
       </div>
+      <div class="floor"></div>
     </div>
-    <div class="hint" id="hint" hidden></div>
   </div>
+</section>
 
-  <!-- Barra superior -->
-  <header class="top">
-    <div class="prod">
-      <img id="pThumb" alt="" hidden>
-      <div class="prod-t"><b id="pName">Probador Litper</b><span id="pPrice"></span></div>
-    </div>
-    <div class="top-a">
-      <a class="pill pri buyp" id="btnBuy" target="_top" rel="noopener" hidden>Comprar</a>
-      <button class="ic" id="btnFlip" aria-label="Cambiar cámara" title="Cambiar cámara"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><path d="M9 13a3 3 0 0 0 5.6 1.5M15 13a3 3 0 0 0-5.6-1.5"/></svg></button>
-      <button class="ic" id="btnTune" aria-label="Ajustar" title="Ajustar"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
-    </div>
-  </header>
-
-  <!-- Panel de ajustes -->
-  <section class="sheet" id="tune" hidden>
-    <div class="sheet-h"><b>Ajustar</b><button class="x" data-close="tune" aria-label="Cerrar">✕</button></div>
-    <div class="grid2">
-      <label>Tipo de producto<select id="selKind">
-        <option value="superior">Camisa, camiseta, buzo</option><option value="completo">Vestido, pijama</option>
-        <option value="inferior">Pantalón, jean, falda</option><option value="zapatos">Zapatos</option>
-        <option value="gafas">Gafas</option><option value="gorra">Gorra</option>
-        <option value="cama">Cama: protector, sábanas, cobija</option><option value="cortina">Cortina</option><option value="mantel">Mantel</option>
-      </select></label>
-      <label>Vista<select id="selView"><option value="auto">Automática (frente / espalda)</option><option value="front">Siempre frente</option><option value="back">Siempre espalda</option></select></label>
-      <label>Tamaño <input type="range" id="rScale" min="0.7" max="1.4" step="0.01" value="1"></label>
-      <label>Altura <input type="range" id="rOff" min="-0.25" max="0.25" step="0.01" value="0"></label>
-      <div class="grid3"><label>Ancho (cm)<input type="number" id="dW" min="10" max="400" value="140"></label><label>Largo / alto (cm)<input type="number" id="dL" min="10" max="400" value="190"></label><label>Fondo (cm)<input type="number" id="dH" min="1" max="80" value="30"></label></div>
-      <label class="chk"><input type="checkbox" id="chkShade" checked> Luz y pliegues reales</label>
-      <label class="chk"><input type="checkbox" id="chkDots"> Ver puntos del cuerpo</label>
-    </div>
-  </section>
-
-  <!-- Herramientas de "Mi espacio" -->
-  <div class="roomtools" id="roomTools" hidden>
-    <label class="pill pri">Foto de mi cama<input type="file" id="fileRoom" accept="image/*" capture="environment" hidden></label>
-    <button class="pill" id="btnRoomLive">Cámara en vivo</button>
-    <button class="pill" id="btnRoomDemo">Ejemplo</button>
-    <button class="pill" id="btnRoomReset">Ajustar a mano</button>
+<!-- RESULTADOS -->
+<section class="sec" id="resultados" aria-labelledby="t-res">
+  <div class="sec-h">
+    <h2 id="t-res">Así lo ve tu cliente</h2>
+    <p>Desliza sobre cada foto. Los productos son reales de <a href="https://litper.store" target="_blank" rel="noopener">litper.store</a>; las casas y personas son fotos de ejemplo creadas con IA para no usar fotos de clientes. El resultado es del probador, sin retoques (17-oct-2026).</p>
   </div>
-
-  <button class="kitchip" id="btnKit" hidden><span class="kc-dot"></span><span id="kitT">Completa tu cama</span></button>
-
-  <!-- Parte inferior -->
-  <footer class="bottom">
-    <div class="swatches" id="swatches" role="listbox" aria-label="Colores y diseños"></div>
-    <div class="shutter-row">
-      <button class="side" id="btnUpload" aria-label="Subir foto"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 8"/></svg></button>
-      <button class="shutter" id="btnShot" aria-label="Tomar foto"><svg viewBox="0 0 80 80"><circle class="thread" cx="40" cy="40" r="36"/><circle class="core" cx="40" cy="40" r="28"/></svg></button>
-      <button class="side ai" id="btnAI" aria-label="Versión ultra realista con IA"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></button>
-    </div>
-    <nav class="dial" id="dial" role="tablist"><span class="dial-ink" id="dialInk" aria-hidden="true"></span>
-      <button data-m="probar" class="on">Probarme</button>
-      <button data-m="espacio">En mi espacio</button>
-      <button data-m="tres">Tamaño real 3D</button>
-      <button data-m="medir">Medir</button>
-      <button data-m="talla">Mi talla</button>
-    </nav>
-  </footer>
-
-  <!-- Mi talla -->
-  <section class="sheet tall" id="talla" hidden>
-    <div class="sheet-h"><b>Tu talla exacta</b><button class="x" data-close="talla" aria-label="Cerrar">✕</button></div>
-    <div id="tallaRopa">
-      <p class="lead">Escribe tu estatura y toma dos fotos de cuerpo entero: de frente y de lado, con los brazos un poco separados. Medimos tu pecho, cintura y cadera.</p>
-      <div class="grid3">
-        <label>Estatura (cm)<input type="number" id="tH" inputmode="numeric" min="100" max="220" value="165"></label>
-        <label>Peso (kg)<input type="number" id="tW" inputmode="numeric" min="30" max="200" value="65"></label>
-        <label>Para<select id="tS"><option value="f">Mujer</option><option value="m">Hombre</option></select></label>
+  <div class="gal">
+    <div class="tabs" role="tablist" aria-label="Ejemplos" id="galTabs"></div>
+    <div class="gal-body">
+      <div class="cmp-l" id="galCmp" tabindex="0" aria-label="Comparación antes y después. Usa las flechas para mover.">
+        <img id="galBefore" alt="Antes" width="768" height="1024">
+        <div class="after"><img id="galAfter" alt="Después, con el producto" width="768" height="1024"></div>
+        <div class="bar"><span></span></div>
+        <span class="tg l">Antes</span><span class="tg r">Con el probador</span>
       </div>
-      <div class="shots">
-        <label class="shot" id="shotF"><input type="file" accept="image/*" capture="user" hidden data-side="f"><span>Foto de frente</span></label>
-        <label class="shot" id="shotS"><input type="file" accept="image/*" capture="user" hidden data-side="s"><span>Foto de lado</span></label>
-      </div>
-      <label>Me gusta que quede<select id="tF"><option value="0">Normal</option><option value="-1">Ajustado</option><option value="1">Holgado</option></select></label>
-      <button class="pill pri wide" id="btnTalla">Calcular mi talla</button>
+      <aside class="gal-side">
+        <div class="gal-prod"><img id="galProd" alt="" width="96" height="96"><div><small>Producto de la tienda</small><b id="galName"></b></div></div>
+        <p id="galNote" class="muted"></p>
+        <ul class="gal-meta"><li><span>Tiempo</span><b id="galTime"></b></li><li><span>Entrada</span><b>1 foto del cliente + 1 foto del catálogo</b></li><li><span>Motor</span><b>FLUX.2 klein (Black Forest Labs) en Cloudflare</b></li></ul>
+      </aside>
     </div>
-    <div id="tallaCama" hidden>
-      <p class="lead">Mide tu colchón con la pestaña Medir o con un metro y escribe las medidas.</p>
-      <div class="grid3">
-        <label>Ancho (cm)<input type="number" id="bW" min="60" max="250" value="140"></label>
-        <label>Largo (cm)<input type="number" id="bL" min="150" max="230" value="190"></label>
-        <label>Alto (cm)<input type="number" id="bH" min="5" max="60" value="30"></label>
-      </div>
-      <button class="pill pri wide" id="btnCama">Ver qué medida necesito</button>
-    </div>
-    <div class="result" id="res" hidden></div>
-  </section>
-
-  <!-- Medir -->
-  <section class="sheet tall" id="medir" hidden>
-    <div class="sheet-h"><b>Medir con la cámara</b><button class="x" data-close="medir" aria-label="Cerrar">✕</button></div>
-    <div id="medirXR" hidden>
-      <p class="lead">Apunta a la superficie, toca + en el primer punto y otra vez en el segundo. Funciona como la app Medida del iPhone.</p>
-      <button class="pill pri wide" id="btnXR">Empezar a medir</button>
-    </div>
-    <div id="medirFoto">
-      <p class="lead">Pon una tarjeta bancaria sobre lo que vas a medir y toma la foto. Marca los dos extremos del lado largo de la tarjeta y luego los dos puntos que quieres medir.</p>
-      <label class="pill pri wide">Tomar la foto<input type="file" id="fileMeasure" accept="image/*" capture="environment" hidden></label>
-    </div>
-    <div class="result" id="resMedir" hidden></div>
-  </section>
-
-  <!-- Resultado de foto / IA -->
-  <section class="sheet tall" id="shot" hidden>
-    <div class="sheet-h"><b id="shotT">Tu foto</b><button class="x" data-close="shot" aria-label="Cerrar">✕</button></div>
-    <div class="shot-img" id="cmp"><img id="shotBefore" alt="Antes" hidden><img id="shotImg" alt="Resultado"><input type="range" id="cmpR" min="0" max="100" value="50" aria-label="Comparar antes y después" hidden><span class="cmp-bar" id="cmpBar" hidden></span><div class="spin" id="spin" hidden><span></span><p id="spinT">Creando la versión ultra realista…</p></div></div>
-    <div class="row">
-      <button class="pill" id="btnSave">Guardar o compartir</button>
-      <button class="pill pri" id="btnAI2">Hacerla ultra realista</button>
-    </div>
-    <button class="pill wide kitcta" id="btnKit2">Completa tu cama en un solo pedido</button>
-  </section>
-
-  <section class="sheet tall" id="kit" hidden>
-    <div class="sheet-h"><b>Completa tu cama</b><button class="x" data-close="kit" aria-label="Cerrar">✕</button></div>
-    <p class="lead" id="kitLead">Lo que combina con lo que te probaste. Marca lo que quieras y llévalo en un solo pedido.</p>
-    <div class="kitlist" id="kitList"></div>
-    <div class="kitfoot"><div><span>Total del kit</span><b id="kitTotal">$0</b></div><a class="pill pri" id="kitBuy" target="_top" rel="noopener">Agregar al carrito</a></div>
-  </section>
-
-  <!-- Capa del medidor AR -->
-  <div class="xrui" id="xrui" hidden>
-    <svg class="xrsvg"></svg>
-    <div class="ret" id="ret"></div>
-    <div class="xr-read" id="xrRead">Mueve el celular despacio</div>
-    <div class="xr-bar"><button class="pill" id="xrUndo">Deshacer</button><button class="xr-add" id="xrAdd" aria-label="Agregar punto">+</button><button class="pill" id="xrClose">Listo</button></div>
   </div>
+</section>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<!-- DEMO CON SU TIENDA -->
+<section class="sec demo" id="demo" aria-labelledby="t-demo">
+  <div class="sec-h">
+    <h2 id="t-demo">Pruébalo ya con tu propia tienda</h2>
+    <p>Escribe la dirección de tu tienda Shopify. Traemos tus productos y los pruebas con una foto, igual que lo haría tu cliente.</p>
+  </div>
+  <form class="demo-f" id="demoForm" autocomplete="off">
+    <label class="sr" for="demoShop">Dirección de tu tienda</label>
+    <input id="demoShop" name="shop" inputmode="url" placeholder="tutienda.com" required>
+    <button class="btn pri" type="submit">Traer mis productos</button>
+  </form>
+  <p class="demo-alt">¿Aún no tienes tienda o quieres ver un ejemplo? <button type="button" class="link" id="demoLitper">Usa la tienda de Litper</button></p>
+  <p class="demo-msg" id="demoMsg" role="status"></p>
+  <div class="demo-grid" id="demoGrid"></div>
+</section>
+
+<!-- CÓMO FUNCIONA: capas en 3D -->
+<section class="how" id="como" aria-labelledby="t-how">
+  <div class="how-sticky">
+    <div class="how-copy">
+      <h2 id="t-how">Cómo funciona</h2>
+      <ol class="how-steps" id="howSteps">
+        <li class="on"><b>El cliente toca «Pruébalo»</b><span>El botón aparece junto a «Comprar» en la página del producto. El probador se abre sin salir de tu tienda.</span></li>
+        <li><b>Toma una foto de su espacio o de sí mismo</b><span>Con la cámara del celular, como cualquier foto. No descarga nada.</span></li>
+        <li><b>La IA pone tu producto real</b><span>Toma la foto de tu catálogo: mismo color, estampado y textura, con la luz y los pliegues de su casa. Tarda unos 8 segundos.</span></li>
+        <li><b>Elige color, medida y compra</b><span>Va directo a tu formulario de compra o contraentrega con la variante elegida, y puede sumar productos para completar la cama.</span></li>
+      </ol>
+    </div>
+    <div class="stack" id="stack" aria-hidden="true">
+      <div class="layer l1"><img src="/img/demo/cuarto_a.webp" alt="" width="768" height="1024" loading="lazy"><em>Foto del cliente</em></div>
+      <div class="layer l2"><svg viewBox="0 0 768 1024" preserveAspectRatio="none"><defs><pattern id="mesh" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M28 0H0v28" fill="none" stroke="#00ff88" stroke-opacity=".35" stroke-width="1.2"/></pattern><clipPath id="bedClip"><polygon points="374,392 354,400 346,440 355,472 328,512 229,528 220,544 198,552 0,600 0,768 38,776 232,888 240,912 287,976 301,1016 315,1016 344,984 379,936 392,904 454,840 591,720 628,704 653,592 721,568 722,560 709,552 741,536 763,432 758,416 738,408 464,392"/></clipPath></defs><rect width="768" height="1024" fill="url(#mesh)" clip-path="url(#bedClip)"/><polygon points="374,392 354,400 346,440 355,472 328,512 229,528 220,544 198,552 0,600 0,768 38,776 232,888 240,912 287,976 301,1016 315,1016 344,984 379,936 392,904 454,840 591,720 628,704 653,592 721,568 722,560 709,552 741,536 763,432 758,416 738,408 464,392" fill="rgba(0,255,136,.08)" stroke="#00ff88" stroke-width="5" stroke-linejoin="round"/></svg><em>La IA entiende la escena</em></div>
+      <div class="layer l3"><img src="/img/demo/p_protector.webp" alt="" width="768" height="1024" loading="lazy"><em>Tu producto real</em></div>
+      <div class="layer l4"><img src="/img/demo/r_protector.webp" alt="" width="768" height="1024" loading="lazy"><em>Listo para comprar</em><span class="buy">Comprar</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- QUÉ SE PUEDE PROBAR -->
+<section class="sec" id="productos" aria-labelledby="t-cat">
+  <div class="sec-h"><h2 id="t-cat">Qué se puede probar</h2><p>El probador reconoce solo el tipo de producto de tu catálogo y le pide al cliente la foto correcta.</p></div>
+  <div class="cats">
+    <article class="cat big"><img src="/img/demo/r_colcha.webp" alt="Colcha navideña puesta en una cama" loading="lazy" width="768" height="1024"><div><h3>Cama</h3><p>Protectores, sábanas, edredones, colchas, cobijas y almohadas.</p></div></article>
+    <article class="cat"><img src="/img/demo/r_cortina_nav.webp" alt="Cortina navideña en una ventana" loading="lazy" width="768" height="1024"><div><h3>Ventanas</h3><p>Cortinas, blackout y velos.</p></div></article>
+    <article class="cat"><img src="/img/demo/r_camiseta_b.webp" alt="Camiseta verde puesta en una persona" loading="lazy" width="768" height="1024"><div><h3>Ropa</h3><p>Camisetas, buzos, chaquetas, jeans, faldas y vestidos.</p></div></article>
+    <article class="cat"><img src="/img/demo/r_forro.webp" alt="Forros navideños en sillas de comedor" loading="lazy" width="768" height="1024"><div><h3>Comedor</h3><p>Manteles y forros de sillas.</p></div></article>
+    <article class="cat"><img src="/img/demo/r_zapatero.webp" alt="Zapatero puesto en una entrada" loading="lazy" width="768" height="1024"><div><h3>Espacios <small>beta</small></h3><p>Organizadores, zapateros y muebles pequeños.</p></div></article>
+  </div>
+</section>
+
+<!-- POR QUÉ VENDE MÁS -->
+<section class="sec why" id="porque" aria-labelledby="t-why">
+  <div class="sec-h"><h2 id="t-why">Por qué vende más</h2><p>Comprar textiles y ropa por internet deja una duda que el catálogo no resuelve: <i>¿cómo se verá en mi casa, en mí?</i> El probador la resuelve con la foto del propio cliente. Desde mayo de 2026 Google ya deja probarse ropa en Colombia, pero solo dentro de Google y sin productos del hogar; el probador lo lleva a tu tienda.</p></div>
+  <div class="stats" id="stats"></div>
+  <div class="why-grid">
+    <div><h3>Menos preguntas por WhatsApp</h3><p>«¿Cómo se ve en una cama doble?», «¿ese gris es oscuro?». El cliente lo ve en su foto y decide solo.</p></div>
+    <div><h3>Menos devoluciones por «no era como pensaba»</h3><p>Lo que llega se parece a lo que vio puesto en su casa, no a una foto de estudio.</p></div>
+    <div><h3>Clientes que te hacen publicidad</h3><p>Comparten su foto «antes y después» con la familia. Cada imagen lleva el nombre de tu tienda.</p></div>
+    <div><h3>Pedidos más grandes</h3><p>Después de ver el protector puesto, le ofrecemos completar la cama con sábanas y almohadas de tu tienda.</p></div>
+  </div>
+</section>
+
+<!-- PRECIOS -->
+<section class="sec pricing" id="precios" aria-labelledby="t-pre">
+  <div class="sec-h"><h2 id="t-pre">Precios</h2><p id="preLead">Empieza gratis 14 días con 50 fotos. Sin tarjeta. Cancelas cuando quieras.</p></div>
+  <div class="cur" role="group" aria-label="Moneda"><button type="button" class="chip" data-cur="COP" aria-pressed="true">COP</button><button type="button" class="chip" data-cur="USD" aria-pressed="false">USD</button></div>
+  <div class="plans" id="plans"></div>
+  <div class="guarantee">
+    <svg><use href="#i-shield"/></svg>
+    <div><b id="garT">Garantía de 30 días</b><p id="garS"></p></div>
+  </div>
+  <div class="founder" id="founder"></div>
+</section>
+
+<!-- INSTALACIÓN -->
+<section class="sec install" id="instalar" aria-labelledby="t-ins">
+  <div class="sec-h"><h2 id="t-ins">Se instala sin programador</h2><p>Funciona con temas de Shopify 2.0 (Horizon, Dawn y similares) y con formularios contraentrega como Releasit.</p></div>
+  <ol class="ins">
+    <li><b>Activa tu prueba</b><span>Te damos un código con el nombre de tu tienda.</span></li>
+    <li><b>Pégalo en tu tema</b><span>Tienda online → Personalizar → página de producto → Agregar bloque → «Liquid personalizado».</span></li>
+    <li><b>Listo</b><span>El botón «Pruébalo» aparece en todos tus productos que se pueden probar. Ves los resultados en tu panel.</span></li>
+  </ol>
+  <div class="ins-vis">
+    <pre class="code" aria-label="Ejemplo del bloque que se pega"><code>&lt;!-- Zynex Probador --&gt;
+{%- assign zvto = 'tu-tienda' -%}
+&lt;button class="zvto-btn" data-zvto&gt;
+  Pruébalo en tu cama
+&lt;/button&gt;
+&lt;script src="…/embed.js" defer&gt;&lt;/script&gt;</code></pre>
+    <div class="panel-mock" aria-label="Ejemplo del panel de la tienda">
+      <div class="pm-h"><b>Tu panel</b><small>últimos 30 días · ejemplo</small></div>
+      <div class="pm-k"><div><small>Abrieron el probador</small><b>1.284</b></div><div><small>Fotos creadas</small><b>612</b></div><div><small>Tocaron «Comprar»</small><b>149</b></div></div>
+      <div class="pm-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+  </div>
+</section>
+
+<!-- PREGUNTAS -->
+<section class="sec faq" id="preguntas" aria-labelledby="t-faq">
+  <div class="sec-h"><h2 id="t-faq">Preguntas frecuentes</h2></div>
+  <div class="qa">
+    <details><summary>¿Qué tan real se ve?</summary><p>Mira la sección de resultados: son salidas directas del probador, sin retoques. Usa la foto de tu catálogo, así que respeta color, estampado y textura. Como toda imagen hecha con IA, los tonos pueden variar un poco según la luz de la foto del cliente; por eso el probador lo avisa.</p></details>
+    <details><summary>¿Guardan las fotos de mis clientes?</summary><p>No. La foto viaja cifrada, se usa solo para crear la imagen y no se guarda en ningún servidor nuestro. Solo guardamos métricas anónimas (cuántas pruebas, cuántos clics en comprar) para tu panel. <a href="/legal">Ver privacidad</a>.</p></details>
+    <details><summary>¿Funciona con pago contraentrega?</summary><p>Sí. Al tocar «Comprar», el cliente vuelve a la página del producto con la variante elegida y se abre tu formulario (por ejemplo Releasit). Si usas el checkout normal de Shopify, también funciona.</p></details>
+    <details><summary>¿Cuánto tarda cada foto?</summary><p>Entre 6 y 10 segundos en nuestras pruebas del 17 de octubre de 2026. Mientras tanto, el cliente ve el avance paso a paso.</p></details>
+    <details><summary>¿Qué pasa si se acaban las pruebas del mes?</summary><p>Te avisamos antes. Puedes comprar pruebas extra o subir de plan. El botón nunca rompe tu tienda: si no hay pruebas, el cliente compra normal.</p></details>
+    <details><summary>¿Cómo funciona la garantía «Vende o te devolvemos»?</summary><p>Cuando un cliente compra después de usar el probador, el pedido llega marcado en tu Shopify. Si en 60 días esas ventas no suman 5 veces lo que pagaste, te devolvemos el 100 %. La condición es tener el botón activo en tus 10 productos más vendidos durante esos 60 días.</p></details>
+    <details><summary>¿Sirve para ropa interior o trajes de baño?</summary><p>No. Por respeto a la privacidad de las personas, el probador no trabaja con ropa interior, lencería ni trajes de baño.</p></details>
+    <details><summary>¿Necesito Shopify?</summary><p>Hoy sí: lee tu catálogo de Shopify automáticamente. Si tienes otra plataforma, escríbenos y lo conectamos a la medida.</p></details>
+    <details><summary>¿Quién está detrás?</summary><p>Zynex, la empresa de software de Litper Group. Lo construimos primero para vender más en nuestra propia tienda de textiles para el hogar, litper.store.</p></details>
+  </div>
+</section>
+
+<!-- CIERRE + FORMULARIO -->
+<section class="sec close" id="empezar" aria-labelledby="t-go">
+  <div class="go">
+    <div class="go-copy">
+      <h2 id="t-go">Actívalo hoy en tu tienda</h2>
+      <p>14 días gratis con 100 pruebas. Te ayudamos a instalarlo por WhatsApp en menos de 1 hora hábil.</p>
+      <ul class="ticks"><li><svg><use href="#i-check"/></svg>Sin tarjeta y sin permanencia</li><li><svg><use href="#i-check"/></svg>Lo instalamos contigo</li><li><svg><use href="#i-check"/></svg>Panel con tus números desde el primer día</li><li><svg><use href="#i-check"/></svg>Garantía: vende o te devolvemos la plata</li></ul>
+      <a class="btn sec" id="waGo" target="_blank" rel="noopener"><svg><use href="#i-wa"/></svg>Prefiero hablar por WhatsApp</a>
+    </div>
+    <form class="go-f" id="leadForm" novalidate>
+      <div class="field"><label for="fNombre">Tu nombre</label><input id="fNombre" name="nombre" autocomplete="name" required maxlength="80"></div>
+      <div class="field"><label for="fWa">WhatsApp</label><input id="fWa" name="whatsapp" type="tel" autocomplete="tel" inputmode="tel" placeholder="+57 300 000 0000" required maxlength="30"></div>
+      <div class="field"><label for="fTienda">Dirección de tu tienda</label><input id="fTienda" name="tienda" inputmode="url" placeholder="tutienda.com" maxlength="120"></div>
+      <div class="field"><label for="fEmail">Correo (opcional)</label><input id="fEmail" name="email" type="email" autocomplete="email" maxlength="120"></div>
+      <div class="field"><label for="fPlan">Plan que te interesa</label><select id="fPlan" name="plan"></select></div>
+      <label class="consent"><input type="checkbox" id="fOk" required> Acepto que Zynex me escriba por WhatsApp sobre el probador. <a href="/legal" target="_blank" rel="noopener">Privacidad</a></label>
+      <button class="btn pri big" type="submit" id="leadBtn">Activar mi prueba gratis</button>
+      <p class="form-msg" id="leadMsg" role="status"></p>
+    </form>
+  </div>
+</section>
+</main>
+
+<footer class="foot">
+  <div><span class="logo-z">zynex</span><p>Less chaos. More control.</p></div>
+  <nav aria-label="Enlaces"><a href="/legal">Privacidad y condiciones</a><a href="/instalar">Guía de instalación</a><a href="/panel">Panel de tienda</a><a id="waFoot" target="_blank" rel="noopener">WhatsApp</a></nav>
+  <p class="muted small">© 2026 Zynex · Litper Group LLC. Precios en pesos colombianos con referencia en dólares.</p>
+</footer>
+
+<a class="wa-fab" id="waFab" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp"><svg><use href="#i-wa"/></svg></a>
+
+<div class="modal" id="tryModal" hidden role="dialog" aria-modal="true" aria-label="Probador con tu producto">
+  <div class="modal-box"><button class="modal-x" id="tryClose" aria-label="Cerrar"><svg><use href="#i-x"/></svg></button><iframe id="tryFrame" title="Probador" allow="camera; web-share; clipboard-write"></iframe></div>
 </div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>
 </html>
