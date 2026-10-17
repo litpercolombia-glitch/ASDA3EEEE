@@ -1,0 +1,22 @@
+{
+  "framework": null,
+  "installCommand": "echo skip",
+  "buildCommand": "echo static",
+  "outputDirectory": ".",
+  "cleanUrls": true,
+  "functions": { "api/tryon.js": { "maxDuration": 60 }, "api/hogar.js": { "maxDuration": 60 }, "api/catalogo.js": { "maxDuration": 10 } },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com blob: data:; img-src 'self' https://cdn.shopify.com https://litper.store data: blob:; media-src 'self' blob: mediastream:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self' https://*.myshopify.com https://admin.shopify.com https://litper.store https://*.litper.store; upgrade-insecure-requests" },
+        { "key": "Permissions-Policy", "value": "camera=(self \"https://litper.store\"), xr-spatial-tracking=(self \"https://litper.store\"), microphone=(), geolocation=(), payment=(), usb=()" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" }
+      ]
+    },
+    { "source": "/assets/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] }
+  ]
+}
