@@ -62,7 +62,7 @@ function galSet(i) {
   $$('#galTabs button').forEach((b, k) => b.setAttribute('aria-selected', String(k === i)));
   $('#galBefore').src = `/img/demo/${g.b}.webp`; $('#galAfter').src = `/img/demo/${g.a}.webp`;
   $('#galProd').src = g.p ? `/img/demo/${g.p}_s.webp` : `/img/demo/${g.a}.webp`;
-  $('#galName').textContent = g.name; $('#galNote').textContent = g.note; $('#galTime').textContent = `${g.t} (17-oct-2026)`;
+  $('#galName').textContent = g.name; $('#galNote').textContent = g.note; $('#galTime').textContent = `IA: ${g.t} (17-oct-2026)`;
   setCut(50);
 }
 GAL.forEach((g, i) => $('#galTabs').append(el('button', { type: 'button', role: 'tab', 'aria-selected': 'false', onclick: () => { galSet(i); track('demo', { detalle: { galeria: g.tab } }); } }, g.tab)));
@@ -189,13 +189,13 @@ $('#leadForm').addEventListener('submit', async (e) => {
   try {
     const d = await call('lead', data, { timeout: 25000 });
     track('cta', { detalle: { lead: true, plan: data.plan } });
-    const t = d.tienda, inst = t ? `/instalar?t=${encodeURIComponent(t.id)}${t.panel_key ? '&k=' + t.panel_key : ''}` : null;
+    const t = d.tienda, inst = t ? `/instalar?t=${encodeURIComponent(t.id)}` : null;
     const done = el('div', { class: 'done', role: 'status' },
       el('b', { text: t?.nuevo ? `Listo, ${data.nombre.split(' ')[0]}: tu tienda quedó registrada` : `Gracias, ${data.nombre.split(' ')[0]}. Te escribimos en menos de 1 hora hábil.` }),
       el('p', { text: t ? (t.estado === 'pendiente' ? `Tienda «${t.id}»: tus ${t.cuota} pruebas gratis por 14 días arrancan solas cuando el botón aparezca en ${data.tienda}. Sigue la guía para pegarlo en tu tema; si prefieres, lo hacemos contigo.` : `Tienda «${t.id}» ya registrada. Te escribimos para ayudarte con la instalación.`) : 'Si nos dejaste tu tienda Shopify, te enviamos el código listo para pegar.' }),
       el('div', { class: 'row' }, inst ? el('a', { class: 'btn pri', href: inst }, 'Ver mi guía de instalación') : null,
         el('a', { class: 'btn sec', href: wa(`Hola, soy ${data.nombre}. Acabo de activar la prueba del probador${t ? ' para ' + t.id : ''}.`), target: '_blank', rel: 'noopener' }, 'Hablar por WhatsApp')),
-      t?.panel_key ? el('p', { class: 'small', text: 'Guarda el enlace de tu guía: incluye la llave de tu panel.' }) : null);
+      t ? el('p', { class: 'small', text: 'El acceso a tu panel te lo enviamos por WhatsApp cuando confirmemos que la tienda es tuya.' }) : null);
     f.replaceWith(done);
   } catch (err) {
     b.disabled = false; b.textContent = 'Activar mi prueba gratis';

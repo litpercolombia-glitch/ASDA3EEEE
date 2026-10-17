@@ -1,4 +1,4 @@
-// vto-api v6 — Zynex Probador (backend). 17-oct-2026
+// vto-api v6.2 — Zynex Probador (backend). 17-oct-2026
 // Acciones (POST JSON {action, ...}):
 //   cfg     → configuración pública mínima de la tienda + ficha de sesión firmada (tok).
 //   ai      → foto realista con Cloudflare Workers AI (FLUX.2 klein 4B). El servidor resuelve el producto él mismo
@@ -78,10 +78,12 @@ async function tokOk(salt: string, tenant: string, tok: unknown) {
 }
 
 /* ---------- qué es el producto (mismo clasificador v2 que /api/_util.js) ---------- */
-const normw = (s: unknown) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9ñ]+/g, ' ').trim();
+const normw = (s: unknown) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9ñ]+/g, ' ').trim();
 const has = (t: string, words: string) => new RegExp(`(^| )(${words})( |$)`).test(t);
 const at = (t: string, words: string) => { const m = new RegExp(`(^| )(${words})( |$)`).exec(t); return m ? m.index : -1; };
-const BLOCKED = 'ropa interior|brasier|brasieres|bra|sosten|panty|pantys|tanga|tangas|boxer|boxers|calzon|calzoncillo|lenceria|bikini|bikinis|traje de bano|vestido de bano|banador|trusa|cachetero|bodysuit|body|faja|fajas|moldeador|moldeadora|shapewear|levanta gluteos|levanta cola|erotico|erotica|erotic|sexual|intimo|intima|sex';
+const BLOCKED = 'ropa interior|brasier|brasieres|bra|sosten|panty|pantys|tanga|tangas|boxer|boxers|calzon|calzoncillo|lenceria|bikini|bikinis|traje de bano|vestido de bano|banador|trusa|cachetero|bodysuit|body|faja|fajas|moldeador|moldeadora|shapewear|levanta gluteos|levanta cola|erotico|erotica|erotic|sexual|intimo|intima|sex|tanguita|hilo dental';
+// Solo para ropa (en hogar «transparente» o «malla» son normales: mantel transparente, organizador de malla)
+const BLOCKED_ROPA = 'sexy|transparente|transparentes|transparencia|transparencias|bralette|bralettes|babydoll|baby doll|corset|corsets|corse|corses|corpino|liguero|ligueros|camison|camisones|malla|mallas|encaje transparente';
 const NOT_HOME = 'pantalla|screen|celular|iphone|samsung|xiaomi|telefono|movil|camara|lente|lentes|solar|vidrio|templado|carro|auto|moto|vehiculo|parlante|cargador|bateria|audifonos|reloj|tablet|laptop|portatil|consola|perro|gato|mascota|bebe';
 const RULES: [string, string, string | null, string | null][] = [
   ['protector', 'protector|protectores', 'colchon|colchones|cama', NOT_HOME + '|espaldar|cabecero|cabecera|pintura|techo|pared'],
@@ -111,6 +113,7 @@ function kindOf(p: { title?: string; type?: string; product_type?: string; handl
   if (!has(`${title} ${handle}`, HOME_CTX) && !has(title, NOT_HOME) && !has(title, NOT_GARMENT)) {
     for (const [g, words] of Object.entries(GARMENT_WORDS)) { const i = at(title, words); if (i >= 0 && (!best || i < best.i)) best = { i, kind: 'ropa', garment: g }; }
   }
+  if (best?.kind === 'ropa' && has(`${type} ${title} ${handle} ${tags}`, BLOCKED_ROPA)) return { kind: 'bloqueado', garment: '' };
   if (best) return { kind: best.kind, garment: best.garment || '' };
   for (const [kind, words, ctx, excl] of RULES) if (has(type, words) && !(excl && has(`${title} ${type}`, excl)) && (!ctx || has(`${title} ${type} ${handle}`, ctx))) return { kind, garment: '' };
   return { kind: 'otro', garment: '' };
@@ -118,12 +121,14 @@ function kindOf(p: { title?: string; type?: string; product_type?: string; handl
 
 /* ---------- prompts (solo palabras de listas fijas: nada del cliente entra crudo al prompt) ---------- */
 const COLORS: [RegExp, string][] = [
-  [/vino ?tinto|vinotinto|burdeos|borgo/, 'burgundy'], [/palo de rosa/, 'dusty pink'], [/azul (oscuro|marino|navy)|navy/, 'navy blue'], [/azul rey/, 'royal blue'],
+  [/vino ?tinto|vinotinto|burdeos|borgo|\bvino\b/, 'burgundy'], [/palo (de )?rosa|rosa palo/, 'dusty pink'], [/azul (oscuro|marino|navy)|navy/, 'navy blue'], [/azul rey/, 'royal blue'],
+  [/azul (claro|cielo)|celeste/, 'light blue'], [/azul beb[eé]/, 'baby blue'], [/azul petr[oó]leo|petr[oó]leo/, 'teal'], [/verde (oscuro|botella|bosque)/, 'dark green'], [/verde menta/, 'mint green'],
+  [/blanco (hueso|marfil|perla)|hueso|marfil/, 'off-white'], [/rojo (vino|oscuro)/, 'dark red'],
   [/gris (oscuro|plomo|raton|ratón)|grafito|carb[oó]n/, 'neutral charcoal gray (no blue tint)'], [/gris claro|perla/, 'neutral light gray (no blue tint)'], [/turque[sz]a/, 'turquoise'], [/fucsia/, 'fuchsia'],
   [/mostaza/, 'mustard yellow'], [/terracota/, 'terracotta'], [/lila|lavanda/, 'lilac'], [/morad|violeta|p[uú]rpura/, 'purple'],
-  [/menta/, 'mint green'], [/verde (oliva|militar)/, 'olive green'], [/verde/, 'green'], [/celeste|azul cielo/, 'light blue'], [/azul/, 'blue'],
+  [/menta/, 'mint green'], [/verde (oliva|militar)/, 'olive green'], [/verde/, 'green'], [/azul/, 'blue'],
   [/rosad|rosa/, 'pink'], [/roj/, 'red'], [/naranja/, 'orange'], [/amarill/, 'yellow'], [/dorad/, 'gold'], [/platead|plata/, 'silver'],
-  [/beige|arena/, 'beige'], [/crema|hueso|marfil/, 'cream'], [/caf[eé]|marr[oó]n|chocolate/, 'brown'], [/camel/, 'camel'],
+  [/beige|arena/, 'beige'], [/crema/, 'cream'], [/caf[eé]|marr[oó]n|chocolate/, 'brown'], [/camel/, 'camel'],
   [/negr/, 'black'], [/blanc/, 'white'], [/gris/, 'neutral gray (no blue tint)'],
 ];
 // Color del producto: solo la parte antes de «+» (ej. «NEGRA + SÁBANA GRIS CLARO» → negra) y en el orden en que aparece
@@ -181,14 +186,25 @@ function buildPrompt(kind: string, garment: string, color: string) {
 }
 
 /* ---------- catálogo: el servidor resuelve el producto (no confía en el navegador) ---------- */
+// GET siguiendo máximo 3 redirecciones a mano: cada salto debe ser https y a un dominio público válido
+async function getSafe(url: string, accept: string, ms = 8000) {
+  let u = url;
+  for (let i = 0; i < 4; i++) {
+    const x = new URL(u);
+    if (x.protocol !== 'https:' || !shopHost(x.hostname)) return null;
+    const r = await fetch(x, { headers: { accept }, redirect: 'manual', signal: AbortSignal.timeout(ms) }).catch(() => null);
+    if (!r) return null;
+    if (r.status >= 300 && r.status < 400 && r.headers.get('location')) { u = new URL(r.headers.get('location')!, x).href; continue; }
+    return r.ok ? r : null;
+  }
+  return null;
+}
 const PCACHE = new Map<string, { t: number; v: any }>();
 async function productJson(shop: string, handle: string) {
   const k = `${shop}/${handle}`, c = PCACHE.get(k);
   if (c && Date.now() - c.t < 600_000) return c.v;
-  const r = await fetch(`https://${shop}/products/${handle}.js`, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(8000) }).catch(() => null);
-  if (!r?.ok) return null;
-  const fin = new URL(r.url);
-  if (fin.protocol !== 'https:' || !shopHost(fin.hostname)) return null;
+  const r = await getSafe(`https://${shop}/products/${handle}.js`, 'application/json');
+  if (!r) return null;
   const v = await r.json().catch(() => null);
   if (!v?.id || !Array.isArray(v.variants)) return null;
   if (PCACHE.size > 300) PCACHE.clear();
@@ -244,8 +260,17 @@ async function moderar(sec: Record<string, string>, photo: string) {
 }
 
 async function avisoUnaVezAlDia(clave: string, mensaje: string) {
-  const { data: n } = await sb.rpc('vto_add', { p_key: `aviso:${clave}:${utcDay()}`, p_n: 1 });
+  const { data: n } = await sb.rpc('vto_add_utc', { p_key: `aviso:${clave}:${utcDay()}`, p_n: 1 });
   if (n === 1) await sb.from('slack_cola').insert({ tipo: 'parte', destino: 'dm_ceo', empresa: 'zynex', origen: 'probador', mensaje });
+}
+
+// ¿Se agotó hoy el cupo de IA? (lo marca el primer error 4006 del día UTC). Se consulta cada minuto como máximo.
+let PAUSA = { t: 0, v: false };
+async function iaPausada() {
+  if (Date.now() - PAUSA.t < 60_000) return PAUSA.v;
+  const { data } = await sb.rpc('vto_get_utc', { p_key: `aviso:cupo-cf:${utcDay()}` });
+  PAUSA = { t: Date.now(), v: (Number(data) || 0) > 0 };
+  return PAUSA.v;
 }
 
 /* ---------- acciones ---------- */
@@ -289,7 +314,7 @@ async function actionAI(body: any, req: Request) {
     // Mejor de 2: dos versiones en paralelo y la app se queda con la más fiel. Con el cupo gratis de Cloudflare
     // se usa 1 sola versión cuando el día pasa de VTO_N2_MAX_DIA imágenes (por defecto 70).
     const dia = utcDay(), maxN2 = Number(sec.VTO_N2_MAX_DIA) || 70;
-    const { data: imgsHoy } = await sb.rpc('vto_add', { p_key: `imgs:${dia}`, p_n: 0 });
+    const { data: imgsHoy } = await sb.rpc('vto_get_utc', { p_key: `imgs:${dia}` });
     n = Math.min(2, Math.max(1, Math.floor(+body.n) || 1)); if ((imgsHoy ?? 0) >= maxN2) n = 1;
     const once = async () => {
       const fd = new FormData();
@@ -310,15 +335,23 @@ async function actionAI(body: any, req: Request) {
       if (!mod || 'error' in mod) { err = 'moderacion_no_disponible'; console.error('mod', mod); return [503, { error: err }]; }
       if (mod.bloquear) { err = 'foto_no_permitida'; ok = true; return [422, { error: err }]; } // cuenta como prueba: no se devuelve
     }
-    const images = runs.flatMap((x) => (x.status === 'fulfilled' ? [x.value] : []));
+    let images = runs.flatMap((x) => (x.status === 'fulfilled' ? [x.value] : []));
+    if (kind === 'ropa' && images.length) { // también se revisa lo que crea la IA: nada de ropa interior ni desnudos
+      const chk = await Promise.all(images.map((im) => moderar(sec, im).catch(() => null)));
+      const marcadas = chk.some((c) => c && c.bloquear);
+      images = images.filter((_, i) => chk[i] && !chk[i]!.bloquear);
+      if (!images.length && marcadas) { err = 'foto_no_permitida'; ok = true; return [422, { error: err }]; }
+      if (!images.length) { err = 'moderacion_no_disponible'; return [503, { error: err }]; }
+    }
     if (!images.length) {
       const msg = runs.map((x) => (x.status === 'rejected' ? String((x.reason as Error)?.name === 'TimeoutError' ? 'TimeoutError' : (x.reason as Error)?.message || x.reason) : '')).join(' | ');
       err = /4006|neuron|allocation/i.test(msg) ? 'ia_cupo_diario' : /3030|flagged/i.test(msg) ? 'ia_rechazo' : /TimeoutError/.test(msg) ? 'ia_tiempo' : 'ia_fallo';
       console.error('cf', msg);
+      if (err === 'ia_cupo_diario') { PAUSA = { t: Date.now(), v: true }; }
       if (err === 'ia_cupo_diario') await avisoUnaVezAlDia('cupo-cf', '🔴 Probador IA sin cupo hoy: se acabaron las 10.000 neuronas gratis de Cloudflare. Vuelve a las 7:00 p. m. (Colombia). Para que no se apague: activar Workers Paid (US$5/mes).');
       return [502, { error: err }];
     }
-    await sb.rpc('vto_add', { p_key: `imgs:${dia}`, p_n: images.length });
+    await sb.rpc('vto_add_utc', { p_key: `imgs:${dia}`, p_n: images.length });
     ok = true;
     return [200, { image: images[0], images, ms: Date.now() - t0, via: 'cf-klein4b', restan: take.restan, restan_sesion: take.restan_sesion, w: W, h: H, kind }];
   } catch (e) {
@@ -339,8 +372,16 @@ function flat(o: unknown) { // detalle plano y corto: hasta 8 claves con valores
   }
   return out;
 }
+const TCACHE = new Map<string, { t: number; v: boolean }>();
+async function tenantExiste(id: string) {
+  const c = TCACHE.get(id); if (c && Date.now() - c.t < 600_000) return c.v;
+  const { data } = await sb.from('vto_tenants').select('id').eq('id', id).maybeSingle();
+  if (TCACHE.size > 500) TCACHE.clear();
+  TCACHE.set(id, { t: Date.now(), v: !!data }); return !!data;
+}
 async function actionEvent(body: any, req: Request) {
   const tipo = str(body.tipo, 20); if (!TIPOS.has(tipo)) return [400, { error: 'tipo' }];
+  if (slug(body.tenant) && !(await tenantExiste(slug(body.tenant)))) return [400, { error: 'tienda' }];
   const sec = await secrets(); const ip = await ipHash(req, sec.VTO_SALT || 'x');
   const { data: okRate } = await sb.rpc('vto_rate', { p_key: ip + '#ev', p_max: 400 });
   if (okRate === false) return [429, { error: 'limite' }];
@@ -350,10 +391,22 @@ async function actionEvent(body: any, req: Request) {
 
 async function isShopify(domain: string) {
   try {
-    const r = await fetch(`https://${domain}/products.json?limit=1`, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(8000) });
-    if (!r.ok) return false; const j = await r.json(); return Array.isArray(j?.products);
+    const r = await getSafe(`https://${domain}/products.json?limit=1`, 'application/json');
+    if (!r) return false; const j = await r.json(); return Array.isArray(j?.products);
   } catch { return false; }
 }
+// Dominio interno de Shopify (xxxx.myshopify.com) de una tienda, leído de /meta.json (caché 1 h)
+const MCACHE = new Map<string, { t: number; v: string }>();
+async function myshopifyOf(host: string) {
+  const c = MCACHE.get(host); if (c && Date.now() - c.t < 3_600_000) return c.v;
+  let v = '';
+  try { const r = await getSafe(`https://${host}/meta.json`, 'application/json', 6000); const j = r ? await r.json() : null; v = typeof j?.myshopify_domain === 'string' ? j.myshopify_domain.toLowerCase() : ''; } catch { v = ''; }
+  if (MCACHE.size > 500) MCACHE.clear();
+  MCACHE.set(host, { t: Date.now(), v });
+  return v;
+}
+// Texto del visitante para Slack: sin menciones ni enlaces disfrazados
+const slackSafe = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/[\r\n]+/g, ' ');
 async function actionLead(body: any, req: Request) {
   // trampa para robots: campo oculto «web» y menos de 2,5 s llenando el formulario → se responde ok sin hacer nada
   if (str(body.web, 200) || (Number(body.ms) > 0 && Number(body.ms) < 2500)) return [200, { ok: true, tienda: null, shopify: false }];
@@ -373,6 +426,10 @@ async function actionLead(body: any, req: Request) {
   if (tienda && (await isShopify(tienda))) {
     const { data } = await sb.rpc('vto_tenant_upsert', { p_shop: tienda, p_nombre: empresa || nombre, p_contacto: { nombre, whatsapp, email } });
     if (data?.ok) tenantInfo = data;
+    if (data?.ok && data.nuevo) { // se guarda su dominio myshopify para reconocer el botón en cualquiera de sus dominios
+      const ms = await myshopifyOf(tienda);
+      if (ms && ms !== tienda) { await sb.rpc('vto_alias_add', { p_tenant: data.id, p_host: ms }); }
+    }
   }
   const utm = body.utm && typeof body.utm === 'object' ? Object.fromEntries(Object.entries(body.utm).slice(0, 8).map(([k, v]) => [str(k, 30), str(v, 100)])) : null;
   await sb.from('vto_leads').insert({ nombre, empresa, whatsapp, email, tienda, plan, mensaje, origen: str(body.origen, 60) || 'landing', utm, ip_hash: ip, tenant_id: tenantInfo?.id || null });
@@ -384,9 +441,9 @@ async function actionLead(body: any, req: Request) {
   });
   await sb.from('slack_cola').insert({
     tipo: 'parte', destino: 'dm_ceo', empresa: 'zynex', origen: 'probador-landing',
-    mensaje: `🟢 Lead nuevo · Probador IA\n${empresa || nombre}${tienda ? ` (${tienda})` : ''} — ${nombre}\nWhatsApp: ${whatsapp || '—'} · Email: ${email || '—'} · Plan: ${plan || '—'}${tenantInfo?.nuevo ? `\nTienda "${tenantInfo.id}" creada: la prueba de 14 días (100 fotos) arranca cuando el botón cargue en ${tienda}.` : ''}\nPróximo paso: escribirle en menos de 1 hora.`,
+    mensaje: `🟢 Lead nuevo · Probador IA\n${slackSafe(empresa || nombre)}${tienda ? ` (${tienda})` : ''} — ${slackSafe(nombre)}\nWhatsApp: ${whatsapp || '—'} · Email: ${slackSafe(email) || '—'} · Plan: ${slackSafe(plan) || '—'}${tenantInfo?.nuevo ? `\nTienda "${tenantInfo.id}" creada: la prueba de 14 días (100 fotos) arranca cuando el botón cargue en ${tienda}.\nPanel (enviar solo al dueño, después de verificarlo): /panel?t=${tenantInfo.id}&k=${tenantInfo.panel_key}` : ''}\nPróximo paso: escribirle en menos de 1 hora.`,
   });
-  return [200, { ok: true, tienda: tenantInfo ? { id: tenantInfo.id, nuevo: tenantInfo.nuevo, estado: tenantInfo.estado, cuota: tenantInfo.cuota, vence: tenantInfo.vence, panel_key: tenantInfo.panel_key || null } : null, shopify: !!tenantInfo }];
+  return [200, { ok: true, tienda: tenantInfo ? { id: tenantInfo.id, nuevo: tenantInfo.nuevo, estado: tenantInfo.estado, cuota: tenantInfo.cuota, vence: tenantInfo.vence } : null, shopify: !!tenantInfo }];
 }
 
 const SELLO = new Set(['prueba', 'gratis', 'basico', 'demo', 'interno']);
@@ -401,7 +458,7 @@ async function actionCfg(body: any, req: Request) {
   const wa = /^\d{8,15}$/.test(String(t.config?.whatsapp || '')) ? String(t.config.whatsapp) : null;
   return [200, {
     id: t.id, dominio: t.plan === 'demo' ? null : t.shop_domain, activo: t.estado === 'activo', estado: t.estado,
-    sello: SELLO.has(t.plan), kit: KIT.has(t.plan), wa, cod: t.config?.cod === true, ropa: sec.VTO_MODERACION === 'on', tok: await newTok(sec.VTO_SALT || 'x', t.id),
+    sello: SELLO.has(t.plan), kit: KIT.has(t.plan) && t.config?.kit !== false, wa, cod: t.config?.cod === true, ropa: sec.VTO_MODERACION === 'on', ia: !(await iaPausada()), tok: await newTok(sec.VTO_SALT || 'x', t.id),
   }];
 }
 
@@ -412,9 +469,19 @@ async function actionEstado(body: any, req: Request, origin: string | null) {
   const sec = await secrets(); const ip = await ipHash(req, sec.VTO_SALT || 'x');
   const { data: okRate } = await sb.rpc('vto_rate', { p_key: ip + '#estado', p_max: 500 });
   if (okRate === false) return [429, { error: 'limite' }];
-  const { data } = await sb.rpc('vto_activar', { p_tenant: id, p_host: host });
+  let [{ data }, pausa] = await Promise.all([sb.rpc('vto_activar', { p_tenant: id, p_host: host }), iaPausada()]);
+  if (data?.motivo === 'dominio_distinto' && shopHost(host) && shopHost(data.dominio)) {
+    // ¿Es otro dominio de la MISMA tienda (myshopify, dominio de Markets, www)? Shopify lo dice en /meta.json
+    const [a, b] = await Promise.all([myshopifyOf(host), myshopifyOf(String(data.dominio))]);
+    if (a && a === b) {
+      await sb.rpc('vto_alias_add', { p_tenant: id, p_host: host });
+      ({ data } = await sb.rpc('vto_activar', { p_tenant: id, p_host: host }));
+    } else if (a) {
+      await avisoUnaVezAlDia(`dominio-${id}`, `🟠 Probador IA: el botón de "${id}" cargó en ${host}, que no es su tienda registrada (${data.dominio}). Si es la misma tienda, agrega el dominio; si no, ignóralo.`);
+    }
+  }
   if (data?.activado) await sb.from('slack_cola').insert({ tipo: 'parte', destino: 'dm_ceo', empresa: 'zynex', origen: 'probador', mensaje: `🟢 Probador IA instalado: la tienda "${id}" (${host}) activó su prueba de 14 días con 100 fotos.` });
-  return [200, { mostrar: !!(data?.ok && data.activo && data.cupo > 0), activado: !!data?.activado }];
+  return [200, { mostrar: !!(data?.ok && data.activo && data.cupo > 0), activado: !!data?.activado, ia: !pausa, ropa: sec.VTO_MODERACION === 'on' }];
 }
 
 async function actionStats(body: any) {

@@ -12,7 +12,7 @@ body.pg { background: radial-gradient(60% 40% at 90% 0%, rgba(0, 212, 245, .08),
 .steps2 { list-style: none; counter-reset: s; padding: 0; margin: 0; display: grid; gap: 14px; }
 .steps2 > li { counter-increment: s; display: grid; grid-template-columns: 40px 1fr; gap: 14px; }
 .steps2 > li::before { content: counter(s); width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--neon); color: #03140b; font-weight: 700; }
-.steps2 b { display: block; font-size: 17px; margin-bottom: 4px; } .steps2 p { margin: 0; color: var(--mu); }
+.steps2 > li > div > b:first-child { display: block; font-size: 17px; margin-bottom: 4px; } .steps2 p { margin: 0; color: var(--mu); }
 textarea.code2 { width: 100%; min-height: 150px; padding: 16px; border-radius: 16px; border: 1px solid var(--line2); background: #05060a; color: #b9f5d8; font: 500 13px/1.6 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; resize: vertical; }
 .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
@@ -40,3 +40,7 @@ textarea.code2 { width: 100%; min-height: 150px; padding: 16px; border-radius: 1
 .steps2 p, .steps2 b, #sub, #ttl { overflow-wrap: anywhere; }
 textarea.code2, input.code2 { max-width: 100%; }
 .pend { padding: 14px 16px; border-radius: 14px; border: 1px solid rgba(255, 184, 0, .45); background: rgba(255, 184, 0, .08); color: var(--tx); }
+
+/* v4.2: nada se sale en celular (select de productos y link) */
+select, .link-in, .field select { max-width: 100%; min-width: 0; }
+.row > .link-in { flex: 1 1 200px; }

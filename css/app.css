@@ -187,3 +187,8 @@ body.app { min-height: 100dvh; background:
   body[data-state=error] #errBox { order: -2; }
 }
 @media (prefers-reduced-motion: reduce) { .opt.pulse { animation: none; outline: 2px solid var(--neon); } }
+
+/* v4.2: diseño sin foto tras un resultado (la foto muestra el anterior) y opciones extra */
+.cmp.stale #imgAfter { opacity: .45; filter: grayscale(.5); transition: opacity .25s; }
+#optExtra { display: grid; gap: 14px; }
+#optExtra:empty { display: none; }

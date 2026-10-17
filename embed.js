@@ -1,4 +1,4 @@
-/*! Zynex Probador · botón para la página de producto de Shopify · 2026-10-17
+/*! Zynex Probador · botón para la página de producto de Shopify · v4.2 · 2026-10-17
    Uso: <div data-zvto data-t="TU-TIENDA" data-h="{{ product.handle }}" data-v="{{ product.selected_or_first_available_variant.id }}" data-title="{{ product.title | escape }}" data-type="{{ product.type | escape }}"></div>
         <script src="https://<este-dominio>/embed.js" defer></script> */
 (function () {
@@ -8,7 +8,8 @@
   var FN = 'https://gtsivwbnhcawvmsfujby.supabase.co/functions/v1/vto-api';
   var visible = function (n) { return !!(n && n.offsetParent !== null && getComputedStyle(n).visibility !== 'hidden'); };
   // Con Releasit (contraentrega) el carrito abre su formulario en /cart#rsi-form-top-anchor; sin Releasit se va al pago normal
-  var hasRsi = function () { return !!(window._RSI_COD_FORM_SETTINGS || document.querySelector('[data-rsi-cod-button]')); };
+  var RSI_BTN = '[data-rsi-cod-button], #rsi_buy_now_button, .rsi_buy_now_button';
+  var hasRsi = function () { return !!(window._RSI_COD_FORM_SETTINGS || document.querySelector(RSI_BTN)); };
   var codGo = function () { location.href = hasRsi() ? '/cart#rsi-form-top-anchor' : '/checkout'; };
   var norm = function (s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
 
@@ -24,11 +25,12 @@
   var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
   var ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.6" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
 
-  function currentVariant(el) {
+  function pageVariant() {
     var q = new URLSearchParams(location.search).get('variant');
     var inp = document.querySelector('form[action*="/cart/add"] [name="id"]');
-    return q || (inp && inp.value) || el.getAttribute('data-v') || '';
+    return q || (inp && inp.value) || '';
   }
+  function currentVariant(el) { return pageVariant() || el.getAttribute('data-v') || ''; }
   var modal = null, lastFocus = null;
   function open(el) {
     lastFocus = document.activeElement;
@@ -37,6 +39,7 @@
     u.searchParams.set('s', el.getAttribute('data-s') || location.hostname.replace(/^www\./, ''));
     u.searchParams.set('h', el.getAttribute('data-h') || '');
     var v = currentVariant(el); if (v) u.searchParams.set('v', v);
+    if (new URLSearchParams(location.search).get('variant')) u.searchParams.set('vs', '1'); // el cliente ya eligió medida/color en la ficha
     u.searchParams.set('embed', '1');
     modal = document.createElement('div'); modal.className = 'zvto-m'; modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-label', 'Probador con IA');
     var f = document.createElement('iframe'); f.src = u.href; f.title = 'Probador con IA'; f.allow = 'camera; web-share; clipboard-write';
@@ -58,43 +61,51 @@
     if (d.vto === 'buy' && d.variant) {
       ack(); close();
       mark('producto').then(function () {
-        var here = location.pathname.indexOf('/products/' + d.handle) >= 0 && new URLSearchParams(location.search).get('variant') === String(d.variant);
-        if (here && codButton()) return buyHere(d.variant);
-        if (hasRsi()) return toCart(d.variant); // contraentrega del carrito: sin pasos intermedios
-        if (here) return buyHere(d.variant);   // misma ficha: cambiar solo el #hash no recarga la página
+        // Se compra por la ficha: ahí corren el formulario contraentrega y lo propio de cada tienda (combos, ofertas, notas).
+        var onPage = location.pathname.indexOf('/products/' + d.handle) >= 0;
+        if (onPage && String(pageVariant()) === String(d.variant)) return buyHere(d.variant); // misma variante: sin recargar
         location.href = '/products/' + encodeURIComponent(d.handle) + '?variant=' + encodeURIComponent(d.variant) + '#zvto-comprar';
       });
     }
     if (d.vto === 'cart' && d.items && d.items.length) {
       ack(); close();
-      var items = d.items.slice(0, 6).map(function (i) { return { id: i.id, quantity: i.quantity || 1, properties: { _probador: 'kit' } }; });
-      fetch('/cart/add.js', { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify({ items: items }) })
+      fetch('/cart.js', { headers: { accept: 'application/json' } }).then(function (r) { return r.json(); }).catch(function () { return {}; })
+        .then(function (c) { // lo que ya está en el carrito no se vuelve a agregar
+          var ya = {}; (c.items || []).forEach(function (i) { ya[String(i.variant_id)] = 1; });
+          var items = d.items.slice(0, 6).filter(function (i) { return !ya[String(i.id)]; }).map(function (i) { return { id: i.id, quantity: i.quantity || 1, properties: { _probador: 'kit' } }; });
+          return items.length ? fetch('/cart/add.js', { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify({ items: items }) })
+            .then(function (r) { if (!r.ok) throw r; }) : null;
+        })
         .then(function () { return mark('kit'); }).then(codGo)
         .catch(function () { location.href = d.url || '/cart'; });
     }
   });
   // Botón contraentrega visible de Releasit en esta página (si lo hay)
-  function codButton() { var c = document.querySelectorAll('[data-rsi-cod-button]'); for (var i = 0; i < c.length; i++) if (visible(c[i])) return c[i]; return null; }
+  function codButton() {
+    var c = document.querySelectorAll(RSI_BTN), i, alt = null;
+    for (i = 0; i < c.length; i++) if (visible(c[i])) { if (c[i].closest('form[action*="/cart/add"]')) return c[i]; alt = alt || c[i]; }
+    return alt;
+  }
   function toCart(variant) { // si la variante ya está en el carrito no la duplica (doble toque o volver atrás)
     return fetch('/cart.js', { headers: { accept: 'application/json' } }).then(function (r) { return r.json(); })
       .then(function (c) { return (c.items || []).some(function (i) { return String(i.variant_id) === String(variant); }); }, function () { return false; })
       .then(function (ya) { return ya || fetch('/cart/add.js', { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify({ items: [{ id: +variant, quantity: 1 }] }) }).then(function (r) { if (!r.ok) throw r; }); })
       .then(function () { return mark('producto'); }).then(codGo).catch(function () { location.href = '/cart'; });
   }
-  // Al volver del probador (#zvto-comprar): abre el contraentrega visible; si la tienda usa Releasit sin botón en la ficha,
-  // agrega la variante y abre el formulario del carrito; si no usa Releasit, toca el botón de compra visible de la tienda.
+  // En la ficha con la variante elegida: toca el botón contraentrega de la tienda (corren sus combos, ofertas y notas).
+  // Releasit puede tardar unos segundos en pintarlo; si no aparece en 12 s se usa el formulario del carrito.
+  // Sin Releasit: toca el botón «Agregar al carrito» visible de la tienda; si no hay, va al pago.
   function buyHere(variant) {
     variant = variant || new URLSearchParams(location.search).get('variant');
     var tries = 0;
     (function tick() {
       var b = codButton(), i;
-      if (!b && tries >= 10 && hasRsi() && variant) return void toCart(variant);
-      if (!b && tries >= 10) {
+      if (!b && !hasRsi() && tries >= 8) {
         var adds = document.querySelectorAll('form[action*="/cart/add"] [type="submit"]:not([disabled]), form[action*="/cart/add"] button[name="add"]:not([disabled])');
         for (i = 0; i < adds.length && !b; i++) if (visible(adds[i])) b = adds[i];
       }
       if (b) { b.scrollIntoView({ block: 'center', behavior: 'smooth' }); setTimeout(function () { b.click(); }, 450); return; }
-      if (++tries < 40) return void setTimeout(tick, 250);
+      if (++tries < 48) return void setTimeout(tick, 250);
       if (variant) toCart(variant);
     })();
   }
@@ -118,7 +129,10 @@
     Promise.all([
       bt ? Promise.resolve(bt) : fetch(APP + '/api/boton?shop=' + encodeURIComponent(shop) + '&handle=' + encodeURIComponent(h)).then(function (r) { return r.json(); }).then(function (d) { return keep(key, d); }),
       es ? Promise.resolve(es) : fetch(FN, { method: 'POST', headers: { 'content-type': 'text/plain' }, body: JSON.stringify({ action: 'estado', tenant: t }) }).then(function (r) { return r.json(); }).then(function (d) { return keep(ek, d); }),
-    ]).then(function (r) { done(r[1] && r[1].mostrar ? r[0] : null); }).catch(function () { el.style.display = 'none'; });
+    ]).then(function (r) { // se oculta si la tienda no está activa, si la IA está en pausa hoy o si es ropa sin revisión de fotos activa
+      var b = r[0], e = r[1] || {};
+      done(e.mostrar && e.ia !== false && !(b && b.kind === 'ropa' && e.ropa === false) ? b : null);
+    }).catch(function () { el.style.display = 'none'; });
   }
   function scan() { Array.prototype.forEach.call(document.querySelectorAll('[data-zvto]'), mount); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan); else scan();

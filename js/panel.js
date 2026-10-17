@@ -30,7 +30,11 @@ async function load() {
   ];
   $('#kpis').replaceChildren(...kp.map(([a, b, c]) => el('div', { class: 'kpi' }, el('small', { text: a }), el('b', { text: nf.format(b) }), el('span', { text: c }))));
   chart(d.dias || []);
-  $('#top').replaceChildren(...(d.top?.length ? d.top.map((r) => el('tr', {}, el('td', { text: r.handle }), el('td', { class: 'n', text: nf.format(r.ia) }), el('td', { class: 'n', text: nf.format(r.comprar) }))) : [el('tr', {}, el('td', { colspan: '3', class: 'muted', text: 'Aún no hay pruebas. Cuando tus clientes usen el botón, aparecen aquí.' }))]));
+  // nombre del producto (no el handle): se lee del catálogo público de la tienda
+  const names = new Map();
+  if (d.top?.length && d.dominio) { try { const r = await fetch(`/api/tienda?shop=${encodeURIComponent(d.dominio)}`); const c = await r.json(); for (const it of c.items || []) names.set(it.handle, it.title); } catch {} }
+  const nombre = (h) => names.get(h) || String(h || '').replace(/-/g, ' ').replace(/^./, (m) => m.toUpperCase());
+  $('#top').replaceChildren(...(d.top?.length ? d.top.map((r) => el('tr', {}, el('td', { text: nombre(r.handle) }), el('td', { class: 'n', text: nf.format(r.ia) }), el('td', { class: 'n', text: nf.format(r.comprar) }))) : [el('tr', {}, el('td', { colspan: '3', class: 'muted', text: 'Aún no hay pruebas. Cuando tus clientes usen el botón, aparecen aquí.' }))]));
   $('#dash').hidden = false;
 }
 

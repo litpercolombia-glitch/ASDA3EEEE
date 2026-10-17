@@ -7,6 +7,11 @@ const PAIRS = {
   almohada: ['protector', 'sabanas', 'edredon'], cortina: ['sabanas', 'edredon', 'cobija'], mantel: ['forro', 'cortina'],
   forro: ['mantel', 'cortina'], mueble: ['mueble'], ropa: ['ropa'],
 };
+// Combos y paquetes (dúo, trío, kit, x2, «paga 1 lleva 2»…) piden elegir cada unidad en su ficha: no se sugieren en el kit
+const COMBO = /(^|[^a-z])(duo|trio|combo|kit|pack|packs|paquete|juegos|set de \d)([^a-z]|$)|(^|[^a-z0-9])x ?[2-9]([^0-9]|$)|\d+ ?x ?\d|paga \d+ y? ?lleva|lleva(te)? \d+|a elegir/;
+const sinTilde = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+// Espacios: zapatero con clóset y entrada; estante de baño con baño (no mezclar)
+const ZONA_MUEBLE = (t) => /ba[nñ]o|inodoro|ducha|toalla/i.test(t) ? 'bano' : /zapat|closet|cl[oó]set|armario|perchero|entrada|ropa/i.test(t) ? 'ropa' : /cocina|alacena|especiero/i.test(t) ? 'cocina' : 'otro';
 const ZONE = { camiseta: 'top', polo: 'top', camisa: 'top', blusa: 'top', buzo: 'top', hoodie: 'top', saco: 'top', chaqueta: 'top', chaleco: 'top', top: 'top', pantalon: 'bottom', jean: 'bottom', sudadera: 'bottom', jogger: 'bottom', falda: 'bottom', short: 'bottom' };
 
 export default async function handler(req, res) {
@@ -21,6 +26,8 @@ export default async function handler(req, res) {
     for (const k of want) {
       const cands = all.filter((p) => p.handle !== handle && !out.some((o) => o.handle === p.handle) && p.images?.length && p.variants?.some((v) => v.available)).filter((p) => {
         const i = info(p); if (i.kind !== k) return false;
+        if (COMBO.test(sinTilde(p.title))) return false;
+        if (k === 'mueble' && ZONA_MUEBLE(p.title) !== ZONA_MUEBLE(me.title)) return false;
         if (k === 'ropa') { const a = ZONE[mi.garment] || 'full', b = ZONE[i.garment] || 'full'; return a !== b && a !== 'full' && b !== 'full'; }
         return true;
       });
