@@ -1,141 +1,144 @@
-function U() {
-return { P: [], N: [], U: [], I: [] };
+// Modelos 3D de textiles a medida real (metros) para AR en vivo.
+// Genera GLB en el navegador: tela con caída y pliegues + muebles base.
+
+function mesh() { return { P: [], N: [], U: [], I: [] }; }
+function normals(m) {
+  const n = new Float32Array(m.P.length);
+  for (let i = 0; i < m.I.length; i += 3) {
+    const [a, b, c] = [m.I[i] * 3, m.I[i + 1] * 3, m.I[i + 2] * 3];
+    const ux = m.P[b] - m.P[a], uy = m.P[b + 1] - m.P[a + 1], uz = m.P[b + 2] - m.P[a + 2];
+    const vx = m.P[c] - m.P[a], vy = m.P[c + 1] - m.P[a + 1], vz = m.P[c + 2] - m.P[a + 2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    for (const k of [a, b, c]) { n[k] += nx; n[k + 1] += ny; n[k + 2] += nz; }
+  }
+  for (let i = 0; i < n.length; i += 3) { const l = Math.hypot(n[i], n[i + 1], n[i + 2]) || 1; n[i] /= l; n[i + 1] /= l; n[i + 2] /= l; }
+  m.N = Array.from(n); return m;
 }
-function V(e) {
-const o = new Float32Array(e.P.length);
-for (let n = 0; n < e.I.length; n += 3) {
-const [t, r, s] = [e.I[n] * 3, e.I[n + 1] * 3, e.I[n + 2] * 3], l = e.P[r] - e.P[t], i = e.P[r + 1] - e.P[t + 1], p = e.P[r + 2] - e.P[t + 2], a = e.P[s] - e.P[t], c = e.P[s + 1] - e.P[t + 1], m = e.P[s + 2] - e.P[t + 2], u = i * m - p * c, f = p * a - l * m, h = l * c - i * a;
-for (const g of [t, r, s])
-o[g] += u, o[g + 1] += f, o[g + 2] += h;
+function grid(m, cols, rows, f) { // f(u,v)->{p:[x,y,z], uv:[s,t]}
+  const o = m.P.length / 3;
+  for (let j = 0; j <= rows; j++) for (let i = 0; i <= cols; i++) { const r = f(i / cols, j / rows); m.P.push(...r.p); m.U.push(...r.uv); }
+  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) { const a = o + j * (cols + 1) + i, b = a + 1, c = a + cols + 1, d = c + 1; m.I.push(a, c, b, b, c, d); }
+  return m;
 }
-for (let n = 0; n < o.length; n += 3) {
-const t = Math.hypot(o[n], o[n + 1], o[n + 2]) || 1;
-o[n] /= t, o[n + 1] /= t, o[n + 2] /= t;
+function box(m, x0, y0, z0, x1, y1, z1) {
+  const q = (a, b, c, d) => { const o = m.P.length / 3; [a, b, c, d].forEach((p) => { m.P.push(...p); m.U.push(0, 0); }); m.I.push(o, o + 1, o + 2, o, o + 2, o + 3); };
+  q([x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0]); q([x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]);
+  q([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]); q([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0]);
+  q([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1]); q([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]);
+  return m;
 }
-return e.N = Array.from(o), e;
+// Tela sobre una superficie W×L a altura H con caída D por los lados (sin cabecera)
+function drapeCloth(W, L, H, D, rep, head = false) {
+  const m = mesh(), cols = 70, rows = 80, uW = W + 2 * D, uL = L + D + (head ? D : 0.02);
+  return normals(grid(m, cols, rows, (a, b) => {
+    const u = a * uW - D, v = b * uL - (head ? D : 0.02); // u en [-D, W+D], v en [-?, L+D]
+    const sx = u < 0 ? -u : u > W ? u - W : 0, sz = v > L ? v - L : v < 0 ? -v : 0;
+    const s = Math.max(sx, sz);
+    let x = Math.min(Math.max(u, 0), W), z = Math.min(Math.max(v, 0), L), y = H + 0.012;
+    if (s > 0) {
+      const t = s / D, fold = Math.sin((sx > 0 ? v : u) * Math.PI * 2 / 0.22) * 0.018 * t;
+      const roll = Math.min(s, 0.03); // borde redondeado
+      y = H + 0.012 - (s - roll * 0.5);
+      if (sx > 0) x = (u < 0 ? -1 : 1) * (roll + fold) + (u < 0 ? 0 : W); else x += fold * 0.6;
+      if (sz > 0) z = (v > L ? L + roll : -roll) + (sx > 0 ? 0 : fold);
+      if (sx > 0 && sz > 0) { y = H + 0.012 - s * 1.05; }
+      y = Math.max(y, 0.005);
+    } else {
+      y += Math.sin(u * 9) * Math.sin(v * 7) * 0.004; // arrugas suaves sobre la cama
+    }
+    return { p: [x - W / 2, y, z - L / 2], uv: [(a * rep) % 1e9, b * rep * (uL / uW)] };
+  }));
 }
-function C(e, o, n, t) {
-const r = e.P.length / 3;
-for (let s = 0; s <= n; s++) for (let l = 0; l <= o; l++) {
-const i = t(l / o, s / n);
-e.P.push(...i.p), e.U.push(...i.uv);
+function curtain(W, H, rep) {
+  const m = mesh(), pleat = 0.11, amp = 0.035, cols = Math.max(40, Math.round(W / pleat * 6)), rows = 40;
+  return normals(grid(m, cols, rows, (a, b) => {
+    const x = a * W, y = (1 - b) * H, z = Math.sin(x / pleat * Math.PI * 2) * amp * (0.7 + 0.3 * b);
+    return { p: [x - W / 2, y, z + amp + 0.06], uv: [a * rep, b * rep * (H / W)] };
+  }));
 }
-for (let s = 0; s < n; s++) for (let l = 0; l < o; l++) {
-const i = r + s * (o + 1) + l, p = i + 1, a = i + o + 1, c = a + 1;
-e.I.push(i, a, p, p, a, c);
+
+/* ---------- GLB ---------- */
+function glb(parts, materials, img) {
+  const bufs = [], views = [], accs = [], prims = [];
+  let off = 0; const pad = (n) => (n + 3) & ~3;
+  const push = (arr, target) => { views.push({ buffer: 0, byteOffset: off, byteLength: arr.byteLength, ...(target ? { target } : {}) }); bufs.push([off, arr]); off = pad(off + arr.byteLength); return views.length - 1; };
+  for (const p of parts) {
+    const pos = new Float32Array(p.P), mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
+    for (let i = 0; i < pos.length; i += 3) for (let k = 0; k < 3; k++) { mn[k] = Math.min(mn[k], pos[i + k]); mx[k] = Math.max(mx[k], pos[i + k]); }
+    if (!p.N.length) normals(p);
+    const n = pos.length / 3, idx = n > 65535 ? new Uint32Array(p.I) : new Uint16Array(p.I);
+    const a0 = accs.length;
+    accs.push({ bufferView: push(pos, 34962), componentType: 5126, count: n, type: 'VEC3', min: mn, max: mx });
+    accs.push({ bufferView: push(new Float32Array(p.N), 34962), componentType: 5126, count: n, type: 'VEC3' });
+    accs.push({ bufferView: push(new Float32Array(p.U), 34962), componentType: 5126, count: n, type: 'VEC2' });
+    accs.push({ bufferView: push(idx, 34963), componentType: idx instanceof Uint32Array ? 5125 : 5123, count: idx.length, type: 'SCALAR' });
+    prims.push({ attributes: { POSITION: a0, NORMAL: a0 + 1, TEXCOORD_0: a0 + 2 }, indices: a0 + 3, material: p.mat });
+  }
+  const json = { asset: { version: '2.0', generator: 'Litper Probador' }, scene: 0, scenes: [{ nodes: [0] }], nodes: [{ mesh: 0 }], meshes: [{ primitives: prims }], accessors: accs, bufferViews: views, buffers: [] };
+  json.materials = materials.map((m) => ({ pbrMetallicRoughness: { baseColorFactor: [...(m.color || [1, 1, 1]), 1], metallicFactor: 0, roughnessFactor: m.rough ?? 0.92, ...(m.tex ? { baseColorTexture: { index: 0 } } : {}) }, doubleSided: true }));
+  if (img) { json.images = [{ bufferView: push(img.bytes, 0), mimeType: img.mime }]; json.textures = [{ sampler: 0, source: 0 }]; json.samplers = [{ magFilter: 9729, minFilter: 9987, wrapS: 33648, wrapT: 33648 }]; }
+  json.bufferViews.forEach((v) => { if (!v.target) delete v.target; });
+  json.buffers = [{ byteLength: off }];
+  const bin = new Uint8Array(off); bufs.forEach(([o, a]) => bin.set(new Uint8Array(a.buffer, a.byteOffset, a.byteLength), o));
+  const js = new TextEncoder().encode(JSON.stringify(json)), jl = pad(js.length), jp = new Uint8Array(jl).fill(32); jp.set(js);
+  const total = 28 + jl + off, out = new ArrayBuffer(total), dv = new DataView(out), u8 = new Uint8Array(out);
+  dv.setUint32(0, 0x46546c67, true); dv.setUint32(4, 2, true); dv.setUint32(8, total, true);
+  dv.setUint32(12, jl, true); dv.setUint32(16, 0x4e4f534a, true); u8.set(jp, 20);
+  dv.setUint32(20 + jl, off, true); dv.setUint32(24 + jl, 0x004e4942, true); u8.set(bin, 28 + jl);
+  return new Blob([out], { type: 'model/gltf-binary' });
 }
-return e;
+
+// Textura de tela: recorte de la foto del producto, espejada 2×2 para que no se noten uniones
+export async function fabricTexture(img, crop = [0.3, 0.62, 0.4, 0.22]) {
+  const c = document.createElement('canvas'); c.width = c.height = 1024; const x = c.getContext('2d');
+  const sw = img.width * crop[2], sh = img.height * crop[3], sx = img.width * crop[0], sy = img.height * crop[1];
+  for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
+    x.save(); x.translate(i * 512 + (i ? 512 : 0), j * 512 + (j ? 512 : 0)); x.scale(i ? -1 : 1, j ? -1 : 1);
+    x.drawImage(img, sx, sy, sw, sh, 0, 0, 512, 512); x.restore();
+  }
+  const b = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.88));
+  return { bytes: new Uint8Array(await b.arrayBuffer()), mime: 'image/jpeg', canvas: c };
 }
-function A(e, o, n, t, r, s, l) {
-const i = (p, a, c, m) => {
-const u = e.P.length / 3;
-[p, a, c, m].forEach((f) => {
-e.P.push(...f), e.U.push(0, 0);
-}), e.I.push(u, u + 1, u + 2, u, u + 2, u + 3);
-};
-return i([o, s, l], [r, s, l], [r, s, t], [o, s, t]), i([o, n, t], [r, n, t], [r, n, l], [o, n, l]), i([o, n, l], [r, n, l], [r, s, l], [o, s, l]), i([r, n, t], [o, n, t], [o, s, t], [r, s, t]), i([r, n, l], [r, n, t], [r, s, t], [r, s, l]), i([o, n, t], [o, n, l], [o, s, l], [o, s, t]), e;
+
+// Tela de color sólido con su textura (acolchado en rombos, cuadros de plumón o tejido de cortina)
+export async function solidFabric(rgb, style) {
+  const c = document.createElement('canvas'); c.width = c.height = 1024; const x = c.getContext('2d');
+  const [r, g, b] = rgb, col = (k) => `rgb(${Math.round(r * k)},${Math.round(g * k)},${Math.round(b * k)})`;
+  x.fillStyle = col(1); x.fillRect(0, 0, 1024, 1024);
+  for (let i = 0; i < 9000; i++) { x.fillStyle = Math.random() < .5 ? col(0.93) : col(1.06); x.fillRect(Math.random() * 1024, Math.random() * 1024, 2, 2); }
+  if (style === 'rombos' || style === 'cuadros') {
+    const step = style === 'rombos' ? 128 : 256; x.lineWidth = 6;
+    for (let k = -1024; k <= 2048; k += step) {
+      const grad = (x0, y0, x1, y1) => { x.strokeStyle = col(0.72); x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke(); x.strokeStyle = col(1.12); x.lineWidth = 3; x.beginPath(); x.moveTo(x0 + 5, y0); x.lineTo(x1 + 5, y1); x.stroke(); x.lineWidth = 6; };
+      if (style === 'rombos') { grad(k, 0, k + 1024, 1024); grad(k, 1024, k + 1024, 0); } else { grad(k, 0, k, 1024); grad(0, k, 1024, k); }
+    }
+  } else { for (let i = 0; i < 1024; i += 6) { x.fillStyle = i % 12 ? col(0.97) : col(1.04); x.fillRect(i, 0, 3, 1024); } }
+  const bl = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.9));
+  return { bytes: new Uint8Array(await bl.arrayBuffer()), mime: 'image/jpeg', canvas: c };
 }
-function F(e, o, n, t, r, s = !1) {
-const l = U(), i = 70, p = 80, a = e + 2 * t, c = o + t + (s ? t : 0.02);
-return V(C(l, i, p, (m, u) => {
-const f = m * a - t, h = u * c - (s ? t : 0.02), g = f < 0 ? -f : f > e ? f - e : 0, P = h > o ? h - o : h < 0 ? -h : 0, d = Math.max(g, P);
-let O = Math.min(Math.max(f, 0), e), b = Math.min(Math.max(h, 0), o), w = n + 0.012;
-if (d > 0) {
-const v = d / t, j = Math.sin((g > 0 ? h : f) * Math.PI * 2 / 0.22) * 0.018 * v, M = Math.min(d, 0.03);
-w = n + 0.012 - (d - M * 0.5), g > 0 ? O = (f < 0 ? -1 : 1) * (M + j) + (f < 0 ? 0 : e) : O += j * 0.6, P > 0 && (b = (h > o ? o + M : -M) + (g > 0 ? 0 : j)), g > 0 && P > 0 && (w = n + 0.012 - d * 1.05), w = Math.max(w, 5e-3);
-} else
-w += Math.sin(f * 9) * Math.sin(h * 7) * 4e-3;
-return { p: [O - e / 2, w, b - o / 2], uv: [m * r % 1e9, u * r * (c / a)] };
-}));
+
+const LINEN = [0.93, 0.92, 0.9], WOOD = [0.42, 0.29, 0.18];
+// kind: cama | cobija | cortina | mantel ; dims en cm
+export function buildModel(kind, dims, tex) {
+  const W = dims.w / 100, L = dims.l / 100, H = (dims.h || 30) / 100;
+  if (kind === 'cortina') {
+    const parts = [Object.assign(curtain(W * 0.5, L, 2), { mat: 0 }), Object.assign(curtain(W * 0.5, L, 2), { mat: 0 })];
+    parts[0].P = parts[0].P.map((v, i) => (i % 3 === 0 ? v - W * 0.27 : v)); parts[1].P = parts[1].P.map((v, i) => (i % 3 === 0 ? v + W * 0.27 : v));
+    const rod = Object.assign(box(mesh(), -W * 0.58, L - 0.01, 0.04, W * 0.58, L + 0.02, 0.07), { mat: 1 });
+    return { blob: glb([...parts, rod], [{ tex: true }, { color: [0.2, 0.2, 0.22], rough: 0.4 }], tex), placement: 'wall' };
+  }
+  if (kind === 'mantel') {
+    const top = 0.75, cloth = Object.assign(drapeCloth(W, L, top, 0.24, 2, true), { mat: 0 });
+    const t = mesh(); box(t, -W / 2, top - 0.03, -L / 2, W / 2, top, L / 2);
+    for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) box(t, x * (W / 2 - 0.06) - 0.03, 0, z * (L / 2 - 0.06) - 0.03, x * (W / 2 - 0.06) + 0.03, top - 0.03, z * (L / 2 - 0.06) + 0.03);
+    return { blob: glb([cloth, Object.assign(t, { mat: 1 })], [{ tex: true }, { color: WOOD, rough: 0.6 }], tex), placement: 'floor' };
+  }
+  const drop = kind === 'cobija' ? 0.32 : 0.3;
+  const cloth = Object.assign(drapeCloth(W, L, kind === 'cobija' ? 0.0 + H : H, Math.min(drop, H + 0.25), 2), { mat: 0 });
+  if (kind === 'cobija') return { blob: glb([cloth], [{ tex: true }], tex), placement: 'floor' };
+  const bed = mesh(); box(bed, -W / 2, 0.0, -L / 2, W / 2, H, L / 2);
+  const frame = mesh(); box(frame, -W / 2 - 0.03, 0, -L / 2 - 0.08, W / 2 + 0.03, H + 0.75, -L / 2 - 0.02);
+  const pil = mesh(); const pw = W > 1.3 ? W / 2 - 0.08 : W - 0.2;
+  for (const cx of W > 1.3 ? [-W / 4, W / 4] : [0]) box(pil, cx - pw / 2, H + 0.02, -L / 2 + 0.04, cx + pw / 2, H + 0.15, -L / 2 + 0.42);
+  return { blob: glb([cloth, Object.assign(bed, { mat: 1 }), Object.assign(frame, { mat: 2 }), Object.assign(pil, { mat: 1 })], [{ tex: true }, { color: LINEN }, { color: WOOD, rough: 0.7 }], tex), placement: 'floor' };
 }
-function S(e, o, n) {
-const t = U(), r = 0.11, s = 0.035, l = Math.max(40, Math.round(e / r * 6));
-return V(C(t, l, 40, (p, a) => {
-const c = p * e, m = (1 - a) * o, u = Math.sin(c / r * Math.PI * 2) * s * (0.7 + 0.3 * a);
-return { p: [c - e / 2, m, u + s + 0.06], uv: [p * n, a * n * (o / e)] };
-}));
-}
-function x(e, o, n) {
-const t = [], r = [], s = [], l = [];
-let i = 0;
-const p = (b) => b + 3 & -4, a = (b, w) => (r.push({ buffer: 0, byteOffset: i, byteLength: b.byteLength, ...w ? { target: w } : {} }), t.push([i, b]), i = p(i + b.byteLength), r.length - 1);
-for (const b of e) {
-const w = new Float32Array(b.P), v = [1e9, 1e9, 1e9], j = [-1e9, -1e9, -1e9];
-for (let T = 0; T < w.length; T += 3) for (let y = 0; y < 3; y++)
-v[y] = Math.min(v[y], w[T + y]), j[y] = Math.max(j[y], w[T + y]);
-b.N.length || V(b);
-const M = w.length / 3, E = M > 65535 ? new Uint32Array(b.I) : new Uint16Array(b.I), I = s.length;
-s.push({ bufferView: a(w, 34962), componentType: 5126, count: M, type: "VEC3", min: v, max: j }), s.push({ bufferView: a(new Float32Array(b.N), 34962), componentType: 5126, count: M, type: "VEC3" }), s.push({ bufferView: a(new Float32Array(b.U), 34962), componentType: 5126, count: M, type: "VEC2" }), s.push({ bufferView: a(E, 34963), componentType: E instanceof Uint32Array ? 5125 : 5123, count: E.length, type: "SCALAR" }), l.push({ attributes: { POSITION: I, NORMAL: I + 1, TEXCOORD_0: I + 2 }, indices: I + 3, material: b.mat });
-}
-const c = { asset: { version: "2.0", generator: "Litper Probador" }, scene: 0, scenes: [{ nodes: [0] }], nodes: [{ mesh: 0 }], meshes: [{ primitives: l }], accessors: s, bufferViews: r, buffers: [] };
-c.materials = o.map((b) => ({ pbrMetallicRoughness: { baseColorFactor: [...b.color || [1, 1, 1], 1], metallicFactor: 0, roughnessFactor: b.rough ?? 0.92, ...b.tex ? { baseColorTexture: { index: 0 } } : {} }, doubleSided: !0 })), n && (c.images = [{ bufferView: a(n.bytes, 0), mimeType: n.mime }], c.textures = [{ sampler: 0, source: 0 }], c.samplers = [{ magFilter: 9729, minFilter: 9987, wrapS: 33648, wrapT: 33648 }]), c.bufferViews.forEach((b) => {
-b.target || delete b.target;
-}), c.buffers = [{ byteLength: i }];
-const m = new Uint8Array(i);
-t.forEach(([b, w]) => m.set(new Uint8Array(w.buffer, w.byteOffset, w.byteLength), b));
-const u = new TextEncoder().encode(JSON.stringify(c)), f = p(u.length), h = new Uint8Array(f).fill(32);
-h.set(u);
-const g = 28 + f + i, P = new ArrayBuffer(g), d = new DataView(P), O = new Uint8Array(P);
-return d.setUint32(0, 1179937895, !0), d.setUint32(4, 2, !0), d.setUint32(8, g, !0), d.setUint32(12, f, !0), d.setUint32(16, 1313821514, !0), O.set(h, 20), d.setUint32(20 + f, i, !0), d.setUint32(24 + f, 5130562, !0), O.set(m, 28 + f), new Blob([P], { type: "model/gltf-binary" });
-}
-async function B(e, o = [0.3, 0.62, 0.4, 0.22]) {
-const n = document.createElement("canvas");
-n.width = n.height = 1024;
-const t = n.getContext("2d"), r = e.width * o[2], s = e.height * o[3], l = e.width * o[0], i = e.height * o[1];
-for (let a = 0; a < 2; a++) for (let c = 0; c < 2; c++)
-t.save(), t.translate(a * 512 + (a ? 512 : 0), c * 512 + (c ? 512 : 0)), t.scale(a ? -1 : 1, c ? -1 : 1), t.drawImage(e, l, i, r, s, 0, 0, 512, 512), t.restore();
-const p = await new Promise((a) => n.toBlob(a, "image/jpeg", 0.88));
-return { bytes: new Uint8Array(await p.arrayBuffer()), mime: "image/jpeg", canvas: n };
-}
-async function L(e, o) {
-const n = document.createElement("canvas");
-n.width = n.height = 1024;
-const t = n.getContext("2d"), [r, s, l] = e, i = (a) => `rgb(${Math.round(r * a)},${Math.round(s * a)},${Math.round(l * a)})`;
-t.fillStyle = i(1), t.fillRect(0, 0, 1024, 1024);
-for (let a = 0; a < 9e3; a++)
-t.fillStyle = Math.random() < 0.5 ? i(0.93) : i(1.06), t.fillRect(Math.random() * 1024, Math.random() * 1024, 2, 2);
-if (o === "rombos" || o === "cuadros") {
-const a = o === "rombos" ? 128 : 256;
-t.lineWidth = 6;
-for (let c = -1024; c <= 2048; c += a) {
-const m = (u, f, h, g) => {
-t.strokeStyle = i(0.72), t.beginPath(), t.moveTo(u, f), t.lineTo(h, g), t.stroke(), t.strokeStyle = i(1.12), t.lineWidth = 3, t.beginPath(), t.moveTo(u + 5, f), t.lineTo(h + 5, g), t.stroke(), t.lineWidth = 6;
-};
-o === "rombos" ? (m(c, 0, c + 1024, 1024), m(c, 1024, c + 1024, 0)) : (m(c, 0, c, 1024), m(0, c, 1024, c));
-}
-} else
-for (let a = 0; a < 1024; a += 6)
-t.fillStyle = a % 12 ? i(0.97) : i(1.04), t.fillRect(a, 0, 3, 1024);
-const p = await new Promise((a) => n.toBlob(a, "image/jpeg", 0.9));
-return { bytes: new Uint8Array(await p.arrayBuffer()), mime: "image/jpeg", canvas: n };
-}
-const R = [0.93, 0.92, 0.9], N = [0.42, 0.29, 0.18];
-function $(e, o, n) {
-const t = o.w / 100, r = o.l / 100, s = (o.h || 30) / 100;
-if (e === "cortina") {
-const u = [Object.assign(S(t * 0.5, r, 2), { mat: 0 }), Object.assign(S(t * 0.5, r, 2), { mat: 0 })];
-u[0].P = u[0].P.map((h, g) => g % 3 === 0 ? h - t * 0.27 : h), u[1].P = u[1].P.map((h, g) => g % 3 === 0 ? h + t * 0.27 : h);
-const f = Object.assign(A(U(), -t * 0.58, r - 0.01, 0.04, t * 0.58, r + 0.02, 0.07), { mat: 1 });
-return { blob: x([...u, f], [{ tex: !0 }, { color: [0.2, 0.2, 0.22], rough: 0.4 }], n), placement: "wall" };
-}
-if (e === "mantel") {
-const f = Object.assign(F(t, r, 0.75, 0.24, 2, !0), { mat: 0 }), h = U();
-A(h, -t / 2, 0.75 - 0.03, -r / 2, t / 2, 0.75, r / 2);
-for (const [g, P] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) A(h, g * (t / 2 - 0.06) - 0.03, 0, P * (r / 2 - 0.06) - 0.03, g * (t / 2 - 0.06) + 0.03, 0.75 - 0.03, P * (r / 2 - 0.06) + 0.03);
-return { blob: x([f, Object.assign(h, { mat: 1 })], [{ tex: !0 }, { color: N, rough: 0.6 }], n), placement: "floor" };
-}
-const l = e === "cobija" ? 0.32 : 0.3, i = Object.assign(F(t, r, e === "cobija" ? 0 + s : s, Math.min(l, s + 0.25), 2), { mat: 0 });
-if (e === "cobija") return { blob: x([i], [{ tex: !0 }], n), placement: "floor" };
-const p = U();
-A(p, -t / 2, 0, -r / 2, t / 2, s, r / 2);
-const a = U();
-A(a, -t / 2 - 0.03, 0, -r / 2 - 0.08, t / 2 + 0.03, s + 0.75, -r / 2 - 0.02);
-const c = U(), m = t > 1.3 ? t / 2 - 0.08 : t - 0.2;
-for (const u of t > 1.3 ? [-t / 4, t / 4] : [0]) A(c, u - m / 2, s + 0.02, -r / 2 + 0.04, u + m / 2, s + 0.15, -r / 2 + 0.42);
-return { blob: x([i, Object.assign(p, { mat: 1 }), Object.assign(a, { mat: 2 }), Object.assign(c, { mat: 1 })], [{ tex: !0 }, { color: R }, { color: N, rough: 0.7 }], n), placement: "floor" };
-}
-export {
-$ as buildModel,
-B as fabricTexture,
-L as solidFabric
-};

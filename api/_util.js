@@ -23,3 +23,13 @@ export function imageUrlOk(u, selfHost) {
   try { const x = new URL(u); return x.protocol === 'https:' && (IMG_HOSTS.includes(x.hostname) || x.hostname === selfHost); } catch { return false; }
 }
 export const isDataImage = (s) => typeof s === 'string' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(s) && s.length < 4_000_000;
+// fal.ai: una sola llave (FAL_KEY) para FASHN (ropa) y Nano Banana (hogar). sync_mode devuelve la imagen como data URI.
+export async function falRun(model, input) {
+  const r = await fetch(`https://fal.run/${model}`, { method: 'POST', headers: { authorization: `Key ${process.env.FAL_KEY}`, 'content-type': 'application/json' }, body: JSON.stringify({ ...input, sync_mode: true }) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(d.detail?.[0]?.msg || d.detail || 'La IA no pudo con esta foto.'), { code: 502 });
+  const url = d.images?.[0]?.url; if (!url) throw Object.assign(new Error('La IA no devolvió imagen.'), { code: 502 });
+  if (url.startsWith('data:')) return url;
+  const im = await fetch(url); const b = Buffer.from(await im.arrayBuffer());
+  return `data:${(im.headers.get('content-type') || 'image/jpeg').split(';')[0]};base64,${b.toString('base64')}`;
+}

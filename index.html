@@ -4,138 +4,170 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#121726">
+<meta name="theme-color" content="#07080a">
 <title>Probador Litper</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Outfit:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="/app.css">
 <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@4.4.0/dist/model-viewer.min.js" integrity="sha384-wjsPzEO+lXOf7d9csIDfAQpPt2OKuUU3m0K9qsdKIuzX4N8czSF6hdh23eAbZa3p" crossorigin="anonymous"></script>
 <script type="module" src="/app.js"></script>
 </head>
 <body>
 <div class="app" id="app" data-mode="probar">
-<div class="stage" id="stage">
-<video id="vid" playsinline muted></video>
-<canvas id="gl"></canvas>
-<canvas id="room"></canvas>
-<model-viewer id="mv" ar ar-modes="webxr scene-viewer quick-look" ar-scale="fixed" camera-controls touch-action="pan-y" shadow-intensity="1.1" shadow-softness="0.8" exposure="1.05" environment-image="neutral" camera-orbit="35deg 62deg auto" alt="Producto en 3D a tamaño real">
-<button slot="ar-button" class="ar-btn" id="arBtn">Verlo en mi casa, tamaño real</button>
-</model-viewer>
-<div class="empty" id="empty">
-<div class="empty-in">
-<p class="empty-t" id="emptyT">Pruébatelo con tu cámara</p>
-<p class="empty-s" id="emptyS">Muévete y la prenda se mueve contigo. Tu imagen no sale de tu celular.</p>
-<div class="empty-a">
-<button class="pill pri" id="btnStart">Activar cámara</button>
-<label class="pill">Subir una foto<input type="file" id="filePhoto" accept="image/*" hidden></label>
-</div>
-</div>
-</div>
-<div class="hint" id="hint" hidden></div>
-</div>
-<header class="top">
-<div class="prod">
-<img id="pThumb" alt="" hidden>
-<div class="prod-t"><b id="pName">Probador Litper</b><span id="pPrice"></span></div>
-</div>
-<div class="top-a">
-<a class="pill pri buyp" id="btnBuy" target="_top" rel="noopener" hidden>Comprar</a>
-<button class="ic" id="btnFlip" aria-label="Cambiar cámara" title="Cambiar cámara"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><path d="M9 13a3 3 0 0 0 5.6 1.5M15 13a3 3 0 0 0-5.6-1.5"/></svg></button>
-<button class="ic" id="btnTune" aria-label="Ajustar" title="Ajustar"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
-</div>
-</header>
-<section class="sheet" id="tune" hidden>
-<div class="sheet-h"><b>Ajustar</b><button class="x" data-close="tune" aria-label="Cerrar">✕</button></div>
-<div class="grid2">
-<label>Tipo de producto<select id="selKind">
-<option value="superior">Camisa, camiseta, buzo</option><option value="completo">Vestido, pijama</option>
-<option value="inferior">Pantalón, jean, falda</option><option value="zapatos">Zapatos</option>
-<option value="gafas">Gafas</option><option value="gorra">Gorra</option>
-<option value="cama">Cama: protector, sábanas, cobija</option><option value="cortina">Cortina</option><option value="mantel">Mantel</option>
-</select></label>
-<label>Vista<select id="selView"><option value="auto">Automática (frente / espalda)</option><option value="front">Siempre frente</option><option value="back">Siempre espalda</option></select></label>
-<label>Tamaño <input type="range" id="rScale" min="0.7" max="1.4" step="0.01" value="1"></label>
-<label>Altura <input type="range" id="rOff" min="-0.25" max="0.25" step="0.01" value="0"></label>
-<div class="grid3"><label>Ancho (cm)<input type="number" id="dW" min="10" max="400" value="140"></label><label>Largo / alto (cm)<input type="number" id="dL" min="10" max="400" value="190"></label><label>Fondo (cm)<input type="number" id="dH" min="1" max="80" value="30"></label></div>
-<label class="chk"><input type="checkbox" id="chkShade" checked> Luz y pliegues reales</label>
-<label class="chk"><input type="checkbox" id="chkDots"> Ver puntos del cuerpo</label>
-</div>
-</section>
-<div class="roomtools" id="roomTools" hidden>
-<label class="pill pri">Foto de mi cama<input type="file" id="fileRoom" accept="image/*" capture="environment" hidden></label>
-<button class="pill" id="btnRoomDemo">Ver ejemplo</button>
-<button class="pill" id="btnRoomReset">Reacomodar esquinas</button>
-</div>
-<footer class="bottom">
-<div class="swatches" id="swatches" role="listbox" aria-label="Colores y diseños"></div>
-<div class="shutter-row">
-<button class="side" id="btnUpload" aria-label="Subir foto"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 8"/></svg></button>
-<button class="shutter" id="btnShot" aria-label="Tomar foto"><svg viewBox="0 0 80 80"><circle class="thread" cx="40" cy="40" r="36"/><circle class="core" cx="40" cy="40" r="28"/></svg></button>
-<button class="side ai" id="btnAI" aria-label="Versión ultra realista con IA"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></button>
-</div>
-<nav class="dial" id="dial" role="tablist">
-<button data-m="probar" class="on">Probarme</button>
-<button data-m="espacio">En mi espacio</button>
-<button data-m="tres">Tamaño real 3D</button>
-<button data-m="medir">Medir</button>
-<button data-m="talla">Mi talla</button>
-</nav>
-</footer>
-<section class="sheet tall" id="talla" hidden>
-<div class="sheet-h"><b>Tu talla exacta</b><button class="x" data-close="talla" aria-label="Cerrar">✕</button></div>
-<div id="tallaRopa">
-<p class="lead">Escribe tu estatura y toma dos fotos de cuerpo entero: de frente y de lado, con los brazos un poco separados. Medimos tu pecho, cintura y cadera.</p>
-<div class="grid3">
-<label>Estatura (cm)<input type="number" id="tH" inputmode="numeric" min="100" max="220" value="165"></label>
-<label>Peso (kg)<input type="number" id="tW" inputmode="numeric" min="30" max="200" value="65"></label>
-<label>Para<select id="tS"><option value="f">Mujer</option><option value="m">Hombre</option></select></label>
-</div>
-<div class="shots">
-<label class="shot" id="shotF"><input type="file" accept="image/*" capture="user" hidden data-side="f"><span>Foto de frente</span></label>
-<label class="shot" id="shotS"><input type="file" accept="image/*" capture="user" hidden data-side="s"><span>Foto de lado</span></label>
-</div>
-<label>Me gusta que quede<select id="tF"><option value="0">Normal</option><option value="-1">Ajustado</option><option value="1">Holgado</option></select></label>
-<button class="pill pri wide" id="btnTalla">Calcular mi talla</button>
-</div>
-<div id="tallaCama" hidden>
-<p class="lead">Mide tu colchón con la pestaña Medir o con un metro y escribe las medidas.</p>
-<div class="grid3">
-<label>Ancho (cm)<input type="number" id="bW" min="60" max="250" value="140"></label>
-<label>Largo (cm)<input type="number" id="bL" min="150" max="230" value="190"></label>
-<label>Alto (cm)<input type="number" id="bH" min="5" max="60" value="30"></label>
-</div>
-<button class="pill pri wide" id="btnCama">Ver qué medida necesito</button>
-</div>
-<div class="result" id="res" hidden></div>
-</section>
-<section class="sheet tall" id="medir" hidden>
-<div class="sheet-h"><b>Medir con la cámara</b><button class="x" data-close="medir" aria-label="Cerrar">✕</button></div>
-<div id="medirXR" hidden>
-<p class="lead">Apunta a la superficie, toca + en el primer punto y otra vez en el segundo. Funciona como la app Medida del iPhone.</p>
-<button class="pill pri wide" id="btnXR">Empezar a medir</button>
-</div>
-<div id="medirFoto">
-<p class="lead">Pon una tarjeta bancaria sobre lo que vas a medir y toma la foto. Marca los dos extremos del lado largo de la tarjeta y luego los dos puntos que quieres medir.</p>
-<label class="pill pri wide">Tomar la foto<input type="file" id="fileMeasure" accept="image/*" capture="environment" hidden></label>
-</div>
-<div class="result" id="resMedir" hidden></div>
-</section>
-<section class="sheet tall" id="shot" hidden>
-<div class="sheet-h"><b id="shotT">Tu foto</b><button class="x" data-close="shot" aria-label="Cerrar">✕</button></div>
-<div class="shot-img"><img id="shotImg" alt="Resultado"><div class="spin" id="spin" hidden><span></span><p id="spinT">Creando la versión realista…</p></div></div>
-<div class="row">
-<button class="pill" id="btnSave">Guardar o compartir</button>
-<button class="pill pri" id="btnAI2">Hacerla ultra realista</button>
-</div>
-</section>
-<div class="xrui" id="xrui" hidden>
-<svg class="xrsvg"></svg>
-<div class="ret" id="ret"></div>
-<div class="xr-read" id="xrRead">Mueve el celular despacio</div>
-<div class="xr-bar"><button class="pill" id="xrUndo">Deshacer</button><button class="xr-add" id="xrAdd" aria-label="Agregar punto">+</button><button class="pill" id="xrClose">Listo</button></div>
-</div>
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- Escenario -->
+  <div class="stage" id="stage">
+    <video id="vid" playsinline muted></video>
+    <canvas id="gl"></canvas>
+    <canvas id="room"></canvas>
+    <model-viewer id="mv" ar ar-modes="webxr scene-viewer quick-look" ar-scale="fixed" camera-controls touch-action="pan-y" shadow-intensity="1.1" shadow-softness="0.8" exposure="1.05" environment-image="neutral" camera-orbit="35deg 62deg auto" alt="Producto en 3D a tamaño real">
+      <button slot="ar-button" class="ar-btn" id="arBtn">Verlo en mi casa, tamaño real</button>
+    </model-viewer>
+    <div class="empty" id="empty">
+      <div class="floor" aria-hidden="true"><i></i></div><span class="glow a" aria-hidden="true"></span><span class="glow b" aria-hidden="true"></span>
+      <div class="empty-in">
+        <div class="lens" aria-hidden="true"><span></span><span></span><span></span></div>
+        <p class="empty-t" id="emptyT">Pruébatelo antes de comprarlo</p>
+        <p class="empty-s" id="emptyS">Muévete y la prenda se mueve contigo. Tu imagen no sale de tu celular.</p>
+        <div class="empty-a">
+          <button class="pill pri big" id="btnStart">Abrir la cámara</button>
+          <label class="pill ghost">Subir una foto<input type="file" id="filePhoto" accept="image/*" hidden></label>
+        </div>
+      </div>
+    </div>
+    <div class="hint" id="hint" hidden></div>
+  </div>
+
+  <!-- Barra superior -->
+  <header class="top">
+    <div class="prod">
+      <img id="pThumb" alt="" hidden>
+      <div class="prod-t"><b id="pName">Probador Litper</b><span id="pPrice"></span></div>
+    </div>
+    <div class="top-a">
+      <a class="pill pri buyp" id="btnBuy" target="_top" rel="noopener" hidden>Comprar</a>
+      <button class="ic" id="btnFlip" aria-label="Cambiar cámara" title="Cambiar cámara"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><path d="M9 13a3 3 0 0 0 5.6 1.5M15 13a3 3 0 0 0-5.6-1.5"/></svg></button>
+      <button class="ic" id="btnTune" aria-label="Ajustar" title="Ajustar"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
+    </div>
+  </header>
+
+  <!-- Panel de ajustes -->
+  <section class="sheet" id="tune" hidden>
+    <div class="sheet-h"><b>Ajustar</b><button class="x" data-close="tune" aria-label="Cerrar">✕</button></div>
+    <div class="grid2">
+      <label>Tipo de producto<select id="selKind">
+        <option value="superior">Camisa, camiseta, buzo</option><option value="completo">Vestido, pijama</option>
+        <option value="inferior">Pantalón, jean, falda</option><option value="zapatos">Zapatos</option>
+        <option value="gafas">Gafas</option><option value="gorra">Gorra</option>
+        <option value="cama">Cama: protector, sábanas, cobija</option><option value="cortina">Cortina</option><option value="mantel">Mantel</option>
+      </select></label>
+      <label>Vista<select id="selView"><option value="auto">Automática (frente / espalda)</option><option value="front">Siempre frente</option><option value="back">Siempre espalda</option></select></label>
+      <label>Tamaño <input type="range" id="rScale" min="0.7" max="1.4" step="0.01" value="1"></label>
+      <label>Altura <input type="range" id="rOff" min="-0.25" max="0.25" step="0.01" value="0"></label>
+      <div class="grid3"><label>Ancho (cm)<input type="number" id="dW" min="10" max="400" value="140"></label><label>Largo / alto (cm)<input type="number" id="dL" min="10" max="400" value="190"></label><label>Fondo (cm)<input type="number" id="dH" min="1" max="80" value="30"></label></div>
+      <label class="chk"><input type="checkbox" id="chkShade" checked> Luz y pliegues reales</label>
+      <label class="chk"><input type="checkbox" id="chkDots"> Ver puntos del cuerpo</label>
+    </div>
+  </section>
+
+  <!-- Herramientas de "Mi espacio" -->
+  <div class="roomtools" id="roomTools" hidden>
+    <label class="pill pri">Foto de mi cama<input type="file" id="fileRoom" accept="image/*" capture="environment" hidden></label>
+    <button class="pill" id="btnRoomLive">Cámara en vivo</button>
+    <button class="pill" id="btnRoomDemo">Ejemplo</button>
+    <button class="pill" id="btnRoomReset">Ajustar a mano</button>
+  </div>
+
+  <button class="kitchip" id="btnKit" hidden><span class="kc-dot"></span><span id="kitT">Completa tu cama</span></button>
+
+  <!-- Parte inferior -->
+  <footer class="bottom">
+    <div class="swatches" id="swatches" role="listbox" aria-label="Colores y diseños"></div>
+    <div class="shutter-row">
+      <button class="side" id="btnUpload" aria-label="Subir foto"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 8"/></svg></button>
+      <button class="shutter" id="btnShot" aria-label="Tomar foto"><svg viewBox="0 0 80 80"><circle class="thread" cx="40" cy="40" r="36"/><circle class="core" cx="40" cy="40" r="28"/></svg></button>
+      <button class="side ai" id="btnAI" aria-label="Versión ultra realista con IA"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></button>
+    </div>
+    <nav class="dial" id="dial" role="tablist"><span class="dial-ink" id="dialInk" aria-hidden="true"></span>
+      <button data-m="probar" class="on">Probarme</button>
+      <button data-m="espacio">En mi espacio</button>
+      <button data-m="tres">Tamaño real 3D</button>
+      <button data-m="medir">Medir</button>
+      <button data-m="talla">Mi talla</button>
+    </nav>
+  </footer>
+
+  <!-- Mi talla -->
+  <section class="sheet tall" id="talla" hidden>
+    <div class="sheet-h"><b>Tu talla exacta</b><button class="x" data-close="talla" aria-label="Cerrar">✕</button></div>
+    <div id="tallaRopa">
+      <p class="lead">Escribe tu estatura y toma dos fotos de cuerpo entero: de frente y de lado, con los brazos un poco separados. Medimos tu pecho, cintura y cadera.</p>
+      <div class="grid3">
+        <label>Estatura (cm)<input type="number" id="tH" inputmode="numeric" min="100" max="220" value="165"></label>
+        <label>Peso (kg)<input type="number" id="tW" inputmode="numeric" min="30" max="200" value="65"></label>
+        <label>Para<select id="tS"><option value="f">Mujer</option><option value="m">Hombre</option></select></label>
+      </div>
+      <div class="shots">
+        <label class="shot" id="shotF"><input type="file" accept="image/*" capture="user" hidden data-side="f"><span>Foto de frente</span></label>
+        <label class="shot" id="shotS"><input type="file" accept="image/*" capture="user" hidden data-side="s"><span>Foto de lado</span></label>
+      </div>
+      <label>Me gusta que quede<select id="tF"><option value="0">Normal</option><option value="-1">Ajustado</option><option value="1">Holgado</option></select></label>
+      <button class="pill pri wide" id="btnTalla">Calcular mi talla</button>
+    </div>
+    <div id="tallaCama" hidden>
+      <p class="lead">Mide tu colchón con la pestaña Medir o con un metro y escribe las medidas.</p>
+      <div class="grid3">
+        <label>Ancho (cm)<input type="number" id="bW" min="60" max="250" value="140"></label>
+        <label>Largo (cm)<input type="number" id="bL" min="150" max="230" value="190"></label>
+        <label>Alto (cm)<input type="number" id="bH" min="5" max="60" value="30"></label>
+      </div>
+      <button class="pill pri wide" id="btnCama">Ver qué medida necesito</button>
+    </div>
+    <div class="result" id="res" hidden></div>
+  </section>
+
+  <!-- Medir -->
+  <section class="sheet tall" id="medir" hidden>
+    <div class="sheet-h"><b>Medir con la cámara</b><button class="x" data-close="medir" aria-label="Cerrar">✕</button></div>
+    <div id="medirXR" hidden>
+      <p class="lead">Apunta a la superficie, toca + en el primer punto y otra vez en el segundo. Funciona como la app Medida del iPhone.</p>
+      <button class="pill pri wide" id="btnXR">Empezar a medir</button>
+    </div>
+    <div id="medirFoto">
+      <p class="lead">Pon una tarjeta bancaria sobre lo que vas a medir y toma la foto. Marca los dos extremos del lado largo de la tarjeta y luego los dos puntos que quieres medir.</p>
+      <label class="pill pri wide">Tomar la foto<input type="file" id="fileMeasure" accept="image/*" capture="environment" hidden></label>
+    </div>
+    <div class="result" id="resMedir" hidden></div>
+  </section>
+
+  <!-- Resultado de foto / IA -->
+  <section class="sheet tall" id="shot" hidden>
+    <div class="sheet-h"><b id="shotT">Tu foto</b><button class="x" data-close="shot" aria-label="Cerrar">✕</button></div>
+    <div class="shot-img" id="cmp"><img id="shotBefore" alt="Antes" hidden><img id="shotImg" alt="Resultado"><input type="range" id="cmpR" min="0" max="100" value="50" aria-label="Comparar antes y después" hidden><span class="cmp-bar" id="cmpBar" hidden></span><div class="spin" id="spin" hidden><span></span><p id="spinT">Creando la versión ultra realista…</p></div></div>
+    <div class="row">
+      <button class="pill" id="btnSave">Guardar o compartir</button>
+      <button class="pill pri" id="btnAI2">Hacerla ultra realista</button>
+    </div>
+    <button class="pill wide kitcta" id="btnKit2">Completa tu cama en un solo pedido</button>
+  </section>
+
+  <section class="sheet tall" id="kit" hidden>
+    <div class="sheet-h"><b>Completa tu cama</b><button class="x" data-close="kit" aria-label="Cerrar">✕</button></div>
+    <p class="lead" id="kitLead">Lo que combina con lo que te probaste. Marca lo que quieras y llévalo en un solo pedido.</p>
+    <div class="kitlist" id="kitList"></div>
+    <div class="kitfoot"><div><span>Total del kit</span><b id="kitTotal">$0</b></div><a class="pill pri" id="kitBuy" target="_top" rel="noopener">Agregar al carrito</a></div>
+  </section>
+
+  <!-- Capa del medidor AR -->
+  <div class="xrui" id="xrui" hidden>
+    <svg class="xrsvg"></svg>
+    <div class="ret" id="ret"></div>
+    <div class="xr-read" id="xrRead">Mueve el celular despacio</div>
+    <div class="xr-bar"><button class="pill" id="xrUndo">Deshacer</button><button class="xr-add" id="xrAdd" aria-label="Agregar punto">+</button><button class="pill" id="xrClose">Listo</button></div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 </body>
 </html>
