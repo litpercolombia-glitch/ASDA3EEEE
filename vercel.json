@@ -1,4 +1,8 @@
 {
+  "framework": null,
+  "installCommand": "echo skip",
+  "buildCommand": "echo static",
+  "outputDirectory": ".",
   "cleanUrls": true,
   "trailingSlash": false,
   "functions": {
