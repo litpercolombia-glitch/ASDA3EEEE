@@ -13,8 +13,9 @@ export const OFFER = {
   founderS: 'Plan Crecimiento a $91.900 al mes (US$29) congelado para siempre mientras sigas activo, en vez de $154.900. Incluye la instalación hecha por nosotros en 48 horas, 500 pruebas extra el primer mes y un informe mensual de ventas con probador y sin probador.',
 };
 // Primero estudios independientes y retailers grandes (regla de la investigación); siempre con quién lo midió y cuándo.
+// Referencias de la industria (realidad aumentada y 3D de otras empresas): se rotulan así en la landing, separadas de los resultados propios.
 export const STATS = [
-  { n: '+20 %', t: 'compraron más quienes usaron realidad aumentada antes de comprar (160.400 clientes, app de cosméticos).', src: 'Tan, Chandukala y Reddy, Journal of Marketing (2022), estudio independiente', url: 'https://insight.kellogg.northwestern.edu/article/selling-niche-products-augmented-reality' },
-  { n: '−40 %', t: 'devoluciones en los pilotos del probador 3D; sus herramientas de talla evitaron el 8 % de las devoluciones por talla en 2025.', src: 'Zalando (2026), dato propio', url: 'https://corporate.zalando.com/en/node/11013' },
-  { n: '−36,9 %', t: 'devoluciones en zapatos comprados con medición desde el celular (ZOZOMAT, feb–oct 2020).', src: 'ZOZO, Japón (2021), dato propio', url: 'https://corp.zozo.com/en/initiative/20211019-7006/' },
+  { n: '~20 %', t: 'más alta fue la tasa de compra de quienes usaron realidad aumentada antes de comprar (160.400 clientes, app de cosméticos).', src: 'Tan, Chandukala y Reddy, Journal of Marketing (2022), estudio independiente', url: 'https://insight.kellogg.northwestern.edu/article/selling-niche-products-augmented-reality' },
+  { n: 'Hasta −40 %', t: 'de devoluciones en los pilotos del probador 3D de Zalando; sus herramientas de talla evitaron el 8 % de las devoluciones por talla en 2025.', src: 'Zalando (2026), dato propio de Zalando', url: 'https://corporate.zalando.com/en/node/11013' },
+  { n: '−36,9 %', t: 'de devoluciones en zapatos comprados con medición desde el celular (ZOZOMAT, feb–oct 2020).', src: 'ZOZO, Japón (2021), dato propio de ZOZO', url: 'https://corp.zozo.com/en/initiative/20211019-7006/' },
 ];

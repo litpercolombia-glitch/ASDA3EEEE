@@ -1,6 +1,7 @@
 // Zynex Probador — app del comprador. 2026-10-17
 // Flujo: producto de la tienda → foto (cámara, galería o ejemplo) → IA (Cloudflare FLUX.2 klein, vía Supabase) → comparar → comprar.
 import { call, track, money, toast, store, el, $, $$, WA, sesion } from './common.js';
+import { fuse } from './fusion.js';
 
 const Q = new URLSearchParams(location.search);
 const slug = (s) => (/^[a-z0-9][a-z0-9-]{0,200}$/.test(String(s || '').toLowerCase()) ? String(s).toLowerCase() : '');
@@ -8,7 +9,7 @@ const hostOf = (s) => { const h = String(s || '').toLowerCase().replace(/^https?
 const TENANT_SHOP = { litper: 'litper.store' };
 const DEMO = Q.get('demo') === '1';
 const TENANT = DEMO ? 'demo' : slug(Q.get('t')) || 'litper';
-const SHOP = hostOf(Q.get('s')) || TENANT_SHOP[TENANT] || 'litper.store';
+let SHOP = DEMO ? hostOf(Q.get('s')) : TENANT_SHOP[TENANT] || ''; // tenant real: el dominio sale de cfg, nunca de la URL
 const HANDLE = slug(Q.get('h') || Q.get('p'));
 const WANT_V = Number(Q.get('v')) || 0;
 const EMBED = Q.get('embed') === '1' || window.top !== window.self;
@@ -23,16 +24,26 @@ const COPY = {
 };
 const ILLU = { cama: 's-cama', cortina: 's-cortina', mesa: 's-mesa', mueble: 's-mueble', ropa: 's-ropa' };
 const ERR = {
-  limite_ip: ['Llegaste al máximo de pruebas de hoy', 'Mañana puedes hacer más. Si quieres ayuda para elegir, escríbenos por WhatsApp.'],
-  cuota_agotada: ['El probador de esta tienda está en pausa', 'Se usaron todas las pruebas del mes. Puedes comprar normal o escribir a la tienda.'],
-  tienda_inactiva: ['El probador no está activo en esta tienda', 'Puedes comprar normal desde la página del producto.'],
-  tienda_no_registrada: ['El probador no está activo en esta tienda', 'Puedes comprar normal desde la página del producto.'],
-  ia_cupo_diario: ['La IA está muy ocupada ahora', 'Hay muchas personas probando al mismo tiempo. Intenta en unos minutos.'],
+  limite_ip: ['Llegaste al máximo de pruebas de hoy', 'Mañana puedes hacer más. Puedes comprar normal desde la tienda.'],
+  limite_sesion: ['Ya hiciste muchas pruebas en esta visita', 'Elige el que más te gustó y cómpralo, o vuelve mañana para probar más.'],
+  limite_tienda_dia: ['El probador no está disponible por ahora', 'Puedes comprar normal desde la página del producto.'],
+  cuota_agotada: ['El probador no está disponible por ahora', 'Puedes comprar normal desde la página del producto.'],
+  tienda_inactiva: ['El probador no está disponible por ahora', 'Puedes comprar normal desde la página del producto.'],
+  tienda_no_registrada: ['El probador no está disponible por ahora', 'Puedes comprar normal desde la página del producto.'],
+  ia_cupo_diario: ['El probador está en pausa por unas horas', 'Puedes comprar normal; vuelve a intentarlo más tarde.'],
   ia_fallo: ['No pudimos crear tu foto', 'Intenta otra vez. Si se repite, prueba con otra foto con más luz.'],
-  ia_tiempo: ['Se demoró más de lo normal', 'Intenta otra vez; casi siempre tarda menos de 10 segundos.'],
+  ia_rechazo: ['La IA no aceptó esta foto', 'Prueba con otra foto: de frente, con buena luz y sin otras personas.'],
+  ia_tiempo: ['Se demoró más de lo normal', 'Intenta otra vez; casi siempre tarda menos de 12 segundos.'],
   tiempo: ['Se demoró más de lo normal', 'Revisa tu conexión e intenta otra vez.'],
   foto_invalida: ['No pudimos leer esa foto', 'Prueba con otra foto (JPG o PNG) o tómala de nuevo.'],
+  foto_no_permitida: ['No podemos usar esta foto', 'Solo probamos ropa sobre personas mayores de edad, vestidas. Prueba con otra foto.'],
+  falta_consentimiento: ['Falta tu autorización', 'Marca la casilla para confirmar que la foto es tuya o tienes permiso.'],
+  moderacion_no_disponible: ['No pudimos revisar la foto', 'Intenta otra vez en un momento.'],
+  ropa_no_disponible: ['La prueba de ropa no está disponible por ahora', 'Puedes comprar normal desde la página del producto.'],
   producto_sin_imagen: ['Este producto no tiene una foto que la IA pueda usar', 'La tienda debe subir una foto clara del producto.'],
+  imagen_no_valida: ['Esta foto del producto no se puede usar', 'Elige otro color o diseño.'],
+  producto_no_encontrado: ['No encontramos este producto en la tienda', 'Puede que ya no esté disponible.'],
+  producto_sin_probador: ['Este producto aún no tiene probador', 'Puedes verlo y comprarlo normal en la tienda.'],
   prenda_no_permitida: ['Esta prenda no está disponible en el probador', 'Por privacidad no probamos ropa interior ni trajes de baño.'],
   sin_internet: ['Estás sin internet', 'Revisa tu conexión e intenta otra vez.'],
   red: ['No hubo conexión con el probador', 'Revisa tu conexión e intenta otra vez.'],
@@ -40,10 +51,11 @@ const ERR = {
 
 let P = null, G = 'cama', C = COPY.cama;
 let sel = { color: null, size: null, qty: null };
-let photo = null; // { data, w, h, key, src }
+let photo = null; // { data (foto completa), ai (versión de 512 px para la IA), w, h (medidas para la IA), fw, fh, key }
 const results = new Map();
 let busy = false, lastErr = null, KIT = null, kitOn = new Set();
-let CFG = { sello: true, kit: true, activo: true };
+let CFG = { sello: true, kit: true, activo: true, wa: null, tok: null, ropa: false };
+let cfgReady = null;
 
 /* ---------- arranque ---------- */
 init();
@@ -63,14 +75,24 @@ async function init() {
   $('#btnSave').onclick = save;
   $('#btnSizeHelp').onclick = openSizeHelp;
   $('#btnKit').onclick = buyKit;
-  $('#btnWaErr').href = `https://wa.me/${WA}?text=${encodeURIComponent('Hola, necesito ayuda con el probador de ' + SHOP)}`;
   if (DEMO) $('#byLink').removeAttribute('target');
   setupCompare();
-  call('cfg', { tenant: TENANT }, { timeout: 8000 }).then((c) => { CFG = c; $('.by').hidden = !c.sello; if (!c.kit) { KIT = null; $('#kit').hidden = true; } }).catch((e) => { if (e.code === 'tienda_no_registrada') CFG.activo = false; });
+  $('#chkConsent').onchange = () => { try { sessionStorage.setItem('vto_consent', $('#chkConsent').checked ? '1' : ''); } catch {} syncConsent(); };
+  try { $('#chkConsent').checked = sessionStorage.getItem('vto_consent') === '1'; } catch {}
+  cfgReady = loadCfg();
+  if (!SHOP) { await cfgReady; SHOP = CFG.dominio || ''; if (!SHOP) return fatal('El probador no está disponible por ahora.', 'Puedes comprar normal desde la tienda.'); }
   if (!HANDLE) return showPicker();
   await loadProduct(HANDLE);
 }
 
+async function loadCfg() {
+  try {
+    const c = await call('cfg', { tenant: TENANT }, { timeout: 8000 });
+    CFG = { ...CFG, ...c };
+    $('.by').hidden = !c.sello; if (!c.kit) { KIT = null; $('#kit').hidden = true; }
+    if (c.wa) $('#btnWaErr').href = `https://wa.me/${c.wa}?text=${encodeURIComponent('Hola, necesito ayuda con el probador')}`;
+  } catch (e) { if (e.code === 'tienda_no_registrada') CFG.activo = false; }
+}
 async function loadProduct(handle) {
   setState('cargando');
   try {
@@ -83,6 +105,8 @@ async function loadProduct(handle) {
   if (P.kind === 'bloqueado') return fatal('Esta prenda no está disponible en el probador.', 'Por privacidad no probamos ropa interior ni trajes de baño.');
   if (P.kind === 'otro') return fatal('Este producto aún no tiene probador.', 'Puedes verlo y comprarlo normal en la tienda.');
   G = GROUP[P.kind] || 'cama'; C = COPY[G];
+  if (G === 'ropa') { await cfgReady; if (!CFG.ropa) return fatal('La prueba de ropa no está disponible por ahora.', 'Puedes verla y comprarla normal en la tienda.'); }
+  $('#consent').hidden = G !== 'ropa'; syncConsent();
   document.title = `${C.title} · ${P.shopName || SHOP}`;
   $('#barT').textContent = C.title; $('#barS').textContent = P.shopName ? `${P.shopName} · foto real con IA` : 'Foto real con IA';
   $('#emptyT').textContent = C.empty; $('#emptyS').textContent = C.tip;
@@ -108,9 +132,12 @@ function fatal(t, s = '') {
 /* ---------- producto, colores y medidas ---------- */
 const idx = (role) => P.options.findIndex((o) => o.role === role);
 function pickInitialVariant() {
-  const v = P.variants.find((x) => x.id === WANT_V) || P.variants.find((x) => x.available) || P.variants[0];
   const ci = idx('color'), si = idx('size'), qi = idx('qty');
-  sel = { color: ci >= 0 ? v.options[ci] : null, size: si >= 0 ? v.options[si] : null, qty: qi >= 0 ? v.options[qi] : null };
+  const ok = (x) => ci < 0 || !sinFoto(x.options[ci]); // empezar en un color o diseño que sí se puede probar
+  const w = P.variants.find((x) => x.id === WANT_V);
+  const v = (w && ok(w) ? w : null) || P.variants.find((x) => x.available && ok(x)) || P.variants.find(ok) || w || P.variants.find((x) => x.available) || P.variants[0];
+  const one = (i) => i >= 0 && P.options[i].values.length === 1;
+  sel = { color: ci >= 0 ? v.options[ci] : null, size: one(si) ? v.options[si] : null, qty: qi >= 0 ? v.options[qi] : null };
 }
 function currentVariant() {
   const ci = idx('color'), si = idx('size'), qi = idx('qty');
@@ -125,32 +152,57 @@ function colorImage(value) {
 function productImage() { return idx('color') >= 0 ? colorImage(sel.color) : currentVariant().image || P.images[0]; }
 
 function renderProduct() {
-  const v = currentVariant();
+  const v = currentVariant(), si = idx('size'), falta = si >= 0 && !sel.size;
   $('#prod').hidden = false;
   $('#pImg').src = thumb(productImage(), 160);
   $('#pName').textContent = P.title;
-  const pr = $('#pPrice'); pr.replaceChildren(money(v.price, P.currency));
-  if (v.compare && v.compare > v.price) pr.append(el('s', { text: money(v.compare, P.currency) }));
-  $('#buyLab').textContent = DEMO ? 'Quiero esto en mi tienda' : v.available === false ? 'Pedir este' : `Comprar · ${money(v.price, P.currency)}`;
+  const pr = $('#pPrice');
+  if (falta) {
+    const ci = idx('color'), same = P.variants.filter((x) => ci < 0 || x.options[ci] === sel.color), min = Math.min(...same.map((x) => x.price));
+    pr.replaceChildren(`Desde ${money(min, P.currency)}`);
+  } else {
+    pr.replaceChildren(money(v.price, P.currency));
+    if (v.compare && v.compare > v.price) pr.append(el('s', { text: money(v.compare, P.currency) }));
+  }
+  $('#buyLab').textContent = DEMO ? 'Quiero esto en mi tienda' : falta ? (G === 'ropa' ? 'Elige tu talla para comprar' : 'Elige tu medida para comprar') : v.available === false ? 'Pedir este' : `Comprar · ${money(v.price, P.currency)}`;
   if (document.body.dataset.state === 'resultado') renderKit();
 }
+const sinFoto = (val) => !!(P?.sinFoto?.length && P.sinFoto.includes(val));
 const thumb = (u, w) => (u ? u + (u.includes('?') ? '&' : '?') + 'width=' + w : '');
 const SIZE_CM = { sencill: '100 × 190', semi: '120 × 190', doble: '140 × 190', queen: '160 × 190', king: '200 × 200' };
-const cmOf = (v) => { const n = v.toLowerCase(); for (const k in SIZE_CM) if (n.includes(k)) return SIZE_CM[k]; return ''; };
+// Clave única de medida de cama: «SEMIDOBLE» es semi (no doble), «Cama doble 140» es doble, «1.40 x 1.90» es doble.
+export function sizeKey(s) {
+  const n = String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (/semi/.test(n)) return 'semi';
+  if (/sencill|individual|twin|\b1 ?plaza/.test(n)) return 'sencill';
+  if (/queen/.test(n)) return 'queen';
+  if (/king/.test(n)) return 'king';
+  if (/doble|double|\bfull\b|matrimonial/.test(n)) return 'doble';
+  const m = /(\d+(?:[.,]\d+)?)/.exec(n); if (m) { let w = parseFloat(m[1].replace(',', '.')); if (w < 3) w *= 100; const near = [[100, 'sencill'], [120, 'semi'], [140, 'doble'], [160, 'queen'], [200, 'king']].find(([c]) => Math.abs(c - w) <= 10); if (near) return near[1]; }
+  return 'x:' + n.trim();
+}
+const cmOf = (v) => SIZE_CM[sizeKey(v)] || '';
 
 function renderOptions() {
   const ci = idx('color'), si = idx('size'), qi = idx('qty');
   const many = (i) => i >= 0 && P.options[i].values.length > 1;
   $('#optColor').hidden = !many(ci); $('#optSize').hidden = !many(si); $('#optQty').hidden = !many(qi);
   if (ci >= 0) {
-    const box = $('#swatches'); box.replaceChildren();
+    const box = $('#swatches');
     $('#colorLab').textContent = /dise/i.test(P.options[ci].name) ? 'Diseño' : 'Color';
-    for (const val of P.options[ci].values) {
-      const b = el('button', { type: 'button', 'aria-pressed': String(val === sel.color), 'aria-label': val, title: val });
-      b.append(el('img', { src: thumb(colorImage(val), 140), alt: '', loading: 'lazy' }));
-      if (photo && results.has(photo.key + '|' + colorImage(val))) b.classList.add('done');
-      b.onclick = () => chooseColor(val);
-      box.append(b);
+    if (box.dataset.for !== P.handle) { // se crean una sola vez por producto
+      box.replaceChildren(); box.dataset.for = P.handle;
+      for (const val of P.options[ci].values) {
+        const b = el('button', { type: 'button', 'aria-label': prettify(val), title: prettify(val) });
+        b.dataset.val = val;
+        if (sinFoto(val)) { b.classList.add('nofoto'); b.append(el('span', { text: prettify(val) })); } else b.append(el('img', { src: thumb(colorImage(val), 140), alt: '', decoding: 'async' }));
+        b.onclick = () => chooseColor(val);
+        box.append(b);
+      }
+    }
+    for (const b of box.children) {
+      const val = b.dataset.val; b.setAttribute('aria-pressed', String(val === sel.color));
+      b.classList.toggle('done', !!(photo && results.has(photo.key + '|' + colorImage(val))));
     }
     $('#colorVal').textContent = prettify(sel.color);
   }
@@ -160,7 +212,7 @@ function renderOptions() {
     for (const val of P.options[si].values) {
       const cm = G === 'cama' ? cmOf(val) : '';
       const b = el('button', { class: 'chip', type: 'button', 'aria-pressed': String(val === sel.size) }, prettify(val), cm ? el('small', { text: cm }) : null);
-      b.onclick = () => { sel.size = val; renderOptions(); renderProduct(); track('talla', { tenant: TENANT, handle: P.handle, detalle: { valor: val } }); };
+      b.onclick = () => { sel.size = val; renderOptions(); renderProduct(); if (KIT?.items?.length) renderKit(); track('talla', { tenant: TENANT, handle: P.handle, detalle: { valor: val } }); };
       box.append(b);
     }
   }
@@ -173,12 +225,14 @@ function renderOptions() {
     }
   }
 }
-const prettify = (s) => String(s || '').toLowerCase().replace(/^\d+\s+/, '').replace(/(^|\s|-)\S/g, (m) => m.toUpperCase());
+// Etiquetas legibles: «VINO TINTO» → «Vino Tinto»; las tallas (XS, XL, 2XL, 3XL) quedan en mayúscula
+const prettify = (s) => String(s || '').toLowerCase().replace(/^\d+\s+/, '').replace(/(^|\s|-)\S/g, (m) => m.toUpperCase()).replace(/\b(\d?x{1,3}[sl]|xs|xl)\b/gi, (m) => m.toUpperCase());
 
 function chooseColor(val) {
   if (val === sel.color) return;
   sel.color = val; renderOptions(); renderProduct();
   track('variante', { tenant: TENANT, handle: P.handle, detalle: { valor: val } });
+  if (sinFoto(val)) { $('#resHint').textContent = 'Este diseño no tiene foto propia en la tienda, así que no lo podemos probar. Puedes comprarlo igual.'; toast('Este diseño no tiene foto para probarlo.'); return; }
   if (photo && !busy) generate();
 }
 
@@ -209,22 +263,34 @@ function renderSamples() {
 async function fromFile(file, fuente) {
   if (!file) return;
   if (!/^image\//.test(file.type) && !/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name)) return toast('Ese archivo no es una foto.');
-  const url = URL.createObjectURL(file);
-  try { await usePhoto(url, fuente); } finally { setTimeout(() => URL.revokeObjectURL(url), 60000); $('#fileCam').value = ''; $('#fileGal').value = ''; }
+  if (G === 'ropa' && !consentOk()) { $('#fileCam').value = ''; $('#fileGal').value = ''; return toast('Primero marca la casilla de autorización.'); }
+  toast('Preparando tu foto…', 6000);
+  let src = null, url = null;
+  try { if (window.createImageBitmap) src = await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch { src = null; }
+  if (!src) url = URL.createObjectURL(file);
+  try { await usePhoto(src || url, fuente); } finally { if (url) setTimeout(() => URL.revokeObjectURL(url), 60000); $('#fileCam').value = ''; $('#fileGal').value = ''; }
 }
 async function fromUrl(url) { await usePhoto(url, 'ejemplo'); }
 function loadImage(src) { return new Promise((ok, ko) => { const i = new Image(); i.decoding = 'async'; i.onload = () => ok(i); i.onerror = ko; i.src = src; }); }
 async function usePhoto(src, fuente) {
-  let im; try { im = await loadImage(src); } catch { return toast('No pudimos abrir esa foto. Prueba con otra.'); }
-  const w0 = im.naturalWidth, h0 = im.naturalHeight; if (!w0 || !h0) return toast('No pudimos abrir esa foto.');
-  if (Math.min(w0, h0) < 320) toast('La foto es pequeña; el resultado puede verse borroso.');
-  const k = Math.min(1, 1024 / Math.max(w0, h0)), w = Math.round(w0 * k), h = Math.round(h0 * k);
-  const c = el('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(im, 0, 0, w, h);
-  let data = c.toDataURL('image/jpeg', 0.86); if (data.length > 3_800_000) data = c.toDataURL('image/jpeg', 0.7);
-  photo = { data, w, h, key: hashStr(data.slice(-6000) + data.length), src: data, fuente };
+  let im; try { im = typeof src === 'string' ? await loadImage(src) : src; } catch { return toast('No pudimos abrir esa foto. Prueba con otra.'); }
+  const w0 = im.naturalWidth || im.width, h0 = im.naturalHeight || im.height; if (!w0 || !h0) return toast('No pudimos abrir esa foto.');
+  if (Math.min(w0, h0) < 300) return toast('La foto es muy pequeña. Toma una nueva o elige otra de más calidad.');
+  if (Math.min(w0, h0) < 500) toast('La foto es pequeña; el resultado puede verse borroso.');
+  // Encuadre único para la foto, la IA y el resultado: la IA recibe 512 px (múltiplos de 16) y devuelve el doble,
+  // así su imagen calza exacto sobre la foto original y la fusión conserva tus píxeles reales.
+  const k5 = 512 / Math.max(w0, h0), aw = Math.max(256, Math.round((w0 * k5) / 16) * 16), ah = Math.max(256, Math.round((h0 * k5) / 16) * 16);
+  let cw = w0, ch = Math.round(w0 * ah / aw); if (ch > h0) { ch = h0; cw = Math.round(h0 * aw / ah); }
+  const cx = Math.round((w0 - cw) / 2), cy = Math.round((h0 - ch) / 2);
+  const kf = Math.min(1, 1024 / Math.max(cw, ch)), fw = Math.round(cw * kf), fh = Math.round(ch * kf);
+  const draw = (w, h) => { const c = el('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(im, cx, cy, cw, ch, 0, 0, w, h); return c; };
+  let data = draw(fw, fh).toDataURL('image/jpeg', 0.88); if (data.length > 3_800_000) data = draw(fw, fh).toDataURL('image/jpeg', 0.72);
+  const ai = draw(aw, ah).toDataURL('image/jpeg', 0.9);
+  photo = { data, ai, w: aw, h: ah, fw, fh, key: hashStr(data.slice(-6000) + data.length), src: data, fuente };
+  if (im.close) try { im.close(); } catch {}
   track('foto', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { fuente } });
   const cmp = $('#cmp');
-  cmp.style.setProperty('--ar', `${w} / ${h}`); cmp.style.setProperty('--ar-n', String(w / h));
+  cmp.style.setProperty('--ar', `${fw} / ${fh}`); cmp.style.setProperty('--ar-n', String(fw / fh));
   $('#imgBefore').src = data; $('#imgAfter').removeAttribute('src');
   generate();
 }
@@ -235,33 +301,54 @@ function retake() {
 }
 
 /* ---------- IA ---------- */
-async function generate() {
+async function generate(retry = true) {
   if (!photo || busy) return;
+  if (sinFoto(sel.color)) { toast('Este diseño no tiene foto para probarlo. Elige otro.'); return; }
   const prodUrl = productImage(), key = photo.key + '|' + prodUrl;
   if (results.has(key)) return showResult(results.get(key), false);
   busy = true; lastErr = null; setState('procesando'); startProgress();
   markSwatch(sel.color, 'loading');
   const t0 = performance.now();
   try {
-    const d = await call('ai', { tenant: TENANT, kind: P.kind, garment: P.garment, photo: photo.data, product: prodUrl, color: sel.color || '', w: photo.w, h: photo.h, handle: P.handle, sesion }, { timeout: 80000 });
-    results.set(key, d.image);
+    await cfgReady;
+    const d = await call('ai', { tenant: TENANT, tok: CFG.tok, shop: DEMO ? SHOP : undefined, handle: P.handle, photo: photo.ai || photo.data, product: prodUrl, color: sel.color || '', w: photo.w, h: photo.h, sesion, n: 2, consiento: G === 'ropa' ? (photo.fuente === 'ejemplo' || consentOk()) : undefined }, { timeout: 80000 });
+    const fz = await fuseResult(photo, d.images?.length ? d.images : [d.image]);
+    results.set(key, fz.src);
     await stopProgress(true);
     busy = false;
     if (productImage() !== prodUrl) { markSwatch(null); return generate(); }
-    await showResult(d.image, true);
-    track('ver', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { ms: Math.round(performance.now() - t0) } });
+    await showResult(fz.src, true);
+    if (fz.info.motivo === 'encuadre') $('#resHint').textContent = 'La IA movió un poco el encuadre de tu foto. Desliza para comparar.';
+    if (d.restan_sesion != null && d.restan_sesion <= 3) $('#resHint').textContent += d.restan_sesion > 0 ? ` Te quedan ${d.restan_sesion} pruebas en esta visita.` : ' Esta fue tu última prueba de hoy.';
+    track('ver', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { ms: Math.round(performance.now() - t0), fusion: fz.info.ok ? 1 : 0, motivo: fz.info.motivo || '', err: fz.info.err ?? null, costura: fz.info.seam ?? null, n: fz.n, elegida: fz.i } });
     offerSave(photo.fuente);
     if (KIT?.items?.length) renderKit();
   } catch (e) {
-    busy = false; await stopProgress(false);
+    busy = false;
+    if (e.code === 'sesion_invalida' && retry) { await stopProgress(false); cfgReady = loadCfg(); await cfgReady; markSwatch(null); return generate(false); }
+    await stopProgress(false);
     lastErr = e.code || 'ia_fallo';
     track('error', { tenant: TENANT, handle: P.handle, detalle: { code: lastErr } });
     const [t, s] = ERR[lastErr] || ERR.ia_fallo;
     setState('error'); showErr(lastErr, t, s);
   } finally { markSwatch(null); renderOptions(); }
 }
+// Fusión fiel: llegan 2 versiones de la IA; se queda la que mejor conserva tu foto real (cuarto, cara, luz)
+// y, si calza, se funde con tus píxeles originales. Si ninguna calza, se muestra la más fiel tal cual.
+async function fuseResult(ph, gens) {
+  let o; try { o = await loadImage(ph.data); } catch { return { src: gens[0], info: { motivo: 'error' }, i: 0, n: gens.length }; }
+  let best = null;
+  for (let i = 0; i < gens.length; i++) {
+    let r;
+    try { const g = await loadImage(gens[i]); await new Promise((ok) => requestAnimationFrame(() => ok())); r = fuse(o, g); } catch { r = { canvas: null, info: { motivo: 'error' } }; }
+    const score = r.canvas ? r.info.err : 100 + (r.info.err ?? 50) + (r.info.seam ?? 0) / 4;
+    if (!best || score < best.score) best = { score, i, r };
+  }
+  const { r, i } = best;
+  return { src: r.canvas ? r.canvas.toDataURL('image/jpeg', 0.9) : gens[i], info: r.info || {}, i, n: gens.length };
+}
 function markSwatch(val, cls) {
-  $$('#swatches button').forEach((b) => b.classList.toggle('loading', !!cls && b.getAttribute('aria-label') === val));
+  $$('#swatches button').forEach((b) => b.classList.toggle('loading', !!cls && b.dataset.val === val));
 }
 
 let progT = 0, progStart = 0;
@@ -294,10 +381,9 @@ async function showResult(src, animate) {
   setState('resultado');
   cmp.classList.remove('busy', 'compare', 'nudge', 'reveal', 'full');
   if (animate && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    cmp.classList.add('reveal');
-    await wait(1150);
-    cmp.classList.remove('reveal'); cmp.classList.add('full');
-    await wait(700);
+    skipReveal = false; cmp.classList.add('reveal');
+    await waitOr(1150);
+    cmp.classList.remove('reveal'); if (!skipReveal) { cmp.classList.add('full'); await waitOr(700); }
   }
   cmp.classList.remove('full');
   setCut(50); cmp.classList.add('compare');
@@ -308,6 +394,8 @@ async function showResult(src, animate) {
   store.set('vto_hint_cmp', 1);
 }
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+let skipReveal = false;
+const waitOr = (ms) => new Promise((r) => { const t0 = performance.now(); const f = () => (skipReveal || performance.now() - t0 >= ms ? r() : requestAnimationFrame(f)); f(); });
 
 /* ---------- comparador ---------- */
 function setCut(p) { $('#cmp').style.setProperty('--cut', p + '%'); $('#cmpR').value = p; }
@@ -316,7 +404,10 @@ function setupCompare() {
   r.addEventListener('input', () => setCut(+r.value));
   let drag = false;
   const at = (e) => { const b = cmp.getBoundingClientRect(); setCut(Math.max(0, Math.min(100, ((e.clientX - b.left) / b.width) * 100))); };
-  cmp.addEventListener('pointerdown', (e) => { if (!cmp.classList.contains('compare')) return; drag = true; cmp.setPointerCapture(e.pointerId); at(e); });
+  cmp.addEventListener('pointerdown', (e) => {
+    if (cmp.classList.contains('reveal') || cmp.classList.contains('full')) { skipReveal = true; cmp.classList.remove('reveal', 'full'); cmp.classList.add('compare'); }
+    if (!cmp.classList.contains('compare')) return; drag = true; cmp.setPointerCapture(e.pointerId); at(e);
+  });
   cmp.addEventListener('pointermove', (e) => drag && at(e));
   cmp.addEventListener('pointerup', () => (drag = false));
   cmp.addEventListener('pointercancel', () => (drag = false));
@@ -338,7 +429,17 @@ function setState(s) {
   $('#kit').hidden = !(s === 'resultado' && KIT?.items?.length && !DEMO);
   if (s === 'inicio' && !has) { $('#imgBefore').removeAttribute('src'); }
 }
-function showErr(code, t, s) { $('#errT').textContent = t; $('#errS').textContent = s; $('#btnWaErr').hidden = !['limite_ip', 'cuota_agotada', 'tienda_inactiva', 'tienda_no_registrada'].includes(code); }
+function showErr(code, t, s) {
+  $('#errT').textContent = t; $('#errS').textContent = s;
+  $('#btnWaErr').hidden = !CFG.wa || !['limite_ip', 'limite_sesion', 'ia_fallo', 'ia_rechazo', 'producto_sin_imagen', 'imagen_no_valida'].includes(code);
+  $('#btnRetry').hidden = ['cuota_agotada', 'tienda_inactiva', 'tienda_no_registrada', 'limite_tienda_dia', 'limite_sesion', 'limite_ip', 'ropa_no_disponible', 'prenda_no_permitida', 'producto_sin_probador'].includes(code);
+}
+// autorización para fotos de personas (Ley 1581): casilla antes de tomar o subir la foto
+function consentOk() { return $('#chkConsent').checked; }
+function syncConsent() {
+  const need = G === 'ropa' && !consentOk();
+  for (const id of ['#fileCam', '#fileGal']) { const i = $(id); i.disabled = need; i.closest('.btn').classList.toggle('off', need); }
+}
 
 /* ---------- comprar ---------- */
 function post(msg) { try { window.parent.postMessage(msg, '*'); } catch {} }
@@ -346,7 +447,7 @@ let ackT = 0;
 addEventListener('message', (e) => { if (e.data?.vto === 'ack') clearTimeout(ackT); });
 function buy() {
   const v = currentVariant();
-  if (idx('size') >= 0 && !sel.size) { toast('Elige la medida primero.'); return; }
+  if (idx('size') >= 0 && !sel.size) { toast(G === 'ropa' ? 'Elige tu talla primero.' : 'Elige tu medida primero.'); $('#optSize').scrollIntoView({ behavior: 'smooth', block: 'center' }); $('#optSize').classList.add('pulse'); setTimeout(() => $('#optSize').classList.remove('pulse'), 1600); return; }
   track('comprar', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { variante: String(v.id), precio: v.price } });
   if (DEMO) return post({ vto: 'demo-cta', shop: SHOP, handle: P.handle });
   const url = `${P.url}?variant=${v.id}#zvto-comprar`;
@@ -366,32 +467,53 @@ async function loadKit() {
   } catch {}
 }
 function kitVariant(it) {
-  const tok = (sel.size || '').toLowerCase().replace(/cama /, '').slice(0, 5);
   const av = it.variants.filter((v) => v.available !== false), list = av.length ? av : it.variants;
-  return (tok && list.find((v) => v.options.some((o) => o.toLowerCase().includes(tok)))) || list[0];
+  if (list.length === 1) return list[0];
+  if (!sel.size) return null;
+  const want = sizeKey(sel.size), up = String(sel.size).trim().toUpperCase();
+  return list.find((v) => v.options.some((o) => sizeKey(o) === want || String(o).trim().toUpperCase() === up)) || null;
+}
+const kitPick = new Map(); // producto del kit → variante que el cliente eligió a mano
+function kitChosen(it) {
+  const av = it.variants.filter((v) => v.available !== false), opts = av.length ? av : it.variants;
+  return (kitPick.has(it.handle) && opts.find((x) => x.id === kitPick.get(it.handle))) || kitVariant(it);
 }
 function renderKit() {
   if (!KIT?.items?.length || DEMO) return;
   const list = $('#kitList'); list.replaceChildren();
   const main = currentVariant(); let total = main.price, n = 1;
   for (const it of KIT.items) {
-    const v = kitVariant(it), on = kitOn.has(it.handle);
-    const row = el('div', { class: 'ki', role: 'checkbox', tabindex: '0', 'aria-checked': String(on) },
-      el('img', { src: v.image || it.image, alt: '', loading: 'lazy' }),
-      el('div', {}, el('b', { text: it.title }), el('span', { text: money(v.price, P.currency) })), el('i'));
-    const tog = () => { kitOn.has(it.handle) ? kitOn.delete(it.handle) : kitOn.add(it.handle); renderKit(); };
-    row.onclick = tog; row.onkeydown = (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); tog(); } };
+    const av = it.variants.filter((v) => v.available !== false), opts = av.length ? av : it.variants;
+    const v = kitChosen(it);
+    const on = kitOn.has(it.handle) && !!v;
+    const id = 'k_' + it.handle.slice(0, 40);
+    const cb = el('input', { type: 'checkbox', id, checked: on, 'aria-label': `Agregar ${it.title}` });
+    cb.onchange = () => { if (cb.checked && !v) { cb.checked = false; toast('Elige la medida o el color de este producto.'); sel2?.focus(); return; } cb.checked ? kitOn.add(it.handle) : kitOn.delete(it.handle); renderKit(); };
+    const vt = (x) => (/^default title$/i.test(x.title) ? 'Presentación única' : prettify(x.title));
+    const sel2 = opts.length < 2 ? null : el('select', { class: 'ki-sel', 'aria-label': `Medida y color de ${it.title}` },
+      el('option', { value: '', text: v ? 'Cambiar medida o color' : 'Elige medida y color' }),
+      ...opts.map((x) => el('option', { value: String(x.id), selected: v && x.id === v.id, text: `${vt(x)} · ${money(x.price, P.currency)}` })));
+    if (sel2) sel2.onchange = () => { const nv = opts.find((x) => String(x.id) === sel2.value); if (!nv) return; kitPick.set(it.handle, nv.id); kitOn.add(it.handle); renderKit(); };
+    const row = el('div', { class: 'ki' + (on ? ' on' : '') },
+      el('img', { src: (v && v.image) || it.image, alt: '', loading: 'lazy' }),
+      el('div', {}, el('label', { for: id }, el('b', { text: it.title })),
+        el('small', { class: 'ki-v', text: v ? vt(v) : 'Falta elegir medida o color' }),
+        el('span', { text: v ? money(v.price, P.currency) : '' }), sel2),
+      cb);
     list.append(row);
     if (on) { total += v.price; n++; }
   }
-  $('#kitLab').textContent = `Agregar ${n} productos · ${money(total, P.currency)}`;
+  $('#kitLab').textContent = n > 1 ? `Agregar ${n} productos · ${money(total, P.currency)}` : `Agregar solo este · ${money(total, P.currency)}`;
   $('#kit').hidden = document.body.dataset.state !== 'resultado';
 }
 function buyKit() {
+  if (idx('size') >= 0 && !sel.size) { toast('Elige la medida primero.'); return; }
   const items = [{ id: currentVariant().id, quantity: 1 }];
-  for (const it of KIT.items) if (kitOn.has(it.handle)) items.push({ id: kitVariant(it).id, quantity: 1 });
+  for (const it of KIT.items) { const v = kitChosen(it); if (kitOn.has(it.handle) && v) items.push({ id: v.id, quantity: 1 }); }
   track('kit', { tenant: TENANT, handle: P.handle, detalle: { n: items.length } });
-  const url = `https://${SHOP}/cart/${items.map((i) => `${i.id}:${i.quantity}`).join(',')}?storefront=true`;
+  // contraentrega (Releasit): carrito + formulario; si no, directo al pago
+  const ids = items.map((i) => `${i.id}:${i.quantity}`).join(',');
+  const url = CFG.cod ? `https://${SHOP}/cart/${ids}?storefront=true#rsi-form-top-anchor` : `https://${SHOP}/cart/${ids}`;
   if (EMBED) { post({ vto: 'cart', items, url }); ackT = setTimeout(() => { try { window.top.location.href = url; } catch { window.open(url, '_blank', 'noopener'); } }, 900); }
   else location.href = url;
 }
@@ -438,7 +560,7 @@ function openSizeHelp() {
   $('#mSizeT').textContent = ropa ? '¿Cuál es tu talla?' : '¿Cuál es tu medida?';
   if (!ropa) {
     const tb = $('#sizeTable'); tb.replaceChildren();
-    for (const [k, w] of BED_W) { const v = P.options[idx('size')]?.values.find((x) => x.toLowerCase().includes(k)); if (v) tb.append(el('tr', { 'data-k': k }, el('td', { text: prettify(v) }), el('td', { text: `${SIZE_CM[k]} cm` }))); }
+    for (const [k] of BED_W) { const v = P.options[idx('size')]?.values.find((x) => sizeKey(x) === k); if (v) tb.append(el('tr', { 'data-k': k }, el('td', { text: prettify(v) }), el('td', { text: `${SIZE_CM[k]} cm` }))); }
   }
   $$('#fitChips .chip').forEach((b) => (b.onclick = () => { fit = +b.dataset.fit; $$('#fitChips .chip').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); }));
   $('#btnSizeOk').textContent = 'Calcular'; $('#btnSizeOk').onclick = calcSize;
@@ -450,7 +572,7 @@ function calcSize() {
   if (G !== 'ropa') {
     const w = +$('#inAncho').value; if (!(w >= 60 && w <= 230)) return toast('Escribe el ancho en centímetros (ej: 140).');
     const best = BED_W.reduce((a, c) => (Math.abs(c[1] - w) < Math.abs(a[1] - w) ? c : a));
-    pick = values.find((v) => v.toLowerCase().includes(best[0]));
+    pick = values.find((v) => sizeKey(v) === best[0]);
     $$('#sizeTable tr').forEach((tr) => tr.classList.toggle('on', tr.dataset.k === best[0]));
     msg = `Para un colchón de ${w} cm de ancho. Si tu colchón es muy alto (más de 30 cm), escríbenos antes de comprar.`;
   } else {
@@ -464,12 +586,25 @@ function calcSize() {
     if (!pick) msg = `Te sugerimos ${want}. ` + msg;
   }
   const res = $('#sizeRes'); res.hidden = false; res.replaceChildren(el('small', { text: 'Te recomendamos' }), el('b', { text: pick ? prettify(pick) : G === 'ropa' ? '—' : 'Revisa la tabla' }), el('p', { class: 'muted small', text: msg }));
-  if (pick) { sel.size = pick; renderOptions(); renderProduct(); track('talla', { tenant: TENANT, handle: P.handle, detalle: { ayuda: true, valor: pick } }); }
+  if (pick) { sel.size = pick; renderOptions(); renderProduct(); if (KIT?.items?.length) renderKit(); track('talla', { tenant: TENANT, handle: P.handle, detalle: { ayuda: true, valor: pick } }); }
   const ok = $('#btnSizeOk'); ok.textContent = pick ? `Usar ${prettify(pick)}` : 'Calcular otra vez';
   ok.onclick = pick ? () => { closeSheets(); ok.textContent = 'Calcular'; ok.onclick = calcSize; } : calcSize;
 }
-function openSheet(id) { $('#sheetBg').hidden = false; $(id).hidden = false; $(id).querySelector('input, button:not([data-close])')?.focus({ preventScroll: true }); }
-function closeSheets() { $('#sheetBg').hidden = true; $$('.sheet').forEach((s) => (s.hidden = true)); }
+let sheetBack = null;
+function openSheet(id) {
+  sheetBack = document.activeElement; $('#sheetBg').hidden = false; $(id).hidden = false;
+  $(id).querySelector('input, button:not([data-close])')?.focus({ preventScroll: true });
+}
+addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab') return;
+  const sh = $$('.sheet').find((x) => !x.hidden); if (!sh) return;
+  const f = $$('button, [href], input, select, textarea', sh).filter((x) => !x.disabled && x.offsetParent !== null);
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && (document.activeElement === last || !sh.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
+});
+function closeSheets() { $('#sheetBg').hidden = true; $$('.sheet').forEach((s) => (s.hidden = true)); if (sheetBack?.focus) sheetBack.focus({ preventScroll: true }); sheetBack = null; }
 
 /* ---------- selector de producto (sin handle) ---------- */
 async function showPicker() {

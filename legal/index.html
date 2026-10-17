@@ -7,6 +7,7 @@
 <meta name="description" content="Cómo trata el probador con IA las fotos de los clientes y las condiciones de uso para tiendas.">
 <meta name="theme-color" content="#07080a">
 <link rel="icon" href="/img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/base.css"><link rel="stylesheet" href="/css/pages.css">
@@ -19,21 +20,29 @@
   <section>
     <h2>Lo más importante</h2>
     <ul>
-      <li><strong>Tu foto no se guarda.</strong> Se usa solo para crear la imagen con el producto y se descarta. No la usamos para entrenar modelos.</li>
+      <li><strong>Tu foto no se guarda.</strong> A la IA viaja solo una copia pequeña; se usa para crear la imagen con el producto y se descarta. No la usamos para entrenar modelos.</li>
       <li><strong>La imagen es una simulación hecha con IA.</strong> Los colores y el tamaño pueden variar un poco según la luz de tu foto y tu pantalla.</li>
       <li><strong>Solo sube fotos tuyas o de tu casa,</strong> o de personas que te dieron permiso. No subas fotos de menores de edad para probar ropa.</li>
     </ul>
   </section>
 
-  <section>
-    <h2>Qué datos tratamos y para qué</h2>
+  <section id="datos">
+    <h2>Qué datos tratamos, para qué y por cuánto tiempo</h2>
     <ul>
-      <li><strong>La foto que subes:</strong> viaja cifrada (HTTPS) a nuestro servidor y al servicio de IA de Cloudflare (Workers AI) para crear la imagen. No queda guardada en nuestras bases de datos.</li>
-      <li><strong>La imagen resultante:</strong> se envía a tu navegador. Solo queda en tu celular si tú la guardas, la compartes o aceptas «guardar mi foto en este celular» (puedes borrarla desde el probador).</li>
-      <li><strong>Métricas anónimas:</strong> contamos aperturas, fotos creadas, clics en comprar y compartidos para el panel de la tienda. Tu dirección IP se guarda solo como un código irreversible (hash) para evitar abusos y limitar el número de pruebas por día.</li>
-      <li><strong>Datos de contacto de tiendas:</strong> si una empresa nos deja su nombre, WhatsApp, correo y tienda, los usamos solo para activar y dar soporte al servicio.</li>
+      <li><strong>La foto que subes:</strong> tu celular envía una copia reducida (512 px de lado mayor), cifrada (HTTPS), a nuestro servidor y al servicio de IA de Cloudflare (Workers AI) para crear la imagen. Se usa solo para eso y no queda guardada en nuestras bases de datos. La foto en alta resolución no sale de tu celular: allí se mezcla con el resultado de la IA.</li>
+      <li><strong>Fotos de personas (ropa):</strong> antes de subir la foto te pedimos marcar una casilla confirmando que la foto es tuya, o que tienes permiso de la persona, y que es mayor de edad. Guardamos solo el registro de esa autorización (fecha, tienda y producto), sin la foto. Una revisión automática rechaza fotos de menores o de personas en ropa interior o desnudas.</li>
+      <li><strong>La imagen resultante:</strong> se envía a tu navegador. Solo queda en tu celular si tú la guardas, la compartes o aceptas «guardar mi foto en este celular» (puedes borrarla desde el probador cuando quieras).</li>
+      <li><strong>Métricas de uso:</strong> contamos aperturas, fotos creadas, clics en comprar y compartidos para el panel de la tienda. Tu dirección IP se guarda como un seudónimo (un código calculado con una clave secreta) para evitar abusos y limitar las pruebas por día. A los 30 días borramos ese código de las métricas y los contadores.</li>
+      <li><strong>Datos de contacto de tiendas:</strong> si una empresa nos deja su nombre, WhatsApp, correo y tienda, los usamos solo para activar el servicio, darle soporte y escribirle sobre el probador. Los conservamos mientras exista la relación comercial y hasta 2 años después, salvo que pidas borrarlos antes.</li>
     </ul>
-    <p>Responsable: Litper Group LLC (Zynex). Puedes pedir información, corrección o eliminación de tus datos por WhatsApp al <a href="https://wa.me/573022658970">+57 302 265 8970</a>. En Colombia aplicamos la Ley 1581 de 2012 de protección de datos personales.</p>
+  </section>
+
+  <section>
+    <h2>Responsable y cómo ejercer tus derechos</h2>
+    <p><strong>Responsable del tratamiento:</strong> Litper Group LLC (marca Zynex), sociedad de Wyoming, EE. UU., con domicilio registrado en 30 N Gould St STE N, Sheridan, WY 82801. Canal de atención de datos personales: WhatsApp <a href="https://wa.me/573022658970">+57 302 265 8970</a>.</p>
+    <p><strong>Tus derechos (Ley 1581 de 2012 y Decreto 1377 de 2013, Colombia):</strong> conocer, actualizar y rectificar tus datos; pedir prueba de la autorización; saber cómo los usamos; revocar la autorización o pedir que los borremos cuando no haya un deber legal de conservarlos; y presentar quejas ante la Superintendencia de Industria y Comercio después de haber hecho tu solicitud con nosotros.</p>
+    <p><strong>Cómo pedirlo:</strong> escríbenos por el WhatsApp indicado con tu nombre y tu solicitud. Respondemos consultas en máximo 10 días hábiles y reclamos en máximo 15 días hábiles.</p>
+    <p><strong>Proveedores y transferencia internacional:</strong> para prestar el servicio usamos proveedores que tratan datos por nuestra cuenta en Estados Unidos: Cloudflare (IA), Supabase (base de datos) y Vercel (sitio web). Al usar el probador autorizas esa transmisión, que se hace solo para las finalidades de esta política.</p>
   </section>
 
   <section>
@@ -49,11 +58,12 @@
   <section>
     <h2>Para tiendas</h2>
     <ul>
-      <li><strong>Prueba gratis:</strong> 14 días con 100 pruebas, sin tarjeta. Al terminar, la tienda pasa al plan Gratis (30 pruebas al mes con el sello de Zynex) si no elige un plan pago.</li>
+      <li><strong>Prueba gratis:</strong> 14 días con 100 pruebas, sin tarjeta. Los 14 días empiezan cuando el botón aparece por primera vez en la tienda registrada. Al terminar, la tienda pasa al plan Gratis (30 pruebas al mes con el sello de Zynex) si no elige un plan pago.</li>
       <li><strong>Planes:</strong> mensuales, sin permanencia. Los precios en pesos colombianos se calcularon con la TRM del 16-oct-2026 (COP 3.170,46 por dólar).</li>
-      <li><strong>Garantía «Vende o te devolvemos»:</strong> si en 60 días los pedidos marcados por el probador (atributo <code>_probador = si</code>, hechos hasta 7 días después de usarlo) no suman 5 veces lo pagado, devolvemos el 100 %. Condición: el botón activo en los 10 productos más vendidos durante esos 60 días. Además, en los primeros 30 días devolvemos el primer mes si el servicio no te convence.</li>
+      <li><strong>Garantía «Vende o te devolvemos»:</strong> si en 60 días los pedidos que llegan por el probador no suman 5 veces lo pagado, devolvemos el 100 %. Con el checkout de Shopify, el pedido llega marcado con el atributo <code>_probador = si</code>; con formularios contraentrega se cruzan los clics en «Comprar» del panel con los pedidos de la tienda en los 7 días siguientes. Condición: el botón activo en los 10 productos más vendidos durante esos 60 días. Además, en los primeros 30 días devolvemos el primer mes si el servicio no te convence.</li>
       <li><strong>Precio de fundador:</strong> válido para los primeros 20 negocios o hasta el 27 de noviembre de 2026, lo que ocurra primero. Se mantiene mientras la suscripción siga activa.</li>
-      <li>La tienda es responsable de que sus fotos de producto le pertenezcan y de informar a sus clientes sobre el uso del probador.</li>
+      <li>La tienda es responsable de que sus fotos de producto le pertenezcan y de informar a sus clientes sobre el uso del probador. Frente a los datos de sus compradores, Zynex actúa como encargado del tratamiento por cuenta de la tienda.</li>
+      <li>Cada color o diseño necesita su propia foto en Shopify para poder probarse; los que no la tienen se pueden comprar, pero no se ofrecen en el probador.</li>
     </ul>
   </section>
 </main>

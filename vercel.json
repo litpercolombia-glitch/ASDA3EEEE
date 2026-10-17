@@ -85,5 +85,17 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/vercel.json",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/package.json",
+      "destination": "/",
+      "permanent": false
+    }
   ]
 }

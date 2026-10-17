@@ -34,3 +34,9 @@ textarea.code2 { width: 100%; min-height: 150px; padding: 16px; border-radius: 1
 .grow { flex: 1 1 220px; }
 .link-in { flex: 1 1 300px; min-height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line2); background: #05060a; color: #b9f5d8; font: 500 13px/1 ui-monospace, Menlo, Consolas, monospace; }
 .lg1 { background: #2b3a44; } .lg2 { background: var(--cyan); } .lg3 { background: var(--neon); }
+
+/* auditoría 17-oct-2026: nada se desborda en celular */
+.steps2 > li, .steps2 > li > div, .card, .pg-main > * { min-width: 0; }
+.steps2 p, .steps2 b, #sub, #ttl { overflow-wrap: anywhere; }
+textarea.code2, input.code2 { max-width: 100%; }
+.pend { padding: 14px 16px; border-radius: 14px; border: 1px solid rgba(255, 184, 0, .45); background: rgba(255, 184, 0, .08); color: var(--tx); }

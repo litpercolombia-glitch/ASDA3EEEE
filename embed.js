@@ -5,21 +5,12 @@
   if (window.__zvto) return; window.__zvto = 1;
   var me = document.currentScript || document.querySelector('script[src*="/embed.js"]');
   var APP = new URL(me ? me.src : location.href).origin;
+  var FN = 'https://gtsivwbnhcawvmsfujby.supabase.co/functions/v1/vto-api';
+  var visible = function (n) { return !!(n && n.offsetParent !== null && getComputedStyle(n).visibility !== 'hidden'); };
+  // Con Releasit (contraentrega) el carrito abre su formulario en /cart#rsi-form-top-anchor; sin Releasit se va al pago normal
+  var hasRsi = function () { return !!(window._RSI_COD_FORM_SETTINGS || document.querySelector('[data-rsi-cod-button]')); };
+  var codGo = function () { location.href = hasRsi() ? '/cart#rsi-form-top-anchor' : '/checkout'; };
   var norm = function (s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
-
-  // Qué tipo de prueba es (misma lógica del servidor, resumida)
-  function kindOf(title, type, handle) {
-    var t = ' ' + norm(type) + ' ' + norm(title) + ' ' + norm(handle).replace(/-/g, ' ') + ' ';
-    if (/ropa interior|brasier|panty|tanga|boxer|lenceri|bikini|traje de ba|vestido de ba|banador/.test(t)) return null;
-    var home = / (comedor|cama|mesa|silla|sillas|ventana|colchon|sofa|hogar|casa|cocina|bano|sala|cuarto|puerta) /.test(t);
-    var rules = [[/ (cortina|blackout|velo|ventana|persiana)/, 'cortina'], [/ (mantel|forro|silla)/, 'mesa'], [/ (protector|sabana|edredon|colcha|plumon|cubrelecho|cobija|cobertor|manta|frazada|almohada|kit de cama)/, 'cama'],
-      [/ (zapatero|estante|esquinero|armario|perchero|organizador|repisa|tapete|alfombra|mueble)/, 'mueble']];
-    var best = null, bi = 1e9;
-    rules.forEach(function (r) { var m = r[0].exec(t); if (m && m.index < bi) { bi = m.index; best = r[1]; } });
-    if (!home) { var m2 = / (camiseta|polo|camisa|blusa|buzo|hoodie|saco|sueter|chaqueta|chaleco|pantalon|jean|sudadera|jogger|falda|short|vestido|enterizo|pijama|conjunto|uniforme)/.exec(t); if (m2 && m2.index < bi) best = 'ropa'; }
-    return best;
-  }
-  var LABEL = { cama: 'Pruébalo en tu cama', cortina: 'Pruébala en tu ventana', mesa: 'Pruébalo en tu comedor', mueble: 'Pruébalo en tu espacio', ropa: 'Pruébatelo con una foto' };
 
   var css = '.zvto-b{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:52px;margin:10px 0;padding:0 18px;border-radius:999px;background:#07080a;color:#fff;font:600 16px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;cursor:pointer;position:relative;overflow:hidden;box-shadow:0 0 0 1px rgba(0,255,136,.45),0 8px 22px rgba(0,0,0,.18);transition:transform .2s,box-shadow .2s;-webkit-tap-highlight-color:transparent}'
     + '.zvto-b:hover{box-shadow:0 0 0 1px rgba(0,255,136,.8),0 10px 26px rgba(0,0,0,.24)}.zvto-b:active{transform:scale(.98)}.zvto-b:focus-visible{outline:3px solid #00ff88;outline-offset:3px}'
@@ -49,7 +40,8 @@
     u.searchParams.set('embed', '1');
     modal = document.createElement('div'); modal.className = 'zvto-m'; modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-label', 'Probador con IA');
     var f = document.createElement('iframe'); f.src = u.href; f.title = 'Probador con IA'; f.allow = 'camera; web-share; clipboard-write';
-    modal.appendChild(f); modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+    var trap = function () { var t = document.createElement('div'); t.tabIndex = 0; t.addEventListener('focus', function () { f.focus(); }); return t; };
+    modal.appendChild(trap()); modal.appendChild(f); modal.appendChild(trap()); modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
     document.body.appendChild(modal); document.documentElement.style.overflow = 'hidden'; f.focus();
   }
   function close() { if (!modal) return; modal.remove(); modal = null; document.documentElement.style.overflow = ''; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
@@ -66,39 +58,67 @@
     if (d.vto === 'buy' && d.variant) {
       ack(); close();
       mark('producto').then(function () {
-        var path = '/products/' + encodeURIComponent(d.handle) + '?variant=' + encodeURIComponent(d.variant) + '#zvto-comprar';
-        if (location.pathname.indexOf('/products/' + d.handle) >= 0 && new URLSearchParams(location.search).get('variant') === String(d.variant)) { buyHere(); }
-        else location.href = path;
+        var here = location.pathname.indexOf('/products/' + d.handle) >= 0 && new URLSearchParams(location.search).get('variant') === String(d.variant);
+        if (here && codButton()) return buyHere(d.variant);
+        if (hasRsi()) return toCart(d.variant); // contraentrega del carrito: sin pasos intermedios
+        if (here) return buyHere(d.variant);   // misma ficha: cambiar solo el #hash no recarga la página
+        location.href = '/products/' + encodeURIComponent(d.handle) + '?variant=' + encodeURIComponent(d.variant) + '#zvto-comprar';
       });
     }
     if (d.vto === 'cart' && d.items && d.items.length) {
       ack(); close();
       var items = d.items.slice(0, 6).map(function (i) { return { id: i.id, quantity: i.quantity || 1, properties: { _probador: 'kit' } }; });
       fetch('/cart/add.js', { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify({ items: items }) })
-        .then(function () { return mark('kit'); }).then(function () { location.href = '/cart'; })
+        .then(function () { return mark('kit'); }).then(codGo)
         .catch(function () { location.href = d.url || '/cart'; });
     }
   });
-  // Al volver del probador: abre el formulario contraentrega (Releasit) o el botón de compra de la tienda
-  function buyHere() {
+  // Botón contraentrega visible de Releasit en esta página (si lo hay)
+  function codButton() { var c = document.querySelectorAll('[data-rsi-cod-button]'); for (var i = 0; i < c.length; i++) if (visible(c[i])) return c[i]; return null; }
+  function toCart(variant) { // si la variante ya está en el carrito no la duplica (doble toque o volver atrás)
+    return fetch('/cart.js', { headers: { accept: 'application/json' } }).then(function (r) { return r.json(); })
+      .then(function (c) { return (c.items || []).some(function (i) { return String(i.variant_id) === String(variant); }); }, function () { return false; })
+      .then(function (ya) { return ya || fetch('/cart/add.js', { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify({ items: [{ id: +variant, quantity: 1 }] }) }).then(function (r) { if (!r.ok) throw r; }); })
+      .then(function () { return mark('producto'); }).then(codGo).catch(function () { location.href = '/cart'; });
+  }
+  // Al volver del probador (#zvto-comprar): abre el contraentrega visible; si la tienda usa Releasit sin botón en la ficha,
+  // agrega la variante y abre el formulario del carrito; si no usa Releasit, toca el botón de compra visible de la tienda.
+  function buyHere(variant) {
+    variant = variant || new URLSearchParams(location.search).get('variant');
     var tries = 0;
     (function tick() {
-      var b = document.querySelector('[data-rsi-cod-button]') || document.querySelector('form[action*="/cart/add"] button[name="add"]:not([disabled])') || document.querySelector('form[action*="/cart/add"] [type="submit"]:not([disabled])');
+      var b = codButton(), i;
+      if (!b && tries >= 10 && hasRsi() && variant) return void toCart(variant);
+      if (!b && tries >= 10) {
+        var adds = document.querySelectorAll('form[action*="/cart/add"] [type="submit"]:not([disabled]), form[action*="/cart/add"] button[name="add"]:not([disabled])');
+        for (i = 0; i < adds.length && !b; i++) if (visible(adds[i])) b = adds[i];
+      }
       if (b) { b.scrollIntoView({ block: 'center', behavior: 'smooth' }); setTimeout(function () { b.click(); }, 450); return; }
-      if (++tries < 40) setTimeout(tick, 250);
+      if (++tries < 40) return void setTimeout(tick, 250);
+      if (variant) toCart(variant);
     })();
   }
-  if (location.hash === '#zvto-comprar') { history.replaceState(null, '', location.pathname + location.search); if (document.readyState === 'complete') buyHere(); else addEventListener('load', buyHere); }
+  if (location.hash === '#zvto-comprar') { history.replaceState(null, '', location.pathname + location.search); if (document.readyState === 'complete') buyHere(); else addEventListener('load', function () { buyHere(); }); }
 
   function mount(el) {
     if (el.__zvto) return; el.__zvto = 1;
-    var kind = kindOf(el.getAttribute('data-title'), el.getAttribute('data-type'), el.getAttribute('data-h'));
-    if (!kind && !el.getAttribute('data-label')) { el.style.display = 'none'; return; }
-    var b = document.createElement('button'); b.type = 'button'; b.className = 'zvto-b';
-    b.innerHTML = ICON + '<span></span><i>IA</i>'; b.querySelector('span').textContent = el.getAttribute('data-label') || LABEL[kind];
-    b.addEventListener('click', function () { open(el); });
-    b.addEventListener('pointerenter', function () { if (!document.querySelector('link[data-zvto-pre]')) { var l = document.createElement('link'); l.rel = 'preconnect'; l.href = APP; l.setAttribute('data-zvto-pre', ''); document.head.appendChild(l); } }, { once: true });
-    el.appendChild(b);
+    var shop = el.getAttribute('data-s') || location.hostname.replace(/^www\./, ''), h = el.getAttribute('data-h') || '';
+    var key = 'zvto:' + shop + ':' + h, done = function (d) {
+      if (!d || !d.mostrar) { el.style.display = 'none'; return; }
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'zvto-b';
+      b.innerHTML = ICON + '<span></span><i>IA</i>'; b.querySelector('span').textContent = el.getAttribute('data-label') || d.label;
+      b.addEventListener('click', function () { open(el); });
+      b.addEventListener('pointerenter', function () { if (!document.querySelector('link[data-zvto-pre]')) { var l = document.createElement('link'); l.rel = 'preconnect'; l.href = APP; l.setAttribute('data-zvto-pre', ''); document.head.appendChild(l); } }, { once: true });
+      el.appendChild(b);
+    };
+    var t = el.getAttribute('data-t') || '', ek = 'zvto:estado:' + t, now = Date.now();
+    var cached = function (k, ttl) { try { var c = JSON.parse(sessionStorage.getItem(k)); return c && now - c.at < ttl ? c.d : null; } catch (x) { return null; } };
+    var keep = function (k, d) { try { sessionStorage.setItem(k, JSON.stringify({ at: now, d: d })); } catch (x) {} return d; };
+    var bt = cached(key, 36e5), es = cached(ek, 6e5);
+    Promise.all([
+      bt ? Promise.resolve(bt) : fetch(APP + '/api/boton?shop=' + encodeURIComponent(shop) + '&handle=' + encodeURIComponent(h)).then(function (r) { return r.json(); }).then(function (d) { return keep(key, d); }),
+      es ? Promise.resolve(es) : fetch(FN, { method: 'POST', headers: { 'content-type': 'text/plain' }, body: JSON.stringify({ action: 'estado', tenant: t }) }).then(function (r) { return r.json(); }).then(function (d) { return keep(ek, d); }),
+    ]).then(function (r) { done(r[1] && r[1].mostrar ? r[0] : null); }).catch(function () { el.style.display = 'none'; });
   }
   function scan() { Array.prototype.forEach.call(document.querySelectorAll('[data-zvto]'), mount); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan); else scan();

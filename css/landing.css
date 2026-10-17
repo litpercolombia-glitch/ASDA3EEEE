@@ -66,7 +66,7 @@ html:has(body.lp) { overflow-x: clip; }
 @media (min-width: 1024px) { .hero { grid-template-columns: 1.05fr .95fr; gap: 20px; } .hero-vis { height: min(78vh, 720px); } }
 
 /* secciones */
-.sec { padding: clamp(70px, 10vw, 130px) max(16px, calc((100vw - 1200px) / 2)) 0; }
+.blk { padding: clamp(70px, 10vw, 130px) max(16px, calc((100vw - 1200px) / 2)) 0; }
 .sec-h { max-width: 760px; margin-bottom: 36px; }
 .sec-h h2 { font-size: clamp(34px, 4.6vw, 60px); letter-spacing: -.035em; }
 .sec-h p { margin: 16px 0 0; color: var(--mu); font-size: 17.5px; }
@@ -240,3 +240,9 @@ html:has(body.lp) { overflow-x: clip; }
 .modal-x svg { width: 20px; height: 20px; }
 @media (max-width: 719px) { .modal-box { border-radius: 0; height: 100dvh; } .modal-x { display: none; } }
 @keyframes mfade { from { opacity: 0; } } @keyframes mup { from { transform: translateY(40px); opacity: 0; } }
+
+/* auditoría 17-oct-2026 */
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.code b { color: var(--neon); font-weight: 600; } .code .c { color: var(--mu2); }
+.stats-note { color: var(--mu); font-size: 14px; margin: 14px 0 0; max-width: 70ch; }
+@media (max-width: 479px) { .nav .logo-p { display: none; } .nav .btn { padding: 0 16px; font-size: 14px; white-space: nowrap; } }

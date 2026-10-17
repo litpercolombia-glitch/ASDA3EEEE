@@ -14,11 +14,12 @@ else start();
 async function start() {
   let cfg;
   try { cfg = await call('cfg', { tenant: T }); } catch { $('#noTenant').hidden = false; toast('No encontramos esa tienda. Revisa el código.'); return; }
-  $('#ttl').textContent = `Instala el probador en ${cfg.nombre}`;
+  $('#ttl').textContent = `Instala el probador en ${cfg.dominio || cfg.id}`;
   $('#sub').textContent = `Tu código de tienda es «${cfg.id}» (${cfg.dominio}). Son 5 minutos y no necesitas programador.`;
   if (K) { const p = $('#lnkPanel'); p.hidden = false; p.href = `/panel?t=${encodeURIComponent(T)}&k=${K}`; }
   $('#snippet').value = snippet(cfg.id);
-  $('#lnkEditor').href = `https://${cfg.dominio}/admin/themes/current/editor?template=product`;
+  if (cfg.dominio) $('#lnkEditor').href = `https://${cfg.dominio}/admin/themes/current/editor?template=product`;
+  if (cfg.estado === 'pendiente') $('#sub').textContent += ' Tus 14 días de prueba arrancan cuando el botón aparezca en tu tienda.';
   $('#guide').hidden = false;
   $('#btnCopy').onclick = () => copy($('#snippet').value, '#copied', 'Copiado. Ahora pégalo en tu tema.');
   loadProducts(cfg);
@@ -36,6 +37,7 @@ async function copy(text, outSel, okMsg) {
 }
 
 async function loadProducts(cfg) {
+  if (!cfg.dominio) return;
   try {
     const d = await (await fetch(`/api/tienda?shop=${encodeURIComponent(cfg.dominio)}`)).json();
     if (!d.items?.length) return;

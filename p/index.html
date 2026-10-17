@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#07080a">
 <meta name="robots" content="noindex">
 <link rel="icon" href="/img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://gtsivwbnhcawvmsfujby.supabase.co" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
@@ -91,10 +92,11 @@
 
     <div class="acts" id="actsStart" hidden>
       <div class="saved" id="saved" hidden><img id="savedImg" alt="Tu foto guardada"><div class="saved-t"><b>Tu foto guardada</b><small>Solo está en este celular · <button class="link" id="btnSavedDel" type="button">Borrar</button></small></div><button class="btn sec" id="btnSaved" type="button">Usarla</button></div>
+      <label class="consent" id="consent" hidden><input type="checkbox" id="chkConsent"><span>La foto es mía, o tengo permiso de la persona, y es mayor de edad. <a href="/legal#datos" target="_blank" rel="noopener">Cómo usamos la foto</a></span></label>
       <label class="btn pri big"><input type="file" accept="image/*" capture="environment" id="fileCam"><svg><use href="#i-cam"/></svg><span id="camLab">Tomar foto de mi cama</span></label>
       <label class="btn sec"><input type="file" accept="image/*" id="fileGal"><svg><use href="#i-img"/></svg><span id="galLab">Subir de la galería</span></label>
       <div class="samples"><span id="sampleLab">o usa una foto de ejemplo</span><div class="sample-row" id="samples"></div></div>
-      <p class="priv"><svg><use href="#i-lock"/></svg>Tu foto solo se usa para crear la imagen. No la guardamos.</p>
+      <p class="priv"><svg><use href="#i-lock"/></svg>A la IA solo viaja una copia pequeña de tu foto para crear la imagen. No la guardamos.</p>
     </div>
 
     <div class="acts" id="actsResult" hidden>

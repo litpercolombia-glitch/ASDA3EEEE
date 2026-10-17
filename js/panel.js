@@ -16,8 +16,9 @@ async function load() {
   let d;
   try { d = await call('stats', { tenant: T, key: K }); } catch { $('#login').hidden = false; $('#sub').textContent = 'No pudimos entrar: revisa el código y la llave.'; return; }
   $('#ttl').textContent = d.tienda; $('#sub').textContent = `${d.dominio} · últimos 30 días`;
-  $('#plan').textContent = PLAN[d.plan] || d.plan;
-  $('#venc').textContent = d.vence ? `vence el ${new Date(d.vence + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })}` : '';
+  $('#plan').textContent = (PLAN[d.plan] || d.plan) + (d.estado === 'pendiente' ? ' · pendiente' : '');
+  if (d.estado === 'pendiente') $('#venc').textContent = 'Tu prueba arranca cuando el botón aparezca en tu tienda. Sigue la guía de instalación.';
+  if (d.estado !== 'pendiente') $('#venc').textContent = d.vence ? `vence el ${new Date(d.vence + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })}` : '';
   $('#meter').style.width = Math.min(100, (100 * d.usadas) / Math.max(1, d.cuota)).toFixed(1) + '%';
   $('#uso').textContent = `${nf.format(d.usadas)} de ${nf.format(d.cuota)} pruebas usadas este mes`;
   const t = d.totales || {}, ia = (d.dias || []).reduce((a, x) => a + x.ia, 0), buy = (t.comprar || 0) + (t.kit || 0);

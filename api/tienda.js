@@ -2,6 +2,7 @@
 import { json, q, shopHost, getJSON, shopMeta, img, kindOf } from './_util.js';
 
 export default async function handler(req, res) {
+  res.setHeader('access-control-allow-origin', '*');
   const shop = shopHost(q(req, 'shop'));
   if (!shop) return json(res, 400, { error: 'tienda_invalida' });
   try {

@@ -14,25 +14,26 @@ for (const id of ['#waFab', '#waFoot', '#waGo']) { const a = $(id); if (a) a.hre
 
 /* ---------- héroe 3D ---------- */
 const SCENES = [
-  { title: 'Pruébalo en tu cama', b: 'cuarto_a', a: 'r_protector', p: 'p_protector', c1: 'Foto de tu cliente', c2: 'Protector · Rojo', t: '7,0 s' },
-  { title: 'Pruébala en tu ventana', b: 'ventana_a', a: 'r_cortina_nav', p: 'p_cortina_nav', c1: 'Foto de su ventana', c2: 'Cortina · Azul estrellas', t: '8,1 s' },
-  { title: 'Pruébatelo', b: 'persona_a', a: 'r_camiseta', p: 'p_camiseta', c1: 'Foto de tu cliente', c2: 'Camiseta · Verde oliva', t: '7,3 s' },
+  { title: 'Pruébalo en tu cama', b: 'cuarto_a', a: 'r_protector', p: 'p_protector', c1: 'Foto de tu cliente', c2: 'Protector · Rojo', t: '7,4 s' },
+  { title: 'Pruébala en tu ventana', b: 'ventana_a', a: 'r_cortina_nav', p: 'p_cortina_nav', c1: 'Foto de su ventana', c2: 'Cortina · Azul estrellas', t: '7,6 s' },
+  { title: 'Pruébatelo', b: 'persona_a', a: 'r_camiseta', p: 'p_camiseta', c1: 'Foto de tu cliente', c2: 'Camiseta · Verde oliva', t: '8,6 s' },
   { title: 'Pruébalo en tu cama', b: 'cuarto_b', a: 'r_colcha', p: 'p_colcha', c1: 'Foto de su cuarto', c2: 'Colcha · Renos verde', t: '8,4 s' },
 ];
 const card = $('#card3d'), shot = $('#hAfterW').parentElement;
-[...new Set(SCENES.flatMap((s) => [s.b, s.a, s.p]))].forEach((n) => { const i = new Image(); i.src = `/img/demo/${n}.webp`; });
+// precarga solo la escena siguiente (auditoría M-13: antes se bajaban todas al entrar)
+const pre = (s) => [`${s.b}.webp`, `${s.a}.webp`, `${s.p}_s.webp`].forEach((f) => { const i = new Image(); i.src = `/img/demo/${f}`; });
 let sc = 0;
 function setP(v, lo = 1) { shot.style.setProperty('--p', v + '%'); shot.style.setProperty('--lo', lo); }
 async function heroLoop() {
   if (reduce) { setP(100, 0); return; }
-  await wait(900);
+  await wait(900); pre(SCENES[1]);
   for (;;) {
     const s = SCENES[sc % SCENES.length];
     await sweep(0, 100, 1700);
     setP(100, 0); await wait(2600);
-    sc++; const n = SCENES[sc % SCENES.length];
+    sc++; const n = SCENES[sc % SCENES.length]; pre(SCENES[(sc + 1) % SCENES.length]);
     shot.classList.add('swap'); await wait(250);
-    $('#hBefore').src = `/img/demo/${n.b}.webp`; $('#hAfter').src = `/img/demo/${n.a}.webp`; $('#hProd').src = `/img/demo/${n.p}.webp`;
+    $('#hBefore').src = `/img/demo/${n.b}.webp`; $('#hAfter').src = `/img/demo/${n.a}.webp`; $('#hProd').src = `/img/demo/${n.p}_s.webp`;
     $('#hTitle').textContent = n.title; $('#hC1').textContent = n.c1; $('#hC2').textContent = n.c2; $('#hTime').textContent = n.t;
     setP(0, 1); await wait(900); void s;
   }
@@ -48,19 +49,19 @@ heroLoop();
 
 /* ---------- galería antes/después ---------- */
 const GAL = [
-  { tab: 'Protector', b: 'cuarto_a', a: 'r_protector', p: 'p_protector', name: 'Protector de colchón acolchado · Rojo', t: '7,0 s', note: 'Cama con sábanas blancas. El protector queda ajustado al colchón y las almohadas toman la misma tela.' },
+  { tab: 'Protector', b: 'cuarto_a', a: 'r_protector', p: 'p_protector', name: 'Protector de colchón acolchado · Rojo', t: '7,4 s', note: 'Cama con sábanas blancas. El protector queda ajustado al colchón y las almohadas toman la misma tela.' },
   { tab: 'Colcha', b: 'cuarto_b', a: 'r_colcha', p: 'p_colcha', name: 'Colcha navideña · Renos verde', t: '8,4 s', note: 'Edredón gris liso cambiado por la colcha estampada: respeta el diseño, la escala y la caída.' },
-  { tab: 'Edredón', b: 'cuarto_a', a: 'r_edredon', p: 'p_edredon', name: 'Edredón doble faz · Azul oscuro y celeste', t: '8,1 s', note: 'Se ven las dos caras del edredón y los cojines a juego.' },
-  { tab: 'Cortina', b: 'ventana_a', a: 'r_cortina_nav', p: 'p_cortina_nav', name: 'Cortina navideña + velo · Azul estrellas', t: '8,1 s', note: 'Ventana con visillos blancos. La cortina se cuelga en la misma varilla.' },
-  { tab: 'Camiseta', b: 'persona_a', a: 'r_camiseta', p: 'p_camiseta', name: 'Camiseta de algodón · Verde oliva (ejemplo)', t: '7,3 s', note: 'Misma persona, misma postura y misma cara; cambia solo la prenda, con su logo en el lugar correcto.' },
-  { tab: 'Comedor', b: 'comedor_a', a: 'r_forro', p: null, name: 'Forros navideños para sillas · Santa y reno', t: '6,7 s', note: 'Solo cambian las sillas; la mesa y el cuarto quedan iguales.' },
+  { tab: 'Edredón', b: 'cuarto_a', a: 'r_edredon', p: 'p_edredon', name: 'Edredón doble faz · Azul oscuro y celeste', t: '6,5 s', note: 'Se ven las dos caras del edredón y los cojines a juego.' },
+  { tab: 'Cortina', b: 'ventana_a', a: 'r_cortina_nav', p: 'p_cortina_nav', name: 'Cortina navideña + velo · Azul estrellas', t: '7,6 s', note: 'Ventana con visillos blancos. La cortina se cuelga en la misma varilla.' },
+  { tab: 'Camiseta', b: 'persona_a', a: 'r_camiseta', p: 'p_camiseta', name: 'Camiseta de algodón · Verde oliva (ejemplo)', t: '8,6 s', note: 'La cara, el pelo y el fondo son los píxeles de la foto original: cambia solo la prenda, con su logo en el lugar correcto.' },
+  { tab: 'Comedor', b: 'comedor_a', a: 'r_forro', p: null, name: 'Forros navideños para sillas · Santa y reno', t: '6,6 s', note: 'Solo cambian las sillas; la mesa y el cuarto quedan iguales.' },
 ];
 const gc = $('#galCmp');
 function galSet(i) {
   const g = GAL[i];
   $$('#galTabs button').forEach((b, k) => b.setAttribute('aria-selected', String(k === i)));
   $('#galBefore').src = `/img/demo/${g.b}.webp`; $('#galAfter').src = `/img/demo/${g.a}.webp`;
-  $('#galProd').src = g.p ? `/img/demo/${g.p}.webp` : `/img/demo/${g.a}.webp`;
+  $('#galProd').src = g.p ? `/img/demo/${g.p}_s.webp` : `/img/demo/${g.a}.webp`;
   $('#galName').textContent = g.name; $('#galNote').textContent = g.note; $('#galTime').textContent = `${g.t} (17-oct-2026)`;
   setCut(50);
 }
@@ -100,13 +101,24 @@ async function loadShop(raw, sample = false) {
   }
 }
 function msg(t) { $('#demoMsg').textContent = t; }
-new IntersectionObserver((es, o) => { if (es[0].isIntersecting) { o.disconnect(); if (!demoShop) loadShop('litper.store', true); } }, { rootMargin: '300px' }).observe($('#demo'));
+// link personalizado para vender: ?tienda=sutienda.com carga sus productos en la demo
+const preTienda = new URLSearchParams(location.search).get('tienda');
+if (preTienda) { $('#demoShop').value = preTienda; loadShop(preTienda); setTimeout(() => $('#demo').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' }), 400); }
+new IntersectionObserver((es, o) => { if (es[0].isIntersecting) { o.disconnect(); if (!demoShop && !preTienda) loadShop('litper.store', true); } }, { rootMargin: '300px' }).observe($('#demo'));
 const modal = $('#tryModal'), frame = $('#tryFrame');
+let tryBack = null;
 function openTry(shop, handle) {
+  tryBack = document.activeElement;
   frame.src = `/p?demo=1&embed=1&s=${encodeURIComponent(shop)}&h=${encodeURIComponent(handle)}`;
-  modal.hidden = false; document.body.style.overflow = 'hidden';
+  modal.hidden = false; document.body.style.overflow = 'hidden'; $('#tryClose').focus();
 }
-function closeTry() { modal.hidden = true; frame.src = 'about:blank'; document.body.style.overflow = ''; }
+function closeTry() { modal.hidden = true; frame.src = 'about:blank'; document.body.style.overflow = ''; if (tryBack?.focus) tryBack.focus({ preventScroll: true }); tryBack = null; }
+addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab' || modal.hidden) return;
+  const f = [$('#tryClose'), frame];
+  if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); frame.focus(); }
+  else if (!e.shiftKey && !modal.contains(document.activeElement)) { e.preventDefault(); f[0].focus(); }
+});
 $('#tryClose').onclick = closeTry;
 modal.addEventListener('click', (e) => { if (e.target === modal) closeTry(); });
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.hidden) closeTry(); });
@@ -149,7 +161,7 @@ function renderPlans() {
     const price = cur === 'COP' ? p.cop : p.usd, regular = cur === 'COP' ? p.copReg : p.usdReg;
     const btn = el('a', { class: `btn ${p.rec ? 'amber' : 'sec'}`, href: '#empezar', onclick: () => { $('#fPlan').value = p.id; track('cta', { detalle: { plan: p.id } }); } }, p.cta);
     box.append(el('article', { class: 'plan' + (p.rec ? ' rec' : '') },
-      p.rec ? el('span', { class: 'badge', text: 'El más elegido' }) : null,
+      p.rec ? el('span', { class: 'badge', text: 'Recomendado' }) : null,
       el('h3', { text: p.name }), el('p', { class: 'who', text: p.who }),
       el('div', { class: 'price' }, el('b', { text: money(price, cur) }), el('span', { text: '/ mes' }), regular ? el('s', { text: money(regular, cur) }) : null),
       el('p', { class: 'ref', text: cur === 'COP' ? `≈ US$${p.usd} al mes${regular ? ' · precio fundador' : ''}` : `≈ ${money(p.cop, 'COP')} al mes${regular ? ' · precio fundador' : ''}` }),
@@ -165,10 +177,11 @@ $('#fPlan').replaceChildren(...[...PLANS.map((p) => el('option', { value: p.id, 
 $('#fPlan').value = PLANS.find((p) => p.rec)?.id || PLANS[0].id;
 
 /* ---------- alta de prueba (lead) ---------- */
+const formT0 = Date.now();
 $('#leadForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const f = e.target, m = $('#leadMsg'), b = $('#leadBtn');
-  const data = { nombre: f.nombre.value.trim(), whatsapp: f.whatsapp.value.trim(), tienda: f.tienda.value.trim(), email: f.email.value.trim(), plan: f.plan.value, origen: 'landing', utm, pais: (f.whatsapp.value.replace(/\D/g, '').startsWith('57') || !f.whatsapp.value.trim().startsWith('+')) ? 'CO' : '' };
+  const data = { web: f.web.value, ms: Date.now() - formT0, nombre: f.nombre.value.trim(), whatsapp: f.whatsapp.value.trim(), tienda: f.tienda.value.trim(), email: f.email.value.trim(), plan: f.plan.value, origen: 'landing', utm, pais: (f.whatsapp.value.replace(/\D/g, '').startsWith('57') || !f.whatsapp.value.trim().startsWith('+')) ? 'CO' : '' };
   if (!data.nombre) return fail('Escribe tu nombre.', f.nombre);
   if (data.whatsapp.replace(/\D/g, '').length < 7) return fail('Escribe tu WhatsApp con indicativo (ej: +57 300 000 0000).', f.whatsapp);
   if (!$('#fOk').checked) return fail('Acepta que te escribamos por WhatsApp para activar tu prueba.', $('#fOk'));
@@ -178,8 +191,8 @@ $('#leadForm').addEventListener('submit', async (e) => {
     track('cta', { detalle: { lead: true, plan: data.plan } });
     const t = d.tienda, inst = t ? `/instalar?t=${encodeURIComponent(t.id)}${t.panel_key ? '&k=' + t.panel_key : ''}` : null;
     const done = el('div', { class: 'done', role: 'status' },
-      el('b', { text: t?.nuevo ? `Listo, ${data.nombre.split(' ')[0]}: tu prueba está activa` : `Gracias, ${data.nombre.split(' ')[0]}. Te escribimos en menos de 1 hora hábil.` }),
-      el('p', { text: t ? `Tienda «${t.id}» con ${t.cuota} fotos gratis${t.vence ? ' hasta el ' + new Date(t.vence + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'long' }) : ''}. Sigue la guía para pegar el botón en tu tema; si prefieres, lo hacemos contigo.` : 'Si nos dejaste tu tienda Shopify, te enviamos el código listo para pegar.' }),
+      el('b', { text: t?.nuevo ? `Listo, ${data.nombre.split(' ')[0]}: tu tienda quedó registrada` : `Gracias, ${data.nombre.split(' ')[0]}. Te escribimos en menos de 1 hora hábil.` }),
+      el('p', { text: t ? (t.estado === 'pendiente' ? `Tienda «${t.id}»: tus ${t.cuota} pruebas gratis por 14 días arrancan solas cuando el botón aparezca en ${data.tienda}. Sigue la guía para pegarlo en tu tema; si prefieres, lo hacemos contigo.` : `Tienda «${t.id}» ya registrada. Te escribimos para ayudarte con la instalación.`) : 'Si nos dejaste tu tienda Shopify, te enviamos el código listo para pegar.' }),
       el('div', { class: 'row' }, inst ? el('a', { class: 'btn pri', href: inst }, 'Ver mi guía de instalación') : null,
         el('a', { class: 'btn sec', href: wa(`Hola, soy ${data.nombre}. Acabo de activar la prueba del probador${t ? ' para ' + t.id : ''}.`), target: '_blank', rel: 'noopener' }, 'Hablar por WhatsApp')),
       t?.panel_key ? el('p', { class: 'small', text: 'Guarda el enlace de tu guía: incluye la llave de tu panel.' }) : null);

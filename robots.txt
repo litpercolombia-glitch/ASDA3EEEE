@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /panel
+Disallow: /instalar
+Disallow: /p
+Sitemap: https://asda3eeee-git-probador-litpers-projects.vercel.app/sitemap.xml

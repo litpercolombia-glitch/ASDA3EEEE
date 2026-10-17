@@ -17,11 +17,19 @@ export function shopHost(raw) {
 }
 export const handleOk = (h) => /^[a-z0-9][a-z0-9-]{0,200}$/.test(h);
 
+// Lee JSON público de una tienda. Sigue máximo 3 redirecciones y revalida cada destino (https y dominio público),
+// para que una tienda no pueda mandarnos a una red interna (SSRF).
 export async function getJSON(url, ms = 9000) {
-  const r = await fetch(url, { headers: { accept: 'application/json', 'user-agent': 'ZynexProbador/1.0 (+https://probador.zynexapp.com)' }, redirect: 'follow', signal: AbortSignal.timeout(ms) });
-  if (!r.ok) { const e = new Error('http_' + r.status); e.status = r.status; throw e; }
-  const t = await r.text(); if (t.length > 8_000_000) throw new Error('muy_grande');
-  return JSON.parse(t);
+  const t0 = Date.now(); let u = new URL(url);
+  for (let hop = 0; hop < 4; hop++) {
+    if (u.protocol !== 'https:' || !shopHost(u.hostname)) { const e = new Error('destino_invalido'); e.status = 400; throw e; }
+    const r = await fetch(u, { headers: { accept: 'application/json', 'user-agent': 'ZynexProbador/1.0 (+https://probador.zynexapp.com)' }, redirect: 'manual', signal: AbortSignal.timeout(Math.max(1000, ms - (Date.now() - t0))) });
+    if (r.status >= 300 && r.status < 400 && r.headers.get('location')) { u = new URL(r.headers.get('location'), u); continue; }
+    if (!r.ok) { const e = new Error('http_' + r.status); e.status = r.status; throw e; }
+    const t = await r.text(); if (t.length > 8_000_000) throw new Error('muy_grande');
+    return JSON.parse(t);
+  }
+  const e = new Error('demasiadas_redirecciones'); e.status = 508; throw e;
 }
 
 const cacheMeta = new Map();
@@ -35,42 +43,44 @@ export async function shopMeta(shop) {
 export const img = (u, w) => { if (!u) return null; let s = u.startsWith('//') ? 'https:' + u : u; if (w) s += (s.includes('?') ? '&' : '?') + 'width=' + w; return s; };
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
-// Qué es el producto: decide el tipo de prueba (cama, ventana, mesa, cuerpo, espacio)
-const TYPE_MAP = [
-  [/protector/, 'protector'], [/kit de cama|juego de s[aá]banas|s[aá]bana/, 'sabanas'], [/cortina|velo|persiana/, 'cortina'],
-  [/edred|colcha|plum[oó]n|cubrelecho|duvet/, 'edredon'], [/cobija|manta|frazada|cobertor/, 'cobija'], [/mantel/, 'mantel'],
-  [/almohada/, 'almohada'],
+// Qué es el producto: decide el tipo de prueba (v2, 17-oct-2026: palabras completas, contexto obligatorio y exclusiones;
+// probado con 3.000+ productos de 17 tiendas colombianas: evita «protector de pantalla», «cortina de luces», «silla plegable», etc.)
+const normw = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9ñ]+/g, ' ').trim();
+const has = (t, words) => new RegExp(`(^| )(${words})( |$)`).test(t);
+const at = (t, words) => { const m = new RegExp(`(^| )(${words})( |$)`).exec(t); return m ? m.index : -1; };
+const BLOCKED = 'ropa interior|brasier|brasieres|bra|sosten|panty|pantys|tanga|tangas|boxer|boxers|calzon|calzoncillo|lenceria|bikini|bikinis|traje de bano|vestido de bano|banador|trusa|cachetero|bodysuit|body|faja|fajas|moldeador|moldeadora|shapewear|levanta gluteos|levanta cola|erotico|erotica|erotic|sexual|intimo|intima|sex';
+const NOT_HOME = 'pantalla|screen|celular|iphone|samsung|xiaomi|telefono|movil|camara|lente|lentes|solar|vidrio|templado|carro|auto|moto|vehiculo|parlante|cargador|bateria|audifonos|reloj|tablet|laptop|portatil|consola|perro|gato|mascota|bebe';
+const RULES = [ // [kind, palabras que lo identifican, contexto requerido (opcional), exclusiones]
+  ['protector', 'protector|protectores', 'colchon|colchones|cama', NOT_HOME + '|espaldar|cabecero|cabecera|pintura|techo|pared'],
+  ['sabanas', 'sabana|sabanas|juego de cama|juegos de cama|kit de cama', null, NOT_HOME + '|caja|organizadora|organizador|bolsa|bolsas|ganchos|sujetador'],
+  ['edredon', 'edredon|edredones|colcha|colchas|plumon|plumones|cubrelecho|cubrelechos|duvet|comforter', null, NOT_HOME + '|vasenilla|escalera|caja|organizadora|organizador|bolsa|bolsas'],
+  ['cobija', 'cobija|cobijas|cobertor|cobertores|frazada|frazadas|manta|mantas', null, NOT_HOME + '|electrica|peluche|juguete|caja|organizadora|organizador|bolsa|bolsas|para muebles|para sofa|sofa|sala'],
+  ['almohada', 'almohada|almohadas', null, 'cervical para carro|viaje|' + NOT_HOME.replace('|bebe', '')],
+  ['cortina', 'cortina|cortinas|blackout|velo|velos|persiana|persianas', null, 'cortina de luces|cortina de luz|cortinas de luces|cortinas de luz|led|leds|de bano|ducha|iman|imanes|gancho|ganchos|riel|varilla|soporte|' + NOT_HOME],
+  ['mantel', 'mantel|manteles|camino de mesa', null, 'picnic|' + NOT_HOME],
+  ['forro', 'forro|forros|funda|fundas|cubresillas|cubre silla|cubre sofa|cubresofa|manta|mantas', 'silla|sillas|sofa|sofas|comedor|mueble|muebles|puestos', NOT_HOME + '|almohada|almohadas|cojin|cojines|colchon'],
+  ['mueble', 'zapatero|zapateros|estante|estantes|esquinero|esquineros|armario|armarios|closet|perchero|percheros|repisa|repisas|mueble|muebles|organizador de pie|organizador de zapatos|biblioteca|mesa de noche|tapete|tapetes|alfombra|alfombras', null, NOT_HOME + '|viaje|maleta|cosmetiquero|maquillaje|masajeador|masaje|spa|pies|yoga|ejercicio|frutas|verduras|nevera|cocina|carro|luces|led|embarazada|embarazadas|cinturon|salida de bano|pareo'],
 ];
-const WORDS = [
-  ['cortina', 'cortina'], ['blackout', 'cortina'], ['velo', 'cortina'], ['ventana', 'cortina'], ['persiana', 'cortina'],
-  ['mantel', 'mantel'], ['forro', 'forro'], ['silla', 'forro'], ['sofa', 'forro'], ['protector', 'protector'],
-  ['sabana', 'sabanas'], ['edredon', 'edredon'], ['colcha', 'edredon'], ['plumon', 'edredon'], ['cubrelecho', 'edredon'], ['duvet', 'edredon'],
-  ['cobija', 'cobija'], ['cobertor', 'cobija'], ['manta', 'cobija'], ['frazada', 'cobija'], ['almohada', 'almohada'],
-  ['zapatero', 'mueble'], ['estante', 'mueble'], ['esquinero', 'mueble'], ['armario', 'mueble'], ['perchero', 'mueble'], ['organizador', 'mueble'],
-  ['repisa', 'mueble'], ['mueble', 'mueble'], ['tapete', 'mueble'], ['alfombra', 'mueble'], ['lampara', 'mueble'], ['espejo', 'mueble'], ['cuadro', 'mueble'],
-];
-const GARMENT_WORDS = [
-  ['camiseta', 'camiseta'], ['t-shirt', 'camiseta'], ['polo', 'polo'], ['camisa', 'camisa'], ['blusa', 'blusa'], ['buzo', 'buzo'], ['hoodie', 'hoodie'],
-  ['saco', 'saco'], ['sueter', 'saco'], ['chaqueta', 'chaqueta'], ['chaleco', 'chaleco'], ['crop top', 'top'], ['top ', 'top'],
-  ['pantalon', 'pantalon'], ['jean', 'jean'], ['sudadera', 'sudadera'], ['jogger', 'jogger'], ['falda', 'falda'], ['short', 'short'], ['bermuda', 'short'],
-  ['vestido', 'vestido'], ['enterizo', 'enterizo'], ['jumpsuit', 'enterizo'], ['pijama', 'pijama'], ['conjunto', 'conjunto'], ['uniforme', 'uniforme'],
-];
-const BLOCKED = /ropa interior|brasier|sosten|panty|tanga|boxer|calzon|lenceri|bikini|traje de ba|vestido de ba|banador|trusa|cachetero|bodysuit/;
-
+const GARMENTS = { camiseta: 'camiseta|camisetas|t shirt|tshirt|polo|polos', camisa: 'camisa|camisas', blusa: 'blusa|blusas', buzo: 'buzo|buzos|hoodie|hoodies|sudadera con capota', saco: 'saco|sacos|sueter|sueteres|cardigan', chaqueta: 'chaqueta|chaquetas|chaqueton|abrigo|parka', chaleco: 'chaleco|chalecos', top: 'top|tops|crop top', pantalon: 'pantalon|pantalones|palazzo', jean: 'jean|jeans', sudadera: 'sudadera|sudaderas|jogger|joggers', falda: 'falda|faldas', short: 'short|shorts|bermuda|bermudas', vestido: 'vestido|vestidos', enterizo: 'enterizo|enterizos|jumpsuit|overol', pijama: 'pijama|pijamas', conjunto: 'conjunto deportivo|conjunto de ropa|conjunto casual|conjunto de dos piezas' };
+const HOME_CTX = 'comedor|cama|mesa|silla|sillas|ventana|colchon|sofa|hogar|casa|cocina|bano|sala|habitacion|cuarto|puerta';
+const NOT_GARMENT = 'percha|perchas|gancho|ganchos|organizador|mascota|mascotas|perro|perros|gato|gatos|salvavidas|oil|aceite|crema|serum|celulitis|medias|lavadora|plancha|corrector|postura|lastrado|fitness|faja';
 export function kindOf(p) {
-  const type = norm(p.type || p.product_type), title = norm(p.title), handle = norm(p.handle).replace(/-/g, ' ');
-  const all = `${type} ${title} ${handle} ${norm((p.tags || []).join(' '))}`;
-  if (BLOCKED.test(all)) return { kind: 'bloqueado', garment: null };
-  for (const [r, k] of TYPE_MAP) if (r.test(type)) return { kind: k, garment: null };
-  // primero la prenda o el artículo que se nombra antes en el título (el principal)
+  const title = normw(p.title), type = normw(p.type || p.product_type), handle = normw(p.handle), tags = normw([].concat(p.tags || []).join(' '));
+  const all = `${type} ${title} ${handle} ${tags}`;
+  if (has(all, BLOCKED)) return { kind: 'bloqueado', garment: null };
   let best = null;
-  for (const [w, k] of WORDS) { const i = (' ' + title + ' ').indexOf(' ' + w); if (i >= 0 && (!best || i < best.i)) best = { i, kind: k }; }
-  // "comedor vestido de Navidad" no es ropa: si el título habla de la casa, las palabras de ropa no cuentan
-  const home = /(^| )(comedor|cama|mesa|silla|sillas|ventana|colchon|sofa|hogar|casa|cocina|bano|sala|habitacion|cuarto|puerta)( |$)/.test(`${title} ${handle}`);
-  if (!home) for (const [w, g] of GARMENT_WORDS) { const i = (' ' + title + ' ').indexOf(' ' + w); if (i >= 0 && (!best || i < best.i)) best = { i, kind: 'ropa', garment: g }; }
+  for (const [kind, words, ctx, excl] of RULES) {
+    const i = at(title, words); if (i < 0) continue;
+    if (excl && has(`${title} ${type}`, excl)) continue;
+    if (ctx && !has(`${title} ${type} ${handle}`, ctx)) continue;
+    if (!best || i < best.i) best = { i, kind };
+  }
+  if (!has(`${title} ${handle}`, HOME_CTX) && !has(title, NOT_HOME) && !has(title, NOT_GARMENT)) {
+    for (const [g, words] of Object.entries(GARMENTS)) { const i = at(title, words); if (i >= 0 && (!best || i < best.i)) best = { i, kind: 'ropa', garment: g }; }
+  }
   if (best) return { kind: best.kind, garment: best.garment || null };
-  for (const [w, k] of WORDS) if (handle.includes(w)) return { kind: k, garment: null };
-  if (!home) for (const [w, g] of GARMENT_WORDS) if (`${handle} ${type}`.includes(w.trim())) return { kind: 'ropa', garment: g };
+  // sin palabra en el título: miramos el tipo de producto con las mismas reglas
+  for (const [kind, words, ctx, excl] of RULES) if (has(type, words) && !(excl && has(`${title} ${type}`, excl)) && (!ctx || has(`${title} ${type} ${handle}`, ctx))) return { kind, garment: null };
   return { kind: 'otro', garment: null };
 }
 
@@ -87,10 +97,24 @@ export function optionRoles(options) {
   return r;
 }
 
-// Busca la foto que corresponde a un valor (ej. "6 DORADO" → ...-dorado.jpg) cuando la variante no trae imagen
-export function imageForValue(value, images) {
-  const words = norm(value).replace(/[^a-z ]/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !['con', 'para', 'del', 'las', 'los', 'navidad', 'premium'].includes(w));
-  let best = null, bs = 0;
-  for (const u of images) { const f = norm(decodeURIComponent((u.split('/').pop() || '').split('?')[0])); const s = words.reduce((a, w) => a + (f.includes(w) ? 1 : 0), 0); if (s > bs) { bs = s; best = u; } }
-  return best;
+// Busca la foto que corresponde a un valor (ej. "6 DORADO" → ...-dorado.jpg) cuando la variante no trae imagen.
+// v2 (17-oct-2026): pesa más las palabras raras (las que distinguen un diseño de otro), descarta fotos con un color
+// que contradice al valor y, si hay empate, no adivina (devuelve null → el probador no ofrece ese diseño).
+const COLOR_WORDS = ['rojo', 'roja', 'azul', 'gris', 'rosa', 'rosado', 'dorado', 'dorada', 'blanco', 'blanca', 'negro', 'negra', 'verde', 'beige', 'crema', 'vino', 'morado', 'lila', 'fucsia', 'turquesa', 'turqueza', 'naranja', 'amarillo', 'cafe', 'plateado', 'plata'];
+const STOP = ['con', 'para', 'del', 'las', 'los', 'navidad', 'navideno', 'premium', 'x'];
+const wordsOf = (v) => norm(v).replace(/[^a-z ]/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !STOP.includes(w));
+export function imageForValue(value, images, allValues = []) {
+  const words = wordsOf(value); if (!words.length) return null;
+  const df = (w) => Math.max(1, allValues.filter((v) => wordsOf(v).includes(w)).length);
+  const myColors = words.filter((w) => COLOR_WORDS.includes(w));
+  let best = null, bs = 0, tie = false;
+  for (const u of images) {
+    const f = norm(decodeURIComponent((u.split('/').pop() || '').split('?')[0])).replace(/[^a-z]+/g, ' ');
+    const fw = f.split(' ');
+    const fColors = fw.filter((w) => COLOR_WORDS.includes(w));
+    if (myColors.length && fColors.length && !fColors.some((c) => myColors.some((m) => m.slice(0, 4) === c.slice(0, 4)))) continue; // color que no corresponde
+    const sc = words.reduce((a, w) => a + (fw.includes(w) ? 1 / df(w) : 0), 0);
+    if (sc > bs + 1e-9) { bs = sc; best = u; tie = false; } else if (sc > 0 && Math.abs(sc - bs) < 1e-9) tie = true;
+  }
+  return tie ? null : best;
 }

@@ -10,6 +10,7 @@ const PAIRS = {
 const ZONE = { camiseta: 'top', polo: 'top', camisa: 'top', blusa: 'top', buzo: 'top', hoodie: 'top', saco: 'top', chaqueta: 'top', chaleco: 'top', top: 'top', pantalon: 'bottom', jean: 'bottom', sudadera: 'bottom', jogger: 'bottom', falda: 'bottom', short: 'bottom' };
 
 export default async function handler(req, res) {
+  res.setHeader('access-control-allow-origin', '*');
   const shop = shopHost(q(req, 'shop')), handle = q(req, 'handle').toLowerCase();
   if (!shop || !handleOk(handle)) return json(res, 400, { error: 'datos_invalidos' });
   try {

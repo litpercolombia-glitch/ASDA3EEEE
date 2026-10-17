@@ -2,7 +2,7 @@
 :root {
   --bg: #07080a; --bg2: #0b0d10; --panel: #101317; --panel2: #151a1f; --panel3: #1b2128;
   --line: rgba(255, 255, 255, .08); --line2: rgba(255, 255, 255, .15);
-  --tx: #eef3f0; --mu: #9ba6a1; --mu2: #6c7672;
+  --tx: #eef3f0; --mu: #9ba6a1; --mu2: #858f8b;
   --neon: #00ff88; --neon2: #00d873; --neon-a: rgba(0, 255, 136, .14); --cyan: #00d4f5; --cyan-a: rgba(0, 212, 245, .14); --amber: #ffb800; --red: #ff6b6b;
   --r1: 10px; --r2: 16px; --r3: 24px; --r4: 32px;
   --ease: cubic-bezier(.23, 1, .32, 1); --ease-drawer: cubic-bezier(.32, .72, 0, 1);
