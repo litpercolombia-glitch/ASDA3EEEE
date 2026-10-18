@@ -179,12 +179,13 @@ export function corregir(gen, ref) {
 
 // 5c) ¿La IA trajo un mueble de la foto del catálogo (p. ej. su cabecero)? Mira justo encima de la tela, donde está el
 // cabecero de la cama del cliente, y busca lo que cambió sin parecerse a la tela. Cada píxel se compara con la foto real
-// a ±3 px, así un leve corrimiento de la IA no cuenta.
+// a ±4 px, así un leve corrimiento de la IA o un tamaño de foto distinto no cuentan.
 // - cob (decide): parte del ancho de la tela que tiene, justo encima, un tramo vertical de cambio de 4 px o más. Un cabecero
 //   copiado cubre casi todo el ancho aunque las almohadas tapen la mayor parte; los bordes de las almohadas dan 1–2 px.
 // - arriba (solo métrica): parte de la franja de arriba (18 % del alto) que es nueva, sin líneas finas.
-// v4.9 (18-oct-2026), con 25 salidas reales etiquetadas del 17-oct (test/t_cabecero49.py): cabeceros copiados (gris y de
-// madera) cob 0,30–0,74; versiones limpias 0–0,12.
+// v4.10 (18-oct-2026), con 25 salidas reales etiquetadas del 17-oct a tamaño igual y al doble (test/t_cabecero410.py): cabeceros
+// copiados lisos cob 0,27–0,67 y colcha estampada 0,18–0,21; versiones limpias 0–0,12. Límite conocido: en telas claras
+// (blanco, gris claro, beige) un cabecero gris se parece a la tela y no se ve (auditoría 7, R7-M1).
 function encima(o, LG, tela, m, w, h) {
   const n = w * h, F = new Uint8Array(n); let nf = 0;
   for (let i = 0; i < n; i++) if (m[i] && tela[i]) { F[i] = 1; nf++; }
@@ -199,7 +200,7 @@ function encima(o, LG, tela, m, w, h) {
   }
   const zona = morph(band, w, h, 2, true); // la franja con margen para la apertura, más la ventana justo encima de la tela
   for (let x = 0; x < w; x++) if (top[x] > 0) for (let y = Math.max(0, top[x] - VEN); y < top[x]; y++) zona[y * w + x] = 1;
-  const R = 3, alrededor = morph(zona, w, h, R, true), LO = new Float32Array(n * 3);
+  const R = 4, alrededor = morph(zona, w, h, R, true), LO = new Float32Array(n * 3); // ±4 px: aguanta un leve reencuadre de la IA y otro tamaño de foto
   for (let i = 0; i < n; i++) if (alrededor[i]) { const p = lab(o[i * 3], o[i * 3 + 1], o[i * 3 + 2]); LO[i * 3] = p[0]; LO[i * 3 + 1] = p[1]; LO[i * 3 + 2] = p[2]; }
   const ch = new Uint8Array(n);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -345,7 +346,8 @@ export function fuse(orig, gen, ref = null, opts = {}) {
       prod.paleta = pal.length;
     }
     const enc = encima(o, LG, tela, m, w, h);
-    if (enc) { prod.arriba = enc.arriba; prod.cob = enc.cob; }
+    if (enc) { prod.arriba = enc.arriba; prod.cob = enc.cob; if (!ref.solid) prod.est = 1; }
+    const q0 = ref.palette[0]; if (ref.solid && (cr(q0) <= 12 ? q0[0] > 55 : q0[0] > 60 && cr(q0) < 25)) prod.clara = 1; // tela clara: la medida no ve un cabecero gris
     if (Object.keys(prod).length) info.prod = prod;
   }
 

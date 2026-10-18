@@ -399,7 +399,7 @@ async function generate(retry = true) {
     busy = false;
     if (productImage() !== prodUrl) { markSwatch(null); return generate(); }
     shown = { key: photo.key, color: sel.color, src: fz.src };
-    trk('ver', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { ms: Math.round(performance.now() - t0), fusion: fz.info.ok ? 1 : 0, motivo: fz.info.motivo || '', err: fz.info.err ?? null, costura: fz.info.seam ?? null, n: fz.n, elegida: fz.i, prod: fz.info.prod ? `${fz.info.prod.dE ?? '-'}|${fz.info.prod.nuevo ?? '-'}|${fz.info.color ? 'c' : ''}|${fz.info.prod.arriba ?? '-'}/${fz.info.prod.cob ?? '-'}|${fz.copias}` : '' } });
+    trk('ver', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { ms: Math.round(performance.now() - t0), fusion: fz.info.ok ? 1 : 0, motivo: fz.info.motivo || '', err: fz.info.err ?? null, costura: fz.info.seam ?? null, n: fz.n, elegida: fz.i, prod: fz.info.prod ? `${fz.info.prod.dE ?? '-'}|${fz.info.prod.nuevo ?? '-'}|${fz.info.color ? 'c' : ''}|${fz.info.prod.arriba ?? '-'}/${fz.info.prod.cob ?? '-'}${fz.info.prod.est ? 'e' : ''}${fz.info.prod.clara ? 'k' : ''}|${fz.copias}` : '' } });
     await showResult(fz.src, true, gen);
     if (gen !== genN) return; // mientras se mostraba, el cliente ya pidió otra prueba
     if (fz.info.motivo === 'encuadre') $('#resHint').textContent = 'La IA movió un poco el encuadre de tu foto. Desliza para comparar.';
@@ -429,7 +429,7 @@ async function generate(retry = true) {
 // Mejor de 2: gana la versión que funde con la foto real, conserva el color de la tela y no trae objetos nuevos
 // el fondo intacto manda; el color de la tela solo desempata; castigo fuerte si casi no aparece la tela y más fuerte si la IA
 // trajo un mueble del catálogo encima de la tela (cabecero copiado): esa versión pierde aunque sea la única que se funde
-const copiaMueble = (p) => !!p && p.cob >= 0.2; // fusion.js 5c: un mueble del catálogo encima de la tela (p. ej. el cabecero)
+const copiaMueble = (p) => !!p && p.cob >= (p.est ? 0.12 : 0.2); // fusion.js 5c: un mueble del catálogo encima de la tela (p. ej. el cabecero); en estampados las limpias dan ≤ 0,012
 const castigo = (inf) => { const p = inf.prod; if (!p) return 0; return (p.dE != null ? 0.1 * p.dE : 0) + (p.frac < 0.25 ? 12 : 0) + (copiaMueble(p) ? 150 + 100 * p.cob : 0); };
 async function fuseResult(ph, gens, ref = null) {
   let o; try { o = await loadImage(ph.data); } catch { return { src: gens[0], info: { motivo: 'error' }, i: 0, n: gens.length, copias: 0 }; }

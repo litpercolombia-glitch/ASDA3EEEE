@@ -109,7 +109,8 @@
       .then(function () { return mark('producto'); }).then(codGo).catch(function () { location.href = '/cart'; });
   }
   // En la ficha con la variante elegida: toca el botón contraentrega de la tienda (corren sus combos, ofertas y notas).
-  // Releasit puede tardar unos segundos en pintarlo (en litper.store, 3,5–4,9 s); si no aparece en 5 s se usa el formulario del carrito.
+  // En litper.store el botón de Releasit ya está visible al cargar la ficha (7 de 8 cargas el 18-oct), así que se toca al primer intento.
+  // Si Releasit lo pinta tarde se espera hasta 5 s; si no aparece, se usa el formulario del carrito.
   // Sin Releasit: toca el botón «Agregar al carrito» visible de la tienda; si no hay, va al pago.
   function buyHere(variant) {
     variant = variant || new URLSearchParams(location.search).get('variant');
