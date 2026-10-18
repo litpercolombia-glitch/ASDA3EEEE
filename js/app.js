@@ -392,14 +392,14 @@ async function generate(retry = true) {
     await cfgReady;
     // color y zona de la tela en la foto de la variante (en paralelo; si tarda, la IA no la espera)
     const refP = refInfo(prodUrl, sel.color || ''), ref0 = await Promise.race([refP, wait(1200).then(() => null)]);
-    const d = await call('ai', { tenant: TENANT, tok: CFG.tok, shop: DEMO ? SHOP : undefined, handle: P.handle, photo: photo.ai || photo.data, product: prodUrl, color: sel.color || '', w: photo.w, h: photo.h, sesion, n: 2, consiento: G === 'ropa' ? (photo.fuente === 'ejemplo' || consentOk()) : undefined, ref: ref0 ? { hex: ref0.hex, box: ref0.box } : undefined }, { timeout: 80000 });
+    const d = await call('ai', { tenant: TENANT, tok: CFG.tok, shop: DEMO ? SHOP : undefined, handle: P.handle, photo: photo.ai || photo.data, product: prodUrl, color: sel.color || '', w: photo.w, h: photo.h, sesion, n: 2, consiento: G === 'ropa' ? (photo.fuente === 'ejemplo' || consentOk()) : undefined, ref: ref0?.solid ? { hex: ref0.hex, box: ref0.box } : undefined }, { timeout: 80000 }); // en estampados el recorte cortaría el diseño
     const fz = await fuseResult(photo, d.images?.length ? d.images : [d.image], ref0 || (await refP));
     results.set(key, fz.src);
     await stopProgress(true);
     busy = false;
     if (productImage() !== prodUrl) { markSwatch(null); return generate(); }
     shown = { key: photo.key, color: sel.color, src: fz.src };
-    trk('ver', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { ms: Math.round(performance.now() - t0), fusion: fz.info.ok ? 1 : 0, motivo: fz.info.motivo || '', err: fz.info.err ?? null, costura: fz.info.seam ?? null, n: fz.n, elegida: fz.i, prod: fz.info.prod ? `${fz.info.prod.dE ?? '-'}|${fz.info.prod.nuevo}|${fz.info.color ? 'c' : ''}|${fz.info.prod.arriba ?? '-'}|${fz.copias}` : '' } });
+    trk('ver', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { ms: Math.round(performance.now() - t0), fusion: fz.info.ok ? 1 : 0, motivo: fz.info.motivo || '', err: fz.info.err ?? null, costura: fz.info.seam ?? null, n: fz.n, elegida: fz.i, prod: fz.info.prod ? `${fz.info.prod.dE ?? '-'}|${fz.info.prod.nuevo ?? '-'}|${fz.info.color ? 'c' : ''}|${fz.info.prod.arriba ?? '-'}/${fz.info.prod.cob ?? '-'}|${fz.copias}` : '' } });
     await showResult(fz.src, true, gen);
     if (gen !== genN) return; // mientras se mostraba, el cliente ya pidió otra prueba
     if (fz.info.motivo === 'encuadre') $('#resHint').textContent = 'La IA movió un poco el encuadre de tu foto. Desliza para comparar.';
@@ -429,20 +429,21 @@ async function generate(retry = true) {
 // Mejor de 2: gana la versión que funde con la foto real, conserva el color de la tela y no trae objetos nuevos
 // el fondo intacto manda; el color de la tela solo desempata; castigo fuerte si casi no aparece la tela y más fuerte si la IA
 // trajo un mueble del catálogo encima de la tela (cabecero copiado): esa versión pierde aunque sea la única que se funde
-const castigo = (inf) => { const p = inf.prod; if (!p) return 0; return (p.dE != null ? 0.1 * p.dE : 0) + (p.frac < 0.25 ? 12 : 0) + (p.arriba > 0.04 ? 150 + 100 * p.arriba : 0); };
+const copiaMueble = (p) => !!p && p.cob >= 0.2; // fusion.js 5c: un mueble del catálogo encima de la tela (p. ej. el cabecero)
+const castigo = (inf) => { const p = inf.prod; if (!p) return 0; return (p.dE != null ? 0.1 * p.dE : 0) + (p.frac < 0.25 ? 12 : 0) + (copiaMueble(p) ? 150 + 100 * p.cob : 0); };
 async function fuseResult(ph, gens, ref = null) {
   let o; try { o = await loadImage(ph.data); } catch { return { src: gens[0], info: { motivo: 'error' }, i: 0, n: gens.length, copias: 0 }; }
   let best = null, copias = 0; // copias: versiones con un mueble del catálogo encima de la tela
   for (let i = 0; i < gens.length; i++) {
     let r, g = null;
-    try { g = await loadImage(gens[i]); await new Promise((ok) => requestAnimationFrame(() => ok())); r = fuse(o, g, ref); } catch { r = { canvas: null, info: { motivo: 'error' } }; }
-    if (r.info.prod?.arriba > 0.04) copias++;
+    try { g = await loadImage(gens[i]); await new Promise((ok) => requestAnimationFrame(() => ok())); r = fuse(o, g, ref, { cama: G === 'cama' }); } catch { r = { canvas: null, info: { motivo: 'error' } }; }
+    if (copiaMueble(r.info.prod)) copias++;
     const score = (r.canvas ? r.info.err : 100 + (r.info.err ?? 50) + (r.info.seam ?? 0) / 4) + castigo(r.info);
     if (!best || score < best.score) best = { score, i, r, g };
   }
   const { r, i, g } = best;
   if (!r.canvas && g && ref) { // sin fusión: se muestra la imagen de la IA, con el color de la tela corregido
-    try { const c = corregir(g, ref); if (c) return { src: c.canvas.toDataURL('image/jpeg', 0.92), info: { ...r.info, color: c.info.color, prod: { dE: c.info.dE, nuevo: '-', arriba: r.info.prod?.arriba } }, i, n: gens.length, copias }; } catch {}
+    try { const c = corregir(g, ref); if (c) return { src: c.canvas.toDataURL('image/jpeg', 0.92), info: { ...r.info, color: c.info.color, prod: { dE: c.info.dE, nuevo: '-', arriba: r.info.prod?.arriba, cob: r.info.prod?.cob } }, i, n: gens.length, copias }; } catch {}
   }
   return { src: r.canvas ? r.canvas.toDataURL('image/jpeg', 0.9) : gens[i], info: r.info || {}, i, n: gens.length, copias };
 }

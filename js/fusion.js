@@ -177,30 +177,33 @@ export function corregir(gen, ref) {
   return { canvas: c, info: { dE: +dE.toFixed(1), color: t.info } };
 }
 
-// 5c) ¿La IA trajo un mueble de la foto del catálogo (p. ej. su cabecero)? Mira la franja justo encima de la tela
-// (donde está el cabecero de la cama del cliente) y cuenta lo que cambió sin ser la tela. Cada píxel se compara con
-// la foto real a ±3 px, así un leve corrimiento de la IA no cuenta, y se quitan las líneas finas (apertura 5×5).
-// Devuelve la parte de la franja que es nueva: con las 10 salidas reales del 17-oct que se pueden medir, los 2 cabeceros
-// copiados dan 0,11 y 0,43 y las 8 versiones limpias 0–0,001 (test/t_cabecero48.py).
-function encima(o, LG, fab, m, w, h) {
+// 5c) ¿La IA trajo un mueble de la foto del catálogo (p. ej. su cabecero)? Mira justo encima de la tela, donde está el
+// cabecero de la cama del cliente, y busca lo que cambió sin parecerse a la tela. Cada píxel se compara con la foto real
+// a ±3 px, así un leve corrimiento de la IA no cuenta.
+// - cob (decide): parte del ancho de la tela que tiene, justo encima, un tramo vertical de cambio de 4 px o más. Un cabecero
+//   copiado cubre casi todo el ancho aunque las almohadas tapen la mayor parte; los bordes de las almohadas dan 1–2 px.
+// - arriba (solo métrica): parte de la franja de arriba (18 % del alto) que es nueva, sin líneas finas.
+// v4.9 (18-oct-2026), con 25 salidas reales etiquetadas del 17-oct (test/t_cabecero49.py): cabeceros copiados (gris y de
+// madera) cob 0,30–0,74; versiones limpias 0–0,12.
+function encima(o, LG, tela, m, w, h) {
   const n = w * h, F = new Uint8Array(n); let nf = 0;
-  for (let i = 0; i < n; i++) if (m[i] && fab[i]) { F[i] = 1; nf++; }
-  if (nf < 0.02 * n) return 0;
-  const B = Math.round(0.18 * h), cerca = morph(fab, w, h, 3, true), band = new Uint8Array(n);
+  for (let i = 0; i < n; i++) if (m[i] && tela[i]) { F[i] = 1; nf++; }
+  if (nf < 0.02 * n) return null;
+  const B = Math.round(0.18 * h), VEN = Math.round(0.12 * h), cerca3 = morph(tela, w, h, 3, true), cerca1 = morph(tela, w, h, 1, true);
+  const band = new Uint8Array(n), top = new Int32Array(w).fill(-1);
   for (let x = 0; x < w; x++) {
     let c = 0; for (let y = 0; y < h; y++) c += F[y * w + x];
     if (c < 0.04 * h) continue;
-    let top = -1; for (let y = 0; y + 2 < h; y++) if (F[y * w + x] && F[(y + 1) * w + x] && F[(y + 2) * w + x]) { top = y; break; }
-    for (let y = Math.max(0, top - B); y < top - 3; y++) if (!cerca[y * w + x]) band[y * w + x] = 1;
+    for (let y = 0; y + 2 < h; y++) if (F[y * w + x] && F[(y + 1) * w + x] && F[(y + 2) * w + x]) { top[x] = y; break; }
+    for (let y = Math.max(0, top[x] - B); y < top[x] - 3; y++) if (!cerca3[y * w + x]) band[y * w + x] = 1;
   }
-  let nb = 0; for (let i = 0; i < n; i++) nb += band[i];
-  if (!nb) return 0;
-  const R = 3, zona = morph(band, w, h, 2, true), alrededor = morph(zona, w, h, R, true); // margen para la apertura y para la tolerancia
-  const LO = new Float32Array(n * 3);
+  const zona = morph(band, w, h, 2, true); // la franja con margen para la apertura, más la ventana justo encima de la tela
+  for (let x = 0; x < w; x++) if (top[x] > 0) for (let y = Math.max(0, top[x] - VEN); y < top[x]; y++) zona[y * w + x] = 1;
+  const R = 3, alrededor = morph(zona, w, h, R, true), LO = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) if (alrededor[i]) { const p = lab(o[i * 3], o[i * 3 + 1], o[i * 3 + 2]); LO[i * 3] = p[0]; LO[i * 3 + 1] = p[1]; LO[i * 3 + 2] = p[2]; }
   const ch = new Uint8Array(n);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const i = y * w + x; if (!zona[i] || fab[i]) continue;
+    const i = y * w + x; if (!zona[i] || tela[i]) continue;
     const L = LG[i * 3], a = LG[i * 3 + 1], b = LG[i * 3 + 2]; let best = 1e9;
     for (let dy = -R; dy <= R && best > 1; dy++) {
       const yy = y + dy; if (yy < 0 || yy >= h) continue;
@@ -213,16 +216,47 @@ function encima(o, LG, fab, m, w, h) {
     if (best > 1) ch[i] = 1;
   }
   const op = morph(morph(ch, w, h, 2, false), w, h, 2, true);
-  let k = 0; for (let i = 0; i < n; i++) if (op[i] && band[i]) k++;
-  return +(k / nb).toFixed(3);
+  let k = 0, nb = 0; for (let i = 0; i < n; i++) { nb += band[i]; if (op[i] && band[i]) k++; }
+  let cols = 0, con = 0;
+  for (let x = 0; x < w; x++) {
+    if (top[x] < 0) continue; cols++;
+    let run = 0, best = 0;
+    for (let y = top[x] - 2; y >= Math.max(0, top[x] - VEN); y--) { const i = y * w + x; if (ch[i] && !cerca1[i]) { if (++run > best) best = run; } else run = 0; }
+    if (best >= 4) con++;
+  }
+  return { arriba: nb ? +(k / nb).toFixed(3) : 0, cob: cols ? +(con / cols).toFixed(3) : 0 };
+}
+
+// Colores de un estampado sacados de la misma tela generada (debajo de su borde de arriba): k-medias en Lab
+function paletaDe(LG, m, telaN, w, h) {
+  const S = [];
+  for (let x = 0; x < w; x += 2) {
+    let c = 0; for (let y = 0; y < h; y++) c += telaN[y * w + x];
+    if (c < 0.04 * h) continue;
+    let top = -1; for (let y = 0; y + 2 < h; y++) if (telaN[y * w + x] && telaN[(y + 1) * w + x] && telaN[(y + 2) * w + x]) { top = y; break; }
+    if (top < 0) continue;
+    for (let y = top + 3; y < Math.min(h, top + Math.round(0.3 * h)); y += 2) { const i = y * w + x; if (m[i]) S.push([LG[i * 3], LG[i * 3 + 1], LG[i * 3 + 2]]); }
+  }
+  if (S.length < 60) return [];
+  const cen = [S[0].slice()];
+  while (cen.length < 6) { let bi = 0, bd = -1; for (let j = 0; j < S.length; j += 3) { let d = 1e9; for (const c of cen) d = Math.min(d, dist2(S[j], c)); if (d > bd) { bd = d; bi = j; } } cen.push(S[bi].slice()); }
+  const cnt = new Array(6).fill(0);
+  for (let it = 0; it < 8; it++) {
+    const acc = cen.map(() => [0, 0, 0, 0]); cnt.fill(0);
+    for (const p of S) { let bj = 0, bd = 1e9; cen.forEach((c, j) => { const d = dist2(p, c); if (d < bd) { bd = d; bj = j; } }); const a2 = acc[bj]; a2[0] += p[0]; a2[1] += p[1]; a2[2] += p[2]; a2[3]++; cnt[bj]++; }
+    acc.forEach((a2, j) => { if (a2[3]) cen[j] = [a2[0] / a2[3], a2[1] / a2[3], a2[2] / a2[3]]; });
+  }
+  return cen.filter((_, j) => cnt[j] >= 0.05 * S.length);
 }
 
 /**
  * @param {HTMLCanvasElement|HTMLImageElement} orig foto del cliente (ya recortada al encuadre de la IA)
  * @param {HTMLImageElement} gen imagen de la IA
+ * @param {object|null} ref color y zona de la tela de la variante (ref.js)
+ * @param {{cama?: boolean}} opts cama: producto de cama (protector, sábanas, edredón, cobija, almohada)
  * @returns {{canvas: HTMLCanvasElement, info: object} | {canvas: null, info: object}}
  */
-export function fuse(orig, gen, ref = null) {
+export function fuse(orig, gen, ref = null, opts = {}) {
   const W = orig.width || orig.naturalWidth, H = orig.height || orig.naturalHeight;
   const s = L / Math.max(W, H), w = Math.round(W * s), h = Math.round(H * s), n = w * h;
   const o = pixels(orig, w, h), g0 = pixels(gen, w, h);
@@ -274,34 +308,45 @@ export function fuse(orig, gen, ref = null) {
   for (let i = 0; i < n; i++) if (!out[i]) m[i] = 1;
   m = morph(m, w, h, 2, true);
 
-  // 5b) ¿lo que cambió es el producto o algo nuevo? (con la paleta de la tela del catálogo)
+  // 5b) ¿lo que cambió es el producto o algo nuevo? (con el color de la tela del catálogo)
   let corr = null;
-  if (ref && ref.solid && ref.palette?.length) { // solo telas de un color: en estampados no se sabe qué colores son del diseño
+  if (ref && ref.palette?.length && (ref.solid || opts.cama)) { // estampados: solo la medida de muebles copiados, y solo en camas
     const cl = (v) => (v < 0 ? 0 : v > 255 ? 255 : v), hue = (q) => Math.atan2(q[2], q[1]) * 57.2958, cr = (q) => Math.hypot(q[1], q[2]);
-    const mismaFamilia = (p) => ref.palette.some((q) => dist2(p, q) < 22 || (cr(p) > 12 && cr(q) > 12 && Math.abs(((hue(p) - hue(q) + 540) % 360) - 180) < 22));
-    const LG = new Float32Array(n * 3), fab = new Uint8Array(n), ext = new Uint8Array(n); // color de la IA (ya igualado) en Lab y si es de la tela
+    const dTono = (p, q) => Math.abs(((hue(p) - hue(q) + 540) % 360) - 180);
+    const mismaFamilia = (p) => ref.palette.some((q) => dist2(p, q) < 22 || (cr(p) > 12 && cr(q) > 12 && dTono(p, q) < 22));
+    // parecido a la tela, para la medida de arriba: tono a ±40° (la sombra y el brillo lo corren) con una croma parecida
+    // (la madera tiene la mitad de croma que una tela roja y el doble que una beige); en telas sin color, una luz parecida
+    const pareceTela = (p) => ref.palette.some((q) => cr(q) > 12 ? dTono(p, q) <= 40 && cr(p) >= 0.6 * cr(q) && cr(p) <= 1.4 * cr(q) + 6 : cr(p) <= 12 && Math.abs(p[0] - q[0]) <= 25);
+    const LG = new Float32Array(n * 3), fab = new Uint8Array(n), tela = new Uint8Array(n); // color de la IA (ya igualado) en Lab
     for (let i = 0; i < n; i++) {
       const p = lab(cl(g[i * 3] * A[0][0] + A[0][1]), cl(g[i * 3 + 1] * A[1][0] + A[1][1]), cl(g[i * 3 + 2] * A[2][0] + A[2][1]));
-      LG[i * 3] = p[0]; LG[i * 3 + 1] = p[1]; LG[i * 3 + 2] = p[2]; fab[i] = mismaFamilia(p) ? 1 : 0;
-      // la misma tela en sombra cambia de tono (el fucsia oscuro se ve morado): cuenta como tela para la medida de arriba
-      if (!fab[i] && ref.palette.some((q) => cr(q) > 12 && cr(p) >= Math.max(10, 0.35 * cr(q)) && p[0] < q[0] + 15 && Math.abs(((hue(p) - hue(q) + 540) % 360) - 180) < 40)) ext[i] = 1;
+      LG[i * 3] = p[0]; LG[i * 3 + 1] = p[1]; LG[i * 3 + 2] = p[2]; fab[i] = mismaFamilia(p) ? 1 : 0; tela[i] = pareceTela(p) ? 1 : 0;
     }
-    let cnt = 0, pl = 0, nw = 0; const Ls = [], As = [], Bs = [];
-    for (let i = 0; i < n; i++) {
-      if (!m[i]) continue; cnt++;
-      const p = [LG[i * 3], LG[i * 3 + 1], LG[i * 3 + 2]];
-      if (fab[i]) { pl++; if (dist2(p, ref.lab) < 34 && p[0] > 12) { Ls.push(p[0]); As.push(p[1]); Bs.push(p[2]); } }
-      else if (d[i] > ts && p[0] > 25 && p[0] < 92) nw++;
-    }
-    if (cnt) {
-      const prod = { frac: +(pl / cnt).toFixed(3), nuevo: +(nw / cnt).toFixed(3) };
-      if (Ls.length > 30) {
-        const md = (a) => a.sort((x, y) => x - y)[a.length >> 1], mlab = [md(Ls), md(As), md(Bs)];
-        prod.dE = +de00(mlab, ref.lab).toFixed(1); corr = mlab;
+    const prod = {};
+    if (ref.solid) {
+      let cnt = 0, pl = 0, nw = 0; const Ls = [], As = [], Bs = [];
+      for (let i = 0; i < n; i++) {
+        if (!m[i]) continue; cnt++;
+        const p = [LG[i * 3], LG[i * 3 + 1], LG[i * 3 + 2]];
+        if (fab[i]) { pl++; if (dist2(p, ref.lab) < 34 && p[0] > 12) { Ls.push(p[0]); As.push(p[1]); Bs.push(p[2]); } }
+        else if (d[i] > ts && p[0] > 25 && p[0] < 92) nw++;
       }
-      prod.arriba = encima(o, LG, fab.map((v, i) => v | ext[i]), m, w, h);
-      info.prod = prod;
+      if (cnt) {
+        prod.frac = +(pl / cnt).toFixed(3); prod.nuevo = +(nw / cnt).toFixed(3);
+        if (Ls.length > 30) {
+          const md = (a) => a.sort((x, y) => x - y)[a.length >> 1], mlab = [md(Ls), md(As), md(Bs)];
+          prod.dE = +de00(mlab, ref.lab).toFixed(1); corr = mlab;
+        }
+      }
+    } else { // estampado de cama: además del color nombrado, cuentan como tela los colores del diseño que la IA puso en la cama
+      const telaN = new Uint8Array(n); for (let i = 0; i < n; i++) telaN[i] = m[i] && tela[i] ? 1 : 0;
+      const pal = paletaDe(LG, m, telaN, w, h);
+      if (pal.length) for (let i = 0; i < n; i++) if (!tela[i]) { const p = [LG[i * 3], LG[i * 3 + 1], LG[i * 3 + 2]]; if (pal.some((c) => dist2(p, c) < 14)) tela[i] = 1; }
+      prod.paleta = pal.length;
     }
+    const enc = encima(o, LG, tela, m, w, h);
+    if (enc) { prod.arriba = enc.arriba; prod.cob = enc.cob; }
+    if (Object.keys(prod).length) info.prod = prod;
   }
 
   // 6) compuertas de calidad: cuánto cambia y si la costura cae donde ambas fotos coinciden

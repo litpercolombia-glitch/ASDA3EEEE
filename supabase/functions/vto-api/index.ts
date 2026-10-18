@@ -1,4 +1,4 @@
-// vto-api v6.6.1 — Zynex Probador (backend). 18-oct-2026
+// vto-api v6.6.2 — Zynex Probador (backend). 18-oct-2026
 // Acciones (POST JSON {action, ...}):
 //   cfg     → configuración pública mínima de la tienda + ficha de sesión firmada (tok).
 //   ai      → foto realista con Cloudflare Workers AI (FLUX.2 klein 4B). El servidor resuelve el producto él mismo
@@ -84,7 +84,7 @@ const has = (t: string, words: string) => new RegExp(`(^| )(${words})( |$)`).tes
 const at = (t: string, words: string) => { const m = new RegExp(`(^| )(${words})( |$)`).exec(t); return m ? m.index : -1; };
 const BLOCKED = 'ropa interior|brasier|brasieres|bra|sosten|panty|pantys|tanga|tangas|boxer|boxers|calzon|calzones|calzoncillo|calzoncillos|lenceria|bikini|bikinis|traje de bano|vestido de bano|banador|trusa|cachetero|bodysuit|body|faja|fajas|moldeador|moldeadora|shapewear|levanta gluteos|levanta cola|erotico|erotica|erotic|sexual|intimo|intima|sex|tanguita|hilo dental|lingerie|underwear|swimsuit|swimsuits|swimwear|thong|thongs|briefs|panties|negligee|nightie';
 // Solo para ropa (en hogar «transparente» o «malla» son normales: mantel transparente, organizador de malla)
-const BLOCKED_ROPA = 'sexy|transparente|transparentes|transparencia|transparencias|bralette|bralettes|babydoll|baby doll|corset|corsets|corse|corses|corpino|liguero|ligueros|camison|camisones|malla|mallas|encaje|encajes|infantil|infantiles|nino|nina|ninos|ninas|bebe|bebes|bebito|bebita|kids|kid|juvenil|escolar|colegial|colegio|preescolar|primaria|girls|girl|boys|boy|baby|babies|teen|teens|toddler|toddlers|junior|juniors|adolescente|adolescentes|infante|infantes|chicos|nene|nena|nenes|nenas|peques|recien nacido';
+const BLOCKED_ROPA = 'sexy|transparente|transparentes|transparencia|transparencias|bralette|bralettes|babydoll|baby doll|corset|corsets|corse|corses|corpino|liguero|ligueros|camison|camisones|malla|mallas|encaje|encajes|infantil|infantiles|nino|nina|ninos|ninas|bebe|bebes|bebito|bebita|kids|kid|juvenil|escolar|colegial|colegio|preescolar|primaria|girls|girl|boys|boy|baby|babies|teen|teens|toddler|toddlers|junior|juniors|adolescente|adolescentes|infante|infantes|chicos|nene|nena|nenes|nenas|peques|recien nacido|youth|little|menor|menores|pequenos|pequenas|chiquito|chiquitos|chiquita|chiquitas|anos|meses';
 const NOT_HOME = 'pantalla|screen|celular|iphone|samsung|xiaomi|telefono|movil|camara|lente|lentes|solar|vidrio|templado|carro|auto|moto|vehiculo|parlante|cargador|bateria|audifonos|reloj|tablet|laptop|portatil|consola|perro|gato|mascota|bebe';
 const RULES: [string, string, string | null, string | null][] = [
   ['protector', 'protector|protectores', 'colchon|colchones|cama', NOT_HOME + '|espaldar|cabecero|cabecera|pintura|techo|pared'],
@@ -498,15 +498,23 @@ async function apuntaAShopify(host: string) {
 const slackSafe = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/[\r\n]+/g, ' ');
 
 // ¿El bloque está de verdad en la página publicada? El Origin se puede falsificar; la página de la tienda no.
+// Solo se lee la ficha de un producto: /products/<handle>, con prefijo de mercado (/es-co/) o desde una colección
+// (/collections/<c>/products/<handle> se lee como /products/<handle>). Se buscan las etiquetas, no textos sueltos.
+function rutaProducto(path: string) {
+  const m = /^\/(?:([a-z]{2}(?:-[a-z]{2})?)\/)?(?:collections\/[a-z0-9][a-z0-9-]{0,200}\/)?products\/([a-z0-9][a-z0-9-]{0,200})\/?$/.exec(String(path || '').toLowerCase());
+  return m ? `${m[1] ? '/' + m[1] : ''}/products/${m[2]}` : '';
+}
 async function bloqueEnPagina(host: string, path: string, id: string) {
-  const p = /^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?products\/[a-z0-9][a-z0-9-]{0,200}\/?$/.test(path) ? path : ''; // solo la ficha de un producto
+  const p = rutaProducto(path);
   if (!p || !shopHost(host)) return { ok: false, url: null as string | null };
   const url = `https://${host}${p}`;
   try {
     const r = await getSafe(url, 'text/html', 8000);
     if (!r) return { ok: false, url };
     const html = (await r.text()).slice(0, 4_000_000);
-    return { ok: html.includes('data-zvto') && html.includes('/embed.js') && new RegExp(`data-t=["']${id}["']`).test(html), url };
+    const div = (html.match(/<div\b[^>]*\bdata-zvto\b[^>]*>/gi) || []).some((t) => new RegExp(`\\bdata-t=["']${id}["']`).test(t));
+    const js = /<script\b[^>]*\bsrc=["'][^"'<>]*\/embed\.js(?:\?[^"'<>]*)?["'][^>]*>/i.test(html);
+    return { ok: div && js, url };
   } catch { return { ok: false, url }; }
 }
 const VCACHE = new Map<string, number>(); // última verificación por tienda en esta instancia (Infinity = ya verificada)
