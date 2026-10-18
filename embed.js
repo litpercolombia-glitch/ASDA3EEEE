@@ -1,4 +1,4 @@
-/*! Zynex Probador · botón para la página de producto de Shopify · v4.2 · 2026-10-17
+/*! Zynex Probador · botón para la página de producto de Shopify · v4.3 · 2026-10-17
    Uso: <div data-zvto data-t="TU-TIENDA" data-h="{{ product.handle }}" data-v="{{ product.selected_or_first_available_variant.id }}" data-title="{{ product.title | escape }}" data-type="{{ product.type | escape }}"></div>
         <script src="https://<este-dominio>/embed.js" defer></script> */
 (function () {
@@ -10,6 +10,8 @@
   // Con Releasit (contraentrega) el carrito abre su formulario en /cart#rsi-form-top-anchor; sin Releasit se va al pago normal
   var RSI_BTN = '[data-rsi-cod-button], #rsi_buy_now_button, .rsi_buy_now_button';
   var hasRsi = function () { return !!(window._RSI_COD_FORM_SETTINGS || document.querySelector(RSI_BTN)); };
+  // Releasit dice si su botón va en la ficha (productPage.isEnabled); si está apagado, el formulario vive solo en el carrito
+  var rsiSoloCarrito = function () { var s = window._RSI_COD_FORM_SETTINGS; return !!(s && s.productPage && s.productPage.isEnabled === false); };
   var codGo = function () { location.href = hasRsi() ? '/cart#rsi-form-top-anchor' : '/checkout'; };
   var norm = function (s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
 
@@ -21,7 +23,10 @@
     + '.zvto-m{position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;animation:zvto-f .2s}'
     + '.zvto-m iframe{width:min(1040px,100vw);height:min(780px,100dvh);border:0;border-radius:20px;background:#07080a;box-shadow:0 30px 80px rgba(0,0,0,.5)}'
     + '@media (max-width:719px){.zvto-m iframe{width:100vw;height:100dvh;border-radius:0}}@keyframes zvto-f{from{opacity:0}}'
-    + '.zvto-hl{animation:zvto-p 1.2s 3}@keyframes zvto-p{50%{box-shadow:0 0 0 6px rgba(0,255,136,.55)}}';
+    + '.zvto-hl{animation:zvto-p 1.2s 3}@keyframes zvto-p{50%{box-shadow:0 0 0 6px rgba(0,255,136,.55)}}'
+    + '.zvto-w{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:2147483646;display:flex;align-items:center;gap:10px;padding:12px 18px;white-space:nowrap;max-width:calc(100vw - 32px);border-radius:999px;background:#07080a;color:#fff;font:600 15px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;box-shadow:0 0 0 1px rgba(0,255,136,.45),0 10px 28px rgba(0,0,0,.3)}'
+    + '.zvto-w i{width:16px;height:16px;border-radius:50%;border:2px solid #00ff88;border-right-color:transparent;animation:zvto-r .8s linear infinite}@keyframes zvto-r{to{transform:rotate(360deg)}}'
+    + '@media (prefers-reduced-motion:reduce){.zvto-w i{animation:none}}';
   var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
   var ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.6" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
 
@@ -31,6 +36,8 @@
     return q || (inp && inp.value) || '';
   }
   function currentVariant(el) { return pageVariant() || el.getAttribute('data-v') || ''; }
+  var v0 = pageVariant(), vChanged = false;
+  document.addEventListener('change', function (e) { var t = e.target; if (t && t.closest && t.closest('form[action*="/cart/add"], variant-picker, variant-selects, variant-radios, [data-variant-picker], .product-form')) vChanged = true; }, true);
   var modal = null, lastFocus = null;
   function open(el) {
     lastFocus = document.activeElement;
@@ -39,7 +46,7 @@
     u.searchParams.set('s', el.getAttribute('data-s') || location.hostname.replace(/^www\./, ''));
     u.searchParams.set('h', el.getAttribute('data-h') || '');
     var v = currentVariant(el); if (v) u.searchParams.set('v', v);
-    if (new URLSearchParams(location.search).get('variant')) u.searchParams.set('vs', '1'); // el cliente ya eligió medida/color en la ficha
+    if (vChanged || (pageVariant() && pageVariant() !== v0)) u.searchParams.set('vs', '1'); // el cliente cambió medida/color en la ficha
     u.searchParams.set('embed', '1');
     modal = document.createElement('div'); modal.className = 'zvto-m'; modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-label', 'Probador con IA');
     var f = document.createElement('iframe'); f.src = u.href; f.title = 'Probador con IA'; f.allow = 'camera; web-share; clipboard-write';
@@ -47,6 +54,13 @@
     modal.appendChild(trap()); modal.appendChild(f); modal.appendChild(trap()); modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
     document.body.appendChild(modal); document.documentElement.style.overflow = 'hidden'; f.focus();
   }
+  var pill = null;
+  function wait(on, txt) {
+    if (!on) { if (pill) pill.remove(); pill = null; return; }
+    if (!pill) { pill = document.createElement('div'); pill.className = 'zvto-w'; pill.setAttribute('role', 'status'); pill.innerHTML = '<i></i><span></span>'; document.body.appendChild(pill); }
+    pill.querySelector('span').textContent = txt || 'Abriendo tu pedido…';
+  }
+  try { if (sessionStorage.getItem('zvto:compra') && location.hash === '#zvto-comprar') wait(true); } catch (x) {}
   function close() { if (!modal) return; modal.remove(); modal = null; document.documentElement.style.overflow = ''; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
   function mark(extra) { // marca el pedido como venta del probador (atributos ocultos del carrito)
     var a = { _probador: 'si', _probador_fecha: new Date().toISOString().slice(0, 10) }; if (extra) a._probador_tipo = extra;
@@ -59,7 +73,8 @@
     var ack = function () { try { src.postMessage({ vto: 'ack' }, APP); } catch (x) {} };
     if (d.vto === 'close') close();
     if (d.vto === 'buy' && d.variant) {
-      ack(); close();
+      ack(); close(); wait(true);
+      try { sessionStorage.setItem('zvto:compra', '1'); } catch (x) {}
       mark('producto').then(function () {
         // Se compra por la ficha: ahí corren el formulario contraentrega y lo propio de cada tienda (combos, ofertas, notas).
         var onPage = location.pathname.indexOf('/products/' + d.handle) >= 0;
@@ -68,7 +83,7 @@
       });
     }
     if (d.vto === 'cart' && d.items && d.items.length) {
-      ack(); close();
+      ack(); close(); wait(true);
       fetch('/cart.js', { headers: { accept: 'application/json' } }).then(function (r) { return r.json(); }).catch(function () { return {}; })
         .then(function (c) { // lo que ya está en el carrito no se vuelve a agregar
           var ya = {}; (c.items || []).forEach(function (i) { ya[String(i.variant_id)] = 1; });
@@ -98,15 +113,17 @@
   function buyHere(variant) {
     variant = variant || new URLSearchParams(location.search).get('variant');
     var tries = 0;
+    wait(true);
     (function tick() {
       var b = codButton(), i;
+      if (!b && variant && rsiSoloCarrito()) return void toCart(variant);
       if (!b && !hasRsi() && tries >= 8) {
         var adds = document.querySelectorAll('form[action*="/cart/add"] [type="submit"]:not([disabled]), form[action*="/cart/add"] button[name="add"]:not([disabled])');
         for (i = 0; i < adds.length && !b; i++) if (visible(adds[i])) b = adds[i];
       }
-      if (b) { b.scrollIntoView({ block: 'center', behavior: 'smooth' }); setTimeout(function () { b.click(); }, 450); return; }
-      if (++tries < 48) return void setTimeout(tick, 250);
-      if (variant) toCart(variant);
+      if (b) { b.scrollIntoView({ block: 'center', behavior: 'smooth' }); setTimeout(function () { b.click(); setTimeout(function () { wait(false); }, 1200); }, 450); try { sessionStorage.removeItem('zvto:compra'); } catch (x) {} return; }
+      if (++tries < 32) return void setTimeout(tick, 250);
+      if (variant) toCart(variant); else wait(false);
     })();
   }
   if (location.hash === '#zvto-comprar') { history.replaceState(null, '', location.pathname + location.search); if (document.readyState === 'complete') buyHere(); else addEventListener('load', function () { buyHere(); }); }

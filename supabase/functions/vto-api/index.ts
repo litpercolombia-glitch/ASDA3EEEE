@@ -1,4 +1,4 @@
-// vto-api v6.2 — Zynex Probador (backend). 17-oct-2026
+// vto-api v6.3 — Zynex Probador (backend). 18-oct-2026
 // Acciones (POST JSON {action, ...}):
 //   cfg     → configuración pública mínima de la tienda + ficha de sesión firmada (tok).
 //   ai      → foto realista con Cloudflare Workers AI (FLUX.2 klein 4B). El servidor resuelve el producto él mismo
@@ -405,6 +405,21 @@ async function myshopifyOf(host: string) {
   MCACHE.set(host, { t: Date.now(), v });
   return v;
 }
+// ¿El dominio apunta a Shopify? (A en 23.227.38.x o CNAME shops.myshopify.com). Solo así se cree lo que diga su /meta.json.
+const DCACHE = new Map<string, { t: number; v: boolean }>();
+async function apuntaAShopify(host: string) {
+  if (/\.myshopify\.com$/.test(host)) return true;
+  const c = DCACHE.get(host); if (c && Date.now() - c.t < 3_600_000) return c.v;
+  let v = false;
+  try {
+    const r = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(host)}&type=A`, { headers: { accept: 'application/dns-json' }, signal: AbortSignal.timeout(5000) });
+    const j = await r.json();
+    v = (j?.Answer || []).some((a: any) => (a.type === 1 && /^23\.227\.38\.\d{1,3}$/.test(String(a.data))) || (a.type === 5 && /(^|\.)myshopify\.com\.?$/.test(String(a.data))));
+  } catch { v = false; }
+  if (DCACHE.size > 500) DCACHE.clear();
+  DCACHE.set(host, { t: Date.now(), v });
+  return v;
+}
 // Texto del visitante para Slack: sin menciones ni enlaces disfrazados
 const slackSafe = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/[\r\n]+/g, ' ');
 async function actionLead(body: any, req: Request) {
@@ -459,6 +474,7 @@ async function actionCfg(body: any, req: Request) {
   return [200, {
     id: t.id, dominio: t.plan === 'demo' ? null : t.shop_domain, activo: t.estado === 'activo', estado: t.estado,
     sello: SELLO.has(t.plan), kit: KIT.has(t.plan) && t.config?.kit !== false, wa, cod: t.config?.cod === true, ropa: sec.VTO_MODERACION === 'on', ia: !(await iaPausada()), tok: await newTok(sec.VTO_SALT || 'x', t.id),
+    visto: t.config?.visto || null, desde: t.config?.activada || null,
   }];
 }
 
@@ -472,8 +488,8 @@ async function actionEstado(body: any, req: Request, origin: string | null) {
   let [{ data }, pausa] = await Promise.all([sb.rpc('vto_activar', { p_tenant: id, p_host: host }), iaPausada()]);
   if (data?.motivo === 'dominio_distinto' && shopHost(host) && shopHost(data.dominio)) {
     // ¿Es otro dominio de la MISMA tienda (myshopify, dominio de Markets, www)? Shopify lo dice en /meta.json
-    const [a, b] = await Promise.all([myshopifyOf(host), myshopifyOf(String(data.dominio))]);
-    if (a && a === b) {
+    const [a, b, dns] = await Promise.all([myshopifyOf(host), myshopifyOf(String(data.dominio)), apuntaAShopify(host)]);
+    if (a && a === b && dns) { // mismo myshopify y el dominio de verdad está en Shopify (no un /meta.json falso)
       await sb.rpc('vto_alias_add', { p_tenant: id, p_host: host });
       ({ data } = await sb.rpc('vto_activar', { p_tenant: id, p_host: host }));
     } else if (a) {
@@ -481,7 +497,7 @@ async function actionEstado(body: any, req: Request, origin: string | null) {
     }
   }
   if (data?.activado) await sb.from('slack_cola').insert({ tipo: 'parte', destino: 'dm_ceo', empresa: 'zynex', origen: 'probador', mensaje: `🟢 Probador IA instalado: la tienda "${id}" (${host}) activó su prueba de 14 días con 100 fotos.` });
-  return [200, { mostrar: !!(data?.ok && data.activo && data.cupo > 0), activado: !!data?.activado, ia: !pausa, ropa: sec.VTO_MODERACION === 'on' }];
+  return [200, { mostrar: !!(data?.ok && data.activo && data.cupo > 0 && data.hoy_ok !== false), activado: !!data?.activado, ia: !pausa, ropa: sec.VTO_MODERACION === 'on' }];
 }
 
 async function actionStats(body: any) {

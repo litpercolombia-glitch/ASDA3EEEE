@@ -44,3 +44,9 @@ textarea.code2, input.code2 { max-width: 100%; }
 /* v4.2: nada se sale en celular (select de productos y link) */
 select, .link-in, .field select { max-width: 100%; min-width: 0; }
 .row > .link-in { flex: 1 1 200px; }
+
+/* v4.3: estado de la instalación */
+.estado { display: grid; gap: 8px; border-left: 4px solid var(--line2); }
+.estado.ok { border-left-color: var(--neon); }
+.estado.pend { border-left-color: #ffb800; }
+.estado .btn { justify-self: start; }

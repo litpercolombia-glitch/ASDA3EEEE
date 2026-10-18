@@ -246,3 +246,8 @@ html:has(body.lp) { overflow-x: clip; }
 .code b { color: var(--neon); font-weight: 600; } .code .c { color: var(--mu2); }
 .stats-note { color: var(--mu); font-size: 14px; margin: 14px 0 0; max-width: 70ch; }
 @media (max-width: 479px) { .nav .logo-p { display: none; } .nav .btn { padding: 0 16px; font-size: 14px; white-space: nowrap; } }
+
+/* v4.3: productos de ropa mientras la prueba de ropa no está encendida */
+.dp.pronto { opacity: .6; }
+.dp.pronto span { background: rgba(255, 184, 0, .16); color: #ffcf5c; }
+#catRopaT small { font-size: .55em; font-weight: 600; letter-spacing: .02em; padding: 3px 8px; border-radius: 999px; background: rgba(255, 184, 0, .16); color: #ffcf5c; vertical-align: middle; }

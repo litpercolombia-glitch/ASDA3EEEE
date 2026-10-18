@@ -193,3 +193,7 @@ body.app { min-height: 100dvh; background:
 #optExtra { display: grid; gap: 14px; }
 #optExtra:empty { display: none; }
 @media (max-width: 899px) { body[data-orient=h]:not([data-state=inicio]) .stage { height: max(200px, min(60dvh, calc((100vw - 24px) / var(--ar-n, 1.5)))); } }
+/* v4.3: combinaciones que no existen y sin texto alternativo asomando tras un error */
+.chip.na { opacity: .45; text-decoration: line-through; }
+.chip.na small { text-decoration: none; }
+#imgAfter:not([src]) { visibility: hidden; }

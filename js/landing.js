@@ -77,6 +77,17 @@ galSet(0);
 // al entrar en pantalla, una pasada que enseña a deslizar
 new IntersectionObserver((es, o) => { if (es[0].isIntersecting && !reduce) { o.disconnect(); const t0 = performance.now(); const f = (t) => { const k = Math.min(1, (t - t0) / 1600); setCut(50 + Math.sin(k * Math.PI * 2) * 22 * (1 - k)); if (k < 1) requestAnimationFrame(f); }; requestAnimationFrame(f); } }, { threshold: 0.6 }).observe(gc);
 
+/* ---------- ropa: se vende solo cuando la revisión automática de fotos está encendida en el servidor ---------- */
+// Mientras esté apagada, la landing la muestra como «muy pronto» y la demo no deja probar prendas (no hay salida sin revisión).
+const ROPA = call('cfg', { tenant: 'demo' }, { timeout: 8000 }).then((c) => c.ropa === true).catch(() => false);
+ROPA.then((on) => {
+  if (on) return;
+  const h = $('#catRopaT'); if (h) h.append(' ', el('small', { text: 'muy pronto' }));
+  const lead = $('.lead'); if (lead) for (const n of lead.childNodes) if (n.nodeType === 3 && /o de sí mismo/.test(n.textContent)) n.textContent = n.textContent.replace('su ventana o de sí mismo', 'su ventana o su comedor');
+  for (const li of $$('#plans li')) if (/y ropa/.test(li.textContent)) li.textContent = li.textContent.replace('y ropa', '(ropa: muy pronto)');
+  for (const b of $$('#galTabs button')) if (b.textContent === 'Camiseta') b.textContent = 'Camiseta · pronto';
+});
+
 /* ---------- demo con la tienda del visitante ---------- */
 const KIND = { protector: 'Cama', sabanas: 'Cama', edredon: 'Cama', cobija: 'Cama', almohada: 'Cama', cortina: 'Ventana', mantel: 'Comedor', forro: 'Comedor', mueble: 'Espacio', ropa: 'Ropa' };
 let demoShop = '';
@@ -92,8 +103,17 @@ async function loadShop(raw, sample = false) {
     if (!r.ok) throw new Error(d.error);
     if (!sample) demoShop = shop; grid.replaceChildren();
     if (!d.items.length) { msg(`Encontramos ${d.total} productos en ${d.shopName}, pero ninguno es de cama, ventanas, comedor o ropa. Escríbenos y lo adaptamos.`); return; }
-    msg(sample ? `Ejemplo con ${d.shopName}: toca un producto y pruébalo con una foto. Luego escribe tu tienda arriba.` : `${d.shopName}: ${d.items.length} productos listos para probar. Toca uno.`);
-    for (const it of d.items.slice(0, 24)) grid.append(el('button', { class: 'dp', type: 'button', onclick: () => openTry(shop, it.handle) }, el('img', { src: it.image, alt: '', loading: 'lazy' }), el('span', { text: KIND[it.kind] || 'Probar' }), el('b', { text: it.title })));
+    const ropaOn = await ROPA, hogar = d.items.filter((it) => it.kind !== 'ropa'), ropa = d.items.length - hogar.length;
+    const lista = ropaOn ? d.items : [...hogar, ...d.items.filter((it) => it.kind === 'ropa')];
+    msg(sample ? `Ejemplo con ${d.shopName}: toca un producto y pruébalo con una foto. Luego escribe tu tienda arriba.`
+      : ropaOn || !ropa ? `${d.shopName}: ${d.items.length} productos listos para probar. Toca uno.`
+      : hogar.length ? `${d.shopName}: ${hogar.length} productos listos para probar hoy y ${ropa} de ropa que podrás probar muy pronto. Toca uno.`
+      : `${d.shopName}: encontramos ${ropa} productos de ropa. La prueba de ropa llega muy pronto: déjanos tus datos abajo y te avisamos primero.`);
+    for (const it of lista.slice(0, 24)) {
+      const pronto = !ropaOn && it.kind === 'ropa';
+      grid.append(el('button', { class: 'dp' + (pronto ? ' pronto' : ''), type: 'button', onclick: () => (pronto ? toast('La prueba de ropa llega muy pronto. Déjanos tus datos y te avisamos primero.') : openTry(shop, it.handle)) },
+        el('img', { src: it.image, alt: '', loading: 'lazy' }), el('span', { text: pronto ? 'Ropa · muy pronto' : KIND[it.kind] || 'Probar' }), el('b', { text: it.title })));
+    }
     if (!sample) { track('demo', { detalle: { tienda: shop, productos: d.items.length } }); $('#fTienda').value ||= shop; }
   } catch (err) {
     grid.replaceChildren();

@@ -50,6 +50,13 @@ const ERR = {
   red: ['No hubo conexión con el probador', 'Revisa tu conexión e intenta otra vez.'],
 };
 
+// En la demo de la landing quien prueba es un comerciante: los avisos le hablan a él
+const ERR_DEMO = {
+  limite_tienda_dia: ['La demo en vivo llegó a su tope de hoy', 'Mira los ejemplos reales de esta página o déjanos tus datos y te la mostramos por WhatsApp.'],
+  limite_ip: ['Ya hiciste muchas pruebas hoy', 'Déjanos tus datos y te la mostramos por WhatsApp con tus productos.'],
+  limite_sesion: ['Ya hiciste muchas pruebas en esta visita', 'Déjanos tus datos y te mostramos más por WhatsApp.'],
+  ropa_no_disponible: ['La prueba de ropa llega muy pronto', 'Mientras tanto prueba un producto de hogar de tu tienda: cama, cortinas o comedor.'],
+};
 let P = null, G = 'cama', C = COPY.cama;
 let sel = { color: null, size: null, qty: null, extra: {} };
 let shown = null; // último resultado mostrado: { key de la foto, color, src }
@@ -62,7 +69,7 @@ let CFG = { sello: true, kit: true, activo: true, wa: null, tok: null, ropa: fal
 function vuelveIA() {
   const d = new Date(); d.setUTCHours(24, 0, 0, 0);
   const hoy = new Date().toDateString() === d.toDateString();
-  return `${hoy ? 'hoy' : 'mañana'} a las ${d.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' })}`;
+  return `${hoy ? 'hoy' : 'mañana'} a las ${d.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' }).replace(/\.$/, '')}`;
 }
 let cfgReady = null;
 
@@ -114,7 +121,8 @@ async function loadProduct(handle) {
   if (P.kind === 'bloqueado') return fatal('Esta prenda no está disponible en el probador.', 'Por privacidad no probamos ropa interior ni trajes de baño.');
   if (P.kind === 'otro') return fatal('Este producto aún no tiene probador.', 'Puedes verlo y comprarlo normal en la tienda.');
   G = GROUP[P.kind] || 'cama'; C = COPY[G];
-  if (G === 'ropa') { await cfgReady; if (!CFG.ropa) return fatal('La prueba de ropa no está disponible por ahora.', 'Puedes verla y comprarla normal en la tienda.'); }
+  $('#illu use').setAttribute('href', '#' + ILLU[G]);
+  if (G === 'ropa') { await cfgReady; if (!CFG.ropa) return DEMO ? fatal(...ERR_DEMO.ropa_no_disponible) : fatal('La prueba de ropa no está disponible por ahora.', 'Puedes verla y comprarla normal en la tienda.'); }
   $('#consent').hidden = G !== 'ropa'; syncConsent();
   document.title = `${C.title} · ${P.shopName || SHOP}`;
   $('#barT').textContent = C.title; $('#barS').textContent = P.shopName ? `${P.shopName} · foto real con IA` : 'Foto real con IA';
@@ -157,6 +165,17 @@ function pickInitialVariant() {
   sel = { color: ci >= 0 ? v.options[ci] : null, size: si >= 0 ? pre(si) : null, qty: qi >= 0 ? v.options[qi] : null, extra: {} };
   for (const i of extraIdx()) sel.extra[i] = pre(i);
 }
+// Variante exacta de lo elegido (null si esa combinación no existe en la tienda)
+function exactVariant() {
+  const ci = idx('color'), si = idx('size'), qi = idx('qty'), xs = extraIdx();
+  return P.variants.find((v) => (ci < 0 || v.options[ci] === sel.color) && (si < 0 || v.options[si] === sel.size) && (qi < 0 || v.options[qi] === sel.qty) && xs.every((i) => v.options[i] === sel.extra[i])) || null;
+}
+// ¿Existe la combinación si cambio la opción i por val?
+function existe(i, val) {
+  const ci = idx('color'), si = idx('size'), qi = idx('qty'), xs = extraIdx();
+  const want = (k) => (k === i ? val : k === ci ? sel.color : k === si ? sel.size : k === qi ? sel.qty : sel.extra[k]);
+  return P.variants.some((v) => [ci, si, qi, ...xs].every((k) => k < 0 || want(k) == null || v.options[k] === want(k)));
+}
 function currentVariant() {
   const ci = idx('color'), si = idx('size'), qi = idx('qty'), xs = extraIdx();
   const ok = (v) => (ci < 0 || v.options[ci] === sel.color) && (si < 0 || v.options[si] === sel.size) && (qi < 0 || v.options[qi] === sel.qty) && xs.every((i) => !sel.extra[i] || v.options[i] === sel.extra[i]);
@@ -177,19 +196,19 @@ function colorImage(value) {
 function productImage() { return idx('color') >= 0 ? colorImage(sel.color) : currentVariant().image || P.images[0]; }
 
 function renderProduct() {
-  const v = currentVariant(), fx = falta();
+  const fx = falta(), ex = fx ? null : exactVariant(), v = ex || currentVariant(), noExiste = !fx && !ex;
   $('#prod').hidden = false;
   $('#pImg').src = thumb(productImage(), 160);
   $('#pName').textContent = P.title;
   const pr = $('#pPrice');
-  if (fx) {
+  if (fx || noExiste) {
     const ci = idx('color'), same = P.variants.filter((x) => ci < 0 || x.options[ci] === sel.color), min = Math.min(...same.map((x) => x.price));
     pr.replaceChildren(`Desde ${money(min, P.currency)}`);
   } else {
     pr.replaceChildren(money(v.price, P.currency));
     if (v.compare && v.compare > v.price) pr.append(el('s', { text: money(v.compare, P.currency) }));
   }
-  $('#buyLab').textContent = DEMO ? 'Quiero esto en mi tienda' : fx ? `Elige ${fx.txt} para comprar` : v.available === false ? 'Pedir este' : `Comprar · ${money(v.price, P.currency)}`;
+  $('#buyLab').textContent = DEMO ? 'Quiero esto en mi tienda' : fx ? `Elige ${fx.txt} para comprar` : noExiste ? 'Esa combinación no existe' : v.available === false ? 'Pedir este' : `Comprar · ${money(v.price, P.currency)}`;
   if (document.body.dataset.state === 'resultado') renderKit();
 }
 const sinFoto = (val) => !!(P?.sinFoto?.length && P.sinFoto.includes(val));
@@ -239,8 +258,9 @@ function renderOptions() {
     const vals = G === 'cama' ? [...P.options[si].values].sort(bySize) : P.options[si].values;
     for (const val of vals) {
       const cm = G === 'cama' ? cmOf(val) : '';
-      const b = el('button', { class: 'chip', type: 'button', 'aria-pressed': String(val === sel.size) }, prettify(val), cm ? el('small', { text: cm }) : null);
-      b.onclick = () => { sel.size = val; renderOptions(); renderProduct(); if (KIT?.items?.length) renderKit(); track('talla', { tenant: TENANT, handle: P.handle, detalle: { valor: val } }); };
+      const ok = existe(si, val);
+      const b = el('button', { class: 'chip' + (ok ? '' : ' na'), type: 'button', 'aria-pressed': String(val === sel.size), 'aria-disabled': String(!ok), title: ok ? '' : 'No viene en este color o diseño' }, prettify(val), cm ? el('small', { text: cm }) : ok ? null : el('small', { text: 'No disponible' }));
+      b.onclick = () => { if (!ok) return toast('Esa medida no viene en este color o diseño.'); sel.size = val; renderOptions(); renderProduct(); if (KIT?.items?.length) renderKit(); track('talla', { tenant: TENANT, handle: P.handle, detalle: { valor: val } }); };
       box.append(b);
     }
   }
@@ -257,8 +277,9 @@ function renderOptions() {
     const name = String(P.options[i].name || '').toLowerCase().replace(/^./, (m) => m.toUpperCase()); // «Diseño de forro»
     const chips = el('div', { class: 'chips', role: 'group', 'aria-label': name });
     for (const val of P.options[i].values) {
-      const b = el('button', { class: 'chip', type: 'button', 'aria-pressed': String(val === sel.extra[i]) }, prettify(val));
-      b.onclick = () => { sel.extra[i] = val; renderOptions(); renderProduct(); };
+      const ok = existe(i, val);
+      const b = el('button', { class: 'chip' + (ok ? '' : ' na'), type: 'button', 'aria-pressed': String(val === sel.extra[i]), 'aria-disabled': String(!ok) }, prettify(val));
+      b.onclick = () => { if (!ok) return toast('Esa opción no viene con lo que elegiste.'); sel.extra[i] = val; renderOptions(); renderProduct(); };
       chips.append(b);
     }
     xbox.append(el('div', { class: 'opt', id: `optX${i}` }, el('div', { class: 'lab' }, el('span', { text: name })), chips));
@@ -269,7 +290,11 @@ const prettify = (s) => String(s || '').toLowerCase().replace(/^\d+\s+/, '').rep
 
 function chooseColor(val) {
   if (val === sel.color) return;
-  sel.color = val; renderOptions(); renderProduct();
+  sel.color = val;
+  const si = idx('size');
+  if (si >= 0 && sel.size && !existe(si, sel.size)) { toast(`La medida ${prettify(sel.size)} no viene en ${prettify(val)}: elige otra.`); sel.size = null; }
+  for (const i of extraIdx()) if (sel.extra[i] && !existe(i, sel.extra[i])) sel.extra[i] = null;
+  renderOptions(); renderProduct();
   track('variante', { tenant: TENANT, handle: P.handle, detalle: { valor: val } });
   if (sinFoto(val)) {
     if (shown && document.body.dataset.state === 'resultado') { $('#cmp').classList.add('stale'); $('#resHint').textContent = `Este diseño no tiene foto propia para probarlo: la foto muestra «${prettify(shown.color)}». Puedes comprar «${prettify(val)}» igual.`; }
@@ -351,6 +376,11 @@ async function generate(retry = true) {
   if (!photo || busy) return;
   if (sinFoto(sel.color)) { toast('Este diseño no tiene foto para probarlo. Elige otro.'); return; }
   const prodUrl = productImage(), key = photo.key + '|' + prodUrl;
+  if (CFG.ia === false && !results.has(key)) { // IA en pausa hoy: no se gasta otra llamada
+    const m = DEMO ? `La demo en vivo vuelve ${vuelveIA()}.` : `El probador está en pausa: vuelve ${vuelveIA()}. Puedes comprar este color igual.`;
+    if (shown) { sel.color = shown.color; renderOptions(); renderProduct(); $('#resHint').textContent = m; }
+    toast(m, 5000); return;
+  }
   if (results.has(key)) { shown = { key: photo.key, color: sel.color, src: results.get(key) }; return showResult(results.get(key), false); }
   const gen = ++genN;
   busy = true; lastErr = null; setState('procesando'); startProgress();
@@ -370,7 +400,7 @@ async function generate(retry = true) {
     await showResult(fz.src, true, gen);
     if (gen !== genN) return; // mientras se mostraba, el cliente ya pidió otra prueba
     if (fz.info.motivo === 'encuadre') $('#resHint').textContent = 'La IA movió un poco el encuadre de tu foto. Desliza para comparar.';
-    if (d.restan_sesion != null && d.restan_sesion <= 3) $('#resHint').textContent += d.restan_sesion > 1 ? ` Te quedan ${d.restan_sesion} pruebas en esta visita.` : d.restan_sesion === 1 ? ' Te queda 1 prueba en esta visita.' : ' Esta fue tu última prueba de hoy.';
+    if (d.restan_sesion != null && d.restan_sesion <= 3) $('#resHint').textContent += d.restan_sesion > 1 ? ` Te quedan ${d.restan_sesion} pruebas en esta visita.` : d.restan_sesion === 1 ? ' Te queda 1 prueba en esta visita.' : ' Esta fue tu última prueba en esta visita.';
     offerSave(photo.fuente);
     if (KIT?.items?.length) renderKit();
   } catch (e) {
@@ -379,7 +409,7 @@ async function generate(retry = true) {
     await stopProgress(false);
     lastErr = e.code || 'ia_fallo';
     track('error', { tenant: TENANT, handle: P.handle, detalle: { code: lastErr } });
-    const [t, s0] = ERR[lastErr] || ERR.ia_fallo, s = lastErr === 'ia_cupo_diario' ? `Vuelve ${vuelveIA()}. Mientras tanto puedes comprar normal desde la tienda.` : s0;
+    const [t, s0] = (DEMO && ERR_DEMO[lastErr]) || ERR[lastErr] || ERR.ia_fallo, s = lastErr === 'ia_cupo_diario' ? (DEMO ? `La demo en vivo vuelve ${vuelveIA()}. Mientras tanto, mira los ejemplos reales de esta página.` : `Vuelve ${vuelveIA()}. Mientras tanto puedes comprar normal desde la tienda.`) : s0;
     if (lastErr === 'ia_cupo_diario') CFG.ia = false;
     if (shown && photo && shown.key === photo.key) { // ya había un resultado: no se pierde «Comprar»
       sel.color = shown.color; renderOptions(); renderProduct();
@@ -511,9 +541,10 @@ function pedirFalta(f) {
   o.scrollIntoView({ behavior: 'smooth', block: 'center' }); o.classList.add('pulse'); setTimeout(() => o.classList.remove('pulse'), 1600);
 }
 function buy() {
-  const v = currentVariant();
+  const v = exactVariant() || currentVariant();
   if (DEMO) { track('cta', { tenant: TENANT, handle: P.handle, detalle: { desde: 'demo' } }); return post({ vto: 'demo-cta', shop: SHOP, handle: P.handle }); }
   const f = falta(); if (f) return pedirFalta(f);
+  if (!exactVariant()) return toast('Esa combinación no existe en la tienda. Elige otra medida o color.');
   track('comprar', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { variante: String(v.id), precio: v.price } });
   const url = `${P.url}?variant=${v.id}#zvto-comprar`;
   if (EMBED) {
@@ -574,7 +605,8 @@ function renderKit() {
 }
 function buyKit() {
   const f = falta(); if (f) return pedirFalta(f);
-  const items = [{ id: currentVariant().id, quantity: 1 }];
+  const main = exactVariant(); if (!main) return toast('Esa combinación no existe en la tienda. Elige otra medida o color.');
+  const items = [{ id: main.id, quantity: 1 }];
   for (const it of KIT.items) { const v = kitChosen(it); if (kitOn.has(it.handle) && v) items.push({ id: v.id, quantity: 1 }); }
   track('kit', { tenant: TENANT, handle: P.handle, detalle: { n: items.length } });
   // contraentrega (Releasit): carrito + formulario; si no, directo al pago
