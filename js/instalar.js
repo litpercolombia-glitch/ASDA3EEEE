@@ -27,21 +27,24 @@ async function start() {
   loadProducts(cfg);
 }
 
-// ¿Ya vimos el botón en la tienda? (el servidor guarda la última vez que cargó en su dominio)
+// ¿Ya vimos el botón en la tienda? (el servidor guarda la última vez que cargó y si el bloque está en la página publicada)
 function estado(cfg) {
   const box = $('#estadoIns'), visto = cfg.visto ? new Date(cfg.visto) : null;
   const fecha = (d) => d.toLocaleString('es-CO', { day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' }).replace(/\.$/, '');
-  box.className = 'card estado ' + (visto ? 'ok' : 'pend');
-  box.replaceChildren(
-    el('b', { text: visto ? 'El botón ya está en tu tienda' : 'Aún no vemos el botón en tu tienda' }),
+  const listo = visto && cfg.verif !== false; // verif null = activación anterior a la verificación
+  const ruta = (u) => { try { return new URL(u).pathname; } catch { return ''; } };
+  box.className = 'card estado ' + (listo ? 'ok' : 'pend');
+  box.replaceChildren(...[
+    el('b', { text: !visto ? 'Aún no vemos el botón en tu tienda' : listo ? 'El botón ya está en tu tienda' : 'Falta confirmar que el bloque está publicado' }),
     el('p', { class: 'muted', text: visto ? `Lo vimos cargar por última vez el ${fecha(visto)}.${cfg.desde ? ` Tu prueba arrancó el ${new Date(cfg.desde).toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })}.` : ''}` : 'Pega el bloque, abre un producto de tu tienda en el celular y toca «Verificar». Tus 14 días de prueba arrancan solos ese día.' }),
-    visto && cfg.verif === true ? el('p', { class: 'small', text: `✓ Bloque verificado en tu página publicada${cfg.verif_url ? ` (${new URL(cfg.verif_url).pathname})` : ''}.` }) : null,
-    visto && cfg.verif === false ? el('p', { class: 'small', text: 'Lo vimos cargar, pero aún no está en tu página publicada. Si lo pegaste en un tema sin publicar o solo en la vista previa, publícalo y vuelve a verificar.' }) : null,
+    visto && cfg.verif === true ? el('p', { class: 'small', text: `✓ Bloque confirmado en tu página publicada${cfg.verif_url && ruta(cfg.verif_url) ? ` (${ruta(cfg.verif_url)})` : ''}.` }) : null,
+    visto && cfg.verif === false ? el('p', { class: 'small', text: 'Aún no está en tu página publicada. Si lo pegaste en un tema sin publicar o solo en la vista previa, publícalo, abre un producto y vuelve a verificar.' }) : null,
     el('button', { class: 'btn sec', type: 'button', onclick: async (e) => {
       e.target.disabled = true;
-      try { const c = await call('cfg', { tenant: T }); estado(c); toast(c.visto ? 'Listo: el botón está en tu tienda.' : 'Aún no lo vemos. Abre un producto de tu tienda y vuelve a verificar.'); }
+      try { const c = await call('cfg', { tenant: T }); estado(c); toast(c.visto && c.verif !== false ? 'Listo: el botón está en tu tienda.' : c.visto ? 'Lo vimos cargar, pero aún no está en tu página publicada.' : 'Aún no lo vemos. Abre un producto de tu tienda y vuelve a verificar.'); }
       catch { toast('No pudimos verificar ahora. Intenta en un momento.'); e.target.disabled = false; }
-    } }, 'Verificar'));
+    } }, 'Verificar'),
+  ].filter(Boolean));
   box.hidden = false;
 }
 
