@@ -20,6 +20,7 @@ async function start() {
   $('#snippet').value = snippet(cfg.id);
   if (cfg.dominio) $('#lnkEditor').href = `https://${cfg.dominio}/admin/themes/current/editor?template=product`;
   if (cfg.estado === 'pendiente') $('#sub').textContent += ' Tus 14 días de prueba arrancan cuando el botón aparezca en tu tienda.';
+  if (cfg.ropa) $('#insCats').textContent = 'cama, cortinas, comedor o ropa';
   estado(cfg);
   $('#guide').hidden = false;
   $('#btnCopy').onclick = () => copy($('#snippet').value, '#copied', 'Copiado. Ahora pégalo en tu tema.');
@@ -34,6 +35,8 @@ function estado(cfg) {
   box.replaceChildren(
     el('b', { text: visto ? 'El botón ya está en tu tienda' : 'Aún no vemos el botón en tu tienda' }),
     el('p', { class: 'muted', text: visto ? `Lo vimos cargar por última vez el ${fecha(visto)}.${cfg.desde ? ` Tu prueba arrancó el ${new Date(cfg.desde).toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })}.` : ''}` : 'Pega el bloque, abre un producto de tu tienda en el celular y toca «Verificar». Tus 14 días de prueba arrancan solos ese día.' }),
+    visto && cfg.verif === true ? el('p', { class: 'small', text: `✓ Bloque verificado en tu página publicada${cfg.verif_url ? ` (${new URL(cfg.verif_url).pathname})` : ''}.` }) : null,
+    visto && cfg.verif === false ? el('p', { class: 'small', text: 'Lo vimos cargar, pero aún no está en tu página publicada. Si lo pegaste en un tema sin publicar o solo en la vista previa, publícalo y vuelve a verificar.' }) : null,
     el('button', { class: 'btn sec', type: 'button', onclick: async (e) => {
       e.target.disabled = true;
       try { const c = await call('cfg', { tenant: T }); estado(c); toast(c.visto ? 'Listo: el botón está en tu tienda.' : 'Aún no lo vemos. Abre un producto de tu tienda y vuelve a verificar.'); }

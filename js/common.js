@@ -19,7 +19,7 @@ export async function call(action, body = {}, { timeout = 20000 } = {}) {
   } finally { clearTimeout(t); }
 }
 
-// Métrica anónima del embudo; beacon para no frenar la navegación
+// Métrica seudónima del embudo; beacon para no frenar la navegación
 export function track(tipo, extra = {}) {
   const body = JSON.stringify({ action: 'event', tipo, sesion, ...extra });
   try { if (navigator.sendBeacon && navigator.sendBeacon(FN, new Blob([body], { type: 'text/plain' }))) return; } catch {}

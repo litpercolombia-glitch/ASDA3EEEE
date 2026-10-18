@@ -65,13 +65,12 @@ let photo = null; // { data (foto completa), ai (versión de 512 px para la IA),
 const results = new Map();
 let busy = false, lastErr = null, KIT = null, kitOn = new Set();
 let CFG = { sello: true, kit: true, activo: true, wa: null, tok: null, ropa: false, ia: true };
-// La IA gratis se reinicia a las 00:00 UTC: se dice la hora local de regreso («hoy a las 7:00 p. m.» en Colombia)
-function vuelveIA() {
-  const d = new Date(); d.setUTCHours(24, 0, 0, 0);
-  const hoy = new Date().toDateString() === d.toDateString();
-  return `${hoy ? 'hoy' : 'mañana'} a las ${d.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' }).replace(/\.$/, '')}`;
-}
+// Cuando se agota el cupo de IA, el servidor revisa cada hora si ya volvió (Cloudflare no siempre lo devuelve a las 00:00 UTC):
+// no se promete una hora exacta.
+function vuelveIA() { return 'en unas horas'; }
 let cfgReady = null;
+// Métricas del panel de la tienda: viajan con la sesión firmada (tok) que entrega cfg; sin ella el servidor las rechaza
+const trk = (tipo, extra = {}) => { (cfgReady || Promise.resolve()).then(() => { if (CFG.tok) track(tipo, { ...extra, tok: CFG.tok }); }).catch(() => {}); };
 
 /* ---------- arranque ---------- */
 init();
@@ -138,7 +137,7 @@ async function loadProduct(handle) {
   pickInitialVariant();
   renderProduct(); renderOptions();
   setState('inicio');
-  track('abrir', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { embed: EMBED, demo: DEMO } });
+  trk('abrir', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { embed: EMBED, demo: DEMO } });
   cfgReady.then(() => { if (CFG.ia === false && !busy) pausaIA(); });
   loadKit();
 }
@@ -260,7 +259,7 @@ function renderOptions() {
       const cm = G === 'cama' ? cmOf(val) : '';
       const ok = existe(si, val);
       const b = el('button', { class: 'chip' + (ok ? '' : ' na'), type: 'button', 'aria-pressed': String(val === sel.size), 'aria-disabled': String(!ok), title: ok ? '' : 'No viene en este color o diseño' }, prettify(val), cm ? el('small', { text: cm }) : ok ? null : el('small', { text: 'No disponible' }));
-      b.onclick = () => { if (!ok) return toast('Esa medida no viene en este color o diseño.'); sel.size = val; renderOptions(); renderProduct(); if (KIT?.items?.length) renderKit(); track('talla', { tenant: TENANT, handle: P.handle, detalle: { valor: val } }); };
+      b.onclick = () => { if (!ok) return toast('Esa medida no viene en este color o diseño.'); sel.size = val; renderOptions(); renderProduct(); if (KIT?.items?.length) renderKit(); trk('talla', { tenant: TENANT, handle: P.handle, detalle: { valor: val } }); };
       box.append(b);
     }
   }
@@ -295,7 +294,7 @@ function chooseColor(val) {
   if (si >= 0 && sel.size && !existe(si, sel.size)) { toast(`La medida ${prettify(sel.size)} no viene en ${prettify(val)}: elige otra.`); sel.size = null; }
   for (const i of extraIdx()) if (sel.extra[i] && !existe(i, sel.extra[i])) sel.extra[i] = null;
   renderOptions(); renderProduct();
-  track('variante', { tenant: TENANT, handle: P.handle, detalle: { valor: val } });
+  trk('variante', { tenant: TENANT, handle: P.handle, detalle: { valor: val } });
   if (sinFoto(val)) {
     if (shown && document.body.dataset.state === 'resultado') { $('#cmp').classList.add('stale'); $('#resHint').textContent = `Este diseño no tiene foto propia para probarlo: la foto muestra «${prettify(shown.color)}». Puedes comprar «${prettify(val)}» igual.`; }
     else $('#resHint').textContent = 'Este diseño no tiene foto propia en la tienda, así que no lo podemos probar. Puedes comprarlo igual.';
@@ -312,7 +311,7 @@ function renderSaved() {
   const s = savedPhoto(), box = $('#saved'); if (!box) return;
   box.hidden = !s; if (!s) return;
   $('#savedImg').src = s.data;
-  $('#btnSaved').onclick = () => { track('foto', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { fuente: 'guardada' } }); usePhoto(s.data, 'guardada'); };
+  $('#btnSaved').onclick = () => { trk('foto', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { fuente: 'guardada' } }); usePhoto(s.data, 'guardada'); };
   $('#btnSavedDel').onclick = () => { try { localStorage.removeItem(SAVED_KEY()); } catch {} renderSaved(); toast('Borramos tu foto de este celular.'); };
 }
 function offerSave(fuente) {
@@ -357,7 +356,7 @@ async function usePhoto(src, fuente) {
   const ai = draw(aw, ah).toDataURL('image/jpeg', 0.9);
   photo = { data, ai, w: aw, h: ah, fw, fh, key: hashStr(data.slice(-6000) + data.length), src: data, fuente };
   if (im.close) try { im.close(); } catch {}
-  track('foto', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { fuente } });
+  trk('foto', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { fuente } });
   const cmp = $('#cmp');
   cmp.style.setProperty('--ar', `${fw} / ${fh}`); cmp.style.setProperty('--ar-n', String(fw / fh));
   // foto horizontal en celular: el escenario se ajusta a la foto (sin franjas vacías) y los botones suben
@@ -396,7 +395,7 @@ async function generate(retry = true) {
     busy = false;
     if (productImage() !== prodUrl) { markSwatch(null); return generate(); }
     shown = { key: photo.key, color: sel.color, src: fz.src };
-    track('ver', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { ms: Math.round(performance.now() - t0), fusion: fz.info.ok ? 1 : 0, motivo: fz.info.motivo || '', err: fz.info.err ?? null, costura: fz.info.seam ?? null, n: fz.n, elegida: fz.i } });
+    trk('ver', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { ms: Math.round(performance.now() - t0), fusion: fz.info.ok ? 1 : 0, motivo: fz.info.motivo || '', err: fz.info.err ?? null, costura: fz.info.seam ?? null, n: fz.n, elegida: fz.i } });
     await showResult(fz.src, true, gen);
     if (gen !== genN) return; // mientras se mostraba, el cliente ya pidió otra prueba
     if (fz.info.motivo === 'encuadre') $('#resHint').textContent = 'La IA movió un poco el encuadre de tu foto. Desliza para comparar.';
@@ -408,7 +407,7 @@ async function generate(retry = true) {
     if (e.code === 'sesion_invalida' && retry) { await stopProgress(false); cfgReady = loadCfg(); await cfgReady; markSwatch(null); return generate(false); }
     await stopProgress(false);
     lastErr = e.code || 'ia_fallo';
-    track('error', { tenant: TENANT, handle: P.handle, detalle: { code: lastErr } });
+    trk('error', { tenant: TENANT, handle: P.handle, detalle: { code: lastErr } });
     const [t, s0] = (DEMO && ERR_DEMO[lastErr]) || ERR[lastErr] || ERR.ia_fallo, s = lastErr === 'ia_cupo_diario' ? (DEMO ? `La demo en vivo vuelve ${vuelveIA()}. Mientras tanto, mira los ejemplos reales de esta página.` : `Vuelve ${vuelveIA()}. Mientras tanto puedes comprar normal desde la tienda.`) : s0;
     if (lastErr === 'ia_cupo_diario') CFG.ia = false;
     if (shown && photo && shown.key === photo.key) { // ya había un resultado: no se pierde «Comprar»
@@ -542,10 +541,10 @@ function pedirFalta(f) {
 }
 function buy() {
   const v = exactVariant() || currentVariant();
-  if (DEMO) { track('cta', { tenant: TENANT, handle: P.handle, detalle: { desde: 'demo' } }); return post({ vto: 'demo-cta', shop: SHOP, handle: P.handle }); }
+  if (DEMO) { trk('cta', { tenant: TENANT, handle: P.handle, detalle: { desde: 'demo' } }); return post({ vto: 'demo-cta', shop: SHOP, handle: P.handle }); }
   const f = falta(); if (f) return pedirFalta(f);
   if (!exactVariant()) return toast('Esa combinación no existe en la tienda. Elige otra medida o color.');
-  track('comprar', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { variante: String(v.id), precio: v.price } });
+  trk('comprar', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { variante: String(v.id), precio: v.price } });
   const url = `${P.url}?variant=${v.id}#zvto-comprar`;
   if (EMBED) {
     post({ vto: 'buy', handle: P.handle, variant: v.id, url });
@@ -608,7 +607,7 @@ function buyKit() {
   const main = exactVariant(); if (!main) return toast('Esa combinación no existe en la tienda. Elige otra medida o color.');
   const items = [{ id: main.id, quantity: 1 }];
   for (const it of KIT.items) { const v = kitChosen(it); if (kitOn.has(it.handle) && v) items.push({ id: v.id, quantity: 1 }); }
-  track('kit', { tenant: TENANT, handle: P.handle, detalle: { n: items.length } });
+  trk('kit', { tenant: TENANT, handle: P.handle, detalle: { n: items.length } });
   // contraentrega (Releasit): carrito + formulario; si no, directo al pago
   const ids = items.map((i) => `${i.id}:${i.quantity}`).join(',');
   const url = CFG.cod ? `https://${SHOP}/cart/${ids}?storefront=true#rsi-form-top-anchor` : `https://${SHOP}/cart/${ids}`;
@@ -632,7 +631,7 @@ async function composeShare() {
 }
 function trim(x, s, max) { if (x.measureText(s).width <= max) return s; while (s.length > 4 && x.measureText(s + '…').width > max) s = s.slice(0, -1); return s + '…'; }
 async function share() {
-  track('compartir', { tenant: TENANT, handle: P.handle });
+  trk('compartir', { tenant: TENANT, handle: P.handle });
   const text = `¿Cómo me queda? Lo probé en mi casa con IA: ${P.url}`;
   try {
     const blob = await composeShare(), f = new File([blob], 'mi-prueba.jpg', { type: 'image/jpeg' });
@@ -642,7 +641,7 @@ async function share() {
   } catch (e) { if (e?.name !== 'AbortError') toast('No pudimos compartir. Usa Guardar y envíala tú.'); }
 }
 async function save() {
-  track('descargar', { tenant: TENANT, handle: P.handle });
+  trk('descargar', { tenant: TENANT, handle: P.handle });
   const blob = await (await fetch($('#imgAfter').src)).blob();
   download(blob, `${P.handle.slice(0, 40)}-en-mi-casa.jpg`); toast('Foto guardada.');
 }
@@ -684,7 +683,7 @@ function calcSize() {
     if (!pick) msg = `Te sugerimos ${want}. ` + msg;
   }
   const res = $('#sizeRes'); res.hidden = false; res.replaceChildren(el('small', { text: 'Te recomendamos' }), el('b', { text: pick ? prettify(pick) : G === 'ropa' ? '—' : 'Revisa la tabla' }), el('p', { class: 'muted small', text: msg }));
-  if (pick) { sel.size = pick; renderOptions(); renderProduct(); if (KIT?.items?.length) renderKit(); track('talla', { tenant: TENANT, handle: P.handle, detalle: { ayuda: true, valor: pick } }); }
+  if (pick) { sel.size = pick; renderOptions(); renderProduct(); if (KIT?.items?.length) renderKit(); trk('talla', { tenant: TENANT, handle: P.handle, detalle: { ayuda: true, valor: pick } }); }
   const ok = $('#btnSizeOk'); ok.textContent = pick ? `Usar ${prettify(pick)}` : 'Calcular otra vez';
   ok.onclick = pick ? () => { closeSheets(); ok.textContent = 'Calcular'; ok.onclick = calcSize; } : calcSize;
 }

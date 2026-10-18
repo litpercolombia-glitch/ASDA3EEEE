@@ -1,10 +1,11 @@
-// vto-api v6.3 — Zynex Probador (backend). 18-oct-2026
+// vto-api v6.4 — Zynex Probador (backend). 18-oct-2026
 // Acciones (POST JSON {action, ...}):
 //   cfg     → configuración pública mínima de la tienda + ficha de sesión firmada (tok).
 //   ai      → foto realista con Cloudflare Workers AI (FLUX.2 klein 4B). El servidor resuelve el producto él mismo
 //             (tienda + handle), valida tipo, imagen y color, y no guarda la foto del cliente.
-//   estado  → lo llama el botón desde la página de la tienda: activa la prueba si el dominio coincide y dice si mostrar el botón.
-//   event   → métrica del embudo (abrir, foto, comprar, kit, compartir…).
+//   estado  → lo llama el botón desde la página de la tienda: activa la prueba si el dominio coincide, dice si mostrar el botón
+//             y verifica (leyendo la página publicada) que el bloque de verdad está instalado.
+//   event   → métrica del embudo (abrir, foto, comprar, kit, compartir…). Las de una tienda exigen la sesión firmada (tok).
 //   lead    → empresa interesada (landing): queda una tienda pendiente que se activa al instalar el botón.
 //   stats   → panel de la tienda (requiere llave del panel).
 // Secretos en Supabase Vault (VTO_*), leídos solo con service_role. Límites por IP, por sesión, por tienda y cuota mensual.
@@ -264,13 +265,42 @@ async function avisoUnaVezAlDia(clave: string, mensaje: string) {
   if (n === 1) await sb.from('slack_cola').insert({ tipo: 'parte', destino: 'dm_ceo', empresa: 'zynex', origen: 'probador', mensaje });
 }
 
-// ¿Se agotó hoy el cupo de IA? (lo marca el primer error 4006 del día UTC). Se consulta cada minuto como máximo.
+// ¿Se agotó el cupo de IA? Un error 4006 pausa la IA (botón oculto). Como Cloudflare no siempre lo devuelve a las 00:00 UTC,
+// una sola instancia por hora prueba con una llamada mínima (pocas neuronas) si ya volvió. Se consulta cada minuto como máximo.
 let PAUSA = { t: 0, v: false };
+const utcHora = (d = new Date()) => d.toISOString().slice(0, 13).replace(/[-T]/g, '');
+const getUtc = async (k: string) => Number((await sb.rpc('vto_get_utc', { p_key: k })).data) || 0;
+async function cupoVolvio(sec: Record<string, string>) {
+  try {
+    const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${sec.VTO_CF_ACCOUNT_ID}/ai/run/@cf/meta/llama-3.2-1b-instruct`, {
+      method: 'POST', headers: { authorization: `Bearer ${sec.VTO_CF_API_TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ prompt: 'ok', max_tokens: 1 }), signal: AbortSignal.timeout(15000),
+    });
+    if (r.ok) return true;
+    const j = await r.json().catch(() => ({}));
+    return !/4006|neuron|allocation/i.test(JSON.stringify(j?.errors || j)); // otro error no es falta de cupo
+  } catch { return false; }
+}
 async function iaPausada() {
   if (Date.now() - PAUSA.t < 60_000) return PAUSA.v;
-  const { data } = await sb.rpc('vto_get_utc', { p_key: `aviso:cupo-cf:${utcDay()}` });
-  PAUSA = { t: Date.now(), v: (Number(data) || 0) > 0 };
-  return PAUSA.v;
+  const h = utcHora();
+  let v = (await getUtc(`aviso:cupo-cf:${utcDay()}`)) > 0;
+  if (v) {
+    const [sigue, volvio] = await Promise.all([getUtc(`cupo-sigue:${h}`), getUtc(`cupo-volvio:${h}`)]);
+    if (sigue > 0) v = true;
+    else if (volvio > 0) v = false;
+    else {
+      const { data: turno } = await sb.rpc('vto_add_utc', { p_key: `cupo-prueba:${h}`, p_n: 1 });
+      if (turno === 1) {
+        const sec = await secrets();
+        const ok = !!sec.VTO_CF_API_TOKEN && (await cupoVolvio(sec));
+        await sb.rpc('vto_add_utc', { p_key: ok ? `cupo-volvio:${h}` : `cupo-sigue:${h}`, p_n: 1 });
+        v = !ok;
+      }
+    }
+  }
+  PAUSA = { t: Date.now(), v };
+  return v;
 }
 
 /* ---------- acciones ---------- */
@@ -347,8 +377,11 @@ async function actionAI(body: any, req: Request) {
       const msg = runs.map((x) => (x.status === 'rejected' ? String((x.reason as Error)?.name === 'TimeoutError' ? 'TimeoutError' : (x.reason as Error)?.message || x.reason) : '')).join(' | ');
       err = /4006|neuron|allocation/i.test(msg) ? 'ia_cupo_diario' : /3030|flagged/i.test(msg) ? 'ia_rechazo' : /TimeoutError/.test(msg) ? 'ia_tiempo' : 'ia_fallo';
       console.error('cf', msg);
-      if (err === 'ia_cupo_diario') { PAUSA = { t: Date.now(), v: true }; }
-      if (err === 'ia_cupo_diario') await avisoUnaVezAlDia('cupo-cf', '🔴 Probador IA sin cupo hoy: se acabaron las 10.000 neuronas gratis de Cloudflare. Vuelve a las 7:00 p. m. (Colombia). Para que no se apague: activar Workers Paid (US$5/mes).');
+      if (err === 'ia_cupo_diario') {
+        PAUSA = { t: Date.now(), v: true };
+        await sb.rpc('vto_add_utc', { p_key: `cupo-sigue:${utcHora()}`, p_n: 1 });
+        await avisoUnaVezAlDia('cupo-cf', '🔴 Probador IA sin cupo: se acabaron las 10.000 neuronas gratis del día en Cloudflare y el botón quedó oculto. El servidor revisa cada hora y lo vuelve a mostrar solo. Para que no se apague: activar Workers Paid (US$5/mes).');
+      }
       return [502, { error: err }];
     }
     await sb.rpc('vto_add_utc', { p_key: `imgs:${dia}`, p_n: images.length });
@@ -381,8 +414,12 @@ async function tenantExiste(id: string) {
 }
 async function actionEvent(body: any, req: Request) {
   const tipo = str(body.tipo, 20); if (!TIPOS.has(tipo)) return [400, { error: 'tipo' }];
-  if (slug(body.tenant) && !(await tenantExiste(slug(body.tenant)))) return [400, { error: 'tienda' }];
-  const sec = await secrets(); const ip = await ipHash(req, sec.VTO_SALT || 'x');
+  const sec = await secrets(), tenant = slug(body.tenant);
+  if (tenant) { // métricas del panel de una tienda: solo con la sesión firmada que emite cfg (así nadie infla el panel de otro)
+    if (!(await tenantExiste(tenant))) return [400, { error: 'tienda' }];
+    if (!(await tokOk(sec.VTO_SALT || 'x', tenant, body.tok))) return [403, { error: 'sesion' }];
+  }
+  const ip = await ipHash(req, sec.VTO_SALT || 'x');
   const { data: okRate } = await sb.rpc('vto_rate', { p_key: ip + '#ev', p_max: 400 });
   if (okRate === false) return [429, { error: 'limite' }];
   await sb.from('vto_events').insert({ tenant_id: slug(body.tenant) || null, tipo, handle: handleOk(body.handle) || null, categoria: str(body.categoria, 20) || null, sesion: str(body.sesion, 40) || null, detalle: flat(body.detalle), ip_hash: ip });
@@ -422,6 +459,41 @@ async function apuntaAShopify(host: string) {
 }
 // Texto del visitante para Slack: sin menciones ni enlaces disfrazados
 const slackSafe = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/[\r\n]+/g, ' ');
+
+// ¿El bloque está de verdad en la página publicada? El Origin se puede falsificar; la página de la tienda no.
+async function bloqueEnPagina(host: string, path: string, id: string) {
+  const p = /^\/[^\s?#<>"'|\\]{0,300}$/.test(path) ? path : '';
+  if (!p || !shopHost(host)) return { ok: false, url: null as string | null };
+  const url = `https://${host}${p}`;
+  try {
+    const r = await getSafe(url, 'text/html', 8000);
+    if (!r) return { ok: false, url };
+    const html = (await r.text()).slice(0, 4_000_000);
+    return { ok: html.includes('data-zvto') && html.includes('/embed.js') && new RegExp(`data-t=["']${id}["']`).test(html), url };
+  } catch { return { ok: false, url }; }
+}
+const VCACHE = new Map<string, number>(); // última verificación por tienda en esta instancia (Infinity = ya verificada)
+const enFondo = (p: Promise<unknown>) => { const er = (globalThis as any).EdgeRuntime; if (er?.waitUntil) { er.waitUntil(p); return Promise.resolve(); } return p; };
+async function verificar(id: string, host: string, path: string, recienActivada: boolean) {
+  try {
+    if (!recienActivada) {
+      const { data: t } = await sb.from('vto_tenants').select('verificado:config->verificado').eq('id', id).maybeSingle();
+      if ((t as any)?.verificado?.ok === true) { VCACHE.set(id, Infinity); return; }
+    }
+    const v = await bloqueEnPagina(host, path, id);
+    const { data: r } = await sb.rpc('vto_verif', { p_tenant: id, p_ok: v.ok, p_url: v.url });
+    if (v.ok) VCACHE.set(id, Infinity);
+    const base = { tipo: 'parte', destino: 'dm_ceo', empresa: 'zynex', origen: 'probador' };
+    const url = slackSafe(v.url || 'su página');
+    if (recienActivada) {
+      await sb.from('slack_cola').insert({ ...base, mensaje: v.ok
+        ? `🟢 Probador IA instalado y verificado: la tienda "${id}" activó su prueba de 14 días con 100 fotos. Bloque visto en ${url}.`
+        : `🟠 Probador IA: la tienda "${id}" activó su prueba desde ${slackSafe(host)}, pero aún no vemos el bloque publicado en ${url}. Si fue la vista previa del editor, se verifica solo al publicar; si no, puede ser un origen falsificado.` });
+    } else if (v.ok && r?.cambio) {
+      await sb.from('slack_cola').insert({ ...base, mensaje: `✅ Probador IA verificado: el bloque de "${id}" ya está publicado (${url}).` });
+    }
+  } catch (e) { console.error('verif', e); }
+}
 async function actionLead(body: any, req: Request) {
   // trampa para robots: campo oculto «web» y menos de 2,5 s llenando el formulario → se responde ok sin hacer nada
   if (str(body.web, 200) || (Number(body.ms) > 0 && Number(body.ms) < 2500)) return [200, { ok: true, tienda: null, shopify: false }];
@@ -475,6 +547,7 @@ async function actionCfg(body: any, req: Request) {
     id: t.id, dominio: t.plan === 'demo' ? null : t.shop_domain, activo: t.estado === 'activo', estado: t.estado,
     sello: SELLO.has(t.plan), kit: KIT.has(t.plan) && t.config?.kit !== false, wa, cod: t.config?.cod === true, ropa: sec.VTO_MODERACION === 'on', ia: !(await iaPausada()), tok: await newTok(sec.VTO_SALT || 'x', t.id),
     visto: t.config?.visto || null, desde: t.config?.activada || null,
+    verif: typeof t.config?.verificado?.ok === 'boolean' ? t.config.verificado.ok : null, verif_url: t.config?.verificado?.url || null,
   }];
 }
 
@@ -496,7 +569,12 @@ async function actionEstado(body: any, req: Request, origin: string | null) {
       await avisoUnaVezAlDia(`dominio-${id}`, `🟠 Probador IA: el botón de "${id}" cargó en ${host}, que no es su tienda registrada (${data.dominio}). Si es la misma tienda, agrega el dominio; si no, ignóralo.`);
     }
   }
-  if (data?.activado) await sb.from('slack_cola').insert({ tipo: 'parte', destino: 'dm_ceo', empresa: 'zynex', origen: 'probador', mensaje: `🟢 Probador IA instalado: la tienda "${id}" (${host}) activó su prueba de 14 días con 100 fotos.` });
+  // verificación del bloque: al activar y, si aún no se ha visto publicado, como máximo una vez por hora (sin frenar la respuesta)
+  if (data?.ok && data.activo && host && (data.activado || (VCACHE.get(id) ?? 0) < Date.now() - 3_600_000)) {
+    if (VCACHE.size > 500) VCACHE.clear();
+    VCACHE.set(id, Date.now());
+    await enFondo(verificar(id, host, str(body.p, 300), !!data.activado));
+  }
   return [200, { mostrar: !!(data?.ok && data.activo && data.cupo > 0 && data.hoy_ok !== false), activado: !!data?.activado, ia: !pausa, ropa: sec.VTO_MODERACION === 'on' }];
 }
 

@@ -1,6 +1,7 @@
-/*! Zynex Probador · botón para la página de producto de Shopify · v4.3 · 2026-10-17
+/*! Zynex Probador · botón para la página de producto de Shopify · v4.4 · 2026-10-18
    Uso: <div data-zvto data-t="TU-TIENDA" data-h="{{ product.handle }}" data-v="{{ product.selected_or_first_available_variant.id }}" data-title="{{ product.title | escape }}" data-type="{{ product.type | escape }}"></div>
-        <script src="https://<este-dominio>/embed.js" defer></script> */
+        <script src="https://<este-dominio>/embed.js" defer></script>
+   Opcional, para la marca: data-label="Pruébalo en tu cama" data-bg="#000000" data-fg="#ffffff" data-accent="#00ff88" data-radius="12" */
 (function () {
   if (window.__zvto) return; window.__zvto = 1;
   var me = document.currentScript || document.querySelector('script[src*="/embed.js"]');
@@ -15,10 +16,10 @@
   var codGo = function () { location.href = hasRsi() ? '/cart#rsi-form-top-anchor' : '/checkout'; };
   var norm = function (s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
 
-  var css = '.zvto-b{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:52px;margin:10px 0;padding:0 18px;border-radius:999px;background:#07080a;color:#fff;font:600 16px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;cursor:pointer;position:relative;overflow:hidden;box-shadow:0 0 0 1px rgba(0,255,136,.45),0 8px 22px rgba(0,0,0,.18);transition:transform .2s,box-shadow .2s;-webkit-tap-highlight-color:transparent}'
-    + '.zvto-b:hover{box-shadow:0 0 0 1px rgba(0,255,136,.8),0 10px 26px rgba(0,0,0,.24)}.zvto-b:active{transform:scale(.98)}.zvto-b:focus-visible{outline:3px solid #00ff88;outline-offset:3px}'
-    + '.zvto-b svg{width:20px;height:20px;flex:none;color:#00ff88}.zvto-b i{font-style:normal;font-size:11px;font-weight:700;letter-spacing:.02em;padding:3px 7px;border-radius:999px;background:#00ff88;color:#03140b}'
-    + '.zvto-b::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(90deg,transparent,rgba(0,255,136,.28),transparent);animation:zvto-sh 2.6s ease-out 1.2s 2}'
+  var css = '.zvto-b{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:52px;margin:10px 0;padding:0 18px;border-radius:var(--zvto-r,999px);background:var(--zvto-bg,#07080a);color:var(--zvto-fg,#fff);font:600 16px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;cursor:pointer;position:relative;overflow:hidden;box-shadow:0 0 0 1px rgba(0,255,136,.45),0 8px 22px rgba(0,0,0,.18);box-shadow:0 0 0 1px color-mix(in srgb,var(--zvto-ac,#00ff88) 45%,transparent),0 8px 22px rgba(0,0,0,.18);transition:transform .2s,box-shadow .2s;-webkit-tap-highlight-color:transparent}'
+    + '.zvto-b:hover{box-shadow:0 0 0 1px rgba(0,255,136,.8),0 10px 26px rgba(0,0,0,.24);box-shadow:0 0 0 1px color-mix(in srgb,var(--zvto-ac,#00ff88) 80%,transparent),0 10px 26px rgba(0,0,0,.24)}.zvto-b:active{transform:scale(.98)}.zvto-b:focus-visible{outline:3px solid var(--zvto-ac,#00ff88);outline-offset:3px}'
+    + '.zvto-b svg{width:20px;height:20px;flex:none;color:var(--zvto-ac,#00ff88)}.zvto-b i{font-style:normal;font-size:11px;font-weight:700;letter-spacing:.02em;padding:3px 7px;border-radius:999px;background:var(--zvto-ac,#00ff88);color:var(--zvto-ai,#03140b)}'
+    + '.zvto-b::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(90deg,transparent,rgba(0,255,136,.28),transparent);background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--zvto-ac,#00ff88) 28%,transparent),transparent);animation:zvto-sh 2.6s ease-out 1.2s 2}'
     + '@keyframes zvto-sh{to{left:120%}}@media (prefers-reduced-motion:reduce){.zvto-b::after{display:none}}'
     + '.zvto-m{position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;animation:zvto-f .2s}'
     + '.zvto-m iframe{width:min(1040px,100vw);height:min(780px,100dvh);border:0;border-radius:20px;background:#07080a;box-shadow:0 30px 80px rgba(0,0,0,.5)}'
@@ -135,6 +136,14 @@
       if (!d || !d.mostrar) { el.style.display = 'none'; return; }
       var b = document.createElement('button'); b.type = 'button'; b.className = 'zvto-b';
       b.innerHTML = ICON + '<span></span><i>IA</i>'; b.querySelector('span').textContent = el.getAttribute('data-label') || d.label;
+      // colores y forma de la marca (opcionales): data-bg, data-fg, data-accent (#hex) y data-radius (px)
+      var hx = function (v) { return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v || '') ? v : ''; };
+      var lum = function (h) { h = h.slice(1); if (h.length === 3) h = h.replace(/./g, '$&$&'); var n = parseInt(h, 16); return (0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) / 255; };
+      var bg = hx(el.getAttribute('data-bg')), fg = hx(el.getAttribute('data-fg')), ac = hx(el.getAttribute('data-accent')), rd = el.getAttribute('data-radius') || '';
+      if (bg) b.style.setProperty('--zvto-bg', bg);
+      if (fg) b.style.setProperty('--zvto-fg', fg);
+      if (ac) { b.style.setProperty('--zvto-ac', ac); b.style.setProperty('--zvto-ai', lum(ac) > 0.55 ? '#03140b' : '#ffffff'); }
+      if (/^\d{1,2}$/.test(rd)) b.style.setProperty('--zvto-r', rd + 'px');
       b.addEventListener('click', function () { open(el); });
       b.addEventListener('pointerenter', function () { if (!document.querySelector('link[data-zvto-pre]')) { var l = document.createElement('link'); l.rel = 'preconnect'; l.href = APP; l.setAttribute('data-zvto-pre', ''); document.head.appendChild(l); } }, { once: true });
       el.appendChild(b);
@@ -145,7 +154,7 @@
     var bt = cached(key, 36e5), es = cached(ek, 6e5);
     Promise.all([
       bt ? Promise.resolve(bt) : fetch(APP + '/api/boton?shop=' + encodeURIComponent(shop) + '&handle=' + encodeURIComponent(h)).then(function (r) { return r.json(); }).then(function (d) { return keep(key, d); }),
-      es ? Promise.resolve(es) : fetch(FN, { method: 'POST', headers: { 'content-type': 'text/plain' }, body: JSON.stringify({ action: 'estado', tenant: t }) }).then(function (r) { return r.json(); }).then(function (d) { return keep(ek, d); }),
+      es ? Promise.resolve(es) : fetch(FN, { method: 'POST', headers: { 'content-type': 'text/plain' }, body: JSON.stringify({ action: 'estado', tenant: t, p: location.pathname }) }).then(function (r) { return r.json(); }).then(function (d) { return keep(ek, d); }),
     ]).then(function (r) { // se oculta si la tienda no está activa, si la IA está en pausa hoy o si es ropa sin revisión de fotos activa
       var b = r[0], e = r[1] || {};
       done(e.mostrar && e.ia !== false && !(b && b.kind === 'ropa' && e.ropa === false) ? b : null);
