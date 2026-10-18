@@ -122,6 +122,7 @@ async function loadProduct(handle) {
   if (P.kind === 'otro') return fatal('Este producto aún no tiene probador.', 'Puedes verlo y comprarlo normal en la tienda.');
   G = GROUP[P.kind] || 'cama'; C = COPY[G];
   $('#illu use').setAttribute('href', '#' + ILLU[G]);
+  $('#emptyT').textContent = C.empty; $('#emptyS').textContent = C.tip; // antes de cualquier aviso, para que el texto corresponda a la ilustración
   if (G === 'ropa') { await cfgReady; if (!CFG.ropa) return DEMO ? fatal(...ERR_DEMO.ropa_no_disponible) : fatal('La prueba de ropa no está disponible por ahora.', 'Puedes verla y comprarla normal en la tienda.'); }
   $('#consent').hidden = G !== 'ropa'; syncConsent();
   document.title = `${C.title} · ${P.shopName || SHOP}`;
@@ -145,7 +146,7 @@ async function loadProduct(handle) {
 
 function pausaIA() { // cupo de IA agotado hoy: se avisa antes de pedir la foto
   lastErr = 'ia_cupo_diario';
-  fatal('El probador está en pausa por unas horas', DEMO ? `La demo en vivo vuelve ${vuelveIA()}. Mientras tanto, mira los ejemplos reales de esta página.` : `Vuelve ${vuelveIA()}. Mientras tanto puedes comprar normal desde la tienda.`);
+  fatal('El probador está en pausa', DEMO ? `La demo en vivo vuelve ${vuelveIA()}. Mientras tanto, mira los ejemplos reales de esta página.` : `Vuelve ${vuelveIA()}. Mientras tanto puedes comprar normal desde la tienda.`);
 }
 function fatal(t, s = '') {
   setState('error'); showErr(null, t, s); $('#btnRetry').hidden = true;
@@ -426,7 +427,8 @@ async function generate(retry = true) {
 // Fusión fiel: llegan 2 versiones de la IA; se queda la que mejor conserva tu foto real (cuarto, cara, luz)
 // y, si calza, se funde con tus píxeles originales. Si ninguna calza, se muestra la más fiel tal cual.
 // Mejor de 2: gana la versión que funde con la foto real, conserva el color de la tela y no trae objetos nuevos
-const castigo = (inf) => { const p = inf.prod; if (!p) return 0; return (p.dE != null ? 0.5 * p.dE : 0) + 35 * p.nuevo + (p.frac < 0.25 ? 12 : 0); };
+// el fondo intacto manda (un cabecero copiado sube ese error); el color de la tela solo desempata; castigo fuerte si casi no aparece la tela
+const castigo = (inf) => { const p = inf.prod; if (!p) return 0; return (p.dE != null ? 0.1 * p.dE : 0) + (p.frac < 0.25 ? 12 : 0); };
 async function fuseResult(ph, gens, ref = null) {
   let o; try { o = await loadImage(ph.data); } catch { return { src: gens[0], info: { motivo: 'error' }, i: 0, n: gens.length }; }
   let best = null;

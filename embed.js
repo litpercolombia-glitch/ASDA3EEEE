@@ -1,4 +1,4 @@
-/*! Zynex Probador · botón para la página de producto de Shopify · v4.4 · 2026-10-18
+/*! Zynex Probador · botón para la página de producto de Shopify · v4.7 · 2026-10-18
    Uso: <div data-zvto data-t="TU-TIENDA" data-h="{{ product.handle }}" data-v="{{ product.selected_or_first_available_variant.id }}" data-title="{{ product.title | escape }}" data-type="{{ product.type | escape }}"></div>
         <script src="https://<este-dominio>/embed.js" defer></script>
    Opcional, para la marca: data-label="Pruébalo en tu cama" data-bg="#000000" data-fg="#ffffff" data-accent="#00ff88" data-radius="12" */
@@ -123,7 +123,7 @@
         for (i = 0; i < adds.length && !b; i++) if (visible(adds[i])) b = adds[i];
       }
       if (b) { b.scrollIntoView({ block: 'center', behavior: 'smooth' }); setTimeout(function () { b.click(); setTimeout(function () { wait(false); }, 1200); }, 450); try { sessionStorage.removeItem('zvto:compra'); } catch (x) {} return; }
-      if (++tries < 32) return void setTimeout(tick, 250);
+      if (++tries < 20) return void setTimeout(tick, 250);
       if (variant) toCart(variant); else wait(false);
     })();
   }

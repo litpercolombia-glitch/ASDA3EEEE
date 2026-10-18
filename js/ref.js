@@ -53,8 +53,10 @@ const NOMBRES = [
   [/beige|arena/, [78, 3, 15]], [/crema|hueso|marfil/, [90, 0, 12]], [/negr/, [12, 0, 0]], [/blanc/, [95, 0, 2]],
 ];
 const ESTAMPADO = /estampad|reno|estrella|navid|santa|flor|raya|cuadro|[aá]rbol|bast[oó]n|copo|dise[ñn]o|mix|combinad|punto|animal|infantil|coraz[oó]n|letra|\b(y|con)\b|[-/+]/;
+// solo la parte antes de «+» (ej. «Cortina gris oscuro + sábana vino tinto» → gris oscuro), igual que el servidor
+const primero = (nombre) => String(nombre || '').toLowerCase().split('+')[0];
 function objetivo(nombre) {
-  const t = String(nombre || '').toLowerCase();
+  const t = primero(nombre);
   for (const [re, l] of NOMBRES) if (re.test(t)) return l;
   return null;
 }
@@ -78,12 +80,35 @@ function analyze(im, colorName) {
   }
   if (S.length < 0.04 * tot) return null;
   const ref = [med(S.map((p) => p[0])), med(S.map((p) => p[1])), med(S.map((p) => p[2]))];
-  const xs = [], ys = []; for (let i = 0; i < P.length; i += 2) { xs.push(P[i]); ys.push(P[i + 1]); }
-  xs.sort((p, q) => p - q); ys.sort((p, q) => p - q);
-  const q = (a, f) => a[Math.min(a.length - 1, Math.max(0, Math.floor(f * a.length)))], m = 0.03;
-  const bx0 = Math.max(0, q(xs, 0.03) / W - m), bx1 = Math.min(1, q(xs, 0.97) / W + m), by0 = Math.max(0, q(ys, 0.03) / H - m), by1 = Math.min(1, q(ys, 0.97) / H + m);
-  const box = (bx1 - bx0) * (by1 - by0) > 0.06 ? [+bx0.toFixed(3), +by0.toFixed(3), +bx1.toFixed(3), +by1.toFixed(3)] : null;
-  const solid = !ESTAMPADO.test(String(colorName || '').toLowerCase());
+  // zona de la tela: rejilla de 20×20; celdas con ≥ 60 % de tela; el bloque conectado más grande (así no entran cabecero, base ni muebles)
+  const N = 20, cw = W / N, chh = H / N, hit = new Float32Array(N * N), cnt = new Float32Array(N * N);
+  for (let yy = y0; yy < y1; yy += 2) for (let xx = x0; xx < x1; xx += 2) cnt[Math.min(N - 1, (yy / chh) | 0) * N + Math.min(N - 1, (xx / cw) | 0)]++;
+  for (let i = 0; i < P.length; i += 2) hit[Math.min(N - 1, (P[i + 1] / chh) | 0) * N + Math.min(N - 1, (P[i] / cw) | 0)]++;
+  const on = Array.from({ length: N * N }, (_, i) => cnt[i] > 0 && hit[i] / cnt[i] >= 0.6), seen = new Uint8Array(N * N);
+  let best = null;
+  for (let i = 0; i < N * N; i++) {
+    if (!on[i] || seen[i]) continue;
+    const st = [i]; seen[i] = 1; let n = 0, cx0 = N, cy0 = N, cx1 = -1, cy1 = -1;
+    while (st.length) {
+      const c = st.pop(), cx = c % N, cy = (c / N) | 0; n++;
+      cx0 = Math.min(cx0, cx); cy0 = Math.min(cy0, cy); cx1 = Math.max(cx1, cx); cy1 = Math.max(cy1, cy);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = cx + dx, ny = cy + dy, k = ny * N + nx; if (nx >= 0 && ny >= 0 && nx < N && ny < N && on[k] && !seen[k]) { seen[k] = 1; st.push(k); } }
+    }
+    if (!best || n > best.n) best = { n, cx0, cy0, cx1, cy1 };
+  }
+  let box = best && best.n >= 8 ? [best.cx0 / N, best.cy0 / N, (best.cx1 + 1) / N, (best.cy1 + 1) / N] : null;
+  // tela lisa: el rectángulo más grande hecho solo de celdas de tela (así el recorte no lleva cabecero, base ni muebles)
+  const solidName = !ESTAMPADO.test(primero(colorName).trim());
+  if (box && solidName) {
+    const hgt = new Array(N).fill(0); let mr = null;
+    for (let y = 0; y < N; y++) {
+      for (let x = 0; x < N; x++) hgt[x] = on[y * N + x] ? hgt[x] + 1 : 0;
+      for (let x = 0; x < N; x++) { let hmin = N; for (let x2 = x; x2 < N && hgt[x2]; x2++) { hmin = Math.min(hmin, hgt[x2]); const a = hmin * (x2 - x + 1); if (!mr || a > mr.a) mr = { a, x0: x, x1: x2, y1: y, y0: y - hmin + 1 }; } }
+    }
+    if (mr && mr.a >= 0.12 * N * N) box = [mr.x0 / N, mr.y0 / N, (mr.x1 + 1) / N, (mr.y1 + 1) / N];
+  }
+  if (box) box = box.map((v) => +v.toFixed(3));
+  const solid = solidName;
   const [r, g, b] = rgb(...ref);
   return { lab: ref.map((v) => +v.toFixed(1)), hex: '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join(''), solid, share: +(S.length / tot).toFixed(2), box, palette: [ref.map((v) => +v.toFixed(1))] };
 }

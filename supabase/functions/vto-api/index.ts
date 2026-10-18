@@ -1,4 +1,4 @@
-// vto-api v6.5 — Zynex Probador (backend). 18-oct-2026
+// vto-api v6.6 — Zynex Probador (backend). 18-oct-2026
 // Acciones (POST JSON {action, ...}):
 //   cfg     → configuración pública mínima de la tienda + ficha de sesión firmada (tok).
 //   ai      → foto realista con Cloudflare Workers AI (FLUX.2 klein 4B). El servidor resuelve el producto él mismo
@@ -84,7 +84,7 @@ const has = (t: string, words: string) => new RegExp(`(^| )(${words})( |$)`).tes
 const at = (t: string, words: string) => { const m = new RegExp(`(^| )(${words})( |$)`).exec(t); return m ? m.index : -1; };
 const BLOCKED = 'ropa interior|brasier|brasieres|bra|sosten|panty|pantys|tanga|tangas|boxer|boxers|calzon|calzoncillo|lenceria|bikini|bikinis|traje de bano|vestido de bano|banador|trusa|cachetero|bodysuit|body|faja|fajas|moldeador|moldeadora|shapewear|levanta gluteos|levanta cola|erotico|erotica|erotic|sexual|intimo|intima|sex|tanguita|hilo dental';
 // Solo para ropa (en hogar «transparente» o «malla» son normales: mantel transparente, organizador de malla)
-const BLOCKED_ROPA = 'sexy|transparente|transparentes|transparencia|transparencias|bralette|bralettes|babydoll|baby doll|corset|corsets|corse|corses|corpino|liguero|ligueros|camison|camisones|malla|mallas|encaje|encajes|infantil|infantiles|nino|nina|ninos|ninas|bebe|bebes|kids|kid|juvenil|escolar|colegial|colegio';
+const BLOCKED_ROPA = 'sexy|transparente|transparentes|transparencia|transparencias|bralette|bralettes|babydoll|baby doll|corset|corsets|corse|corses|corpino|liguero|ligueros|camison|camisones|malla|mallas|encaje|encajes|infantil|infantiles|nino|nina|ninos|ninas|bebe|bebes|bebito|bebita|kids|kid|juvenil|escolar|colegial|colegio|preescolar|primaria|girls|girl|boys|boy|baby|babies|teen|teens|toddler|toddlers|junior|juniors|adolescente|adolescentes|infante|infantes|chicos|nene|nena|nenes|nenas|peques|recien nacido';
 const NOT_HOME = 'pantalla|screen|celular|iphone|samsung|xiaomi|telefono|movil|camara|lente|lentes|solar|vidrio|templado|carro|auto|moto|vehiculo|parlante|cargador|bateria|audifonos|reloj|tablet|laptop|portatil|consola|perro|gato|mascota|bebe';
 const RULES: [string, string, string | null, string | null][] = [
   ['protector', 'protector|protectores', 'colchon|colchones|cama', NOT_HOME + '|espaldar|cabecero|cabecera|pintura|techo|pared'],
@@ -322,11 +322,8 @@ async function iaPausada() {
     else if (volvio > 0) v = false;
     else {
       const { data: turno } = await sb.rpc('vto_add_utc', { p_key: `cupo-prueba:${h}`, p_n: 1 });
-      if (turno === 1) {
-        const sec = await secrets();
-        const ok = !!sec.VTO_CF_API_TOKEN && (await cupoVolvio(sec));
-        await sb.rpc('vto_add_utc', { p_key: ok ? `cupo-volvio:${h}` : `cupo-sigue:${h}`, p_n: 1 });
-        v = !ok;
+      if (turno === 1) { // la prueba corre en segundo plano: esta respuesta sigue en pausa y las siguientes leen el resultado
+        enFondo((async () => { const sec = await secrets(); const ok = !!sec.VTO_CF_API_TOKEN && (await cupoVolvio(sec)); await sb.rpc('vto_add_utc', { p_key: ok ? `cupo-volvio:${h}` : `cupo-sigue:${h}`, p_n: 1 }); })().catch(() => {}));
       }
     }
   }
@@ -356,7 +353,8 @@ async function actionAI(body: any, req: Request) {
   // motor v6.5 (recorte de la tela + color medido + instrucciones por categoría): global con VTO_MOTOR=v65 o, para validarlo, en la demo con exp
   const v65 = sec.VTO_MOTOR === 'v65' || (t.plan === 'demo' && body.exp === 'v65');
   const rf = refOk(body.ref);
-  const imgUrl = productImageUrl(p, str(body.product, 1200), v65 && kind !== 'ropa' ? rf.box : null);
+  const RECORTE = new Set(['protector', 'sabanas', 'edredon', 'cobija', 'almohada', 'cortina']); // en forros, manteles y muebles la forma importa
+  const imgUrl = productImageUrl(p, str(body.product, 1200), v65 && RECORTE.has(kind) ? rf.box : null);
   if (!imgUrl) return [400, { error: 'imagen_no_valida' }];
   const values = new Set<string>((p.options || []).flatMap((o: any) => (Array.isArray(o?.values) ? o.values : [])).map((v: unknown) => String(v)));
   const color = values.has(str(body.color, 120)) ? colorEn(str(body.color, 120)) : '';
@@ -456,6 +454,7 @@ async function actionEvent(body: any, req: Request) {
     if (!tokId) return [403, { error: 'sesion' }];
     const { data: okTok } = await sb.rpc('vto_rate', { p_key: 'tok:' + tokId + '#ev', p_max: 80 }); // una visita no infla el panel
     if (okTok === false) return [429, { error: 'limite' }];
+    if (tipo === 'comprar' || tipo === 'kit') { const { data: okBuy } = await sb.rpc('vto_rate', { p_key: 'tok:' + tokId + '#buy', p_max: 3 }); if (okBuy === false) return [429, { error: 'limite' }]; }
   }
   const ip = await ipHash(req, sec.VTO_SALT || 'x');
   const { data: okRate } = await sb.rpc('vto_rate', { p_key: ip + '#ev', p_max: 400 });
@@ -500,7 +499,7 @@ const slackSafe = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').
 
 // ¿El bloque está de verdad en la página publicada? El Origin se puede falsificar; la página de la tienda no.
 async function bloqueEnPagina(host: string, path: string, id: string) {
-  const p = /^\/[^\s?#<>"'|\\]{0,300}$/.test(path) ? path : '';
+  const p = /^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?products\/[a-z0-9][a-z0-9-]{0,200}\/?$/.test(path) ? path : ''; // solo la ficha de un producto
   if (!p || !shopHost(host)) return { ok: false, url: null as string | null };
   const url = `https://${host}${p}`;
   try {
