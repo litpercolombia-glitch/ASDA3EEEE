@@ -1,4 +1,4 @@
-// Referencia del producto (18-oct-2026): color y zona de la tela en la foto de la variante del catálogo.
+// Referencia del producto (18-oct-2026, v4.12): color y zona de la tela en la foto de la variante del catálogo.
 // Sirve para elegir la mejor versión de la IA (color fiel y sin objetos nuevos) y para corregir el color
 // de la simulación hacia el color real. Todo en el celular; si algo falla, devuelve null y la app sigue igual.
 
@@ -52,7 +52,7 @@ const NOMBRES = [
   [/gris (oscuro|plomo|rat[oó]n)|grafito|carb[oó]n|plomo/, [35, 0, 0]], [/gris claro|perla|platead|plata/, [78, 0, 0]], [/gris/, [60, 0, 0]],
   [/beige|arena/, [78, 3, 15]], [/crema|hueso|marfil/, [90, 0, 12]], [/negr/, [12, 0, 0]], [/blanc/, [95, 0, 2]],
 ];
-const ESTAMPADO = /estampad|reno|estrella|navid|santa|flor|raya|cuadro|[aá]rbol|bast[oó]n|copo|dise[ñn]o|mix|combinad|punto|animal|infantil|coraz[oó]n|letra|\b(y|con)\b|[-/+]/;
+const ESTAMPADO = /estampad|reno|estrella|navid|noel|mu[ñn]ec|santa|flor|raya|cuadro|[aá]rbol|bast[oó]n|copo|dise[ñn]o|mix|combinad|punto|animal|infantil|coraz[oó]n|letra|\b(y|con)\b|[-/+]/;
 // solo la parte antes de «+» (ej. «Cortina gris oscuro + sábana vino tinto» → gris oscuro), igual que el servidor
 const primero = (nombre) => String(nombre || '').toLowerCase().split('+')[0];
 function objetivo(nombre) {
@@ -62,7 +62,7 @@ function objetivo(nombre) {
 }
 const hueDiff = (p, q) => Math.abs(((Math.atan2(p[2], p[1]) - Math.atan2(q[2], q[1])) * 57.2958 + 540) % 360 - 180);
 
-function analyze(im, colorName) {
+function analyze(im, colorName, zona = '') {
   const tgt = objetivo(colorName); if (!tgt) return null; // sin color reconocible no se adivina
   const W = 200, H = Math.max(40, Math.round((W * (im.naturalHeight || im.height)) / (im.naturalWidth || im.width)));
   const c = document.createElement('canvas'); c.width = W; c.height = H;
@@ -75,7 +75,8 @@ function analyze(im, colorName) {
   for (let yy = y0; yy < y1; yy += 2) for (let xx = x0; xx < x1; xx += 2) {
     const j = (yy * W + xx) * 4, p = lab(d[j], d[j + 1], d[j + 2]); tot++;
     const C = Math.hypot(p[1], p[2]);
-    const es = cromatico ? C >= Math.max(6, 0.5 * Ct) && hueDiff(p, tgt) <= 22 && Math.abs(p[0] - tgt[0]) < 40 : C < 12 && Math.abs(p[0] - tgt[0]) < 18;
+    // en telas sin color (blanco, grises, negro) el blanco puro no cuenta: es fondo de estudio, margen o brillo quemado, no tela
+    const es = cromatico ? C >= Math.max(6, 0.5 * Ct) && hueDiff(p, tgt) <= 22 && Math.abs(p[0] - tgt[0]) < 40 : C < 12 && Math.abs(p[0] - tgt[0]) < 18 && !(p[0] > 99 && C < 1.5);
     if (es) { S.push(p); P.push(xx, yy); }
   }
   if (S.length < 0.04 * tot) return null;
@@ -99,13 +100,39 @@ function analyze(im, colorName) {
   let box = best && best.n >= 8 ? [best.cx0 / N, best.cy0 / N, (best.cx1 + 1) / N, (best.cy1 + 1) / N] : null;
   // tela lisa: el rectángulo más grande hecho solo de celdas de tela (así el recorte no lleva cabecero, base ni muebles)
   const solidName = !ESTAMPADO.test(primero(colorName).trim());
-  if (box && solidName) {
+  const maxRect = (ok) => {
     const hgt = new Array(N).fill(0); let mr = null;
     for (let y = 0; y < N; y++) {
-      for (let x = 0; x < N; x++) hgt[x] = on[y * N + x] ? hgt[x] + 1 : 0;
+      for (let x = 0; x < N; x++) hgt[x] = ok[y * N + x] ? hgt[x] + 1 : 0;
       for (let x = 0; x < N; x++) { let hmin = N; for (let x2 = x; x2 < N && hgt[x2]; x2++) { hmin = Math.min(hmin, hgt[x2]); const a = hmin * (x2 - x + 1); if (!mr || a > mr.a) mr = { a, x0: x, x1: x2, y1: y, y0: y - hmin + 1 }; } }
     }
-    if (mr && mr.a >= 0.12 * N * N) box = [mr.x0 / N, mr.y0 / N, (mr.x1 + 1) / N, (mr.y1 + 1) / N];
+    return mr;
+  };
+  if (solidName && zona === 'cama') {
+    // camas (v4.12, auditoría 9, R9-M1): la caja es el recorte que ve la IA, así que solo puede tener tela.
+    // - no cuenta la franja de arriba (30 % del alto), donde van el cabecero, cuadros y lámparas;
+    // - además de las celdas de siempre, una segunda pasada alrededor del color MEDIDO rescata sombras y brillos de la tela;
+    // - si no hay un rectángulo de tela de buen tamaño, no hay recorte: la IA ve la foto completa, como hoy.
+    // Antes, sin rectángulo se usaba el contorno de la mancha de tela, que en telas claras metía pared, cabecero, silla y cuadro.
+    const Cr = Math.hypot(ref[1], ref[2]), hit2 = new Float32Array(N * N), techo = Math.round(0.3 * N);
+    for (let yy = y0; yy < y1; yy += 2) for (let xx = x0; xx < x1; xx += 2) {
+      const j = (yy * W + xx) * 4, p = lab(d[j], d[j + 1], d[j + 2]), C = Math.hypot(p[1], p[2]);
+      const es = cromatico ? C >= Math.max(6, 0.5 * Cr) && hueDiff(p, ref) <= 22 && Math.abs(p[0] - ref[0]) < 30
+        : C < 12 && Math.abs(p[0] - ref[0]) < 15 && !(p[0] > 99 && C < 1.5);
+      if (es) hit2[Math.min(N - 1, (yy / chh) | 0) * N + Math.min(N - 1, (xx / cw) | 0)]++;
+    }
+    const mr = maxRect(Array.from({ length: N * N }, (_, i) => cnt[i] > 0 && ((i / N) | 0) >= techo && (on[i] || hit2[i] / cnt[i] >= 0.6)));
+    box = mr && mr.a >= 0.08 * N * N ? [mr.x0 / N, mr.y0 / N, (mr.x1 + 1) / N, (mr.y1 + 1) / N] : null;
+  } else if (box && solidName) {
+    // fuera de la cama, en blancos y grises claros la pared, la ventana, el piso o un letrero se confunden con la tela: sin recorte
+    if (!cromatico && ref[0] > 60) box = null;
+    else { const mr = maxRect(on); if (mr && mr.a >= 0.12 * N * N) box = [mr.x0 / N, mr.y0 / N, (mr.x1 + 1) / N, (mr.y1 + 1) / N]; }
+  }
+  // las celdas del borde pueden tener hasta 40 % de otra cosa (ventana, base, almohada): en telas lisas la caja se encoge media celda por lado
+  if (box && solidName) {
+    const m = 0.5 / N;
+    if (box[2] - box[0] > 0.2 + 2 * m) box = [box[0] + m, box[1], box[2] - m, box[3]];
+    if (box[3] - box[1] > 0.2 + 2 * m) box = [box[0], box[1] + m, box[2], box[3] - m];
   }
   if (box) box = box.map((v) => +v.toFixed(3));
   const solid = solidName;
@@ -114,14 +141,14 @@ function analyze(im, colorName) {
 }
 
 const cache = new Map();
-/** Color y zona de la tela de la foto de una variante. @returns {Promise<null|{lab:number[],hex:string,solid:boolean,share:number,box:number[]|null,palette:number[][]}>} */
-export function refInfo(url, colorName = '') {
+/** Color y zona de la tela de la foto de una variante (zona: 'cama', 'cortina'… como en app.js; en camas la caja evita el cabecero). @returns {Promise<null|{lab:number[],hex:string,solid:boolean,share:number,box:number[]|null,palette:number[][]}>} */
+export function refInfo(url, colorName = '', zona = '') {
   if (!url) return Promise.resolve(null);
-  const k = url + '|' + colorName;
+  const k = url + '|' + colorName + '|' + zona;
   if (!cache.has(k)) cache.set(k, new Promise((res) => {
     const im = new Image(); im.crossOrigin = 'anonymous'; im.decoding = 'async';
     const t = setTimeout(() => res(null), 6000);
-    im.onload = () => { clearTimeout(t); try { res(analyze(im, colorName)); } catch { res(null); } };
+    im.onload = () => { clearTimeout(t); try { res(analyze(im, colorName, zona)); } catch { res(null); } };
     im.onerror = () => { clearTimeout(t); res(null); };
     im.src = url.startsWith('data:') ? url : url + (url.includes('?') ? '&' : '?') + 'width=200';
   }));

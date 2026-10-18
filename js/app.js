@@ -391,7 +391,7 @@ async function generate(retry = true) {
   try {
     await cfgReady;
     // color y zona de la tela en la foto de la variante (en paralelo; si tarda, la IA no la espera)
-    const refP = refInfo(prodUrl, sel.color || ''), ref0 = await Promise.race([refP, wait(1200).then(() => null)]);
+    const refP = refInfo(prodUrl, sel.color || '', G), ref0 = await Promise.race([refP, wait(1200).then(() => null)]);
     const d = await call('ai', { tenant: TENANT, tok: CFG.tok, shop: DEMO ? SHOP : undefined, handle: P.handle, photo: photo.ai || photo.data, product: prodUrl, color: sel.color || '', w: photo.w, h: photo.h, sesion, n: 2, consiento: G === 'ropa' ? (photo.fuente === 'ejemplo' || consentOk()) : undefined, ref: ref0?.solid ? { hex: ref0.hex, box: ref0.box } : undefined }, { timeout: 80000 }); // en estampados el recorte cortaría el diseño
     const fz = await fuseResult(photo, d.images?.length ? d.images : [d.image], ref0 || (await refP));
     results.set(key, fz.src);
