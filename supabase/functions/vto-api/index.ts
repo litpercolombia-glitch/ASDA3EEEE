@@ -1,4 +1,4 @@
-// vto-api v6.6 — Zynex Probador (backend). 18-oct-2026
+// vto-api v6.6.1 — Zynex Probador (backend). 18-oct-2026
 // Acciones (POST JSON {action, ...}):
 //   cfg     → configuración pública mínima de la tienda + ficha de sesión firmada (tok).
 //   ai      → foto realista con Cloudflare Workers AI (FLUX.2 klein 4B). El servidor resuelve el producto él mismo
@@ -82,7 +82,7 @@ async function tokOk(salt: string, tenant: string, tok: unknown) {
 const normw = (s: unknown) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9ñ]+/g, ' ').trim();
 const has = (t: string, words: string) => new RegExp(`(^| )(${words})( |$)`).test(t);
 const at = (t: string, words: string) => { const m = new RegExp(`(^| )(${words})( |$)`).exec(t); return m ? m.index : -1; };
-const BLOCKED = 'ropa interior|brasier|brasieres|bra|sosten|panty|pantys|tanga|tangas|boxer|boxers|calzon|calzoncillo|lenceria|bikini|bikinis|traje de bano|vestido de bano|banador|trusa|cachetero|bodysuit|body|faja|fajas|moldeador|moldeadora|shapewear|levanta gluteos|levanta cola|erotico|erotica|erotic|sexual|intimo|intima|sex|tanguita|hilo dental';
+const BLOCKED = 'ropa interior|brasier|brasieres|bra|sosten|panty|pantys|tanga|tangas|boxer|boxers|calzon|calzones|calzoncillo|calzoncillos|lenceria|bikini|bikinis|traje de bano|vestido de bano|banador|trusa|cachetero|bodysuit|body|faja|fajas|moldeador|moldeadora|shapewear|levanta gluteos|levanta cola|erotico|erotica|erotic|sexual|intimo|intima|sex|tanguita|hilo dental|lingerie|underwear|swimsuit|swimsuits|swimwear|thong|thongs|briefs|panties|negligee|nightie';
 // Solo para ropa (en hogar «transparente» o «malla» son normales: mantel transparente, organizador de malla)
 const BLOCKED_ROPA = 'sexy|transparente|transparentes|transparencia|transparencias|bralette|bralettes|babydoll|baby doll|corset|corsets|corse|corses|corpino|liguero|ligueros|camison|camisones|malla|mallas|encaje|encajes|infantil|infantiles|nino|nina|ninos|ninas|bebe|bebes|bebito|bebita|kids|kid|juvenil|escolar|colegial|colegio|preescolar|primaria|girls|girl|boys|boy|baby|babies|teen|teens|toddler|toddlers|junior|juniors|adolescente|adolescentes|infante|infantes|chicos|nene|nena|nenes|nenas|peques|recien nacido';
 const NOT_HOME = 'pantalla|screen|celular|iphone|samsung|xiaomi|telefono|movil|camara|lente|lentes|solar|vidrio|templado|carro|auto|moto|vehiculo|parlante|cargador|bateria|audifonos|reloj|tablet|laptop|portatil|consola|perro|gato|mascota|bebe';
