@@ -39,7 +39,7 @@
 
 <header class="bar">
   <button class="ic" id="btnClose" aria-label="Cerrar probador" hidden><svg><use href="#i-x"/></svg></button>
-  <div class="bar-t"><b id="barT">Probador con IA</b><small id="barS">Foto real, en segundos</small></div>
+  <div class="bar-t"><b id="barT">Probador con IA</b><small id="barS">Simulación con IA sobre tu foto</small></div>
   <button class="ic" id="btnInfo" aria-label="Cómo funciona"><svg><use href="#i-q"/></svg></button>
 </header>
 
@@ -58,6 +58,7 @@
         <div class="handle" id="handle" aria-hidden="true"><span></span></div>
         <input type="range" class="cmp-r" id="cmpR" min="0" max="100" value="50" aria-label="Deslizar para comparar antes y después" hidden>
         <span class="tag l" id="tagL" hidden>Antes</span><span class="tag r" id="tagR" hidden>Con el producto</span>
+        <span class="tag sw" id="tagSw" hidden><i id="tagSwImg"></i><span>Color real</span></span>
       </div>
     </div>
     <div class="steps" id="steps" hidden aria-live="polite">

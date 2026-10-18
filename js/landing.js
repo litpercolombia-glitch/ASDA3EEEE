@@ -49,12 +49,11 @@ heroLoop();
 
 /* ---------- galería antes/después ---------- */
 const GAL = [
-  { tab: 'Protector', b: 'cuarto_a', a: 'r_protector', p: 'p_protector', name: 'Protector de colchón acolchado · Rojo', t: '7,4 s', note: 'Cama con sábanas blancas. El protector queda ajustado al colchón y las almohadas toman la misma tela.' },
+  { tab: 'Protector', b: 'cuarto_a', a: 'r_protector', p: 'p_protector', name: 'Protector de colchón acolchado · Rojo', t: '7,4 s', note: 'Cama con sábanas blancas: el protector y las fundas de las almohadas toman la tela acolchada del catálogo.' },
   { tab: 'Colcha', b: 'cuarto_b', a: 'r_colcha', p: 'p_colcha', name: 'Colcha navideña · Renos verde', t: '8,4 s', note: 'Edredón gris liso cambiado por la colcha estampada: respeta el diseño, la escala y la caída.' },
   { tab: 'Edredón', b: 'cuarto_a', a: 'r_edredon', p: 'p_edredon', name: 'Edredón doble faz · Azul oscuro y celeste', t: '6,5 s', note: 'Se ven las dos caras del edredón y los cojines a juego.' },
   { tab: 'Cortina', b: 'ventana_a', a: 'r_cortina_nav', p: 'p_cortina_nav', name: 'Cortina navideña + velo · Azul estrellas', t: '7,6 s', note: 'Ventana con visillos blancos. La cortina se cuelga en la misma varilla.' },
   { tab: 'Camiseta', b: 'persona_a', a: 'r_camiseta', p: 'p_camiseta', name: 'Camiseta de algodón · Verde oliva (ejemplo)', t: '8,6 s', note: 'La cara, el pelo y el fondo son los píxeles de la foto original: cambia solo la prenda, con su logo en el lugar correcto.' },
-  { tab: 'Comedor', b: 'comedor_a', a: 'r_forro', p: null, name: 'Forros navideños para sillas · Santa y reno', t: '6,6 s', note: 'Solo cambian las sillas; la mesa y el cuarto quedan iguales.' },
 ];
 const gc = $('#galCmp');
 function galSet(i) {

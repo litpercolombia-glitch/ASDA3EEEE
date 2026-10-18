@@ -124,7 +124,7 @@ async function loadProduct(handle) {
   if (G === 'ropa') { await cfgReady; if (!CFG.ropa) return DEMO ? fatal(...ERR_DEMO.ropa_no_disponible) : fatal('La prueba de ropa no está disponible por ahora.', 'Puedes verla y comprarla normal en la tienda.'); }
   $('#consent').hidden = G !== 'ropa'; syncConsent();
   document.title = `${C.title} · ${P.shopName || SHOP}`;
-  $('#barT').textContent = C.title; $('#barS').textContent = P.shopName ? `${P.shopName} · foto real con IA` : 'Foto real con IA';
+  $('#barT').textContent = C.title; $('#barS').textContent = P.shopName ? `${P.shopName} · simulación con IA` : 'Simulación con IA sobre tu foto';
   $('#emptyT').textContent = C.empty; $('#emptyS').textContent = C.tip;
   $('#illu use').setAttribute('href', '#' + ILLU[G]);
   $('#camLab').textContent = C.cam; $('#galLab').textContent = C.gal; $('#sampleLab').textContent = C.sampleLab;
@@ -478,6 +478,9 @@ async function showResult(src, animate, g = genN) {
   cmp.classList.remove('full');
   setCut(50); cmp.classList.add('compare');
   $('#cmpR').hidden = false; $('#tagL').hidden = false; $('#tagR').hidden = false;
+  // muestra del color real del producto (foto del catálogo) junto a la simulación
+  const real = shown?.color && idx('color') >= 0 ? colorImage(shown.color) : productImage();
+  $('#tagSwImg').style.backgroundImage = real ? `url("${thumb(real, 160)}")` : ''; $('#tagSw').hidden = !real;
   if (animate) { cmp.classList.add('nudge'); setTimeout(() => cmp.classList.remove('nudge'), 1800); }
   const first = !store.get('vto_hint_cmp');
   $('#resHint').textContent = first ? 'Desliza sobre la foto para comparar. Toca otro color para verlo en tu foto.' : 'Toca otro color o diseño para verlo en tu misma foto.';
@@ -510,7 +513,7 @@ function setState(s) {
   $('#empty').hidden = has;
   $('#frame').hidden = !has;
   $('#cmp').classList.toggle('busy', s === 'procesando');
-  if (s !== 'resultado') { $('#cmp').classList.remove('compare'); $('#cmpR').hidden = true; $('#tagL').hidden = true; $('#tagR').hidden = true; }
+  if (s !== 'resultado') { $('#cmp').classList.remove('compare'); $('#cmpR').hidden = true; $('#tagL').hidden = true; $('#tagR').hidden = true; $('#tagSw').hidden = true; }
   $('#actsStart').hidden = !(s === 'inicio');
   $('#actsResult').hidden = s !== 'resultado';
   $('#errBox').hidden = s !== 'error';
