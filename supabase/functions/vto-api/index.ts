@@ -1,10 +1,10 @@
-// vto-api v6.4 — Zynex Probador (backend). 18-oct-2026
+// vto-api v6.5 — Zynex Probador (backend). 18-oct-2026
 // Acciones (POST JSON {action, ...}):
 //   cfg     → configuración pública mínima de la tienda + ficha de sesión firmada (tok).
 //   ai      → foto realista con Cloudflare Workers AI (FLUX.2 klein 4B). El servidor resuelve el producto él mismo
 //             (tienda + handle), valida tipo, imagen y color, y no guarda la foto del cliente.
-//   estado  → lo llama el botón desde la página de la tienda: activa la prueba si el dominio coincide, dice si mostrar el botón
-//             y verifica (leyendo la página publicada) que el bloque de verdad está instalado.
+//   estado  → lo llama el botón desde la página de la tienda: dice si mostrar el botón. Una tienda pendiente arranca su prueba
+//             solo cuando el servidor lee su página publicada y encuentra el bloque (el Origin solo no basta).
 //   event   → métrica del embudo (abrir, foto, comprar, kit, compartir…). Las de una tienda exigen la sesión firmada (tok).
 //   lead    → empresa interesada (landing): queda una tienda pendiente que se activa al instalar el botón.
 //   stats   → panel de la tienda (requiere llave del panel).
@@ -37,7 +37,7 @@ let SEC: Record<string, string> | null = null, SEC_T = 0;
 async function secrets() {
   if (SEC && Date.now() - SEC_T < 300_000) return SEC;
   const out: Record<string, string> = {};
-  await Promise.all(['VTO_CF_API_TOKEN', 'VTO_CF_ACCOUNT_ID', 'VTO_SALT', 'VTO_N2_MAX_DIA', 'VTO_MODERACION'].map(async (n) => {
+  await Promise.all(['VTO_CF_API_TOKEN', 'VTO_CF_ACCOUNT_ID', 'VTO_SALT', 'VTO_N2_MAX_DIA', 'VTO_MODERACION', 'VTO_MOTOR'].map(async (n) => {
     const { data } = await sb.rpc('vto_secret', { n });
     if (typeof data === 'string' && data) out[n] = data;
   }));
@@ -84,7 +84,7 @@ const has = (t: string, words: string) => new RegExp(`(^| )(${words})( |$)`).tes
 const at = (t: string, words: string) => { const m = new RegExp(`(^| )(${words})( |$)`).exec(t); return m ? m.index : -1; };
 const BLOCKED = 'ropa interior|brasier|brasieres|bra|sosten|panty|pantys|tanga|tangas|boxer|boxers|calzon|calzoncillo|lenceria|bikini|bikinis|traje de bano|vestido de bano|banador|trusa|cachetero|bodysuit|body|faja|fajas|moldeador|moldeadora|shapewear|levanta gluteos|levanta cola|erotico|erotica|erotic|sexual|intimo|intima|sex|tanguita|hilo dental';
 // Solo para ropa (en hogar «transparente» o «malla» son normales: mantel transparente, organizador de malla)
-const BLOCKED_ROPA = 'sexy|transparente|transparentes|transparencia|transparencias|bralette|bralettes|babydoll|baby doll|corset|corsets|corse|corses|corpino|liguero|ligueros|camison|camisones|malla|mallas|encaje transparente';
+const BLOCKED_ROPA = 'sexy|transparente|transparentes|transparencia|transparencias|bralette|bralettes|babydoll|baby doll|corset|corsets|corse|corses|corpino|liguero|ligueros|camison|camisones|malla|mallas|encaje|encajes|infantil|infantiles|nino|nina|ninos|ninas|bebe|bebes|kids|kid|juvenil|escolar|colegial|colegio';
 const NOT_HOME = 'pantalla|screen|celular|iphone|samsung|xiaomi|telefono|movil|camara|lente|lentes|solar|vidrio|templado|carro|auto|moto|vehiculo|parlante|cargador|bateria|audifonos|reloj|tablet|laptop|portatil|consola|perro|gato|mascota|bebe';
 const RULES: [string, string, string | null, string | null][] = [
   ['protector', 'protector|protectores', 'colchon|colchones|cama', NOT_HOME + '|espaldar|cabecero|cabecera|pintura|techo|pared'],
@@ -157,8 +157,20 @@ const KEEP = 'Keep everything else in image 1 exactly the same: room, walls, flo
 const BED = 'Keep the bed frame, headboard, nightstands and lamps of image 1 exactly as they are; do not copy the headboard, bed base, furniture or room from image 2.';
 const CLEAN = 'Ignore any text, logos, watermarks, price tags, graphics, people or background scenery in image 2; use image 2 only as the product reference.';
 const PHOTO = 'Photorealistic smartphone photo, natural colors, crisp fabric detail.';
-function buildPrompt(kind: string, garment: string, color: string) {
-  const c = color ? ` (${color})` : '';
+const NUNCA = 'Never add, remove or replace furniture, decor or objects of image 1.';
+function extraV65(kind: string, title: string) {
+  const t = normw(title);
+  switch (kind) {
+    case 'protector': return ' It is a fitted mattress protector, not a bedspread or a comforter: nothing hangs below the top edge of the mattress; remove any old sheet that hangs down; keep the bed base, legs and headboard of image 1.';
+    case 'sabanas': return ' Keep the bed base, legs and headboard of image 1; only the sheets and pillowcases change.';
+    case 'cortina': return (/blackout|apaga la luz|oscurec/.test(t) ? ' The curtain fabric is fully opaque blackout: no light, window or outside view shows through it.' : '') + (/velo|visillo/.test(t) ? ' Keep any white sheer curtain pure white.' : '');
+    case 'forro': return ' Keep the exact shape, height and number of the chairs of image 1; only cover them.';
+    case 'mantel': return ' Only the tablecloth changes.';
+    default: return '';
+  }
+}
+function buildPrompt(kind: string, garment: string, color: string, hex = '') {
+  const c = color ? ` (${color}${hex ? `, exact color ${hex}` : ''})` : hex ? ` (exact color ${hex})` : '';
   switch (kind) {
     case 'protector':
       return `Put the exact quilted mattress protector${c} from image 2 on the mattress of the bed in image 1, with matching quilted pillow covers on the pillows: same color, same quilting pattern and texture as image 2. It fits like a fitted sheet: it covers the top and the sides of the mattress only, tight with elastic edges tucked under the mattress, no overhang, smooth surface. Remove the existing sheets and blankets. ${BED} ${KEEP} ${CLEAN} ${PHOTO}`;
@@ -213,15 +225,34 @@ async function productJson(shop: string, handle: string) {
   return v;
 }
 const imgKey = (u: string) => { try { const x = new URL(u.startsWith('//') ? 'https:' + u : u); return (x.hostname.replace(/^www\./, '') + x.pathname).toLowerCase(); } catch { return ''; } };
-function productImageUrl(p: any, wanted: string) {
+function productImageUrl(p: any, wanted: string, box: number[] | null = null) {
   const list: string[] = [...(p.images || []), ...(p.variants || []).map((v: any) => v?.featured_image?.src), ...(p.media || []).map((m: any) => m?.src || m?.preview_image?.src)]
     .filter((u: unknown) => typeof u === 'string' && u);
   const want = imgKey(wanted);
   const hit = want && list.find((u) => imgKey(u) === want);
   if (!hit) return null;
   const url = new URL(hit.startsWith('//') ? 'https:' + hit : hit);
-  url.search = ''; url.searchParams.set('width', '512'); url.searchParams.set('height', '512');
+  url.search = '';
+  // recorte de la tela (sin cabecero, base, mesas ni adornos de la foto del catálogo): coordenadas en píxeles de la imagen original
+  const dims = [...(p.media || []), ...(p.variants || []).map((v: any) => v?.featured_image)].find((m: any) => m && typeof (m.src || '') === 'string' && imgKey(m.src || '') === want && m.width && m.height);
+  if (box && dims) {
+    const [x0, y0, x1, y1] = box, W = +dims.width, H = +dims.height;
+    const l = Math.round(x0 * W), t = Math.round(y0 * H), w = Math.round((x1 - x0) * W), h = Math.round((y1 - y0) * H);
+    if (w > 64 && h > 64) {
+      url.searchParams.set('crop', 'region'); url.searchParams.set('crop_left', String(l)); url.searchParams.set('crop_top', String(t));
+      url.searchParams.set('crop_width', String(w)); url.searchParams.set('crop_height', String(h)); url.searchParams.set('width', '512');
+      return url;
+    }
+  }
+  url.searchParams.set('width', '512'); url.searchParams.set('height', '512');
   return url;
+}
+// Lo que manda la app sobre la tela de la variante: color medido (#rrggbb) y zona de la tela (0–1). Solo se usa como texto y recorte.
+function refOk(r: any) {
+  const hex = typeof r?.hex === 'string' && /^#[0-9a-f]{6}$/i.test(r.hex) ? r.hex.toLowerCase() : '';
+  const b = Array.isArray(r?.box) && r.box.length === 4 && r.box.every((v: unknown) => typeof v === 'number' && v >= 0 && v <= 1) ? r.box as number[] : null;
+  const box = b && b[2] - b[0] > 0.2 && b[3] - b[1] > 0.2 ? b : null;
+  return { hex, box };
 }
 async function productBlob(url: URL) {
   if (url.protocol !== 'https:' || !shopHost(url.hostname)) return null;
@@ -245,7 +276,7 @@ function outSize(w: number, h: number) {
   return [r16(w), r16(h)];
 }
 
-/* ---------- moderación de fotos de personas (Cloudflare Moondream), en paralelo con la generación ---------- */
+/* ---------- moderación de fotos de personas (Cloudflare Moondream): antes de generar y sobre lo que genera la IA ---------- */
 const MOD_Q = 'Look at the image and answer with JSON only, no other text: {"person": true or false, "minor": true or false, "nudity_or_underwear": true or false}. "minor" is true if any person looks younger than 18. "nudity_or_underwear" is true if anyone is nude, topless, or shown in underwear, lingerie or swimwear.';
 async function moderar(sec: Record<string, string>, photo: string) {
   const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${sec.VTO_CF_ACCOUNT_ID}/ai/run/@cf/moondream/moondream3.1-9B-A2B`, {
@@ -322,7 +353,10 @@ async function actionAI(body: any, req: Request) {
   const moderacion = sec.VTO_MODERACION === 'on';
   if (kind === 'ropa' && !moderacion) return [422, { error: 'ropa_no_disponible' }];
   if (kind === 'ropa' && body.consiento !== true) return [400, { error: 'falta_consentimiento' }];
-  const imgUrl = productImageUrl(p, str(body.product, 1200));
+  // motor v6.5 (recorte de la tela + color medido + instrucciones por categoría): global con VTO_MOTOR=v65 o, para validarlo, en la demo con exp
+  const v65 = sec.VTO_MOTOR === 'v65' || (t.plan === 'demo' && body.exp === 'v65');
+  const rf = refOk(body.ref);
+  const imgUrl = productImageUrl(p, str(body.product, 1200), v65 && kind !== 'ropa' ? rf.box : null);
   if (!imgUrl) return [400, { error: 'imagen_no_valida' }];
   const values = new Set<string>((p.options || []).flatMap((o: any) => (Array.isArray(o?.values) ? o.values : [])).map((v: unknown) => String(v)));
   const color = values.has(str(body.color, 120)) ? colorEn(str(body.color, 120)) : '';
@@ -340,7 +374,7 @@ async function actionAI(body: any, req: Request) {
     const prod = await productBlob(imgUrl);
     if (!prod) { err = 'producto_sin_imagen'; return [400, { error: err }]; }
     const [W, H] = outSize(+body.w, +body.h);
-    const prompt = buildPrompt(kind, garment, color);
+    const prompt = v65 ? buildPrompt(kind, garment, color, rf.hex).replace(KEEP, KEEP + extraV65(kind, String(p.title || '')) + ' ' + NUNCA) : buildPrompt(kind, garment, color);
     // Mejor de 2: dos versiones en paralelo y la app se queda con la más fiel. Con el cupo gratis de Cloudflare
     // se usa 1 sola versión cuando el día pasa de VTO_N2_MAX_DIA imágenes (por defecto 70).
     const dia = utcDay(), maxN2 = Number(sec.VTO_N2_MAX_DIA) || 70;
@@ -359,12 +393,13 @@ async function actionAI(body: any, req: Request) {
       const mime = img.startsWith('iVBOR') ? 'image/png' : img.startsWith('UklGR') ? 'image/webp' : 'image/jpeg';
       return `data:${mime};base64,${img}`;
     };
-    const modP = kind === 'ropa' ? moderar(sec, photo).catch((e) => ({ error: String((e as Error)?.message || e) })) : Promise.resolve(null);
-    const [runs, mod] = await Promise.all([Promise.allSettled(Array.from({ length: n }, once)), modP]);
+    // ropa: primero se revisa la foto (persona mayor de edad y vestida) y solo después se genera
     if (kind === 'ropa') {
+      const mod = await moderar(sec, photo).catch((e) => ({ error: String((e as Error)?.message || e) }));
       if (!mod || 'error' in mod) { err = 'moderacion_no_disponible'; console.error('mod', mod); return [503, { error: err }]; }
       if (mod.bloquear) { err = 'foto_no_permitida'; ok = true; return [422, { error: err }]; } // cuenta como prueba: no se devuelve
     }
+    const runs = await Promise.allSettled(Array.from({ length: n }, once));
     let images = runs.flatMap((x) => (x.status === 'fulfilled' ? [x.value] : []));
     if (kind === 'ropa' && images.length) { // también se revisa lo que crea la IA: nada de ropa interior ni desnudos
       const chk = await Promise.all(images.map((im) => moderar(sec, im).catch(() => null)));
@@ -386,13 +421,13 @@ async function actionAI(body: any, req: Request) {
     }
     await sb.rpc('vto_add_utc', { p_key: `imgs:${dia}`, p_n: images.length });
     ok = true;
-    return [200, { image: images[0], images, ms: Date.now() - t0, via: 'cf-klein4b', restan: take.restan, restan_sesion: take.restan_sesion, w: W, h: H, kind }];
+    return [200, { image: images[0], images, ms: Date.now() - t0, via: v65 ? 'cf-klein4b-v65' : 'cf-klein4b', restan: take.restan, restan_sesion: take.restan_sesion, w: W, h: H, kind }];
   } catch (e) {
     err = String((e as Error)?.name === 'TimeoutError' ? 'ia_tiempo' : 'ia_fallo'); console.error('ai', e);
     return [502, { error: err }];
   } finally {
     if (!ok) await sb.rpc('vto_refund2', { p_ip: ip, p_tenant: tenant, p_tok: tokId });
-    await sb.from('vto_events').insert({ tenant_id: tenant, tipo: 'ia', handle, categoria: kind, via: 'cf-klein4b', ms: Date.now() - t0, ok: ok && !err, detalle: err ? { error: err } : { n, ...(kind === 'ropa' ? { consentimiento: true } : {}) }, ip_hash: ip, sesion: str(body.sesion, 40) || null });
+    await sb.from('vto_events').insert({ tenant_id: tenant, tipo: 'ia', handle, categoria: kind, via: v65 ? 'cf-klein4b-v65' : 'cf-klein4b', ms: Date.now() - t0, ok: ok && !err, detalle: err ? { error: err } : { n, ...(kind === 'ropa' ? { consentimiento: true } : {}) }, ip_hash: ip, sesion: str(body.sesion, 40) || null });
   }
 }
 
@@ -417,7 +452,10 @@ async function actionEvent(body: any, req: Request) {
   const sec = await secrets(), tenant = slug(body.tenant);
   if (tenant) { // métricas del panel de una tienda: solo con la sesión firmada que emite cfg (así nadie infla el panel de otro)
     if (!(await tenantExiste(tenant))) return [400, { error: 'tienda' }];
-    if (!(await tokOk(sec.VTO_SALT || 'x', tenant, body.tok))) return [403, { error: 'sesion' }];
+    const tokId = await tokOk(sec.VTO_SALT || 'x', tenant, body.tok);
+    if (!tokId) return [403, { error: 'sesion' }];
+    const { data: okTok } = await sb.rpc('vto_rate', { p_key: 'tok:' + tokId + '#ev', p_max: 80 }); // una visita no infla el panel
+    if (okTok === false) return [429, { error: 'limite' }];
   }
   const ip = await ipHash(req, sec.VTO_SALT || 'x');
   const { data: okRate } = await sb.rpc('vto_rate', { p_key: ip + '#ev', p_max: 400 });
@@ -474,24 +512,14 @@ async function bloqueEnPagina(host: string, path: string, id: string) {
 }
 const VCACHE = new Map<string, number>(); // última verificación por tienda en esta instancia (Infinity = ya verificada)
 const enFondo = (p: Promise<unknown>) => { const er = (globalThis as any).EdgeRuntime; if (er?.waitUntil) { er.waitUntil(p); return Promise.resolve(); } return p; };
-async function verificar(id: string, host: string, path: string, recienActivada: boolean) {
+async function verificar(id: string, host: string, path: string) {
   try {
-    if (!recienActivada) {
-      const { data: t } = await sb.from('vto_tenants').select('verificado:config->verificado').eq('id', id).maybeSingle();
-      if ((t as any)?.verificado?.ok === true) { VCACHE.set(id, Infinity); return; }
-    }
+    const { data: t } = await sb.from('vto_tenants').select('verificado:config->verificado').eq('id', id).maybeSingle();
+    if ((t as any)?.verificado?.ok === true) { VCACHE.set(id, Infinity); return; }
     const v = await bloqueEnPagina(host, path, id);
     const { data: r } = await sb.rpc('vto_verif', { p_tenant: id, p_ok: v.ok, p_url: v.url });
     if (v.ok) VCACHE.set(id, Infinity);
-    const base = { tipo: 'parte', destino: 'dm_ceo', empresa: 'zynex', origen: 'probador' };
-    const url = slackSafe(v.url || 'su página');
-    if (recienActivada) {
-      await sb.from('slack_cola').insert({ ...base, mensaje: v.ok
-        ? `🟢 Probador IA instalado y verificado: la tienda "${id}" activó su prueba de 14 días con 100 fotos. Bloque visto en ${url}.`
-        : `🟠 Probador IA: la tienda "${id}" activó su prueba desde ${slackSafe(host)}, pero aún no vemos el bloque publicado en ${url}. Si fue la vista previa del editor, se verifica solo al publicar; si no, puede ser un origen falsificado.` });
-    } else if (v.ok && r?.cambio) {
-      await sb.from('slack_cola').insert({ ...base, mensaje: `✅ Probador IA verificado: el bloque de "${id}" ya está publicado (${url}).` });
-    }
+    if (v.ok && r?.cambio) await sb.from('slack_cola').insert({ tipo: 'parte', destino: 'dm_ceo', empresa: 'zynex', origen: 'probador', mensaje: `✅ Probador IA verificado: el bloque de "${id}" ya está publicado (${slackSafe(v.url || '')}).` });
   } catch (e) { console.error('verif', e); }
 }
 async function actionLead(body: any, req: Request) {
@@ -558,22 +586,38 @@ async function actionEstado(body: any, req: Request, origin: string | null) {
   const sec = await secrets(); const ip = await ipHash(req, sec.VTO_SALT || 'x');
   const { data: okRate } = await sb.rpc('vto_rate', { p_key: ip + '#estado', p_max: 500 });
   if (okRate === false) return [429, { error: 'limite' }];
-  let [{ data }, pausa] = await Promise.all([sb.rpc('vto_activar', { p_tenant: id, p_host: host }), iaPausada()]);
+  let [{ data }, pausa] = await Promise.all([sb.rpc('vto_activar2', { p_tenant: id, p_host: host, p_activar: false }), iaPausada()]);
   if (data?.motivo === 'dominio_distinto' && shopHost(host) && shopHost(data.dominio)) {
     // ¿Es otro dominio de la MISMA tienda (myshopify, dominio de Markets, www)? Shopify lo dice en /meta.json
     const [a, b, dns] = await Promise.all([myshopifyOf(host), myshopifyOf(String(data.dominio)), apuntaAShopify(host)]);
     if (a && a === b && dns) { // mismo myshopify y el dominio de verdad está en Shopify (no un /meta.json falso)
       await sb.rpc('vto_alias_add', { p_tenant: id, p_host: host });
-      ({ data } = await sb.rpc('vto_activar', { p_tenant: id, p_host: host }));
+      ({ data } = await sb.rpc('vto_activar2', { p_tenant: id, p_host: host, p_activar: false }));
     } else if (a) {
       await avisoUnaVezAlDia(`dominio-${id}`, `🟠 Probador IA: el botón de "${id}" cargó en ${host}, que no es su tienda registrada (${data.dominio}). Si es la misma tienda, agrega el dominio; si no, ignóralo.`);
     }
   }
-  // verificación del bloque: al activar y, si aún no se ha visto publicado, como máximo una vez por hora (sin frenar la respuesta)
-  if (data?.ok && data.activo && host && (data.activado || (VCACHE.get(id) ?? 0) < Date.now() - 3_600_000)) {
+  if (data?.ok && data.pendiente) {
+    // la prueba arranca solo si el bloque está de verdad en la página publicada desde donde cargó el botón (máximo 1 lectura por minuto)
+    const k = 'p:' + id;
+    if ((VCACHE.get(k) ?? 0) > Date.now() - 60_000) return [200, { mostrar: false, activado: false, ia: !pausa, ropa: sec.VTO_MODERACION === 'on' }];
+    if (VCACHE.size > 500) VCACHE.clear();
+    VCACHE.set(k, Date.now());
+    const v = await bloqueEnPagina(host, str(body.p, 300), id), avisa = !id.startsWith('zz-prueba-'); // tiendas de prueba del equipo: sin avisos
+    await sb.rpc('vto_verif', { p_tenant: id, p_ok: v.ok, p_url: v.url });
+    if (v.ok) {
+      ({ data } = await sb.rpc('vto_activar2', { p_tenant: id, p_host: host, p_activar: true }));
+      VCACHE.set(id, Infinity);
+      if (data?.activado && avisa) await sb.from('slack_cola').insert({ tipo: 'parte', destino: 'dm_ceo', empresa: 'zynex', origen: 'probador', mensaje: `🟢 Probador IA instalado y verificado: la tienda "${id}" activó su prueba de 14 días con 100 fotos. Bloque visto en ${slackSafe(v.url || '')}.` });
+    } else {
+      if (avisa) await avisoUnaVezAlDia(`sinbloque-${id}`, `🟠 Probador IA: el botón de "${id}" cargó en ${slackSafe(host)}, pero no vemos el bloque publicado en ${slackSafe(v.url || 'su página')}. La prueba no arranca hasta que esté publicado.`);
+      return [200, { mostrar: false, activado: false, ia: !pausa, ropa: sec.VTO_MODERACION === 'on' }];
+    }
+  } else if (data?.ok && data.activo && host && (VCACHE.get(id) ?? 0) < Date.now() - 3_600_000) {
+    // tienda activa sin bloque confirmado: se revisa como máximo una vez por hora, sin frenar la respuesta
     if (VCACHE.size > 500) VCACHE.clear();
     VCACHE.set(id, Date.now());
-    await enFondo(verificar(id, host, str(body.p, 300), !!data.activado));
+    await enFondo(verificar(id, host, str(body.p, 300)));
   }
   return [200, { mostrar: !!(data?.ok && data.activo && data.cupo > 0 && data.hoy_ok !== false), activado: !!data?.activado, ia: !pausa, ropa: sec.VTO_MODERACION === 'on' }];
 }

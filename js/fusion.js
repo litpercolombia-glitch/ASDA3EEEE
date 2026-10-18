@@ -3,6 +3,9 @@
 // Pasos: alinear (escala + desplazamiento) → igualar color → máscara por histéresis (la costura cae donde
 // ambas fotos coinciden) → compuertas de calidad → mezcla suave a resolución completa.
 // Si alguna compuerta falla, devuelve null y la app muestra la imagen de la IA tal cual.
+// v4.5 (18-oct-2026): con la referencia del producto (color y paleta de la tela del catálogo) mide si la zona que
+// cambió es el producto o un objeto nuevo (p. ej. un cabecero copiado) y corrige el color de la tela hacia el real.
+import { lab, rgb, dist2, de00 } from './ref.js';
 
 const L = 256; // resolución de análisis (lado mayor)
 const LIM = { err: 6, seam: 14, coverMin: 0.01, coverMax: 0.75 };
@@ -127,12 +130,57 @@ function otsu(hist, n) {
   return t;
 }
 
+// Tabla de corrección de color (33³, en deltas para no posterizar): mueve los colores cercanos a la tela generada
+// hacia el color del catálogo. El peso cae suave con la distancia, así lo que no es la tela no cambia.
+function lutColor(ref, corr) {
+  const hz = (q) => Math.atan2(q[2], q[1]), Cz = (q) => Math.hypot(q[1], q[2]);
+  let dh = hz(ref.lab) - hz(corr); if (dh > Math.PI) dh -= 2 * Math.PI; if (dh < -Math.PI) dh += 2 * Math.PI;
+  dh = Math.max(-0.44, Math.min(0.44, dh)); // ±25°
+  // croma esperada con la luz del cuarto: en un cuarto más oscuro la tela también se ve menos saturada
+  const cEsp = Cz(ref.lab) * Math.sqrt(Math.min(1, (corr[0] + 10) / (ref.lab[0] + 10)));
+  const kC = Math.max(0.85, Math.min(1.4, cEsp / Math.max(1, Cz(corr)))), dL = Math.max(-8, Math.min(8, 0.35 * (ref.lab[0] - corr[0])));
+  const N = 33, st = 255 / (N - 1), lut = new Int16Array(N * N * N * 3);
+  for (let r = 0; r < N; r++) for (let g2 = 0; g2 < N; g2++) for (let b = 0; b < N; b++) {
+    const R = r * st, G2 = g2 * st, B = b * st, p = lab(R, G2, B), dd = dist2(p, corr);
+    const t = dd <= 16 ? 1 : dd >= 30 ? 0 : (30 - dd) / 14, wgt = t * t * (3 - 2 * t);
+    if (!wgt) continue;
+    const C = Cz(p) * (1 + (kC - 1) * wgt), hh = hz(p) + dh * wgt, q = rgb(p[0] + dL * wgt, C * Math.cos(hh), C * Math.sin(hh));
+    const o2 = ((r * N + g2) * N + b) * 3; lut[o2] = q[0] - R; lut[o2 + 1] = q[1] - G2; lut[o2 + 2] = q[2] - B;
+  }
+  return { lut, N, st, info: { dh: +(dh * 57.2958).toFixed(1), kC: +kC.toFixed(2), dL: +dL.toFixed(1) } };
+}
+function aplicarLut(px, { lut, N, st }) {
+  for (let i = 0; i < px.length; i += 4) {
+    const o2 = ((Math.round(px[i] / st) * N + Math.round(px[i + 1] / st)) * N + Math.round(px[i + 2] / st)) * 3;
+    if (lut[o2] | lut[o2 + 1] | lut[o2 + 2]) { px[i] += lut[o2]; px[i + 1] += lut[o2 + 1]; px[i + 2] += lut[o2 + 2]; }
+  }
+}
+// Cuando la fusión no entra y se muestra la imagen de la IA tal cual: igual se corrige el color de la tela
+export function corregir(gen, ref) {
+  if (!ref?.solid) return null;
+  const W = gen.naturalWidth || gen.width, H = gen.naturalHeight || gen.height, s = L / Math.max(W, H), w = Math.round(W * s), h = Math.round(H * s);
+  const g = pixels(gen, w, h), Ls = [], As = [], Bs = [];
+  const hue = (q) => Math.atan2(q[2], q[1]) * 57.2958, cr = (q) => Math.hypot(q[1], q[2]);
+  for (let i = 0; i < w * h; i++) {
+    const p = lab(g[i * 3], g[i * 3 + 1], g[i * 3 + 2]);
+    const fam = dist2(p, ref.lab) < 22 || (cr(p) > 12 && cr(ref.lab) > 12 && Math.abs(((hue(p) - hue(ref.lab) + 540) % 360) - 180) < 22);
+    if (fam && p[0] > 12) { Ls.push(p[0]); As.push(p[1]); Bs.push(p[2]); }
+  }
+  if (Ls.length < 0.03 * w * h) return null;
+  const md = (a) => a.sort((x, y) => x - y)[a.length >> 1], corr = [md(Ls), md(As), md(Bs)], dE = de00(corr, ref.lab);
+  if (dE <= 4) return null;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(gen, 0, 0, W, H);
+  const id = x.getImageData(0, 0, W, H), t = lutColor(ref, corr); aplicarLut(id.data, t); x.putImageData(id, 0, 0);
+  return { canvas: c, info: { dE: +dE.toFixed(1), color: t.info } };
+}
+
 /**
  * @param {HTMLCanvasElement|HTMLImageElement} orig foto del cliente (ya recortada al encuadre de la IA)
  * @param {HTMLImageElement} gen imagen de la IA
  * @returns {{canvas: HTMLCanvasElement, info: object} | {canvas: null, info: object}}
  */
-export function fuse(orig, gen) {
+export function fuse(orig, gen, ref = null) {
   const W = orig.width || orig.naturalWidth, H = orig.height || orig.naturalHeight;
   const s = L / Math.max(W, H), w = Math.round(W * s), h = Math.round(H * s), n = w * h;
   const o = pixels(orig, w, h), g0 = pixels(gen, w, h);
@@ -184,6 +232,28 @@ export function fuse(orig, gen) {
   for (let i = 0; i < n; i++) if (!out[i]) m[i] = 1;
   m = morph(m, w, h, 2, true);
 
+  // 5b) ¿lo que cambió es el producto o algo nuevo? (con la paleta de la tela del catálogo)
+  let corr = null;
+  if (ref && ref.solid && ref.palette?.length) { // solo telas de un color: en estampados no se sabe qué colores son del diseño
+    const cl = (v) => (v < 0 ? 0 : v > 255 ? 255 : v), hue = (q) => Math.atan2(q[2], q[1]) * 57.2958, cr = (q) => Math.hypot(q[1], q[2]);
+    const mismaFamilia = (p) => ref.palette.some((q) => dist2(p, q) < 22 || (cr(p) > 12 && cr(q) > 12 && Math.abs(((hue(p) - hue(q) + 540) % 360) - 180) < 22));
+    let cnt = 0, pl = 0, nw = 0; const Ls = [], As = [], Bs = [];
+    for (let i = 0; i < n; i++) {
+      if (!m[i]) continue; cnt++;
+      const p = lab(cl(g[i * 3] * A[0][0] + A[0][1]), cl(g[i * 3 + 1] * A[1][0] + A[1][1]), cl(g[i * 3 + 2] * A[2][0] + A[2][1]));
+      if (mismaFamilia(p)) { pl++; if (dist2(p, ref.lab) < 34 && p[0] > 12) { Ls.push(p[0]); As.push(p[1]); Bs.push(p[2]); } }
+      else if (d[i] > ts && p[0] > 25 && p[0] < 92) nw++;
+    }
+    if (cnt) {
+      const prod = { frac: +(pl / cnt).toFixed(3), nuevo: +(nw / cnt).toFixed(3) };
+      if (Ls.length > 30) {
+        const md = (a) => a.sort((x, y) => x - y)[a.length >> 1], mlab = [md(Ls), md(As), md(Bs)];
+        prod.dE = +de00(mlab, ref.lab).toFixed(1); corr = mlab;
+      }
+      info.prod = prod;
+    }
+  }
+
   // 6) compuertas de calidad: cuánto cambia y si la costura cae donde ambas fotos coinciden
   let cover = 0; for (let i = 0; i < n; i++) cover += m[i]; cover /= n;
   const ring = morph(m, w, h, 3, true); let seamS = 0, seamN = 0;
@@ -208,6 +278,8 @@ export function fuse(orig, gen) {
   gx.drawImage(gen, 0, 0, W, H); gx.setTransform(1, 0, 0, 1, 0, 0);
   const id = gx.getImageData(0, 0, W, H), px = id.data;
   for (let i = 0; i < px.length; i += 4) { px[i] = px[i] * A[0][0] + A[0][1]; px[i + 1] = px[i + 1] * A[1][0] + A[1][1]; px[i + 2] = px[i + 2] * A[2][0] + A[2][1]; }
+  // 8b) color de la tela hacia el del catálogo: tono y croma casi completos, luz solo en parte (respeta la luz del cuarto)
+  if (corr && info.prod.dE > 4) { const t = lutColor(ref, corr); aplicarLut(px, t); info.color = t.info; }
   gx.putImageData(id, 0, 0);
   gx.globalCompositeOperation = 'destination-in'; gx.imageSmoothingQuality = 'high'; gx.drawImage(mc, 0, 0, W, H);
   const fc = document.createElement('canvas'); fc.width = W; fc.height = H;

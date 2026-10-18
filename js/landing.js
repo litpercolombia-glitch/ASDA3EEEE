@@ -16,7 +16,6 @@ for (const id of ['#waFab', '#waFoot', '#waGo']) { const a = $(id); if (a) a.hre
 const SCENES = [
   { title: 'Pruébalo en tu cama', b: 'cuarto_a', a: 'r_protector', p: 'p_protector', c1: 'Foto de tu cliente', c2: 'Protector · Rojo', t: '7,4 s' },
   { title: 'Pruébala en tu ventana', b: 'ventana_a', a: 'r_cortina_nav', p: 'p_cortina_nav', c1: 'Foto de su ventana', c2: 'Cortina · Azul estrellas', t: '7,6 s' },
-  { title: 'Pruébatelo', b: 'persona_a', a: 'r_camiseta', p: 'p_camiseta', c1: 'Foto de tu cliente', c2: 'Camiseta · Verde oliva', t: '8,6 s' },
   { title: 'Pruébalo en tu cama', b: 'cuarto_b', a: 'r_colcha', p: 'p_colcha', c1: 'Foto de su cuarto', c2: 'Colcha · Renos verde', t: '8,4 s' },
 ];
 const card = $('#card3d'), shot = $('#hAfterW').parentElement;
@@ -80,9 +79,12 @@ new IntersectionObserver((es, o) => { if (es[0].isIntersecting && !reduce) { o.d
 // Mientras esté apagada, la landing la muestra como «muy pronto» y la demo no deja probar prendas (no hay salida sin revisión).
 const ROPA = call('cfg', { tenant: 'demo' }, { timeout: 8000 }).then((c) => c.ropa === true).catch(() => false);
 ROPA.then((on) => {
-  if (on) return;
-  const h = $('#catRopaT'); if (h) h.append(' ', el('small', { text: 'muy pronto' }));
-  const lead = $('.lead'); if (lead) for (const n of lead.childNodes) if (n.nodeType === 3 && /o de sí mismo/.test(n.textContent)) n.textContent = n.textContent.replace('su ventana o de sí mismo', 'su ventana o su comedor');
+  // la página sale sin promesas de ropa; si la prueba de ropa está encendida se agrega aquí
+  if (on) {
+    $('#catRopaT small')?.remove();
+    const lead = $('.lead'); if (lead) for (const n of lead.childNodes) if (n.nodeType === 3 && /su ventana o su comedor/.test(n.textContent)) n.textContent = n.textContent.replace('su ventana o su comedor', 'su ventana o de sí mismo');
+    return;
+  }
   for (const li of $$('#plans li')) if (/y ropa/.test(li.textContent)) li.textContent = li.textContent.replace('y ropa', '(ropa: muy pronto)');
   for (const b of $$('#galTabs button')) if (b.textContent === 'Camiseta') b.textContent = 'Camiseta · pronto';
 });

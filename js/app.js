@@ -1,7 +1,8 @@
 // Zynex Probador — app del comprador. 2026-10-17
 // Flujo: producto de la tienda → foto (cámara, galería o ejemplo) → IA (Cloudflare FLUX.2 klein, vía Supabase) → comparar → comprar.
 import { call, track, money, toast, store, el, $, $$, WA, sesion } from './common.js';
-import { fuse } from './fusion.js';
+import { fuse, corregir } from './fusion.js';
+import { refInfo } from './ref.js';
 
 const Q = new URLSearchParams(location.search);
 const slug = (s) => (/^[a-z0-9][a-z0-9-]{0,200}$/.test(String(s || '').toLowerCase()) ? String(s).toLowerCase() : '');
@@ -388,14 +389,16 @@ async function generate(retry = true) {
   const t0 = performance.now();
   try {
     await cfgReady;
-    const d = await call('ai', { tenant: TENANT, tok: CFG.tok, shop: DEMO ? SHOP : undefined, handle: P.handle, photo: photo.ai || photo.data, product: prodUrl, color: sel.color || '', w: photo.w, h: photo.h, sesion, n: 2, consiento: G === 'ropa' ? (photo.fuente === 'ejemplo' || consentOk()) : undefined }, { timeout: 80000 });
-    const fz = await fuseResult(photo, d.images?.length ? d.images : [d.image]);
+    // color y zona de la tela en la foto de la variante (en paralelo; si tarda, la IA no la espera)
+    const refP = refInfo(prodUrl, sel.color || ''), ref0 = await Promise.race([refP, wait(1200).then(() => null)]);
+    const d = await call('ai', { tenant: TENANT, tok: CFG.tok, shop: DEMO ? SHOP : undefined, handle: P.handle, photo: photo.ai || photo.data, product: prodUrl, color: sel.color || '', w: photo.w, h: photo.h, sesion, n: 2, consiento: G === 'ropa' ? (photo.fuente === 'ejemplo' || consentOk()) : undefined, ref: ref0 ? { hex: ref0.hex, box: ref0.box } : undefined }, { timeout: 80000 });
+    const fz = await fuseResult(photo, d.images?.length ? d.images : [d.image], ref0 || (await refP));
     results.set(key, fz.src);
     await stopProgress(true);
     busy = false;
     if (productImage() !== prodUrl) { markSwatch(null); return generate(); }
     shown = { key: photo.key, color: sel.color, src: fz.src };
-    trk('ver', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { ms: Math.round(performance.now() - t0), fusion: fz.info.ok ? 1 : 0, motivo: fz.info.motivo || '', err: fz.info.err ?? null, costura: fz.info.seam ?? null, n: fz.n, elegida: fz.i } });
+    trk('ver', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { ms: Math.round(performance.now() - t0), fusion: fz.info.ok ? 1 : 0, motivo: fz.info.motivo || '', err: fz.info.err ?? null, costura: fz.info.seam ?? null, n: fz.n, elegida: fz.i, prod: fz.info.prod ? `${fz.info.prod.dE ?? '-'}|${fz.info.prod.nuevo}|${fz.info.color ? 'c' : ''}` : '' } });
     await showResult(fz.src, true, gen);
     if (gen !== genN) return; // mientras se mostraba, el cliente ya pidió otra prueba
     if (fz.info.motivo === 'encuadre') $('#resHint').textContent = 'La IA movió un poco el encuadre de tu foto. Desliza para comparar.';
@@ -422,16 +425,21 @@ async function generate(retry = true) {
 }
 // Fusión fiel: llegan 2 versiones de la IA; se queda la que mejor conserva tu foto real (cuarto, cara, luz)
 // y, si calza, se funde con tus píxeles originales. Si ninguna calza, se muestra la más fiel tal cual.
-async function fuseResult(ph, gens) {
+// Mejor de 2: gana la versión que funde con la foto real, conserva el color de la tela y no trae objetos nuevos
+const castigo = (inf) => { const p = inf.prod; if (!p) return 0; return (p.dE != null ? 0.5 * p.dE : 0) + 35 * p.nuevo + (p.frac < 0.25 ? 12 : 0); };
+async function fuseResult(ph, gens, ref = null) {
   let o; try { o = await loadImage(ph.data); } catch { return { src: gens[0], info: { motivo: 'error' }, i: 0, n: gens.length }; }
   let best = null;
   for (let i = 0; i < gens.length; i++) {
-    let r;
-    try { const g = await loadImage(gens[i]); await new Promise((ok) => requestAnimationFrame(() => ok())); r = fuse(o, g); } catch { r = { canvas: null, info: { motivo: 'error' } }; }
-    const score = r.canvas ? r.info.err : 100 + (r.info.err ?? 50) + (r.info.seam ?? 0) / 4;
-    if (!best || score < best.score) best = { score, i, r };
+    let r, g = null;
+    try { g = await loadImage(gens[i]); await new Promise((ok) => requestAnimationFrame(() => ok())); r = fuse(o, g, ref); } catch { r = { canvas: null, info: { motivo: 'error' } }; }
+    const score = (r.canvas ? r.info.err : 100 + (r.info.err ?? 50) + (r.info.seam ?? 0) / 4) + castigo(r.info);
+    if (!best || score < best.score) best = { score, i, r, g };
   }
-  const { r, i } = best;
+  const { r, i, g } = best;
+  if (!r.canvas && g && ref) { // sin fusión: se muestra la imagen de la IA, con el color de la tela corregido
+    try { const c = corregir(g, ref); if (c) return { src: c.canvas.toDataURL('image/jpeg', 0.92), info: { ...r.info, color: c.info.color, prod: { dE: c.info.dE, nuevo: '-' } }, i, n: gens.length }; } catch {}
+  }
   return { src: r.canvas ? r.canvas.toDataURL('image/jpeg', 0.9) : gens[i], info: r.info || {}, i, n: gens.length };
 }
 function markSwatch(val, cls) {
@@ -526,6 +534,13 @@ function showErr(code, t, s) {
   $('#errT').textContent = t; $('#errS').textContent = s;
   $('#btnWaErr').hidden = !CFG.wa || !['limite_ip', 'limite_sesion', 'ia_fallo', 'ia_rechazo', 'producto_sin_imagen', 'imagen_no_valida'].includes(code);
   $('#btnRetry').hidden = ['cuota_agotada', 'tienda_inactiva', 'tienda_no_registrada', 'limite_tienda_dia', 'limite_sesion', 'limite_ip', 'ropa_no_disponible', 'prenda_no_permitida', 'producto_sin_probador'].includes(code);
+  if (DEMO) { // en la demo quien lee es un comerciante: siempre hay un paso siguiente
+    const wa = $('#btnWaErr');
+    const b = $('#btnDemoCta') || wa.parentElement.insertBefore(el('button', { class: 'btn pri', id: 'btnDemoCta', type: 'button', onclick: () => { trk('cta', { tenant: TENANT, handle: P?.handle, detalle: { desde: 'demo-error', code: code || '' } }); post({ vto: 'demo-cta', shop: SHOP, handle: P?.handle || '' }); } }, 'Quiero esto en mi tienda'), wa);
+    b.hidden = false;
+    wa.hidden = false; wa.href = `https://wa.me/${CFG.wa || WA}?text=${encodeURIComponent('Hola, quiero ver el probador con IA en mi tienda' + (SHOP ? ` (${SHOP})` : ''))}`;
+    if (!wa.dataset.demo) { wa.dataset.demo = '1'; wa.replaceChildren(...[wa.querySelector('svg'), 'Escríbenos'].filter(Boolean)); }
+  }
 }
 // autorización para fotos de personas (Ley 1581): casilla antes de tomar o subir la foto
 function consentOk() { return $('#chkConsent').checked; }
