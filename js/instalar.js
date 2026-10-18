@@ -29,7 +29,7 @@ async function start() {
 // ¿Ya vimos el botón en la tienda? (el servidor guarda la última vez que cargó en su dominio)
 function estado(cfg) {
   const box = $('#estadoIns'), visto = cfg.visto ? new Date(cfg.visto) : null;
-  const fecha = (d) => d.toLocaleString('es-CO', { day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' });
+  const fecha = (d) => d.toLocaleString('es-CO', { day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' }).replace(/\.$/, '');
   box.className = 'card estado ' + (visto ? 'ok' : 'pend');
   box.replaceChildren(
     el('b', { text: visto ? 'El botón ya está en tu tienda' : 'Aún no vemos el botón en tu tienda' }),
