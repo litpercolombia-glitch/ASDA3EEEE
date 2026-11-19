@@ -199,3 +199,16 @@ body.app { min-height: 100dvh; background:
 .chip.na { opacity: .45; text-decoration: line-through; }
 .chip.na small { text-decoration: none; }
 #imgAfter:not([src]) { visibility: hidden; }
+
+/* ronda 3 (19-nov-2026): botón deshabilitado claro, consejo sin cortar, ilustración ~30 % más pequeña */
+.btn.off { opacity: .5; filter: grayscale(.9); cursor: not-allowed; }
+.btn.pri.off { background: var(--panel2, #1a1d22); background-image: none; color: var(--mu); box-shadow: none; border: 1px solid var(--line); }
+.empty { overflow: visible; }
+.empty-t, .empty-s { white-space: normal; overflow-wrap: anywhere; }
+.empty-s { max-width: 34ch; }
+.illu-w { width: min(50vw, 182px); }
+@media (max-width: 899px) {
+  body[data-state=inicio] .stage { height: auto; min-height: 0; }
+  body[data-state=inicio] .empty { position: relative; inset: auto; padding: 16px 20px 18px; gap: 6px; }
+  body[data-state=inicio] .empty-t { margin-top: 4px; }
+}
