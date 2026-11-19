@@ -1,4 +1,6 @@
-// vto-api v6.10.0 — Zynex Probador (backend). 19-nov-2026 (auditoría 5: la huella del consentimiento debe ser la del texto de la
+// vto-api v6.11.0 — Zynex Probador (backend). 19-nov-2026 (auditoría 6: clasificador con comedor, cama y funda de colchón;
+//   si la base falla al descontar el cupo responde «servicio_ocupado» y no culpa a la foto).
+// v6.10.0 (auditoría 5: la huella del consentimiento debe ser la del texto de la
 //   categoría del producto (ropa = texto de mayoría de edad); cfg entrega los dominios de la tienda para el frame-ancestors de /p;
 //   vto_take4 atómico y vto_refund2 devuelve la sesión si la 1.ª prueba falla).
 // v6.9.0 (auditoría 4: sesión contada en la 1.ª prueba y no en cada cfg, IPv6 por /64,
@@ -167,8 +169,10 @@ const BLOCKED = 'ropa interior|brasier|brasieres|bra|sosten|panty|pantys|tanga|t
 // Solo para ropa (en hogar «transparente» o «malla» son normales: mantel transparente, organizador de malla)
 const BLOCKED_ROPA = 'sexy|transparente|transparentes|transparencia|transparencias|bralette|bralettes|babydoll|baby doll|corset|corsets|corse|corses|corpino|liguero|ligueros|camison|camisones|malla|mallas|encaje|encajes|infantil|infantiles|nino|nina|ninos|ninas|bebe|bebes|bebito|bebita|kids|kid|juvenil|escolar|colegial|colegio|preescolar|primaria|girls|girl|boys|boy|baby|babies|teen|teens|toddler|toddlers|junior|juniors|adolescente|adolescentes|infante|infantes|chicos|nene|nena|nenes|nenas|peques|recien nacido|youth|little|menor|menores|pequenos|pequenas|chiquito|chiquitos|chiquita|chiquitas|anos|meses';
 const NOT_HOME = 'pantalla|screen|celular|iphone|samsung|xiaomi|telefono|movil|camara|lente|lentes|solar|vidrio|templado|carro|auto|moto|vehiculo|parlante|cargador|bateria|audifonos|reloj|tablet|laptop|portatil|consola|perro|gato|mascota|bebe';
+// Telas de cama y de mesa: si el título las menciona, «comedor» o «cama» hablan de dónde va la tela, no de un mueble
+const TEXTIL_CAMA_MESA = 'kit|kits|sabana|sabanas|juego de cama|juegos de cama|protector|protectores|cobija|cobijas|cobertor|cobertores|frazada|frazadas|manta|mantas|edredon|edredones|colcha|colchas|plumon|plumones|cubrelecho|cubrelechos|duvet|comforter|almohada|almohadas|funda|fundas|forro|forros|cubresillas|cubre silla|mantel|manteles|camino de mesa|individuales|cortina|cortinas|colchon|colchones|cojin|cojines|tendido|tendidos|ropa de cama|lenceria';
 const RULES: [string, string, string | null, string | null][] = [
-  ['protector', 'protector|protectores', 'colchon|colchones|cama', NOT_HOME + '|espaldar|cabecero|cabecera|pintura|techo|pared'],
+  ['protector', 'protector|protectores|funda de colchon|fundas de colchon|forro de colchon|forros de colchon|forro para colchon|funda para colchon|cubre colchon|cubrecolchon|cubrecolchones', 'colchon|colchones|cama', NOT_HOME + '|espaldar|cabecero|cabecera|pintura|techo|pared'],
   ['sabanas', 'sabana|sabanas|juego de cama|juegos de cama|kit de cama', null, NOT_HOME + '|caja|organizadora|organizador|bolsa|bolsas|ganchos|sujetador'],
   ['edredon', 'edredon|edredones|colcha|colchas|plumon|plumones|cubrelecho|cubrelechos|duvet|comforter', null, NOT_HOME + '|vasenilla|escalera|caja|organizadora|organizador|bolsa|bolsas'],
   ['cobija', 'cobija|cobijas|cobertor|cobertores|frazada|frazadas|manta|mantas', null, NOT_HOME + '|electrica|peluche|juguete|caja|organizadora|organizador|bolsa|bolsas|para muebles|para sofa|sofa|sala'],
@@ -176,6 +180,9 @@ const RULES: [string, string, string | null, string | null][] = [
   ['cortina', 'cortina|cortinas|blackout|velo|velos|persiana|persianas', null, 'cortina de luces|cortina de luz|cortinas de luces|cortinas de luz|led|leds|de bano|ducha|iman|imanes|gancho|ganchos|riel|varilla|soporte|' + NOT_HOME],
   ['mantel', 'mantel|manteles|camino de mesa', null, 'picnic|' + NOT_HOME],
   ['forro', 'forro|forros|funda|fundas|cubresillas|cubre silla|cubre sofa|cubresofa|manta|mantas', 'silla|sillas|sofa|sofas|comedor|mueble|muebles|puestos', NOT_HOME + '|almohada|almohadas|cojin|cojines|colchon'],
+  // auditoría 6: muebles grandes (comedor, cama) con sus propias exclusiones: si el título habla de una tela de cama o de comedor
+  // (forro, mantel, sábana, protector, cobija…) NO es el mueble; y aunque lo fuera, esas reglas van antes en el título y ganan.
+  ['mueble', 'comedor|comedores|juego de comedor|set de comedor|cama|camas|camarote|camarotes|litera|literas|base cama|base de cama|cabecero|cabeceros|cabecera|cabeceras', null, NOT_HOME + '|' + TEXTIL_CAMA_MESA + '|mesa para cama|escalera|organizador|organizadora|bajo cama|debajo de cama|inflable|hinchable|colchon inflable|toldo|mosquitero|toldillo|barandal|baranda|lampara|luz|luces|led|tapete|tapetes|alfombra|alfombras'],
   ['mueble', 'zapatero|zapateros|estante|estantes|esquinero|esquineros|armario|armarios|closet|perchero|percheros|repisa|repisas|mueble|muebles|organizador de pie|organizador de zapatos|biblioteca|mesa de noche|tapete|tapetes|alfombra|alfombras', null, NOT_HOME + '|viaje|maleta|cosmetiquero|maquillaje|masajeador|masaje|spa|pies|yoga|ejercicio|frutas|verduras|nevera|cocina|carro|luces|led|embarazada|embarazadas|cinturon|salida de bano|pareo'],
 ];
 const GARMENT_WORDS: Record<string, string> = { camiseta: 'camiseta|camisetas|t shirt|tshirt|polo|polos', camisa: 'camisa|camisas', blusa: 'blusa|blusas', buzo: 'buzo|buzos|hoodie|hoodies|sudadera con capota', saco: 'saco|sacos|sueter|sueteres|cardigan', chaqueta: 'chaqueta|chaquetas|chaqueton|abrigo|parka', chaleco: 'chaleco|chalecos', top: 'top|tops|crop top', pantalon: 'pantalon|pantalones|palazzo', jean: 'jean|jeans', sudadera: 'sudadera|sudaderas|jogger|joggers', falda: 'falda|faldas', short: 'short|shorts|bermuda|bermudas', vestido: 'vestido|vestidos', enterizo: 'enterizo|enterizos|jumpsuit|overol', pijama: 'pijama|pijamas', zapato: 'zapato|zapatos|bota|botas|botin|botines|tenis|zapatilla|zapatillas|mocasin|mocasines|calzado', conjunto: 'conjunto deportivo|conjunto de ropa|conjunto casual|conjunto de dos piezas' };
@@ -458,8 +465,15 @@ async function actionAI(body: any, req: Request) {
   if ((await tokUsos(tokId)) >= 8) return [429, { error: 'limite_sesion' }]; // la sesión se revisa antes de contar la IP
   // vto_take4: en la 1.ª prueba de la ficha cuenta la sesión de la IP (tope 15) y luego vto_take3 cuenta IP, ficha y tienda
   // (si rechaza por algo que no es la IP, devuelve los contadores en la misma transacción)
-  const { data: take } = await sb.rpc('vto_take4', { p_ip: ip, p_tenant: tenant, p_max_ip: MAX_IP_DIA, p_tok: tokId, p_max_tok: 8, p_max_sess: SESS_MAX_IP_DIA });
-  if (!take?.ok) {
+  let take: any = null, takeErr: unknown = null;
+  try {
+    const r = await sb.rpc('vto_take4', { p_ip: ip, p_tenant: tenant, p_max_ip: MAX_IP_DIA, p_tok: tokId, p_max_tok: 8, p_max_sess: SESS_MAX_IP_DIA });
+    take = r.data; takeErr = r.error;
+  } catch (e) { takeErr = e; }
+  // auditoría 6: si la base no respondió no sabemos si hay cupo: no se llama a la IA (no se gasta) y el aviso es honesto,
+  // sin culpar a la foto ni decir que se acabaron las pruebas
+  if (takeErr || !take || typeof take !== 'object') { console.error('vto_take4', (takeErr as any)?.message || takeErr || 'sin datos'); return [503, { error: 'servicio_ocupado' }]; }
+  if (!take.ok) {
     if (take?.motivo === 'cuota_agotada') await avisoUnaVezAlDia(`cuota-${tenant}`, `🟠 Probador IA: la tienda "${tenant}" se quedó sin pruebas del mes. El botón se oculta solo hasta que suba de plan.`);
     return [429, { error: take?.motivo || 'limite' }];
   }

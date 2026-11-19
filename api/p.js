@@ -21,7 +21,8 @@ export default async function handler(req, res) {
   // misma regla que js/app.js: demo=1 → demo; si no, ?t= (por defecto litper)
   const raw = u.searchParams.get('demo') === '1' ? 'demo' : String(u.searchParams.get('t') || 'litper').toLowerCase();
   const tenant = tenantOk(raw) ? raw : '';
-  const doms = tenant ? await dominiosTenant(tenant) : [];
+  // auditoría 6: máximo 2 s esperando a Supabase; si no responde, falla cerrado (solo los dominios propios, sin caché)
+  const doms = tenant ? await dominiosTenant(tenant, 2000) : [];
   const fuentes = [...PROPIOS];
   for (const d of doms || []) {
     fuentes.push(`https://${d}`);

@@ -11,14 +11,14 @@ export const tenantOk = (t) => /^[a-z0-9][a-z0-9-]{0,59}$/.test(String(t || ''))
 const cacheTenant = new Map();
 const TTL_OK = 300e3, TTL_NO = 60e3; // 5 min con dominios; 1 min si la tienda no existe (un lead nuevo no espera mucho)
 // Dominios (sin www) registrados de la tienda; [] si no existe o es la demo; null si la consulta falló (no se cachea).
-export async function dominiosTenant(tenant) {
+export async function dominiosTenant(tenant, ms = 6000) {
   const t = String(tenant || '').toLowerCase(); if (!tenantOk(t) || t === 'demo') return [];
   const c = cacheTenant.get(t);
   if (c && Date.now() - c.t < (c.v.length ? TTL_OK : TTL_NO)) return c.v;
   let v;
   try {
     // Origin fijo: la función filtra por Origin (CORS); no es autenticación, cfg solo devuelve datos públicos de la tienda
-    const r = await fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://probador.zynexapp.com' }, body: JSON.stringify({ action: 'cfg', tenant: t }), signal: AbortSignal.timeout(6000) });
+    const r = await fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://probador.zynexapp.com' }, body: JSON.stringify({ action: 'cfg', tenant: t }), signal: AbortSignal.timeout(ms) });
     const d = await r.json().catch(() => ({}));
     if (r.status === 404) v = [];
     else if (!r.ok) return null;

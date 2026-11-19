@@ -40,6 +40,7 @@ const ERR = {
   tienda_no_registrada: ['El probador no está disponible por ahora', 'Puedes comprar normal desde la página del producto.'],
   ia_cupo_diario: ['El probador está en pausa por unas horas', 'Puedes comprar normal; vuelve a intentarlo más tarde.'],
   ia_fallo: ['Algo falló, intenta de nuevo', 'Tu foto está bien: prueba otra vez en unos segundos.'],
+  servicio_ocupado: ['Servicio ocupado, intenta de nuevo', 'No es tu foto: el probador está ocupado. Prueba otra vez en unos segundos.'],
   origen_no_permitido: ['El probador no está disponible aquí', 'Ábrelo desde la página oficial de la tienda.'],
   ia_rechazo: ['La IA no aceptó esta foto', 'Prueba con otra foto: de frente, con buena luz y sin otras personas.'],
   ia_tiempo: ['Se demoró más de lo normal', 'Intenta otra vez; casi siempre tarda menos de 12 segundos.'],
