@@ -41,11 +41,11 @@ export async function shopMeta(shop) {
 }
 
 export const img = (u, w) => { if (!u) return null; let s = u.startsWith('//') ? 'https:' + u : u; if (w) s += (s.includes('?') ? '&' : '?') + 'width=' + w; return s; };
-const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 // Qué es el producto: decide el tipo de prueba (v2, 17-oct-2026: palabras completas, contexto obligatorio y exclusiones;
 // probado con 3.000+ productos de 17 tiendas colombianas: evita «protector de pantalla», «cortina de luces», «silla plegable», etc.)
-const normw = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9ñ]+/g, ' ').trim();
+const normw = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9ñ]+/g, ' ').trim();
 const has = (t, words) => new RegExp(`(^| )(${words})( |$)`).test(t);
 const at = (t, words) => { const m = new RegExp(`(^| )(${words})( |$)`).exec(t); return m ? m.index : -1; };
 const BLOCKED = 'ropa interior|brasier|brasieres|bra|sosten|panty|pantys|tanga|tangas|boxer|boxers|calzon|calzones|calzoncillo|calzoncillos|lenceria|bikini|bikinis|traje de bano|vestido de bano|banador|trusa|cachetero|bodysuit|body|faja|fajas|moldeador|moldeadora|shapewear|levanta gluteos|levanta cola|erotico|erotica|erotic|sexual|intimo|intima|sex|tanguita|hilo dental|lingerie|underwear|swimsuit|swimsuits|swimwear|thong|thongs|briefs|panties|negligee|nightie';
@@ -70,11 +70,29 @@ const RULES = [ // [kind, palabras que lo identifican, contexto requerido (opcio
 ];
 const GARMENTS = { camiseta: 'camiseta|camisetas|t shirt|tshirt|polo|polos', camisa: 'camisa|camisas', blusa: 'blusa|blusas', buzo: 'buzo|buzos|hoodie|hoodies|sudadera con capota', saco: 'saco|sacos|sueter|sueteres|cardigan', chaqueta: 'chaqueta|chaquetas|chaqueton|abrigo|parka', chaleco: 'chaleco|chalecos', top: 'top|tops|crop top', pantalon: 'pantalon|pantalones|palazzo', jean: 'jean|jeans', sudadera: 'sudadera|sudaderas|jogger|joggers', falda: 'falda|faldas', short: 'short|shorts|bermuda|bermudas', vestido: 'vestido|vestidos', enterizo: 'enterizo|enterizos|jumpsuit|overol', pijama: 'pijama|pijamas', zapato: 'zapato|zapatos|bota|botas|botin|botines|tenis|zapatilla|zapatillas|mocasin|mocasines|calzado', conjunto: 'conjunto deportivo|conjunto de ropa|conjunto casual|conjunto de dos piezas' };
 const HOME_CTX = 'comedor|cama|mesa|silla|sillas|ventana|colchon|sofa|hogar|casa|cocina|bano|sala|habitacion|cuarto|puerta';
-const NOT_GARMENT = 'percha|perchas|gancho|ganchos|organizador|mascota|mascotas|perro|perros|gato|gatos|salvavidas|oil|aceite|crema|serum|celulitis|medias|lavadora|plancha|corrector|postura|lastrado|fitness|faja';
+const NOT_GARMENT = 'percha|perchas|gancho|ganchos|organizador|mascota|mascotas|perro|perros|gato|gatos|salvavidas|oil|aceite|crema|serum|celulitis|medias|lavadora|plancha|corrector|postura|lastrado|fitness|faja|saco de dormir|sacos de dormir|bolsa de dormir|bolsas de dormir|de dormir';
+// auditoría 7: «lencería para el hogar» es textil de casa, no ropa interior. Si el texto habla de algo íntimo
+// («lencería sexy», brasier, tanga…) NO se limpia y la palabra «lenceria» sigue bloqueando.
+const LENC_HOGAR = /(^| )lenceria (para (el |la )?|de (el |la )?|del )?(hogar|casa|cama|mesa|bano|cocina)(?= |$)/g;
+const INTIMO = 'sexy|sensual|intima|intimo|erotica|erotico|erotic|ropa interior|lingerie|underwear|brasier|brasieres|bra|tanga|tangas|panty|pantys|bralette|babydoll|liguero|encaje|encajes|transparente';
+const sinLencHogar = (t) => (has(t, INTIMO) ? t : t.replace(LENC_HOGAR, '$1textil hogar'));
+// auditoría 7: tallas infantiles. En el texto («talla 8», «talla niña», «4 años», «18 meses», «2T») y en la opción de talla
+// (valores numéricos de 2 a 16; en calzado, tallas menores a 33). Si hay duda, se bloquea (falla cerrada).
+const TALLA_NINO = 'talla (2|3|4|5|6|7|8|9|10|11|12|13|14|15|16)|tallas (2|3|4|5|6|7|8|9|10|11|12|13|14|15|16)|talla nino|talla nina|talla ninos|talla ninas|tallas nino|tallas nina|talla infantil|tallas infantiles|talla bebe|talla junior|\\d{1,2} anos|\\d{1,2} meses|[2-9]t|1[0-6]t';
+function tallasNino(p, garment) {
+  const opts = Array.isArray(p?.options) ? p.options : [];
+  const vals = [];
+  for (const o of opts) if (o && typeof o === 'object' && /talla|size|tama|edad|medida/.test(normw(o.name)) && Array.isArray(o.values)) vals.push(...o.values.map((v) => normw(v)));
+  const vt = (Array.isArray(p?.variants) ? p.variants : []).map((v) => normw(v?.title));
+  if ([...vals, ...vt].some((v) => has(v, TALLA_NINO) || has(v, 'nino|nina|ninos|ninas|bebe|bebes|infantil|kids|junior|toddler'))) return true;
+  const nums = vals.filter((v) => /^\d{1,2}(\.\d)?$/.test(v)).map(Number);
+  if (garment === 'zapato') return nums.some((n) => n < 33);
+  return nums.some((n) => n >= 2 && n <= 16);
+}
 export function kindOf(p) {
   const title = normw(p.title), type = normw(p.type || p.product_type), handle = normw(p.handle), tags = normw([].concat(p.tags || []).join(' '));
   const all = `${type} ${title} ${handle} ${tags}`;
-  if (has(all, BLOCKED)) return { kind: 'bloqueado', garment: null };
+  if (has(sinLencHogar(all), BLOCKED)) return { kind: 'bloqueado', garment: null };
   let best = null;
   for (const [kind, words, ctx, excl] of RULES) {
     const i = at(title, words); if (i < 0) continue;
@@ -85,7 +103,7 @@ export function kindOf(p) {
   if (!has(`${title} ${handle}`, HOME_CTX) && !has(title, NOT_HOME) && !has(title, NOT_GARMENT)) {
     for (const [g, words] of Object.entries(GARMENTS)) { const i = at(title, words); if (i >= 0 && (!best || i < best.i)) best = { i, kind: 'ropa', garment: g }; }
   }
-  if (best && best.kind === 'ropa' && has(all, BLOCKED_ROPA)) return { kind: 'bloqueado', garment: null };
+  if (best && best.kind === 'ropa' && (has(all, BLOCKED_ROPA) || has(all, TALLA_NINO) || tallasNino(p, best.garment))) return { kind: 'bloqueado', garment: null };
   if (best) return { kind: best.kind, garment: best.garment || null };
   // sin palabra en el título: miramos el tipo de producto con las mismas reglas
   for (const [kind, words, ctx, excl] of RULES) if (has(type, words) && !(excl && has(`${title} ${type}`, excl)) && (!ctx || has(`${title} ${type} ${handle}`, ctx))) return { kind, garment: null };

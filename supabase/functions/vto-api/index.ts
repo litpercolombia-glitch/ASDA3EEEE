@@ -1,4 +1,7 @@
-// vto-api v6.12.0 — Zynex Probador (backend). 19-nov-2026: ropa y zapatos por tienda (config.ropa=true; moderación siempre activa).
+// vto-api v6.14.0 — Zynex Probador (backend). 19-nov-2026, auditoría 7: moderación que falla cerrada (solo pasa con minor y
+//   nudity_or_underwear en false booleano), cupo devuelto si la moderación rechaza o falla (tope 6/IP/día), tallas infantiles
+//   bloqueadas, «saco de dormir» fuera de ropa y «lencería para el hogar» permitida.
+// v6.12.0: ropa y zapatos por tienda (config.ropa=true; moderación siempre activa).
 // v6.11.0 (auditoría 6: clasificador con comedor, cama y funda de colchón;
 //   si la base falla al descontar el cupo responde «servicio_ocupado» y no culpa a la foto).
 // v6.10.0 (auditoría 5: la huella del consentimiento debe ser la del texto de la
@@ -188,11 +191,29 @@ const RULES: [string, string, string | null, string | null][] = [
 ];
 const GARMENT_WORDS: Record<string, string> = { camiseta: 'camiseta|camisetas|t shirt|tshirt|polo|polos', camisa: 'camisa|camisas', blusa: 'blusa|blusas', buzo: 'buzo|buzos|hoodie|hoodies|sudadera con capota', saco: 'saco|sacos|sueter|sueteres|cardigan', chaqueta: 'chaqueta|chaquetas|chaqueton|abrigo|parka', chaleco: 'chaleco|chalecos', top: 'top|tops|crop top', pantalon: 'pantalon|pantalones|palazzo', jean: 'jean|jeans', sudadera: 'sudadera|sudaderas|jogger|joggers', falda: 'falda|faldas', short: 'short|shorts|bermuda|bermudas', vestido: 'vestido|vestidos', enterizo: 'enterizo|enterizos|jumpsuit|overol', pijama: 'pijama|pijamas', zapato: 'zapato|zapatos|bota|botas|botin|botines|tenis|zapatilla|zapatillas|mocasin|mocasines|calzado', conjunto: 'conjunto deportivo|conjunto de ropa|conjunto casual|conjunto de dos piezas' };
 const HOME_CTX = 'comedor|cama|mesa|silla|sillas|ventana|colchon|sofa|hogar|casa|cocina|bano|sala|habitacion|cuarto|puerta';
-const NOT_GARMENT = 'percha|perchas|gancho|ganchos|organizador|mascota|mascotas|perro|perros|gato|gatos|salvavidas|oil|aceite|crema|serum|celulitis|medias|lavadora|plancha|corrector|postura|lastrado|fitness|faja';
-function kindOf(p: { title?: string; type?: string; product_type?: string; handle?: string; tags?: unknown }) {
+const NOT_GARMENT = 'percha|perchas|gancho|ganchos|organizador|mascota|mascotas|perro|perros|gato|gatos|salvavidas|oil|aceite|crema|serum|celulitis|medias|lavadora|plancha|corrector|postura|lastrado|fitness|faja|saco de dormir|sacos de dormir|bolsa de dormir|bolsas de dormir|de dormir';
+// auditoría 7: «lencería para el hogar» es textil de casa, no ropa interior. Si el texto habla de algo íntimo
+// («lencería sexy», brasier, tanga…) NO se limpia y la palabra «lenceria» sigue bloqueando.
+const LENC_HOGAR = /(^| )lenceria (para (el |la )?|de (el |la )?|del )?(hogar|casa|cama|mesa|bano|cocina)(?= |$)/g;
+const INTIMO = 'sexy|sensual|intima|intimo|erotica|erotico|erotic|ropa interior|lingerie|underwear|brasier|brasieres|bra|tanga|tangas|panty|pantys|bralette|babydoll|liguero|encaje|encajes|transparente';
+const sinLencHogar = (t: string) => (has(t, INTIMO) ? t : t.replace(LENC_HOGAR, '$1textil hogar'));
+// auditoría 7: tallas infantiles. En el texto («talla 8», «talla niña», «4 años», «18 meses», «2T») y en la opción de talla
+// (valores numéricos de 2 a 16; en calzado, tallas menores a 33). Si hay duda, se bloquea (falla cerrada).
+const TALLA_NINO = 'talla (2|3|4|5|6|7|8|9|10|11|12|13|14|15|16)|tallas (2|3|4|5|6|7|8|9|10|11|12|13|14|15|16)|talla nino|talla nina|talla ninos|talla ninas|tallas nino|tallas nina|talla infantil|tallas infantiles|talla bebe|talla junior|\\d{1,2} anos|\\d{1,2} meses|[2-9]t|1[0-6]t';
+function tallasNino(p: any, garment: string) {
+  const opts = Array.isArray(p?.options) ? p.options : [];
+  const vals: string[] = [];
+  for (const o of opts) if (o && typeof o === 'object' && /talla|size|tama|edad|medida/.test(normw(o.name)) && Array.isArray(o.values)) vals.push(...o.values.map((v: unknown) => normw(v)));
+  const vt = (Array.isArray(p?.variants) ? p.variants : []).map((v: any) => normw(v?.title));
+  if ([...vals, ...vt].some((v) => has(v, TALLA_NINO) || has(v, 'nino|nina|ninos|ninas|bebe|bebes|infantil|kids|junior|toddler'))) return true;
+  const nums = vals.filter((v) => /^\d{1,2}(\.\d)?$/.test(v)).map(Number);
+  if (garment === 'zapato') return nums.some((n) => n < 33);
+  return nums.some((n) => n >= 2 && n <= 16);
+}
+function kindOf(p: { title?: string; type?: string; product_type?: string; handle?: string; tags?: unknown; options?: unknown; variants?: unknown }) {
   const title = normw(p.title), type = normw(p.type || p.product_type), handle = normw(p.handle);
   const tags = normw(Array.isArray(p.tags) ? p.tags.join(' ') : String(p.tags || ''));
-  if (has(`${type} ${title} ${handle} ${tags}`, BLOCKED)) return { kind: 'bloqueado', garment: '' };
+  if (has(sinLencHogar(`${type} ${title} ${handle} ${tags}`), BLOCKED)) return { kind: 'bloqueado', garment: '' };
   let best: { i: number; kind: string; garment?: string } | null = null;
   for (const [kind, words, ctx, excl] of RULES) {
     const i = at(title, words); if (i < 0) continue;
@@ -203,7 +224,7 @@ function kindOf(p: { title?: string; type?: string; product_type?: string; handl
   if (!has(`${title} ${handle}`, HOME_CTX) && !has(title, NOT_HOME) && !has(title, NOT_GARMENT)) {
     for (const [g, words] of Object.entries(GARMENT_WORDS)) { const i = at(title, words); if (i >= 0 && (!best || i < best.i)) best = { i, kind: 'ropa', garment: g }; }
   }
-  if (best?.kind === 'ropa' && has(`${type} ${title} ${handle} ${tags}`, BLOCKED_ROPA)) return { kind: 'bloqueado', garment: '' };
+  if (best?.kind === 'ropa' && (has(`${type} ${title} ${handle} ${tags}`, BLOCKED_ROPA) || has(`${type} ${title} ${handle} ${tags}`, TALLA_NINO) || tallasNino(p, best.garment || ''))) return { kind: 'bloqueado', garment: '' };
   if (best) return { kind: best.kind, garment: best.garment || '' };
   for (const [kind, words, ctx, excl] of RULES) if (has(type, words) && !(excl && has(`${title} ${type}`, excl)) && (!ctx || has(`${title} ${type} ${handle}`, ctx))) return { kind, garment: '' };
   return { kind: 'otro', garment: '' };
@@ -379,6 +400,7 @@ async function tenantCfg(id: string) {
 }
 
 /* ---------- moderación de fotos de personas (Cloudflare Moondream): antes de generar y sobre lo que genera la IA ---------- */
+const MOD_FALLOS_IP_DIA = 6; // pruebas de ropa rechazadas o sin moderación por IP y día (se devuelven, pero con tope)
 const MOD_Q = 'Look at the image and answer with JSON only, no other text: {"person": true or false, "minor": true or false, "nudity_or_underwear": true or false}. "minor" is true if any person looks younger than 18. "nudity_or_underwear" is true if anyone is nude, topless, or shown in underwear, lingerie or swimwear.';
 async function moderar(sec: Record<string, string>, photo: string) {
   const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${sec.VTO_CF_ACCOUNT_ID}/ai/run/@cf/moondream/moondream3.1-9B-A2B`, {
@@ -388,9 +410,22 @@ async function moderar(sec: Record<string, string>, photo: string) {
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error('moderacion ' + r.status + ' ' + JSON.stringify(j?.errors || '').slice(0, 200));
   const res = j?.result, txt = typeof res === 'string' ? res : String(res?.answer ?? res?.response ?? res?.text ?? JSON.stringify(res ?? ''));
-  const m = /\{[\s\S]*?\}/.exec(txt); if (!m) throw new Error('moderacion_formato ' + txt.slice(0, 120));
-  const o = JSON.parse(m[0]);
-  return { bloquear: o.minor === true || o.nudity_or_underwear === true, persona: o.person === true, o };
+  return veredicto(txt);
+}
+// auditoría 7: la moderación FALLA CERRADA. Solo pasa si "minor" y "nudity_or_underwear" vienen como booleano false.
+//   'bloquear' → algún campo dice que sí (true, "true", "yes", "si", 1) → 422
+//   'duda'     → cualquier otra cosa (falta la clave, null, texto raro, JSON inválido, sin JSON) → 503
+// (moderar() lanza error en timeout o HTTP no ok → también 503)
+const SI_TXT = /^\s*(true|yes|si|sí|1|y)\s*$/i;
+function veredicto(txt: unknown): { estado: 'ok' | 'bloquear' | 'duda'; motivo?: string } {
+  if (typeof txt !== 'string') return { estado: 'duda', motivo: 'sin_texto' };
+  const m = /\{[\s\S]*?\}/.exec(txt); if (!m) return { estado: 'duda', motivo: 'sin_json' };
+  let o: any; try { o = JSON.parse(m[0]); } catch { return { estado: 'duda', motivo: 'json_invalido' }; }
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return { estado: 'duda', motivo: 'json_no_objeto' };
+  const campos = [o.minor, o.nudity_or_underwear];
+  if (campos.some((v) => v === true || v === 1 || (typeof v === 'string' && SI_TXT.test(v)))) return { estado: 'bloquear' };
+  if (campos.every((v) => v === false)) return { estado: 'ok' };
+  return { estado: 'duda', motivo: 'campos_no_booleanos' };
 }
 
 async function avisoUnaVezAlDia(clave: string, mensaje: string) {
@@ -512,18 +547,23 @@ async function actionAI(body: any, req: Request) {
     };
     // ropa: primero se revisa la foto (persona mayor de edad y vestida) y solo después se genera
     if (kind === 'ropa') {
-      const mod = await moderar(sec, photo).catch((e) => ({ error: String((e as Error)?.message || e) }));
-      if (!mod || 'error' in mod) { err = 'moderacion_no_disponible'; console.error('mod', mod); return [503, { error: err }]; }
-      if (mod.bloquear) { err = 'foto_no_permitida'; ok = true; return [422, { error: err }]; } // cuenta como prueba: no se devuelve
+      if ((await getUtc(`modfallo:${ip}:${dia}`)) >= MOD_FALLOS_IP_DIA) { err = 'limite_moderacion'; return [429, { error: 'limite_ip' }]; }
+      const mod = await moderar(sec, photo).catch((e) => ({ estado: 'duda' as const, motivo: String((e as Error)?.name === 'TimeoutError' ? 'timeout' : (e as Error)?.message || e).slice(0, 120) }));
+      if (mod.estado !== 'ok') { // auditoría 7: 422 o 503 → el cupo vuelve (finally: vto_refund2, IP + sesión + tienda, atómico)
+        await sb.rpc('vto_add_utc', { p_key: `modfallo:${ip}:${dia}`, p_n: 1 }); // tope de intentos fallidos por IP: el reembolso no es gratis infinito
+        if (mod.estado === 'bloquear') { err = 'foto_no_permitida'; return [422, { error: err }]; }
+        err = 'moderacion_no_disponible'; console.error('mod', mod); return [503, { error: err }];
+      }
     }
     const runs = await Promise.allSettled(Array.from({ length: n }, once));
     let images = runs.flatMap((x) => (x.status === 'fulfilled' ? [x.value] : []));
     if (kind === 'ropa' && images.length) { // también se revisa lo que crea la IA: nada de ropa interior ni desnudos
-      const chk = await Promise.all(images.map((im) => moderar(sec, im).catch(() => null)));
-      const marcadas = chk.some((c) => c && c.bloquear);
-      images = images.filter((_, i) => chk[i] && !chk[i]!.bloquear);
-      if (!images.length && marcadas) { err = 'foto_no_permitida'; ok = true; return [422, { error: err }]; }
-      if (!images.length) { err = 'moderacion_no_disponible'; return [503, { error: err }]; }
+      const chk = await Promise.all(images.map((im) => moderar(sec, im).catch(() => ({ estado: 'duda' as const }))));
+      if (!chk.every((c) => c.estado === 'ok')) { // falla cerrada: ninguna imagen sale si alguna no pasó limpia
+        await sb.rpc('vto_add_utc', { p_key: `modfallo:${ip}:${dia}`, p_n: 1 });
+        if (chk.some((c) => c.estado === 'bloquear')) { err = 'foto_no_permitida'; return [422, { error: err }]; }
+        err = 'moderacion_no_disponible'; return [503, { error: err }];
+      }
     }
     if (!images.length) {
       const msg = runs.map((x) => (x.status === 'rejected' ? String((x.reason as Error)?.name === 'TimeoutError' ? 'TimeoutError' : (x.reason as Error)?.message || x.reason) : '')).join(' | ');

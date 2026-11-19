@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     const items = [];
     for (const p of d.products) {
       const im = p.images?.[0]?.src; if (!im) continue;
-      const { kind } = kindOf({ type: p.product_type, title: p.title, handle: p.handle, tags: typeof p.tags === 'string' ? p.tags.split(',') : p.tags });
+      const { kind } = kindOf({ type: p.product_type, title: p.title, handle: p.handle, tags: typeof p.tags === 'string' ? p.tags.split(',') : p.tags, options: p.options, variants: p.variants });
       if (kind === 'otro' || kind === 'bloqueado') continue;
       const v = p.variants?.[0];
       items.push({ handle: p.handle, title: p.title, kind, image: img(im, 480), price: v ? Math.round(parseFloat(v.price) * 100) / 100 : null });

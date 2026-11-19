@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     const images = (p.images || []).map((u) => img(u)).filter(Boolean).slice(0, 40);
     const options = (p.options || []).map((o) => ({ name: o.name, values: o.values || [] }));
     const roles = optionRoles(options);
-    const { kind, garment } = kindOf({ type: p.type, title: p.title, handle: p.handle, tags: p.tags });
+    const { kind, garment } = kindOf({ type: p.type, title: p.title, handle: p.handle, tags: p.tags, options: p.options, variants: p.variants });
     const ci = roles.indexOf('color');
     // Cada color o diseño debe tener su foto propia; si no la tiene, el probador no lo ofrece (auditoría A-5)
     const own = new Map(); // valor → url propia

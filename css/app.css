@@ -1,3 +1,5 @@
+/* auditoría 7: el probador carga solo 2 familias (Cormorant + Jost, las de litper.store) en todos los temas, también ?tema=oscuro */
+:root { --f-d: 'Cormorant', Georgia, 'Times New Roman', serif; --f-u: 'Jost', system-ui, -apple-system, 'Segoe UI', sans-serif; }
 /* Probador (cliente final) — móvil primero, dentro de un iframe de la tienda o solo */
 body.app { min-height: 100dvh; background:
   radial-gradient(120% 60% at 50% -10%, rgba(0, 255, 136, .10), transparent 60%),
@@ -218,7 +220,8 @@ body.app { min-height: 100dvh; background:
 /* ===== Tema Litper (19-nov-2026) =====
    Por defecto el probador se ve como litper.store: crema #FAF8F3, texto navy, botón principal navy/negro,
    dorado solo en detalles y rojo solo en precio/oferta. Paleta y letras leídas de litper.store
-   (--dark #0D1117, --text #1A1A2E, --muted #5A5A72, --acc #C9A84C, --acc2 #E8C97A, --red #8B0000; Playfair Display + Inter).
+   (--dark #0D1117, --text #1A1A2E, --muted #5A5A72, --acc #C9A84C, --acc2 #E8C97A, --red #8B0000).
+   Letras (auditoría 7): las del tema de litper.store (--font-heading Cormorant, --font-body Jost); solo esas 2 familias se cargan.
    - Sin ?tema: claro; si el sistema pide oscuro, Litper oscuro (navy profundo + dorado).
    - ?tema=claro fuerza el claro; ?tema=oscuro conserva el tema negro neón anterior TAL CUAL (no le aplica nada de este bloque).
    La elección por URL la guarda js/app.js en la sesión y la pone en <html data-tema>. */
@@ -234,7 +237,7 @@ html:not([data-tema=oscuro]) {
   --sel: #0D1117; --sel-tx: #FFFFFF;
   /* tokens viejos apuntando a la paleta Litper, por si alguna regla se escapa */
   --neon: #8A6A1C; --neon2: #8A6A1C; --neon-a: rgba(201, 168, 76, .16); --cyan: #1A1A2E; --cyan-a: rgba(26, 26, 46, .06); --amber: #8A6A1C; --red: #8B0000;
-  --f-d: 'Playfair Display', Georgia, 'Times New Roman', serif; --f-u: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-d: 'Cormorant', Georgia, 'Times New Roman', serif; --f-u: 'Jost', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --shadow: 0 18px 50px rgba(13, 17, 23, .14);
   color-scheme: light;
 }

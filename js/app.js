@@ -798,7 +798,7 @@ async function composeShare() {
   const W = 1080, H = Math.round(W * a.naturalHeight / a.naturalWidth), c = el('canvas'); c.width = W; c.height = H + 150;
   const x = c.getContext('2d');
   const cs = getComputedStyle(document.documentElement), tv = (n, d) => cs.getPropertyValue(n).trim() || d; // colores del tema activo
-  const neon = TEMA === 'oscuro', fu = neon ? 'Outfit, sans-serif' : 'Inter, sans-serif';
+  const neon = TEMA === 'oscuro', fu = 'Jost, sans-serif'; // auditoría 7: misma letra que litper.store en todos los temas
   x.fillStyle = tv('--bg', '#07080a'); x.fillRect(0, 0, c.width, c.height); x.drawImage(a, 0, 0, W, H);
   const tw = 250, th = Math.round(tw * b.naturalHeight / b.naturalWidth);
   x.fillStyle = '#fff'; x.fillRect(28, 28, tw + 8, th + 8); x.drawImage(b, 32, 32, tw, th);

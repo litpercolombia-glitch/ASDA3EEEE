@@ -22,7 +22,7 @@ export default async function handler(req, res) {
   if (!(await tiendaPermitida(shop, q(req, 't')))) return json(res, 403, { error: 'tienda_no_registrada' });
   try {
     const all = (await getJSON(`https://${shop}/products.json?limit=250`)).products || [];
-    const info = (p) => kindOf({ type: p.product_type, title: p.title, handle: p.handle, tags: typeof p.tags === 'string' ? p.tags.split(',') : p.tags });
+    const info = (p) => kindOf({ type: p.product_type, title: p.title, handle: p.handle, tags: typeof p.tags === 'string' ? p.tags.split(',') : p.tags, options: p.options, variants: p.variants });
     const me = all.find((p) => p.handle === handle); if (!me) return json(res, 200, { items: [] }, 'public, s-maxage=600');
     // si el producto principal es un combo, su ficha pide cada unidad: el kit no se ofrece (se compraría por el carrito)
     if (COMBO.test(sinTilde(me.title))) return json(res, 200, { for: handle, items: [], motivo: 'combo' }, 'public, s-maxage=900');

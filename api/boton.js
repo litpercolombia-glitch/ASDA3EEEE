@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   if (!shop || !handleOk(handle)) return json(res, 400, { mostrar: false });
   try {
     const p = await getJSON(`https://${shop}/products/${handle}.js`, 6000);
-    const { kind, garment } = kindOf({ type: p.type, title: p.title, handle: p.handle, tags: p.tags });
+    const { kind, garment } = kindOf({ type: p.type, title: p.title, handle: p.handle, tags: p.tags, options: p.options, variants: p.variants });
     const g = GROUP[kind], mostrar = !!g && (p.images || []).length > 0;
     json(res, 200, { mostrar, kind, garment, label: mostrar ? LABEL[g] : null }, 'public, s-maxage=3600, stale-while-revalidate=86400');
   } catch { json(res, 200, { mostrar: false }, 'public, s-maxage=120'); }
