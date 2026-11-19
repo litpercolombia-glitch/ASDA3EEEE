@@ -1,4 +1,6 @@
-// vto-api v6.8.0 — Zynex Probador (backend). 19-nov-2026 (cierre auditoría 3: consentimiento verificado o se rechaza, Origin en lista exacta,
+// vto-api v6.9.0 — Zynex Probador (backend). 19-nov-2026 (auditoría 4: sesión contada en la 1.ª prueba y no en cada cfg, IPv6 por /64,
+//   página que incrusta validada contra los dominios de la tienda).
+// v6.8.0 (cierre auditoría 3: consentimiento verificado o se rechaza, Origin en lista exacta,
 //   topes por IP para CGNAT 60/día y 6 sesiones, devolución atómica de contadores con vto_take3)
 // Acciones (POST JSON {action, ...}):
 //   cfg     → configuración pública mínima de la tienda + ficha de sesión firmada (tok).
@@ -55,7 +57,20 @@ async function ipHash(req: Request, salt: string) {
   // solo la cabecera que pone Cloudflare (el cliente no la puede falsear); x-forwarded-for/x-real-ip se ignoran a propósito
   const ip = (req.headers.get('cf-connecting-ip') || '').trim() || 'sin-ip';
   if (ip === 'sin-ip') console.error('ip: sin cf-connecting-ip');
-  return hex(await crypto.subtle.digest('SHA-256', enc.encode(salt + '|' + ip)), 16);
+  return hex(await crypto.subtle.digest('SHA-256', enc.encode(salt + '|' + ipGrupo(ip))), 16);
+}
+// IPv6: un mismo hogar o celular recibe un /64 entero (puede rotar la dirección dentro de él), así que se cuenta por /64.
+// IPv4 (y IPv4 mapeada en IPv6) se cuenta por dirección.
+function ipGrupo(ip: string) {
+  const s = ip.toLowerCase().split('%')[0];
+  if (!s.includes(':')) return s;
+  const m4 = /^(?:0{0,4}:){0,5}(?:0{0,4}:)?ffff:(\d{1,3}(?:\.\d{1,3}){3})$/.exec(s) || /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/.exec(s);
+  if (m4) return m4[1];
+  const [a, b] = s.split('::');
+  const A = a ? a.split(':') : [], B = b ? b.split(':') : [];
+  const full = s.includes('::') ? [...A, ...Array(Math.max(0, 8 - A.length - B.length)).fill('0'), ...B] : A;
+  if (full.length !== 8 || full.some((x) => !/^[0-9a-f]{1,4}$/.test(x))) return s; // formato raro: se cuenta tal cual
+  return full.slice(0, 4).map((x) => parseInt(x, 16).toString(16)).join(':') + '::/64';
 }
 async function hmac(key: string, msg: string) {
   const k = await crypto.subtle.importKey('raw', enc.encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
@@ -63,9 +78,13 @@ async function hmac(key: string, msg: string) {
 }
 const utcDay = (d = new Date()) => d.toISOString().slice(0, 10).replace(/-/g, '');
 const bogDia = () => new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10); // día de vto_usage (America/Bogota, sin DST)
-const SESS_MAX_IP_DIA = 6; // sesiones nuevas por IP, tienda y día (CGNAT: muchos celulares comparten IP); de la 7.ª en adelante cfg devuelve la misma 6.ª (mismo cupo de 8)
-const MAX_IP_DIA = 60; // pruebas por IP y día (antes 25: con CGNAT un barrio entero sale por la misma IP); el costo lo cuidan la sesión (8) y el tope_dia de la tienda
-// sesión atada a IP + día: recargar la página no regala cupo nuevo
+// Auditoría 4 (CGNAT): la sesión ya NO se cuenta al cargar cfg (6 recargas agotaban la IP de un barrio entero).
+// cfg entrega una ficha propia del navegador (que la guarda y la reusa al recargar) y la sesión se cuenta en la PRIMERA prueba
+// de esa ficha (vto_take4). Topes: 8 pruebas por ficha, 15 fichas con prueba por IP (o /64), tienda y día, 120 pruebas por IP y día,
+// y encima el tope_dia de la tienda y su cuota del mes.
+const SESS_MAX_IP_DIA = 15; // antes 6, contadas en cada carga de cfg
+const MAX_IP_DIA = 120; // antes 60 (= 15 sesiones × 8)
+// (sin uso desde v6.9.0: se conserva como referencia de la versión anterior) sesión atada a IP + día
 async function sesionIpDia(salt: string, tenant: string, ip: string) {
   const key = `${ip}#sess:${tenant}`;
   await sb.rpc('vto_rate', { p_key: key, p_max: SESS_MAX_IP_DIA });
@@ -90,6 +109,21 @@ async function consentInfo(c: any) {
   return { consentimiento: true, consent_v: v, consent_h: h, consent_ok: !!h && conocidos.includes(h) && v === CONSENT_V, consent_ts: new Date().toISOString() };
 }
 const DEMO_SHOPS = ['litper.store', 'www.litper.store', '1wqq1s-2t.myshopify.com']; // la demo solo carga estas tiendas (más config.demo_shops del tenant)
+/* ¿Desde qué página se abrió el probador? La app informa el origen de la página que la incrusta (ancestorOrigins o referrer).
+   Una página ajena que incruste /p?t=litper no puede cambiar ese código, así que no saca ficha ni gasta el cupo de la tienda.
+   Además el navegador lo bloquea antes con frame-ancestors (vercel.json). Un script fuera del navegador lo puede falsear,
+   pero ahí siguen mandando la ficha (8), la IP y el tope diario de la tienda. Apps viejas (sin «emb») pasan como antes. */
+function padreOk(t: any, body: any) {
+  if (body?.emb !== true && body?.emb !== 1) return true; // no está incrustado (o app anterior a v4.16)
+  const p = str(body.padre, 200); if (!p) return false; // incrustado sin poder saber dónde: no
+  let o: URL; try { o = new URL(p); } catch { return false; }
+  if (o.protocol !== 'https:' || o.port) return false;
+  if (ORIGINS.has(o.origin)) return true; // la landing y el panel del probador
+  if (t.plan === 'demo') return false; // la demo solo se incrusta en la landing
+  const sinWww = (x: unknown) => String(x || '').toLowerCase().replace(/^www\./, '');
+  const doms = [t.shop_domain, t.config?.myshopify, ...(Array.isArray(t.config?.dominios) ? t.config.dominios : [])].map(sinWww).filter(Boolean);
+  return doms.includes(sinWww(o.hostname));
+}
 
 const str = (v: unknown, max = 200) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 const slug = (v: unknown) => { const s = str(v, 60).toLowerCase(); return /^[a-z0-9][a-z0-9-]{0,59}$/.test(s) ? s : ''; };
@@ -374,6 +408,7 @@ async function actionAI(body: any, req: Request) {
   if (!t) return [404, { error: 'tienda_no_registrada' }];
   const tokId = await tokOk(sec.VTO_SALT || 'x', tenant, body.tok);
   if (!tokId) return [401, { error: 'sesion_invalida' }];
+  if (!padreOk(t, body)) return [403, { error: 'origen_no_permitido' }];
   let shop = t.plan === 'demo' ? shopHost(body.shop) : shopHost(t.shop_domain);
   if (t.plan === 'demo') {
     const ok = new Set([...DEMO_SHOPS, ...(Array.isArray(t.config?.demo_shops) ? t.config.demo_shops.map((x: unknown) => shopHost(x)).filter(Boolean) : [])]);
@@ -406,8 +441,9 @@ async function actionAI(body: any, req: Request) {
   if (!room) return [400, { error: 'foto_invalida' }];
   const ip = await ipHash(req, sec.VTO_SALT || 'x');
   if ((await tokUsos(tokId)) >= 8) return [429, { error: 'limite_sesion' }]; // la sesión se revisa antes de contar la IP
-  // vto_take3 cuenta IP, sesión y tienda y, si rechaza por algo que no es la IP, devuelve los contadores en la misma transacción
-  const { data: take } = await sb.rpc('vto_take3', { p_ip: ip, p_tenant: tenant, p_max_ip: MAX_IP_DIA, p_tok: tokId, p_max_tok: 8 });
+  // vto_take4: en la 1.ª prueba de la ficha cuenta la sesión de la IP (tope 15) y luego vto_take3 cuenta IP, ficha y tienda
+  // (si rechaza por algo que no es la IP, devuelve los contadores en la misma transacción)
+  const { data: take } = await sb.rpc('vto_take4', { p_ip: ip, p_tenant: tenant, p_max_ip: MAX_IP_DIA, p_tok: tokId, p_max_tok: 8, p_max_sess: SESS_MAX_IP_DIA });
   if (!take?.ok) {
     if (take?.motivo === 'cuota_agotada') await avisoUnaVezAlDia(`cuota-${tenant}`, `🟠 Probador IA: la tienda "${tenant}" se quedó sin pruebas del mes. El botón se oculta solo hasta que suba de plan.`);
     return [429, { error: take?.motivo || 'limite' }];
@@ -619,10 +655,14 @@ async function actionCfg(body: any, req: Request) {
   if (okRate === false) return [429, { error: 'limite' }];
   const { data: t } = await sb.from('vto_tenants').select('id, shop_domain, plan, estado, config').eq('id', id).maybeSingle();
   if (!t) return [404, { error: 'tienda_no_registrada' }];
+  if (!padreOk(t, body)) return [403, { error: 'origen_no_permitido' }];
+  // ficha propia del navegador: si trae una válida de hoy o ayer se devuelve la misma (recargar no regala cupo ni gasta sesión)
+  const salt = sec.VTO_SALT || 'x', previo = str(body.tok, 80);
+  const tok = previo && (await tokOk(salt, t.id, previo)) ? previo : await newTok(salt, t.id);
   const wa = /^\d{8,15}$/.test(String(t.config?.whatsapp || '')) ? String(t.config.whatsapp) : null;
   return [200, {
     id: t.id, dominio: t.plan === 'demo' ? null : t.shop_domain, activo: t.estado === 'activo', estado: t.estado,
-    sello: SELLO.has(t.plan), kit: KIT.has(t.plan) && t.config?.kit !== false, wa, cod: t.config?.cod === true, ropa: sec.VTO_MODERACION === 'on', ia: !(await iaPausada()), tok: await newTok(sec.VTO_SALT || 'x', t.id, await sesionIpDia(sec.VTO_SALT || 'x', t.id, ip)),
+    sello: SELLO.has(t.plan), kit: KIT.has(t.plan) && t.config?.kit !== false, wa, cod: t.config?.cod === true, ropa: sec.VTO_MODERACION === 'on', ia: !(await iaPausada()), tok,
     visto: t.config?.visto || null, desde: t.config?.activada || null,
     verif: typeof t.config?.verificado?.ok === 'boolean' ? t.config.verificado.ok : null, verif_url: t.config?.verificado?.url || null,
   }];

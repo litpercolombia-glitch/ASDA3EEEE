@@ -1,4 +1,6 @@
-// Zynex Probador — app del comprador. 2026-11-19 (v4.15: auditoría 3, cierre — servidor vto-api v6.8.0)
+// Zynex Probador — app del comprador. 2026-11-19 (v4.16: auditoría 4 — ficha propia del navegador, página que incrusta informada,
+//   diálogo accesible, casilla revisada al enviar; servidor vto-api v6.9.0)
+// v4.15: auditoría 3, cierre — servidor vto-api v6.8.0
 // Flujo: producto de la tienda → foto (cámara, galería o ejemplo) → IA (Cloudflare FLUX.2 klein, vía Supabase) → comparar → comprar.
 import { call, track, money, toast, store, el, $, $$, WA, sesion } from './common.js';
 import { fuse, corregir } from './fusion.js';
@@ -35,7 +37,8 @@ const ERR = {
   tienda_inactiva: ['El probador no está disponible por ahora', 'Puedes comprar normal desde la página del producto.'],
   tienda_no_registrada: ['El probador no está disponible por ahora', 'Puedes comprar normal desde la página del producto.'],
   ia_cupo_diario: ['El probador está en pausa por unas horas', 'Puedes comprar normal; vuelve a intentarlo más tarde.'],
-  ia_fallo: ['No pudimos crear tu foto', 'Intenta otra vez. Si se repite, prueba con otra foto con más luz.'],
+  ia_fallo: ['Servicio ocupado, intenta de nuevo', 'El servicio de IA está con mucha demanda. Tu foto está bien: prueba otra vez en unos segundos.'],
+  origen_no_permitido: ['El probador no está disponible aquí', 'Ábrelo desde la página oficial de la tienda.'],
   ia_rechazo: ['La IA no aceptó esta foto', 'Prueba con otra foto: de frente, con buena luz y sin otras personas.'],
   ia_tiempo: ['Se demoró más de lo normal', 'Intenta otra vez; casi siempre tarda menos de 12 segundos.'],
   tiempo: ['Se demoró más de lo normal', 'Revisa tu conexión e intenta otra vez.'],
@@ -106,15 +109,26 @@ async function init() {
   if (!SHOP) { await cfgReady; SHOP = CFG.dominio || ''; if (!SHOP) return fatal('El probador no está disponible por ahora.', 'Puedes comprar normal desde la tienda.'); }
   if (!HANDLE) return showPicker();
   await loadProduct(HANDLE);
+  cfgReady.then(() => { if (CFG.bloqueado) fatal(...ERR.origen_no_permitido); });
 }
+// Ficha de sesión propia de este navegador (por tienda): recargar la página reusa la misma, así no gasta la sesión de la IP
+// (funciones y no constantes: loadCfg las usa durante el arranque, antes de que el módulo termine de evaluarse)
+function tokGet() { try { return localStorage.getItem('vto_tok:' + TENANT) || undefined; } catch { return undefined; } }
+function tokSet(v) { try { if (v) localStorage.setItem('vto_tok:' + TENANT, v); else localStorage.removeItem('vto_tok:' + TENANT); } catch {} }
+// Página que incrusta el probador (el servidor la compara con los dominios de la tienda): emb + origen exacto, o nada
+function padreInfo() { const p = parentOrigin(); return window.top === window.self ? {} : { emb: true, padre: p || '' }; }
 
 async function loadCfg() {
   try {
-    const c = await call('cfg', { tenant: TENANT }, { timeout: 8000 });
-    CFG = { ...CFG, ...c };
+    const c = await call('cfg', { tenant: TENANT, tok: tokGet(), ...padreInfo() }, { timeout: 8000 });
+    CFG = { ...CFG, ...c }; tokSet(c.tok);
+    if (c.ropa) { // con ropa encendida el texto vuelve a prometer «en ti»
+      $('#howRopa').hidden = false;
+      const m = document.querySelector('meta[name="description"]'); if (m) m.content = 'Toma una foto y mira el producto puesto en tu cama, tu ventana o en ti, en segundos.';
+    }
     $('.by').hidden = !c.sello; if (!c.kit) { KIT = null; $('#kit').hidden = true; }
     if (c.wa) $('#btnWaErr').href = `https://wa.me/${c.wa}?text=${encodeURIComponent('Hola, necesito ayuda con el probador')}`;
-  } catch (e) { if (e.code === 'tienda_no_registrada') CFG.activo = false; }
+  } catch (e) { if (e.code === 'tienda_no_registrada') CFG.activo = false; if (e.code === 'origen_no_permitido') { CFG.activo = false; CFG.bloqueado = true; } }
 }
 async function loadProduct(handle) {
   setState('cargando');
@@ -162,7 +176,7 @@ function pausaIA() { // cupo de IA agotado hoy: se avisa antes de pedir la foto
 function fatal(t, s = '') {
   // aviso general: ilustración neutra (nada de «toma una foto de tu cama») y salida clara a la tienda
   $('#illu use').setAttribute('href', '#s-aviso'); $('#emptyT').hidden = true; $('#emptyS').hidden = true;
-  setState('error'); showErr(null, t, s); $('#btnRetry').hidden = true; $('#btnBack').hidden = false;
+  setState('error'); showErr(null, t, s); $('#btnRetry').hidden = true; $('#btnBack').hidden = !hayTienda(); // sin tienda conocida (?t=demo) no hay botón vacío
   brandBar();
 }
 // la pantalla de error conserva la marca de la tienda en el encabezado (nunca queda anónima)
@@ -172,6 +186,7 @@ function brandBar() {
   $('#barT').textContent = $('#barT').textContent || 'Probador con IA'; $('#barS').textContent = `${n} · simulación con IA`;
   if (!document.title.includes(n)) document.title = `Probador con IA · ${n}`;
 }
+function hayTienda() { return !!SHOP || (EMBED && !!parentOrigin()); }
 function volver() { // «Volver a la tienda»: cierra el modal si está incrustado; si no, va a la tienda
   const url = SHOP ? `https://${SHOP}/` : '';
   if (EMBED && PARENT) { post({ vto: 'close' }); if (url) setTimeout(() => { try { window.top.location.href = url; } catch { window.open(url, '_blank', 'noopener'); } }, 700); return; }
@@ -458,6 +473,8 @@ async function generate(retry = true) {
     toast(m, 5000); return;
   }
   if (results.has(key)) { shown = { key: photo.key, color: sel.color, src: results.get(key) }; return showResult(results.get(key), false); }
+  // la autorización se revisa al enviar: si la casilla se desmarcó después de elegir la foto, no sale nada
+  if (!consentOk()) { if (!shown) retake(); needConsent(); return; }
   const gen = ++genN;
   busy = true; lastErr = null; tryHide(); setState('procesando'); startProgress();
   const tt = document.getElementById('toast'); if (tt && /Preparando tu foto/.test(tt.textContent)) tt.classList.remove('on'); // ya se ve el avance
@@ -467,7 +484,7 @@ async function generate(retry = true) {
     await cfgReady;
     // color y zona de la tela en la foto de la variante (en paralelo; si tarda, la IA no la espera)
     const refP = refInfo(prodUrl, sel.color || '', G), ref0 = await Promise.race([refP, wait(1200).then(() => null)]);
-    const d = await call('ai', { tenant: TENANT, tok: CFG.tok, shop: DEMO ? SHOP : undefined, handle: P.handle, photo: photo.ai || photo.data, product: prodUrl, color: sel.color || '', w: photo.w, h: photo.h, sesion, consiento: photo.consent || consentOk() ? true : undefined, consent: photo.consent || consentOk() ? { v: CONSENT_V, h: await consentHuella() } : undefined, ref: ref0?.solid ? { hex: ref0.hex, box: ref0.box } : undefined }, { timeout: 80000 }); // en estampados el recorte cortaría el diseño
+    const d = await call('ai', { tenant: TENANT, tok: CFG.tok, shop: DEMO ? SHOP : undefined, handle: P.handle, photo: photo.ai || photo.data, product: prodUrl, color: sel.color || '', w: photo.w, h: photo.h, sesion, ...padreInfo(), consiento: consentOk() ? true : undefined, consent: consentOk() ? { v: CONSENT_V, h: await consentHuella() } : undefined, ref: ref0?.solid ? { hex: ref0.hex, box: ref0.box } : undefined }, { timeout: 80000 }); // en estampados el recorte cortaría el diseño
     const gens = (d.images?.length ? d.images : [d.image]).filter(Boolean).slice(0, 1); // el servidor entrega 1 sola imagen por prueba
     if (!gens.length) throw Object.assign(new Error('ia_fallo'), { code: 'ia_fallo' });
     const fz = await fuseResult(photo, gens, ref0 || (await refP));
@@ -485,7 +502,7 @@ async function generate(retry = true) {
     if (KIT?.items?.length) renderKit();
   } catch (e) {
     busy = false;
-    if (e.code === 'sesion_invalida' && retry) { await stopProgress(false); cfgReady = loadCfg(); await cfgReady; markSwatch(null); return generate(false); }
+    if (e.code === 'sesion_invalida' && retry) { await stopProgress(false); tokSet(null); cfgReady = loadCfg(); await cfgReady; markSwatch(null); return generate(false); }
     await stopProgress(false);
     lastErr = e.code || 'ia_fallo';
     trk('error', { tenant: TENANT, handle: P.handle, detalle: { code: lastErr } });
@@ -618,7 +635,7 @@ function showErr(code, t, s) {
   $('#errT').textContent = t; $('#errS').textContent = s;
   $('#btnWaErr').hidden = !CFG.wa || !['limite_ip', 'limite_sesion', 'ia_fallo', 'ia_rechazo', 'producto_sin_imagen', 'imagen_no_valida'].includes(code);
   $('#btnRetry').hidden = ['cuota_agotada', 'tienda_inactiva', 'tienda_no_registrada', 'limite_tienda_dia', 'limite_sesion', 'limite_ip', 'ropa_no_disponible', 'prenda_no_permitida', 'producto_sin_probador'].includes(code);
-  $('#btnBack').hidden = !$('#btnRetry').hidden; // sin «Intentar otra vez», siempre queda una salida a la tienda
+  $('#btnBack').hidden = !$('#btnRetry').hidden || !hayTienda(); // sin «Intentar otra vez», siempre queda una salida a la tienda (si se sabe cuál es)
   if (DEMO) { // en la demo quien lee es un comerciante: siempre hay un paso siguiente
     const wa = $('#btnWaErr');
     const b = $('#btnDemoCta') || wa.parentElement.insertBefore(el('button', { class: 'btn pri', id: 'btnDemoCta', type: 'button', onclick: () => { trk('cta', { tenant: TENANT, handle: P?.handle, detalle: { desde: 'demo-error', code: code || '' } }); post({ vto: 'demo-cta', shop: SHOP, handle: P?.handle || '' }); } }, 'Quiero esto en mi tienda'), wa);
@@ -646,12 +663,13 @@ for (const id of ['#fileCam', '#fileGal']) $(id).addEventListener('click', (e) =
 /* ---------- comprar ---------- */
 // Origen exacto de la página que nos incrusta (nunca '*'): ancestorOrigins (Chrome/Safari) o, si no, el referrer.
 // Si no se puede saber, no se manda nada (la compra cae al respaldo de abrir la URL directo).
-const PARENT = (() => {
+function parentOrigin() { // función (no constante) para poder usarla desde el arranque
   if (window.top === window.self) return location.origin; // sin incrustar: los avisos van a esta misma página
   try { const a = location.ancestorOrigins && location.ancestorOrigins[0]; if (a && /^https?:\/\//.test(a)) return new URL(a).origin; } catch {}
   try { if (document.referrer) { const o = new URL(document.referrer).origin; if (/^https?:/.test(o)) return o; } } catch {}
   return null;
-})();
+}
+const PARENT = parentOrigin();
 function post(msg) { if (!PARENT) return; try { window.parent.postMessage(msg, PARENT); } catch {} }
 let ackT = 0;
 addEventListener('message', (e) => { if (e.source === window.parent && PARENT && e.origin === PARENT && e.data?.vto === 'ack') clearTimeout(ackT); });
@@ -808,11 +826,14 @@ function calcSize() {
   ok.onclick = pick ? () => { closeSheets(); ok.textContent = 'Calcular'; ok.onclick = calcSize; } : calcSize;
 }
 let sheetBack = null;
-function openSheet(id) {
-  sheetBack = document.activeElement; $('#sheetBg').hidden = false; $(id).hidden = false;
-  $(id).querySelector('input, button:not([data-close])')?.focus({ preventScroll: true });
+function openSheet(id) { // WCAG 2.4.3: el foco entra al diálogo, queda atrapado (Tab) y Esc lo cierra devolviéndolo al botón
+  sheetBack = document.activeElement; $('#sheetBg').hidden = false; const sh = $(id); sh.hidden = false;
+  const t = sh.querySelector('input, button:not([data-close])') || sh.querySelector('[data-close]') || sh;
+  if (t === sh) sh.setAttribute('tabindex', '-1');
+  t.focus({ preventScroll: true });
 }
 addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && $$('.sheet').some((x) => !x.hidden)) { e.preventDefault(); e.stopImmediatePropagation(); closeSheets(); return; }
   if (e.key !== 'Tab') return;
   const sh = $$('.sheet').find((x) => !x.hidden); if (!sh) return;
   const f = $$('button, [href], input, select, textarea', sh).filter((x) => !x.disabled && x.offsetParent !== null);
