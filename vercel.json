@@ -7,12 +7,13 @@
   "trailingSlash": false,
   "functions": {
     "api/*.js": {
-      "maxDuration": 15
+      "maxDuration": 15,
+      "includeFiles": "p/app.html"
     }
   },
   "headers": [
     {
-      "source": "/((?!p$|p/).*)",
+      "source": "/((?!p$|api/p$).*)",
       "headers": [
         {
           "key": "Content-Security-Policy",
@@ -21,15 +22,6 @@
         {
           "key": "X-Frame-Options",
           "value": "SAMEORIGIN"
-        }
-      ]
-    },
-    {
-      "source": "/p(/?.*)",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://gtsivwbnhcawvmsfujby.supabase.co data: blob:; frame-ancestors 'self' https://litper.store https://www.litper.store https://1wqq1s-2t.myshopify.com https://probador.zynexapp.com https://zynex-probador.vercel.app https://asda3eeee-git-probador-litpers-projects.vercel.app; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
         }
       ]
     },
@@ -73,6 +65,15 @@
       ]
     },
     {
+      "source": "/js/app.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
       "source": "/embed.js",
       "headers": [
         {
@@ -96,6 +97,12 @@
       "source": "/package.json",
       "destination": "/",
       "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/p",
+      "destination": "/api/p"
     }
   ]
 }

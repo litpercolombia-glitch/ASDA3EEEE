@@ -1,4 +1,6 @@
-// Zynex Probador — app del comprador. 2026-11-19 (v4.16: auditoría 4 — ficha propia del navegador, página que incrusta informada,
+// Zynex Probador — app del comprador. 2026-11-19 (v4.17: auditoría 5 — la casilla guarda la huella del texto y se desmarca si el
+//   texto o la categoría cambian; error de IA sin culpar a la demanda; ?t=demo con salida clara; servidor vto-api v6.10.0)
+// v4.16: auditoría 4 — ficha propia del navegador, página que incrusta informada,
 //   diálogo accesible, casilla revisada al enviar; servidor vto-api v6.9.0)
 // v4.15: auditoría 3, cierre — servidor vto-api v6.8.0
 // Flujo: producto de la tienda → foto (cámara, galería o ejemplo) → IA (Cloudflare FLUX.2 klein, vía Supabase) → comparar → comprar.
@@ -37,7 +39,7 @@ const ERR = {
   tienda_inactiva: ['El probador no está disponible por ahora', 'Puedes comprar normal desde la página del producto.'],
   tienda_no_registrada: ['El probador no está disponible por ahora', 'Puedes comprar normal desde la página del producto.'],
   ia_cupo_diario: ['El probador está en pausa por unas horas', 'Puedes comprar normal; vuelve a intentarlo más tarde.'],
-  ia_fallo: ['Servicio ocupado, intenta de nuevo', 'El servicio de IA está con mucha demanda. Tu foto está bien: prueba otra vez en unos segundos.'],
+  ia_fallo: ['Algo falló, intenta de nuevo', 'Tu foto está bien: prueba otra vez en unos segundos.'],
   origen_no_permitido: ['El probador no está disponible aquí', 'Ábrelo desde la página oficial de la tienda.'],
   ia_rechazo: ['La IA no aceptó esta foto', 'Prueba con otra foto: de frente, con buena luz y sin otras personas.'],
   ia_tiempo: ['Se demoró más de lo normal', 'Intenta otra vez; casi siempre tarda menos de 12 segundos.'],
@@ -103,10 +105,15 @@ async function init() {
   $('#btnKit').onclick = buyKit;
   if (DEMO) $('#byLink').removeAttribute('target');
   setupCompare();
-  $('#chkConsent').onchange = () => { try { sessionStorage.setItem('vto_consent', $('#chkConsent').checked ? '1' : ''); } catch {} syncConsent(); };
-  try { $('#chkConsent').checked = sessionStorage.getItem('vto_consent') === '1'; } catch {}
+  $('#chkConsent').onchange = () => { guardarConsent(); syncConsent(); };
+  $('#chkConsent').checked = false; // se marca solo si lo guardado corresponde al texto que se ve (restaurarConsent, al cargar el producto)
   cfgReady = loadCfg();
-  if (!SHOP) { await cfgReady; SHOP = CFG.dominio || ''; if (!SHOP) return fatal('El probador no está disponible por ahora.', 'Puedes comprar normal desde la tienda.'); }
+  if (!SHOP) {
+    await cfgReady; SHOP = CFG.dominio || '';
+    // ?t=demo (o una tienda sin dominio): no hay tienda a la cual volver → se explica qué hacer y se da una salida real
+    if (!SHOP && TENANT === 'demo') { SALIDA = '/#demo'; $('#btnBack').textContent = 'Ver la demo en vivo'; return fatal('Este enlace de demo no trae una tienda', 'La demo en vivo se abre desde la página del probador: elige un producto de ejemplo y pruébalo ahí.'); }
+    if (!SHOP) return fatal('El probador no está disponible por ahora.', 'Puedes comprar normal desde la tienda.');
+  }
   if (!HANDLE) return showPicker();
   await loadProduct(HANDLE);
   cfgReady.then(() => { if (CFG.bloqueado) fatal(...ERR.origen_no_permitido); });
@@ -149,7 +156,7 @@ async function loadProduct(handle) {
   $('#emptyT').textContent = C.empty; $('#emptyS').textContent = C.tip; // antes de cualquier aviso, para que el texto corresponda a la ilustración
   P.title = tit(P.title); P.shopName = tit(P.shopName); for (const o of P.options) o.name = tit(o.name); // textos crudos de la tienda («PROTECTOR OFERTA» → «Protector Oferta»)
   $('#illu use').setAttribute('href', '#' + ILLU[G]); $('#emptyT').hidden = false; $('#emptyS').hidden = false;
-  $('#consentT').textContent = G === 'ropa' ? CONSENT.ropa : CONSENT.otro; syncConsent();
+  $('#consentT').textContent = G === 'ropa' ? CONSENT.ropa : CONSENT.otro; await restaurarConsent(); syncConsent();
   document.title = `${C.title} · ${P.shopName || SHOP}`;
   $('#barT').textContent = C.title; $('#barS').textContent = P.shopName ? `${P.shopName} · simulación con IA` : 'Simulación con IA sobre tu foto';
   $('#emptyT').textContent = C.empty; $('#emptyS').textContent = C.tip;
@@ -176,7 +183,7 @@ function pausaIA() { // cupo de IA agotado hoy: se avisa antes de pedir la foto
 function fatal(t, s = '') {
   // aviso general: ilustración neutra (nada de «toma una foto de tu cama») y salida clara a la tienda
   $('#illu use').setAttribute('href', '#s-aviso'); $('#emptyT').hidden = true; $('#emptyS').hidden = true;
-  setState('error'); showErr(null, t, s); $('#btnRetry').hidden = true; $('#btnBack').hidden = !hayTienda(); // sin tienda conocida (?t=demo) no hay botón vacío
+  setState('error'); showErr(null, t, s); $('#btnRetry').hidden = true; $('#btnBack').hidden = !hayTienda() && !SALIDA; // sin tienda conocida no hay botón vacío; con ?t=demo lleva a la demo
   brandBar();
 }
 // la pantalla de error conserva la marca de la tienda en el encabezado (nunca queda anónima)
@@ -187,7 +194,9 @@ function brandBar() {
   if (!document.title.includes(n)) document.title = `Probador con IA · ${n}`;
 }
 function hayTienda() { return !!SHOP || (EMBED && !!parentOrigin()); }
+var SALIDA = ''; // var: fatal() puede correr antes de que el módulo termine de evaluarse; // salida cuando no hay tienda (?t=demo → la demo en vivo de la landing)
 function volver() { // «Volver a la tienda»: cierra el modal si está incrustado; si no, va a la tienda
+  if (!SHOP && SALIDA) { try { window.top.location.href = SALIDA; } catch { window.open(SALIDA, '_blank', 'noopener'); } return; }
   const url = SHOP ? `https://${SHOP}/` : '';
   if (EMBED && PARENT) { post({ vto: 'close' }); if (url) setTimeout(() => { try { window.top.location.href = url; } catch { window.open(url, '_blank', 'noopener'); } }, 700); return; }
   if (url) location.href = url; else if (history.length > 1) history.back(); else location.href = '/';
@@ -647,7 +656,25 @@ function showErr(code, t, s) {
 // autorización para toda foto (Ley 1581): casilla visible en todos los nichos antes de tomar, subir o probar con una foto
 function consentOk() { return $('#chkConsent').checked; }
 // versión y huella (SHA-256, 16 hex) del texto EXACTO que vio el comprador; el servidor las guarda con cada prueba
+// OJO: al cambiar un texto de CONSENT hay que subir CONSENT_V (aquí y en vto-api). La URL de app.js lleva la versión del despliegue
+// (api/p.js) y app.js va con no-cache, así que nadie se queda con el texto viejo en caché.
 const CONSENT_V = '2026-11-19';
+// La casilla se recuerda en la visita junto con la huella del texto y la categoría: si cambia el texto, la versión o la categoría
+// (ej. de cama a ropa, que exige mayoría de edad), se desmarca y hay que volver a aceptar.
+const consentCat = () => (G === 'ropa' ? 'ropa' : 'otro');
+async function guardarConsent() {
+  const on = $('#chkConsent').checked;
+  try { if (!on) return sessionStorage.removeItem('vto_consent'); } catch { return; }
+  const h = await consentHuella();
+  try { if ($('#chkConsent').checked) sessionStorage.setItem('vto_consent', JSON.stringify({ v: CONSENT_V, h, cat: consentCat() })); } catch {}
+}
+async function restaurarConsent() {
+  let g = null; try { g = JSON.parse(sessionStorage.getItem('vto_consent') || 'null'); } catch {}
+  const h = await consentHuella();
+  const ok = !!g && g.v === CONSENT_V && g.h === h && g.cat === consentCat() && !!h;
+  $('#chkConsent').checked = ok;
+  if (!ok) { try { sessionStorage.removeItem('vto_consent'); } catch {} }
+}
 async function consentHuella() {
   try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode($('#consentT').textContent)); return [...new Uint8Array(b)].slice(0, 8).map((x) => x.toString(16).padStart(2, '0')).join(''); } catch { return ''; }
 }

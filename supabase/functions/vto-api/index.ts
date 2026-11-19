@@ -1,4 +1,7 @@
-// vto-api v6.9.0 — Zynex Probador (backend). 19-nov-2026 (auditoría 4: sesión contada en la 1.ª prueba y no en cada cfg, IPv6 por /64,
+// vto-api v6.10.0 — Zynex Probador (backend). 19-nov-2026 (auditoría 5: la huella del consentimiento debe ser la del texto de la
+//   categoría del producto (ropa = texto de mayoría de edad); cfg entrega los dominios de la tienda para el frame-ancestors de /p;
+//   vto_take4 atómico y vto_refund2 devuelve la sesión si la 1.ª prueba falla).
+// v6.9.0 (auditoría 4: sesión contada en la 1.ª prueba y no en cada cfg, IPv6 por /64,
 //   página que incrusta validada contra los dominios de la tienda).
 // v6.8.0 (cierre auditoría 3: consentimiento verificado o se rechaza, Origin en lista exacta,
 //   topes por IP para CGNAT 60/día y 6 sesiones, devolución atómica de contadores con vto_take3)
@@ -108,10 +111,20 @@ async function consentInfo(c: any) {
   const conocidos = await Promise.all(Object.values(CONSENT_TXT).map(async (t) => hex(await crypto.subtle.digest('SHA-256', enc.encode(t)), 8)));
   return { consentimiento: true, consent_v: v, consent_h: h, consent_ok: !!h && conocidos.includes(h) && v === CONSENT_V, consent_ts: new Date().toISOString() };
 }
+// huella exigida según la categoría del producto: ropa exige el texto de mayoría de edad; el resto, el texto general
+async function consentDe(kind: string) {
+  return hex(await crypto.subtle.digest('SHA-256', enc.encode(kind === 'ropa' ? CONSENT_TXT.ropa : CONSENT_TXT.otro)), 8);
+}
+// dominios donde la tienda puede incrustar /p (los mismos que acepta padreOk): sin www, únicos; la demo no tiene
+function dominiosDe(t: any): string[] {
+  if (t.plan === 'demo') return [];
+  const sw = (x: unknown) => String(x || '').toLowerCase().replace(/^www\./, '');
+  return [...new Set([t.shop_domain, t.config?.myshopify, ...(Array.isArray(t.config?.dominios) ? t.config.dominios : [])].map(sw).filter((d) => !!shopHost(d)))].slice(0, 20);
+}
 const DEMO_SHOPS = ['litper.store', 'www.litper.store', '1wqq1s-2t.myshopify.com']; // la demo solo carga estas tiendas (más config.demo_shops del tenant)
 /* ¿Desde qué página se abrió el probador? La app informa el origen de la página que la incrusta (ancestorOrigins o referrer).
    Una página ajena que incruste /p?t=litper no puede cambiar ese código, así que no saca ficha ni gasta el cupo de la tienda.
-   Además el navegador lo bloquea antes con frame-ancestors (vercel.json). Un script fuera del navegador lo puede falsear,
+   Además el navegador lo bloquea antes con frame-ancestors por tienda (api/p.js, con los mismos dominios de dominiosDe).
    pero ahí siguen mandando la ficha (8), la IP y el tope diario de la tienda. Apps viejas (sin «emb») pasan como antes. */
 function padreOk(t: any, body: any) {
   if (body?.emb !== true && body?.emb !== 1) return true; // no está incrustado (o app anterior a v4.16)
@@ -426,6 +439,8 @@ async function actionAI(body: any, req: Request) {
   const { kind, garment } = kindOf(p);
   if (kind === 'bloqueado') return [422, { error: 'prenda_no_permitida' }];
   if (kind === 'otro') return [422, { error: 'producto_sin_probador' }];
+  // la autorización tiene que ser la del texto de ESTA categoría (no sirve la huella de otro texto vigente)
+  if (cons.consent_h !== (await consentDe(kind))) return [400, { error: 'consentimiento_invalido' }];
   const moderacion = sec.VTO_MODERACION === 'on';
   if (kind === 'ropa' && !moderacion) return [422, { error: 'ropa_no_disponible' }];
   // motor v6.5 (recorte de la tela + color medido + instrucciones por categoría): global con VTO_MOTOR=v65 o, para validarlo, en la demo con exp
@@ -661,7 +676,7 @@ async function actionCfg(body: any, req: Request) {
   const tok = previo && (await tokOk(salt, t.id, previo)) ? previo : await newTok(salt, t.id);
   const wa = /^\d{8,15}$/.test(String(t.config?.whatsapp || '')) ? String(t.config.whatsapp) : null;
   return [200, {
-    id: t.id, dominio: t.plan === 'demo' ? null : t.shop_domain, activo: t.estado === 'activo', estado: t.estado,
+    id: t.id, dominio: t.plan === 'demo' ? null : t.shop_domain, dominios: dominiosDe(t), activo: t.estado === 'activo', estado: t.estado,
     sello: SELLO.has(t.plan), kit: KIT.has(t.plan) && t.config?.kit !== false, wa, cod: t.config?.cod === true, ropa: sec.VTO_MODERACION === 'on', ia: !(await iaPausada()), tok,
     visto: t.config?.visto || null, desde: t.config?.activada || null,
     verif: typeof t.config?.verificado?.ok === 'boolean' ? t.config.verificado.ok : null, verif_url: t.config?.verificado?.url || null,
