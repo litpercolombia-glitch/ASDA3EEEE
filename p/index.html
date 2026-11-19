@@ -14,6 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/app.css">
+<link rel="stylesheet" href="/css/auditoria.css">
 <script type="module" src="/js/app.js"></script>
 </head>
 <body class="app" data-state="cargando">
@@ -34,12 +35,13 @@
   <symbol id="s-cortina" viewBox="0 0 200 150"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M30 18h140"/><rect x="58" y="28" width="84" height="88" rx="2" opacity=".5"/><path d="M100 28v88M58 72h84" opacity=".4"/><path d="M36 18c6 30-6 60 4 110M48 18c-4 34 8 64-2 110M164 18c-6 30 6 60-4 110M152 18c4 34-8 64 2 110"/><path d="M20 136h160"/></g></symbol>
   <symbol id="s-mesa" viewBox="0 0 200 150"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M40 64h120l18 18H22z"/><path d="M34 82v46M166 82v46M60 82v34M140 82v34"/><path d="M14 40v62h22M186 40v62h-22" opacity=".55"/><path d="M14 102v26M36 102v26M186 102v26M164 102v26" opacity=".55"/></g></symbol>
   <symbol id="s-ropa" viewBox="0 0 200 150"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><circle cx="100" cy="22" r="11"/><path d="M82 38h36l12 8 8 34M82 38l-12 8-8 34"/><path d="M82 38v44h36V38" /><path d="M84 82l-4 56M116 82l4 56M100 92v46"/></g></symbol>
+  <symbol id="s-aviso" viewBox="0 0 200 150"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M64 118V56a12 12 0 0 1 12-12h48a12 12 0 0 1 12 12v62" opacity=".5"/><path d="M52 118h96"/><circle cx="100" cy="82" r="22"/><path d="M100 72v13"/><circle cx="100" cy="94" r="1.6" fill="currentColor"/></g></symbol>
   <symbol id="s-mueble" viewBox="0 0 200 150"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M20 128 80 98h100M80 98V14" opacity=".5"/><path d="M20 128V40l60-26" opacity=".5"/><rect x="106" y="50" width="44" height="62" rx="3"/><path d="M106 70h44M106 90h44"/><path d="M40 132h140" opacity=".4"/></g></symbol>
 </svg>
 
 <header class="bar">
   <button class="ic" id="btnClose" aria-label="Cerrar probador" hidden><svg><use href="#i-x"/></svg></button>
-  <div class="bar-t"><b id="barT">Probador con IA</b><small id="barS">Simulación con IA sobre tu foto</small></div>
+  <div class="bar-t"><h1 id="barT">Probador con IA</h1><small id="barS">Simulación con IA sobre tu foto</small></div>
   <button class="ic" id="btnInfo" aria-label="Cómo funciona"><svg><use href="#i-q"/></svg></button>
 </header>
 
@@ -94,14 +96,15 @@
 
     <div class="acts" id="actsStart" hidden>
       <div class="saved" id="saved" hidden><img id="savedImg" alt="Tu foto guardada"><div class="saved-t"><b>Tu foto guardada</b><small>Solo está en este celular · <button class="link" id="btnSavedDel" type="button">Borrar</button></small></div><button class="btn sec" id="btnSaved" type="button">Usarla</button></div>
-      <label class="consent" id="consent" hidden><input type="checkbox" id="chkConsent"><span>La foto es mía, o tengo permiso de la persona, y es mayor de edad. <a href="/legal#datos" target="_blank" rel="noopener">Cómo usamos la foto</a></span></label>
+      <label class="consent" id="consent"><input type="checkbox" id="chkConsent"><span><span id="consentT">La foto es mía, o tengo permiso de quienes aparecen. Autorizo que una copia pequeña se procese con IA en un proveedor externo (Cloudflare) solo para crear esta simulación; no se guarda.</span> <a href="/legal#datos" target="_blank" rel="noopener">Política de datos (Ley 1581)</a></span></label>
       <label class="btn pri big"><input type="file" accept="image/*" capture="environment" id="fileCam"><svg><use href="#i-cam"/></svg><span id="camLab">Tomar foto de mi cama</span></label>
       <label class="btn sec"><input type="file" accept="image/*" id="fileGal"><svg><use href="#i-img"/></svg><span id="galLab">Subir de la galería</span></label>
-      <div class="samples"><span id="sampleLab">o usa una foto de ejemplo</span><div class="sample-row" id="samples"></div></div>
-      <p class="priv"><svg><use href="#i-lock"/></svg>A la IA solo viaja una copia pequeña de tu foto para crear la imagen. No la guardamos.</p>
+      <div class="samples"><span id="sampleLab">o usa una foto de ejemplo</span><div class="sample-row" id="samples"></div><button class="btn pri" id="btnSampleGo" type="button" hidden>Probar con esta foto</button></div>
+      <p class="priv"><svg><use href="#i-lock"/></svg>Una copia pequeña de tu foto se procesa en un proveedor de IA (Cloudflare) para crear la imagen. Nosotros no la guardamos.</p>
     </div>
 
     <div class="acts" id="actsResult" hidden>
+      <button class="btn pri" id="btnTry" type="button" hidden><svg><use href="#i-redo"/></svg>Probar este color en mi foto</button>
       <button class="btn pri big" id="btnBuy" type="button"><svg><use href="#i-cart"/></svg><span id="buyLab">Comprar</span></button>
       <div class="row3">
         <button class="btn sec" id="btnShare" type="button"><svg><use href="#i-share"/></svg>Compartir</button>
@@ -113,7 +116,7 @@
 
     <div class="err" id="errBox" hidden role="alert">
       <b id="errT">Algo falló</b><p id="errS"></p>
-      <div class="row2"><button class="btn sec" id="btnRetry" type="button">Intentar otra vez</button><a class="btn ghost" id="btnWaErr" target="_blank" rel="noopener"><svg><use href="#i-wa"/></svg>Ayuda</a></div>
+      <div class="row2"><button class="btn pri" id="btnBack" type="button" hidden>Volver a la tienda</button><button class="btn sec" id="btnRetry" type="button">Intentar otra vez</button><a class="btn ghost" id="btnWaErr" target="_blank" rel="noopener"><svg><use href="#i-wa"/></svg>Ayuda</a></div>
     </div>
 
     <section class="kit" id="kit" hidden>
@@ -153,7 +156,7 @@
     <li><b>La IA pone el producto real</b> de la tienda sobre tu foto, con la luz y los pliegues de tu casa.</li>
     <li><b>Desliza para comparar</b>, cambia de color y compra el que más te guste.</li>
   </ol>
-  <p class="muted small">Es una simulación hecha con inteligencia artificial: los colores pueden variar un poco según la luz de tu foto y tu pantalla. Tu foto no se guarda. <a href="/legal" target="_blank" rel="noopener">Privacidad y condiciones</a></p>
+  <p class="muted small">Es una simulación hecha con inteligencia artificial: los colores pueden variar un poco según la luz de tu foto y tu pantalla. Tu foto se procesa en un proveedor de IA (Cloudflare) y nosotros no la guardamos. <a href="/legal" target="_blank" rel="noopener">Privacidad y condiciones</a></p>
 </section>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
