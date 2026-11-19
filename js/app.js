@@ -16,13 +16,14 @@ const WANT_V = Number(Q.get('v')) || 0;
 const WANT_EXPL = Q.get('vs') === '1'; // el cliente ya eligió medida y color en la ficha de la tienda
 const EMBED = Q.get('embed') === '1' || window.top !== window.self;
 
+const SAMPLES = 'https://gtsivwbnhcawvmsfujby.supabase.co/storage/v1/object/public/vto-samples/';
 const GROUP = { protector: 'cama', sabanas: 'cama', edredon: 'cama', cobija: 'cama', almohada: 'cama', cama: 'cama', cortina: 'cortina', mantel: 'mesa', forro: 'mesa', mueble: 'mueble', ropa: 'ropa' };
 const COPY = {
-  cama: { title: 'Pruébalo en tu cama', empty: 'Toma una foto de tu cama', tip: 'Que se vea la cama completa, con buena luz. La IA hace el resto.', cam: 'Tomar foto de mi cama', gal: 'Subir de la galería', samples: ['cuarto_a', 'cuarto_b'], sampleLab: 'o usa un cuarto de ejemplo', steps: ['Leyendo la luz de tu cuarto', 'Ubicando tu cama y el colchón', 'Poniendo la tela en tu cama', 'Ajustando pliegues y sombras'], after: 'Con el producto', facing: 'environment' },
-  cortina: { title: 'Pruébala en tu ventana', empty: 'Toma una foto de tu ventana', tip: 'Párate frente a la ventana y que se vea completa.', cam: 'Tomar foto de mi ventana', gal: 'Subir de la galería', samples: ['ventana_a'], sampleLab: 'o usa una ventana de ejemplo', steps: ['Leyendo la luz', 'Ubicando tu ventana', 'Colgando la cortina', 'Ajustando caída y pliegues'], after: 'Con la cortina', facing: 'environment' },
-  mesa: { title: 'Pruébalo en tu comedor', empty: 'Toma una foto de tu comedor', tip: 'Que se vean la mesa y las sillas completas.', cam: 'Tomar foto de mi comedor', gal: 'Subir de la galería', samples: ['comedor_a'], sampleLab: 'o usa un comedor de ejemplo', steps: ['Leyendo la luz', 'Ubicando mesa y sillas', 'Poniendo el producto', 'Ajustando pliegues y sombras'], after: 'Con el producto', facing: 'environment' },
-  mueble: { title: 'Pruébalo en tu espacio', empty: 'Toma una foto del lugar', tip: 'Fotografía el sitio donde lo pondrías, con espacio libre.', cam: 'Tomar foto del espacio', gal: 'Subir de la galería', samples: ['entrada_a', 'bano_a'], sampleLab: 'o usa un espacio de ejemplo', steps: ['Leyendo la luz', 'Midiendo el espacio', 'Poniendo el producto a escala', 'Ajustando sombras'], after: 'Con el producto', facing: 'environment' },
-  ropa: { title: 'Pruébatelo', empty: 'Sube una foto tuya de cuerpo entero', tip: 'De frente, con buena luz y ropa ajustada. Mejor si alguien te la toma.', cam: 'Tomar una foto mía', gal: 'Subir una foto mía', samples: ['persona_a', 'persona_b'], sampleLab: 'o usa una persona de ejemplo', steps: ['Leyendo la luz', 'Ubicando tu cuerpo y tu postura', 'Ajustando la prenda a tu cuerpo', 'Puliendo arrugas y caída'], after: 'Con la prenda', facing: 'user' },
+  cama: { title: 'Pruébalo en tu cama', empty: 'Toma una foto de tu cama', tip: 'Que se vea la cama completa, con buena luz. La IA hace el resto.', cam: 'Tomar foto de mi cama', gal: 'Subir de la galería', samples: ['cuarto_01', 'cuarto_02', 'cuarto_03', 'cuarto_04', 'cuarto_05', 'cuarto_06', 'cuarto_07', 'cuarto_08', 'cuarto_09', 'cuarto_10', 'cuarto_11', 'cuarto_12'], sampleLab: 'o usa un cuarto de ejemplo', steps: ['Leyendo la luz de tu cuarto', 'Ubicando tu cama y el colchón', 'Poniendo la tela en tu cama', 'Ajustando pliegues y sombras'], after: 'Con el producto', facing: 'environment' },
+  cortina: { title: 'Pruébala en tu ventana', empty: 'Toma una foto de tu ventana', tip: 'Párate frente a la ventana y que se vea completa.', cam: 'Tomar foto de mi ventana', gal: 'Subir de la galería', samples: ['ventana_01', 'ventana_02', 'ventana_03', 'ventana_04', 'ventana_05', 'ventana_06', 'ventana_07', 'ventana_08', 'ventana_09', 'ventana_10', 'ventana_11', 'ventana_12'], sampleLab: 'o usa una ventana de ejemplo', steps: ['Leyendo la luz', 'Ubicando tu ventana', 'Colgando la cortina', 'Ajustando caída y pliegues'], after: 'Con la cortina', facing: 'environment' },
+  mesa: { title: 'Pruébalo en tu comedor', empty: 'Toma una foto de tu comedor', tip: 'Que se vean la mesa y las sillas completas.', cam: 'Tomar foto de mi comedor', gal: 'Subir de la galería', samples: ['comedor_01', 'comedor_02', 'comedor_03', 'comedor_04', 'comedor_05', 'comedor_06', 'comedor_07', 'comedor_08', 'comedor_09', 'comedor_10', 'comedor_11'], sampleLab: 'o usa un comedor de ejemplo', steps: ['Leyendo la luz', 'Ubicando mesa y sillas', 'Poniendo el producto', 'Ajustando pliegues y sombras'], after: 'Con el producto', facing: 'environment' },
+  mueble: { title: 'Pruébalo en tu espacio', empty: 'Toma una foto del lugar', tip: 'Fotografía el sitio donde lo pondrías, con espacio libre.', cam: 'Tomar foto del espacio', gal: 'Subir de la galería', samples: ['espacio_01', 'espacio_02', 'espacio_03', 'espacio_04', 'espacio_05', 'espacio_06', 'espacio_07', 'espacio_08', 'espacio_09', 'espacio_10'], sampleLab: 'o usa un espacio de ejemplo', steps: ['Leyendo la luz', 'Midiendo el espacio', 'Poniendo el producto a escala', 'Ajustando sombras'], after: 'Con el producto', facing: 'environment' },
+  ropa: { title: 'Pruébatelo', empty: 'Sube una foto tuya de cuerpo entero', tip: 'De frente, con buena luz y ropa ajustada. Mejor si alguien te la toma.', cam: 'Tomar una foto mía', gal: 'Subir una foto mía', samples: ['persona_01', 'persona_02', 'persona_03', 'persona_04', 'persona_05', 'persona_06', 'persona_07', 'persona_08', 'persona_09', 'persona_10', 'persona_11', 'persona_12'], samplesZapato: ['zapato_01', 'zapato_02', 'zapato_03', 'zapato_04', 'zapato_05', 'zapato_06', 'zapato_07', 'zapato_08', 'zapato_09', 'zapato_10', 'zapato_11'], sampleLab: 'o usa una persona de ejemplo', steps: ['Leyendo la luz', 'Ubicando tu cuerpo y tu postura', 'Ajustando la prenda a tu cuerpo', 'Puliendo arrugas y caída'], after: 'Con la prenda', facing: 'user' },
 };
 const ILLU = { cama: 's-cama', cortina: 's-cortina', mesa: 's-mesa', mueble: 's-mueble', ropa: 's-ropa' };
 const ERR = {
@@ -217,7 +218,7 @@ const thumb = (u, w) => (u ? u + (u.includes('?') ? '&' : '?') + 'width=' + w : 
 const SIZE_CM = { sencill: '100 × 190', semi: '120 × 190', doble: '140 × 190', queen: '160 × 190', king: '200 × 200' };
 // Clave única de medida de cama: «SEMIDOBLE» es semi (no doble), «Cama doble 140» es doble, «1.40 x 1.90» es doble.
 export function sizeKey(s) {
-  const n = String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const n = String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   if (/semi/.test(n)) return 'semi';
   if (/sencill|individual|twin|\b1 ?plaza/.test(n)) return 'sencill';
   if (/queen/.test(n)) return 'queen';
@@ -323,10 +324,12 @@ function offerSave(fuente) {
     ' · ', el('button', { class: 'link', type: 'button', onclick: () => { hint.textContent = 'Desliza sobre la foto para comparar.'; } }, 'No'));
 }
 function renderSamples() {
-  const row = $('#samples'); row.replaceChildren();
-  for (const s of C.samples) {
-    const b = el('button', { type: 'button', 'aria-label': 'Usar foto de ejemplo' }, el('img', { src: `/img/demo/${s}.webp`, alt: '', loading: 'lazy' }));
-    b.onclick = () => fromUrl(`/img/demo/${s}.jpg`);
+  const row = $('#samples'); row.replaceChildren(); Object.assign(row.style, { justifyContent: 'flex-start', overflowX: 'auto', maxWidth: '100%', padding: '2px 2px 8px' });
+  const list = G === 'ropa' && P && P.garment === 'zapato' && C.samplesZapato ? C.samplesZapato : C.samples;
+  for (const s of list) {
+    const u = `${SAMPLES}${s}.jpg`;
+    const b = el('button', { type: 'button', 'aria-label': 'Usar foto de ejemplo' }, el('img', { src: u, alt: '', loading: 'lazy', decoding: 'async' }));
+    b.style.flex = 'none'; b.onclick = () => fromUrl(u);
     row.append(b);
   }
 }
@@ -341,7 +344,7 @@ async function fromFile(file, fuente) {
   try { await usePhoto(src || url, fuente); } finally { if (url) setTimeout(() => URL.revokeObjectURL(url), 60000); $('#fileCam').value = ''; $('#fileGal').value = ''; }
 }
 async function fromUrl(url) { await usePhoto(url, 'ejemplo'); }
-function loadImage(src) { return new Promise((ok, ko) => { const i = new Image(); i.decoding = 'async'; i.onload = () => ok(i); i.onerror = ko; i.src = src; }); }
+function loadImage(src) { return new Promise((ok, ko) => { const i = new Image(); i.decoding = 'async'; if (/^https?:/.test(src)) i.crossOrigin = 'anonymous'; i.onload = () => ok(i); i.onerror = ko; i.src = src; }); }
 async function usePhoto(src, fuente) {
   let im; try { im = typeof src === 'string' ? await loadImage(src) : src; } catch { return toast('No pudimos abrir esa foto. Prueba con otra.'); }
   const w0 = im.naturalWidth || im.width, h0 = im.naturalHeight || im.height; if (!w0 || !h0) return toast('No pudimos abrir esa foto.');
