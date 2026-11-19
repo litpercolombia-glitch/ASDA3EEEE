@@ -214,3 +214,124 @@ body.app { min-height: 100dvh; background:
   body[data-state=inicio] .empty { position: relative; inset: auto; padding: 16px 20px 18px; gap: 6px; }
   body[data-state=inicio] .empty-t { margin-top: 4px; }
 }
+
+/* ===== Tema Litper (19-nov-2026) =====
+   Por defecto el probador se ve como litper.store: crema #FAF8F3, texto navy, botón principal navy/negro,
+   dorado solo en detalles y rojo solo en precio/oferta. Paleta y letras leídas de litper.store
+   (--dark #0D1117, --text #1A1A2E, --muted #5A5A72, --acc #C9A84C, --acc2 #E8C97A, --red #8B0000; Playfair Display + Inter).
+   - Sin ?tema: claro; si el sistema pide oscuro, Litper oscuro (navy profundo + dorado).
+   - ?tema=claro fuerza el claro; ?tema=oscuro conserva el tema negro neón anterior TAL CUAL (no le aplica nada de este bloque).
+   La elección por URL la guarda js/app.js en la sesión y la pone en <html data-tema>. */
+html:not([data-tema=oscuro]) {
+  --bg: #FAF8F3; --bg2: #F2EEE5; --panel: #FFFFFF; --panel2: #F4F1EA; --panel3: #ECE7DC;
+  --line: rgba(26, 26, 46, .11); --line2: rgba(26, 26, 46, .22);
+  --tx: #1A1A2E; --mu: #5A5A72; --mu2: #66667C;
+  --navy: #0D1117; --acc: #0D1117; --acc-h: #1E2533; --acc-tx: #FFFFFF;
+  --gold: #C9A84C; --gold2: #E8C97A; --gold-ink: #8A6A1C; --gold-a: rgba(201, 168, 76, .16); --gold-l: rgba(201, 168, 76, .45);
+  --price: #8B0000; --price-a: rgba(139, 0, 0, .06); --price-l: rgba(139, 0, 0, .32);
+  --focus: #0D1117; --link: #1A1A2E; --ill: #1A1A2E;
+  --bar-bg: rgba(250, 248, 243, .9); --over: rgba(250, 248, 243, .93); --scrim: rgba(13, 17, 23, .45);
+  --sel: #0D1117; --sel-tx: #FFFFFF;
+  /* tokens viejos apuntando a la paleta Litper, por si alguna regla se escapa */
+  --neon: #8A6A1C; --neon2: #8A6A1C; --neon-a: rgba(201, 168, 76, .16); --cyan: #1A1A2E; --cyan-a: rgba(26, 26, 46, .06); --amber: #8A6A1C; --red: #8B0000;
+  --f-d: 'Playfair Display', Georgia, 'Times New Roman', serif; --f-u: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --shadow: 0 18px 50px rgba(13, 17, 23, .14);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-tema]) {
+    --bg: #0D1117; --bg2: #111723; --panel: #161C28; --panel2: #1C2331; --panel3: #242C3C;
+    --line: rgba(232, 201, 122, .12); --line2: rgba(232, 201, 122, .24);
+    --tx: #F5F2EA; --mu: #B3B1C2; --mu2: #9D9BAE;
+    --acc: #E8C97A; --acc-h: #F0D690; --acc-tx: #0D1117;
+    --gold-ink: #E8C97A; --gold-a: rgba(232, 201, 122, .13); --gold-l: rgba(232, 201, 122, .42);
+    --price: #FF9E94; --price-a: rgba(255, 158, 148, .07); --price-l: rgba(255, 158, 148, .35);
+    --focus: #E8C97A; --link: #E8C97A; --ill: #E8C97A;
+    --bar-bg: rgba(13, 17, 23, .86); --over: rgba(13, 17, 23, .88); --scrim: rgba(0, 0, 0, .6);
+    --sel: #E8C97A; --sel-tx: #0D1117;
+    --neon: #E8C97A; --neon2: #E8C97A; --neon-a: rgba(232, 201, 122, .13); --cyan: #E8C97A; --cyan-a: rgba(232, 201, 122, .1); --amber: #E8C97A; --red: #FF9E94;
+    --shadow: 0 18px 50px rgba(0, 0, 0, .5);
+    color-scheme: dark;
+  }
+}
+html:not([data-tema=oscuro]) body.app { background: radial-gradient(110% 50% at 50% -12%, var(--gold-a), transparent 60%), var(--bg); }
+html:not([data-tema=oscuro]) a { color: var(--link); }
+html:not([data-tema=oscuro]) :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+html:not([data-tema=oscuro]) .bar { background: var(--bar-bg); }
+html:not([data-tema=oscuro]) .bar-t h1 { font: 700 19px/1.15 var(--f-d); letter-spacing: -.005em; }
+html:not([data-tema=oscuro]) .ic { box-shadow: 0 1px 2px rgba(13, 17, 23, .06); }
+/* escenario: sin rejilla neón; fondo crema con brillo dorado suave */
+html:not([data-tema=oscuro]) .stage { background: radial-gradient(90% 70% at 50% 115%, var(--gold-a), transparent 62%), var(--bg2); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5); }
+html:not([data-tema=oscuro]) .stage::before { display: none; }
+html:not([data-tema=oscuro]) .illu { color: var(--ill); filter: none; opacity: .85; }
+html:not([data-tema=oscuro]) .empty .sweep { background: var(--gold); box-shadow: 0 0 12px 1px var(--gold-l); }
+html:not([data-tema=oscuro]) .empty-t { font-weight: 700; letter-spacing: -.01em; }
+html:not([data-tema=oscuro]) .scan .mesh { background-image: linear-gradient(rgba(232, 201, 122, .3) 1px, transparent 1px), linear-gradient(90deg, rgba(232, 201, 122, .3) 1px, transparent 1px); }
+html:not([data-tema=oscuro]) .scan .line { background: var(--gold2); box-shadow: 0 0 18px 3px rgba(232, 201, 122, .55); }
+html:not([data-tema=oscuro]) .handle { box-shadow: 0 0 0 1px rgba(0, 0, 0, .25), 0 0 12px rgba(232, 201, 122, .5); }
+html:not([data-tema=oscuro]) .handle span { background: rgba(13, 17, 23, .72); box-shadow: 0 0 0 4px rgba(232, 201, 122, .3); }
+/* etiquetas sobre la foto: fondo oscuro translúcido → letra clara siempre */
+html:not([data-tema=oscuro]) .tag { background: rgba(13, 17, 23, .72); color: #FFFFFF; font-family: var(--f-u); }
+html:not([data-tema=oscuro]) .tag.r { color: #E8C97A; }
+html:not([data-tema=oscuro]) .steps { background: var(--over); box-shadow: var(--shadow); }
+html:not([data-tema=oscuro]) .steps li.on i { border-color: var(--gold-ink); border-top-color: transparent; }
+html:not([data-tema=oscuro]) .steps li.ok i { border-color: var(--sel); background: var(--sel); }
+html:not([data-tema=oscuro]) .steps li.ok i::after { border-color: var(--sel-tx); }
+html:not([data-tema=oscuro]) .prog i { background: linear-gradient(90deg, var(--gold), var(--gold2)); }
+/* producto: el precio es lo único en rojo */
+html:not([data-tema=oscuro]) .prod img { border-color: var(--line); }
+html:not([data-tema=oscuro]) .prod-t b { font-weight: 600; color: var(--tx); }
+html:not([data-tema=oscuro]) .prod-t span { color: var(--price); font: 700 18px/1.2 var(--f-u); }
+html:not([data-tema=oscuro]) .prod-t span s { color: var(--mu2); }
+html:not([data-tema=oscuro]) .link { color: var(--link); }
+/* selección: borde navy (en oscuro dorado) + aro dorado suave */
+html:not([data-tema=oscuro]) .sw button { border-color: var(--line2); }
+html:not([data-tema=oscuro]) .sw button[aria-pressed=true],
+html:not([data-tema=oscuro]) .sample-row button[aria-pressed=true] { border-color: var(--sel); box-shadow: 0 0 0 3px var(--gold-l); }
+html:not([data-tema=oscuro]) .sw button.done::after { background: var(--gold); box-shadow: 0 0 0 2px var(--panel); }
+html:not([data-tema=oscuro]) .sw button.loading::before { background: rgba(250, 248, 243, .55) linear-gradient(90deg, transparent, rgba(201, 168, 76, .45), transparent) -60px 0/60px 100% no-repeat; }
+html:not([data-tema=oscuro]) .chip { background: var(--panel); border-color: var(--line2); color: var(--tx); }
+html:not([data-tema=oscuro]) .chip[aria-pressed=true], html:not([data-tema=oscuro]) .chip[aria-checked=true] { border-color: var(--sel); background: var(--sel); color: var(--sel-tx); }
+html:not([data-tema=oscuro]) .chip[aria-pressed=true] small { color: inherit; opacity: .85; }
+html:not([data-tema=oscuro]) .field input, html:not([data-tema=oscuro]) .field select, html:not([data-tema=oscuro]) .field textarea { background: var(--panel); }
+html:not([data-tema=oscuro]) .field input:focus, html:not([data-tema=oscuro]) .field select:focus, html:not([data-tema=oscuro]) .field textarea:focus { border-color: var(--focus); box-shadow: 0 0 0 4px var(--gold-a); }
+/* botones: principal navy/negro como litper.store (en oscuro, dorado con letra navy) */
+html:not([data-tema=oscuro]) .btn { border-color: var(--line2); }
+html:not([data-tema=oscuro]) .btn.pri { --b: var(--acc); --c: var(--acc-tx); border-color: transparent; box-shadow: 0 10px 24px -12px rgba(13, 17, 23, .55); }
+html:not([data-tema=oscuro]) .btn.pri:hover { --b: var(--acc-h); box-shadow: 0 14px 30px -12px rgba(13, 17, 23, .6); }
+html:not([data-tema=oscuro]) .btn.sec { --b: var(--panel); }
+html:not([data-tema=oscuro]) .btn.sec:hover { border-color: var(--tx); background: var(--panel2); }
+html:not([data-tema=oscuro]) .btn.ghost { --b: transparent; border-color: transparent; color: var(--mu); }
+html:not([data-tema=oscuro]) .btn.ghost:hover { color: var(--tx); }
+html:not([data-tema=oscuro]) .btn.amber { --b: var(--gold); --c: #0D1117; }
+html:not([data-tema=oscuro]) .btn:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 3px; }
+html:not([data-tema=oscuro]) .btn.off, html:not([data-tema=oscuro]) .btn.pri.off { opacity: 1; filter: none; background: var(--panel3); color: var(--mu); border: 1px dashed var(--line2); box-shadow: none; }
+html:not([data-tema=oscuro]) .cmp:focus-within { outline: 2px solid var(--gold2); outline-offset: -2px; }
+html:not([data-tema=oscuro]) .saved { border-color: var(--gold-l); background: var(--gold-a); }
+html:not([data-tema=oscuro]) .sample-row button:hover, html:not([data-tema=oscuro]) .pk:hover { border-color: var(--sel); }
+html:not([data-tema=oscuro]) .priv svg { color: var(--gold-ink); }
+html:not([data-tema=oscuro]) .consent { border-color: var(--line2); background: var(--panel); }
+html:not([data-tema=oscuro]) .consent input { accent-color: var(--sel); }
+html:not([data-tema=oscuro]) .consent a { color: var(--link); }
+html:not([data-tema=oscuro]) .err { border-color: var(--price-l); background: var(--price-a); }
+html:not([data-tema=oscuro]) .kit { background: linear-gradient(180deg, var(--gold-a), transparent 60%), var(--panel); }
+html:not([data-tema=oscuro]) .kit-h b, html:not([data-tema=oscuro]) .size-res b { font-weight: 700; }
+html:not([data-tema=oscuro]) .ki { background: var(--bg); }
+html:not([data-tema=oscuro]) .ki.on { border-color: var(--gold-l); }
+html:not([data-tema=oscuro]) .ki span { color: var(--price); }
+html:not([data-tema=oscuro]) .ki-sel { background: var(--panel); }
+html:not([data-tema=oscuro]) .ki-sel:focus-visible, html:not([data-tema=oscuro]) .ki input[type=checkbox]:focus-visible { outline-color: var(--focus); }
+html:not([data-tema=oscuro]) .ki input[type=checkbox] { accent-color: var(--sel); }
+html:not([data-tema=oscuro]) .sizes-t tr.on td { color: var(--tx); font-weight: 700; }
+html:not([data-tema=oscuro]) .sizes-t tr.on td:first-child { box-shadow: inset 3px 0 0 var(--gold); padding-left: 10px; }
+html:not([data-tema=oscuro]) .size-res { background: var(--gold-a); border-color: var(--gold-l); }
+html:not([data-tema=oscuro]) .sheet-bg { background: var(--scrim); }
+html:not([data-tema=oscuro]) .sheet { box-shadow: 0 -12px 40px rgba(13, 17, 23, .12); }
+html:not([data-tema=oscuro]) .toast { background: var(--navy, #0D1117); color: #FFFFFF; }
+html:not([data-tema=oscuro]) .opt.pulse, html:not([data-tema=oscuro]) .consent.pulse { animation-name: optpulse-l; }
+@keyframes optpulse-l { 50% { box-shadow: 0 0 0 4px var(--gold-l); } }
+@media (prefers-reduced-motion: reduce) { html:not([data-tema=oscuro]) .opt.pulse, html:not([data-tema=oscuro]) .consent.pulse { animation: none; outline: 2px solid var(--gold-ink); } }
+/* pie: una sola línea gris discreta */
+html:not([data-tema=oscuro]) .by a { color: var(--mu2); font-size: 12px; white-space: nowrap; letter-spacing: .01em; }
+html:not([data-tema=oscuro]) .by a b { color: inherit; font-weight: 500; }
+@media (prefers-color-scheme: dark) { html:not([data-tema]) .toast { background: #F5F2EA; color: #0D1117; } html:not([data-tema]) .ic { box-shadow: none; } }

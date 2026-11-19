@@ -19,6 +19,17 @@ const HANDLE = slug(Q.get('h') || Q.get('p'));
 const WANT_V = Number(Q.get('v')) || 0;
 const WANT_EXPL = Q.get('vs') === '1'; // el cliente ya eligió medida y color en la ficha de la tienda
 const EMBED = Q.get('embed') === '1' || window.top !== window.self;
+// Tema (19-nov-2026): por defecto el claro de Litper (css/app.css); con el sistema en oscuro, Litper oscuro.
+// A/B: ?tema=oscuro → tema negro neón anterior tal cual; ?tema=claro → claro forzado. La elección queda en la sesión.
+const TEMA = (() => {
+  const q = String(Q.get('tema') || '').toLowerCase(); let t = q === 'oscuro' || q === 'claro' ? q : '';
+  try { if (t) sessionStorage.setItem('vto_tema', t); else t = sessionStorage.getItem('vto_tema') || ''; } catch {}
+  return t === 'oscuro' || t === 'claro' ? t : '';
+})();
+if (TEMA) {
+  document.documentElement.dataset.tema = TEMA;
+  for (const m of document.querySelectorAll('meta[name=theme-color]')) { m.removeAttribute('media'); m.content = TEMA === 'oscuro' ? '#07080a' : '#FAF8F3'; }
+}
 
 const SAMPLES = 'https://gtsivwbnhcawvmsfujby.supabase.co/storage/v1/object/public/vto-samples/';
 const GROUP = { protector: 'cama', sabanas: 'cama', edredon: 'cama', cobija: 'cama', almohada: 'cama', cama: 'cama', cortina: 'cortina', mantel: 'mesa', forro: 'mesa', mueble: 'mueble', ropa: 'ropa' };
@@ -786,13 +797,15 @@ async function composeShare() {
   const a = await loadImage($('#imgAfter').src), b = await loadImage(photo.data);
   const W = 1080, H = Math.round(W * a.naturalHeight / a.naturalWidth), c = el('canvas'); c.width = W; c.height = H + 150;
   const x = c.getContext('2d');
-  x.fillStyle = '#07080a'; x.fillRect(0, 0, c.width, c.height); x.drawImage(a, 0, 0, W, H);
+  const cs = getComputedStyle(document.documentElement), tv = (n, d) => cs.getPropertyValue(n).trim() || d; // colores del tema activo
+  const neon = TEMA === 'oscuro', fu = neon ? 'Outfit, sans-serif' : 'Inter, sans-serif';
+  x.fillStyle = tv('--bg', '#07080a'); x.fillRect(0, 0, c.width, c.height); x.drawImage(a, 0, 0, W, H);
   const tw = 250, th = Math.round(tw * b.naturalHeight / b.naturalWidth);
   x.fillStyle = '#fff'; x.fillRect(28, 28, tw + 8, th + 8); x.drawImage(b, 32, 32, tw, th);
-  x.fillStyle = 'rgba(7,8,10,.75)'; x.fillRect(32, 32 + th - 40, 92, 40); x.fillStyle = '#fff'; x.font = '600 24px Outfit, sans-serif'; x.fillText('Antes', 44, 32 + th - 12);
-  x.fillStyle = '#00ff88'; x.fillRect(0, H, W, 6);
-  x.fillStyle = '#eef3f0'; x.font = '700 40px Outfit, sans-serif'; x.fillText(trim(x, P.title, W - 80), 40, H + 66);
-  x.fillStyle = '#9ba6a1'; x.font = '500 30px Outfit, sans-serif'; x.fillText(`Lo probé con IA en ${P.shopName || SHOP}`, 40, H + 116);
+  x.fillStyle = 'rgba(7,8,10,.75)'; x.fillRect(32, 32 + th - 40, 92, 40); x.fillStyle = '#fff'; x.font = `600 24px ${fu}`; x.fillText('Antes', 44, 32 + th - 12);
+  x.fillStyle = neon ? '#00ff88' : tv('--gold', '#C9A84C'); x.fillRect(0, H, W, 6);
+  x.fillStyle = tv('--tx', '#eef3f0'); x.font = `700 40px ${fu}`; x.fillText(trim(x, P.title, W - 80), 40, H + 66);
+  x.fillStyle = tv('--mu', '#9ba6a1'); x.font = `500 30px ${fu}`; x.fillText(`Lo probé con IA en ${P.shopName || SHOP}`, 40, H + 116);
   return new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
 }
 function trim(x, s, max) { if (x.measureText(s).width <= max) return s; while (s.length > 4 && x.measureText(s + '…').width > max) s = s.slice(0, -1); return s + '…'; }
