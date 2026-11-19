@@ -1,4 +1,4 @@
-// Zynex Probador — app del comprador. 2026-10-17
+// Zynex Probador — app del comprador. 2026-11-19 (v4.13: arreglos de la auditoría externa)
 // Flujo: producto de la tienda → foto (cámara, galería o ejemplo) → IA (Cloudflare FLUX.2 klein, vía Supabase) → comparar → comprar.
 import { call, track, money, toast, store, el, $, $$, WA, sesion } from './common.js';
 import { fuse, corregir } from './fusion.js';
@@ -87,6 +87,9 @@ async function init() {
   $('#fileGal').onchange = (e) => fromFile(e.target.files[0], 'galeria');
   $('#btnRetake').onclick = retake;
   $('#btnRetry').onclick = () => (lastErr === 'foto_invalida' ? retake() : generate());
+  $('#btnBack').onclick = volver;
+  $('#btnTry').onclick = () => { tryHide(); generate(); };
+  $('#btnSampleGo').onclick = () => { const u = pendSample; sampleClear(); if (u) fromUrl(u); };
   $('#btnBuy').onclick = buy;
   $('#btnShare').onclick = share;
   $('#btnSave').onclick = save;
@@ -113,10 +116,11 @@ async function loadCfg() {
 async function loadProduct(handle) {
   setState('cargando');
   try {
-    const r = await fetch(`/api/catalogo?shop=${encodeURIComponent(SHOP)}&handle=${encodeURIComponent(handle)}`);
+    const r = await fetch(`/api/catalogo?shop=${encodeURIComponent(SHOP)}&t=${encodeURIComponent(TENANT)}&handle=${encodeURIComponent(handle)}`);
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'no_existe');
     P = await r.json();
   } catch (e) {
+    if (e.message === 'tienda_no_registrada') return fatal(...ERR.tienda_no_registrada);
     return fatal(e.message === 'no_existe' ? 'No encontramos este producto en la tienda.' : 'La tienda no respondió. Intenta otra vez en un momento.');
   }
   if (P.kind === 'bloqueado') return fatal('Esta prenda no está disponible en el probador.', 'Por privacidad no probamos ropa interior ni trajes de baño.');
@@ -125,7 +129,9 @@ async function loadProduct(handle) {
   $('#illu use').setAttribute('href', '#' + ILLU[G]);
   $('#emptyT').textContent = C.empty; $('#emptyS').textContent = C.tip; // antes de cualquier aviso, para que el texto corresponda a la ilustración
   if (G === 'ropa') { await cfgReady; if (!CFG.ropa) return DEMO ? fatal(...ERR_DEMO.ropa_no_disponible) : fatal('La prueba de ropa no está disponible por ahora.', 'Puedes verla y comprarla normal en la tienda.'); }
-  $('#consent').hidden = G !== 'ropa'; syncConsent();
+  P.title = tit(P.title); P.shopName = tit(P.shopName); for (const o of P.options) o.name = tit(o.name); // textos crudos de la tienda («PROTECTOR OFERTA» → «Protector Oferta»)
+  $('#illu use').setAttribute('href', '#' + ILLU[G]); $('#emptyT').hidden = false; $('#emptyS').hidden = false;
+  $('#consentT').textContent = G === 'ropa' ? CONSENT.ropa : CONSENT.otro; syncConsent();
   document.title = `${C.title} · ${P.shopName || SHOP}`;
   $('#barT').textContent = C.title; $('#barS').textContent = P.shopName ? `${P.shopName} · simulación con IA` : 'Simulación con IA sobre tu foto';
   $('#emptyT').textContent = C.empty; $('#emptyS').textContent = C.tip;
@@ -150,7 +156,14 @@ function pausaIA() { // cupo de IA agotado hoy: se avisa antes de pedir la foto
   fatal('El probador está en pausa', DEMO ? `La demo en vivo vuelve ${vuelveIA()}. Mientras tanto, mira los ejemplos reales de esta página.` : `Vuelve ${vuelveIA()}. Mientras tanto puedes comprar normal desde la tienda.`);
 }
 function fatal(t, s = '') {
-  setState('error'); showErr(null, t, s); $('#btnRetry').hidden = true;
+  // aviso general: ilustración neutra (nada de «toma una foto de tu cama») y salida clara a la tienda
+  $('#illu use').setAttribute('href', '#s-aviso'); $('#emptyT').hidden = true; $('#emptyS').hidden = true;
+  setState('error'); showErr(null, t, s); $('#btnRetry').hidden = true; $('#btnBack').hidden = false;
+}
+function volver() { // «Volver a la tienda»: cierra el modal si está incrustado; si no, va a la tienda
+  const url = SHOP ? `https://${SHOP}/` : '';
+  if (EMBED && PARENT) { post({ vto: 'close' }); if (url) setTimeout(() => { try { window.top.location.href = url; } catch { window.open(url, '_blank', 'noopener'); } }, 700); return; }
+  if (url) location.href = url; else if (history.length > 1) history.back(); else location.href = '/';
 }
 
 /* ---------- producto, colores y medidas ---------- */
@@ -290,6 +303,17 @@ function renderOptions() {
 // Etiquetas legibles: «VINO TINTO» → «Vino Tinto»; las tallas (XS, XL, 2XL, 3XL) quedan en mayúscula
 const prettify = (s) => String(s || '').toLowerCase().replace(/^\d+\s+/, '').replace(/(^|\s|-)\S/g, (m) => m.toUpperCase()).replace(/\b(\d?x{1,3}[sl]|xs|xl)\b/gi, (m) => m.toUpperCase());
 
+// Título crudo de la tienda (todo en mayúsculas o todo en minúsculas) → «Título Legible»; si ya viene bien escrito no se toca
+function tit(s) {
+  s = String(s || '').trim(); if (!/[a-záéíóúñ]/i.test(s)) return s;
+  if (/[a-záéíóúñ]/.test(s) && /[A-ZÁÉÍÓÚÑ]/.test(s)) return s;
+  return s.toLowerCase().replace(/(^|\s|-|\/)\S/g, (m) => m.toUpperCase()).replace(/\b(\d?x{1,3}[sl]|xs|xl)\b/gi, (m) => m.toUpperCase());
+}
+const CONSENT = {
+  ropa: 'La foto es mía, o tengo permiso de la persona, y es mayor de edad. Autorizo que una copia pequeña se procese con IA en un proveedor externo (Cloudflare) solo para crear esta simulación; no se guarda.',
+  otro: 'La foto es mía, o tengo permiso de quienes aparecen. Autorizo que una copia pequeña se procese con IA en un proveedor externo (Cloudflare) solo para crear esta simulación; no se guarda.',
+};
+
 function chooseColor(val) {
   if (val === sel.color) return;
   sel.color = val;
@@ -304,8 +328,14 @@ function chooseColor(val) {
     toast('Este diseño no tiene foto para probarlo.'); return;
   }
   $('#cmp').classList.remove('stale');
-  if (photo && !busy) generate();
+  if (photo && !busy) {
+    // primer toque: selecciona. Si ya está probado se muestra gratis; si no, se pide confirmar (cada prueba gasta IA)
+    if (results.has(photo.key + '|' + productImage())) { tryHide(); generate(); }
+    else if (document.body.dataset.state === 'resultado') tryShow(`Elegiste «${prettify(val)}». Toca «Probar este color en mi foto» para verlo.`);
+  }
 }
+function tryShow(msg) { const b = $('#btnTry'); b.hidden = false; $('#resHint').textContent = msg; }
+function tryHide() { const b = $('#btnTry'); if (b) b.hidden = true; }
 
 /* ---------- fotos ---------- */
 const SAVED_KEY = () => 'vto_foto_' + G;
@@ -326,17 +356,22 @@ function offerSave(fuente) {
 function renderSamples() {
   const row = $('#samples'); row.replaceChildren(); Object.assign(row.style, { justifyContent: 'flex-start', overflowX: 'auto', maxWidth: '100%', padding: '2px 2px 8px' });
   const list = G === 'ropa' && P && P.garment === 'zapato' && C.samplesZapato ? C.samplesZapato : C.samples;
-  for (const s of list) {
+  sampleClear();
+  list.forEach((s, i) => {
     const u = `${SAMPLES}${s}.jpg`;
-    const b = el('button', { type: 'button', 'aria-label': 'Usar foto de ejemplo' }, el('img', { src: u, alt: '', loading: 'lazy', decoding: 'async' }));
-    b.style.flex = 'none'; b.onclick = () => fromUrl(u);
+    const b = el('button', { type: 'button', 'aria-label': `Foto de ejemplo ${i + 1}`, 'aria-pressed': 'false' }, el('img', { src: u, alt: '', loading: 'lazy', decoding: 'async' }));
+    b.style.flex = 'none'; b.dataset.u = u; b.onclick = () => (pendSample === u ? $('#btnSampleGo').click() : samplePick(u));
     row.append(b);
-  }
+  });
 }
+// Tocar un ejemplo solo lo selecciona; la prueba (que gasta IA) arranca con «Probar con esta foto» o con un segundo toque
+let pendSample = null;
+function samplePick(u) { pendSample = u; $$('#samples button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.u === u))); $('#btnSampleGo').hidden = false; }
+function sampleClear() { pendSample = null; $$('#samples button').forEach((x) => x.setAttribute('aria-pressed', 'false')); const g = $('#btnSampleGo'); if (g) g.hidden = true; }
 async function fromFile(file, fuente) {
   if (!file) return;
   if (!/^image\//.test(file.type) && !/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name)) return toast('Ese archivo no es una foto.');
-  if (G === 'ropa' && !consentOk()) { $('#fileCam').value = ''; $('#fileGal').value = ''; return toast('Primero marca la casilla de autorización.'); }
+  if (!consentOk()) { $('#fileCam').value = ''; $('#fileGal').value = ''; return needConsent(); }
   toast('Preparando tu foto…', 6000);
   let src = null, url = null;
   try { if (window.createImageBitmap) src = await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch { src = null; }
@@ -346,6 +381,7 @@ async function fromFile(file, fuente) {
 async function fromUrl(url) { await usePhoto(url, 'ejemplo'); }
 function loadImage(src) { return new Promise((ok, ko) => { const i = new Image(); i.decoding = 'async'; if (/^https?:/.test(src)) i.crossOrigin = 'anonymous'; i.onload = () => ok(i); i.onerror = ko; i.src = src; }); }
 async function usePhoto(src, fuente) {
+  if (!consentOk()) return needConsent(); // Ley 1581: sin autorización no sale ninguna foto (ni propia, ni guardada, ni de ejemplo)
   let im; try { im = typeof src === 'string' ? await loadImage(src) : src; } catch { return toast('No pudimos abrir esa foto. Prueba con otra.'); }
   const w0 = im.naturalWidth || im.width, h0 = im.naturalHeight || im.height; if (!w0 || !h0) return toast('No pudimos abrir esa foto.');
   if (Math.min(w0, h0) < 300) return toast('La foto es muy pequeña. Toma una nueva o elige otra de más calidad.');
@@ -359,7 +395,8 @@ async function usePhoto(src, fuente) {
   const draw = (w, h) => { const c = el('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(im, cx, cy, cw, ch, 0, 0, w, h); return c; };
   let data = draw(fw, fh).toDataURL('image/jpeg', 0.88); if (data.length > 3_800_000) data = draw(fw, fh).toDataURL('image/jpeg', 0.72);
   const ai = draw(aw, ah).toDataURL('image/jpeg', 0.9);
-  photo = { data, ai, w: aw, h: ah, fw, fh, key: hashStr(data.slice(-6000) + data.length), src: data, fuente };
+  photo = { data, ai, w: aw, h: ah, fw, fh, key: hashStr(data.slice(-6000) + data.length), src: data, fuente, consent: true };
+  sampleClear();
   if (im.close) try { im.close(); } catch {}
   trk('foto', { tenant: TENANT, handle: P.handle, categoria: P.kind, detalle: { fuente } });
   const cmp = $('#cmp');
@@ -371,7 +408,7 @@ async function usePhoto(src, fuente) {
 }
 function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i += 7) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
 function retake() {
-  photo = null; shown = null; results.clear(); delete document.body.dataset.orient; setState('inicio'); renderOptions(); renderSaved();
+  photo = null; shown = null; results.clear(); delete document.body.dataset.orient; tryHide(); setState('inicio'); renderOptions(); renderSaved();
   $('#fileCam').value = ''; $('#fileGal').value = '';
 }
 
@@ -387,7 +424,7 @@ async function generate(retry = true) {
   }
   if (results.has(key)) { shown = { key: photo.key, color: sel.color, src: results.get(key) }; return showResult(results.get(key), false); }
   const gen = ++genN;
-  busy = true; lastErr = null; setState('procesando'); startProgress();
+  busy = true; lastErr = null; tryHide(); setState('procesando'); startProgress();
   const tt = document.getElementById('toast'); if (tt && /Preparando tu foto/.test(tt.textContent)) tt.classList.remove('on'); // ya se ve el avance
   markSwatch(sel.color, 'loading');
   const t0 = performance.now();
@@ -395,8 +432,10 @@ async function generate(retry = true) {
     await cfgReady;
     // color y zona de la tela en la foto de la variante (en paralelo; si tarda, la IA no la espera)
     const refP = refInfo(prodUrl, sel.color || '', G), ref0 = await Promise.race([refP, wait(1200).then(() => null)]);
-    const d = await call('ai', { tenant: TENANT, tok: CFG.tok, shop: DEMO ? SHOP : undefined, handle: P.handle, photo: photo.ai || photo.data, product: prodUrl, color: sel.color || '', w: photo.w, h: photo.h, sesion, n: 2, consiento: G === 'ropa' ? (photo.fuente === 'ejemplo' || consentOk()) : undefined, ref: ref0?.solid ? { hex: ref0.hex, box: ref0.box } : undefined }, { timeout: 80000 }); // en estampados el recorte cortaría el diseño
-    const fz = await fuseResult(photo, d.images?.length ? d.images : [d.image], ref0 || (await refP));
+    const d = await call('ai', { tenant: TENANT, tok: CFG.tok, shop: DEMO ? SHOP : undefined, handle: P.handle, photo: photo.ai || photo.data, product: prodUrl, color: sel.color || '', w: photo.w, h: photo.h, sesion, consiento: photo.consent ? true : undefined, ref: ref0?.solid ? { hex: ref0.hex, box: ref0.box } : undefined }, { timeout: 80000 }); // en estampados el recorte cortaría el diseño
+    const gens = (d.images?.length ? d.images : [d.image]).filter(Boolean).slice(0, 1); // el servidor entrega 1 sola imagen por prueba
+    if (!gens.length) throw Object.assign(new Error('ia_fallo'), { code: 'ia_fallo' });
+    const fz = await fuseResult(photo, gens, ref0 || (await refP));
     results.set(key, fz.src);
     await stopProgress(true);
     busy = false;
@@ -427,14 +466,15 @@ async function generate(retry = true) {
     setState('error'); showErr(lastErr, t, s);
   } finally { markSwatch(null); renderOptions(); }
 }
-// Fusión fiel: llegan 2 versiones de la IA; se queda la que mejor conserva tu foto real (cuarto, cara, luz)
-// y, si calza, se funde con tus píxeles originales. Si ninguna calza, se muestra la más fiel tal cual.
-// Mejor de 2: gana la versión que funde con la foto real, conserva el color de la tela y no trae objetos nuevos
+// Fusión fiel: llega 1 versión de la IA (costo fijo por prueba); si calza, se funde con tus píxeles originales;
+// si no calza, se muestra tal cual con el color de la tela corregido. Sigue aceptando varias versiones (elige la mejor):
+// gana la versión que funde con la foto real, conserva el color de la tela y no trae objetos nuevos
 // el fondo intacto manda; el color de la tela solo desempata; castigo fuerte si casi no aparece la tela y más fuerte si la IA
 // trajo un mueble del catálogo encima de la tela (cabecero copiado): esa versión pierde aunque sea la única que se funde
 const copiaMueble = (p) => !!p && p.cob >= (p.est ? 0.12 : 0.2); // fusion.js 5c: un mueble del catálogo encima de la tela (p. ej. el cabecero); en estampados las limpias dan ≤ 0,012
 const castigo = (inf) => { const p = inf.prod; if (!p) return 0; return (p.dE != null ? 0.1 * p.dE : 0) + (p.frac < 0.25 ? 12 : 0) + (copiaMueble(p) ? 150 + 100 * p.cob : 0); };
 async function fuseResult(ph, gens, ref = null) {
+  gens = gens.filter(Boolean); if (!gens.length) throw Object.assign(new Error('ia_fallo'), { code: 'ia_fallo' });
   let o; try { o = await loadImage(ph.data); } catch { return { src: gens[0], info: { motivo: 'error' }, i: 0, n: gens.length, copias: 0 }; }
   let best = null, copias = 0; // copias: versiones con un mueble del catálogo encima de la tela
   for (let i = 0; i < gens.length; i++) {
@@ -533,7 +573,8 @@ function setState(s) {
   $('#actsStart').hidden = !(s === 'inicio');
   $('#actsResult').hidden = s !== 'resultado';
   $('#errBox').hidden = s !== 'error';
-  $('#btnRetry').hidden = false;
+  $('#btnRetry').hidden = false; $('#btnBack').hidden = true;
+  if (s !== 'resultado') tryHide();
   $('#picker').hidden = s !== 'picker';
   $('#kit').hidden = !(s === 'resultado' && KIT?.items?.length && !DEMO);
   if (s === 'inicio' && !has) { $('#imgBefore').removeAttribute('src'); }
@@ -542,6 +583,7 @@ function showErr(code, t, s) {
   $('#errT').textContent = t; $('#errS').textContent = s;
   $('#btnWaErr').hidden = !CFG.wa || !['limite_ip', 'limite_sesion', 'ia_fallo', 'ia_rechazo', 'producto_sin_imagen', 'imagen_no_valida'].includes(code);
   $('#btnRetry').hidden = ['cuota_agotada', 'tienda_inactiva', 'tienda_no_registrada', 'limite_tienda_dia', 'limite_sesion', 'limite_ip', 'ropa_no_disponible', 'prenda_no_permitida', 'producto_sin_probador'].includes(code);
+  $('#btnBack').hidden = !$('#btnRetry').hidden; // sin «Intentar otra vez», siempre queda una salida a la tienda
   if (DEMO) { // en la demo quien lee es un comerciante: siempre hay un paso siguiente
     const wa = $('#btnWaErr');
     const b = $('#btnDemoCta') || wa.parentElement.insertBefore(el('button', { class: 'btn pri', id: 'btnDemoCta', type: 'button', onclick: () => { trk('cta', { tenant: TENANT, handle: P?.handle, detalle: { desde: 'demo-error', code: code || '' } }); post({ vto: 'demo-cta', shop: SHOP, handle: P?.handle || '' }); } }, 'Quiero esto en mi tienda'), wa);
@@ -550,17 +592,26 @@ function showErr(code, t, s) {
     if (!wa.dataset.demo) { wa.dataset.demo = '1'; wa.replaceChildren(...[wa.querySelector('svg'), 'Escríbenos'].filter(Boolean)); }
   }
 }
-// autorización para fotos de personas (Ley 1581): casilla antes de tomar o subir la foto
+// autorización para toda foto (Ley 1581): casilla visible en todos los nichos antes de tomar, subir o probar con una foto
 function consentOk() { return $('#chkConsent').checked; }
+function needConsent() { toast('Primero marca la casilla de autorización.'); const c = $('#consent'); c.scrollIntoView({ behavior: 'smooth', block: 'center' }); c.classList.add('pulse'); setTimeout(() => c.classList.remove('pulse'), 1600); }
 function syncConsent() {
-  const need = G === 'ropa' && !consentOk();
+  const need = !consentOk();
   for (const id of ['#fileCam', '#fileGal']) { const i = $(id); i.disabled = need; i.closest('.btn').classList.toggle('off', need); }
 }
 
 /* ---------- comprar ---------- */
-function post(msg) { try { window.parent.postMessage(msg, '*'); } catch {} }
+// Origen exacto de la página que nos incrusta (nunca '*'): ancestorOrigins (Chrome/Safari) o, si no, el referrer.
+// Si no se puede saber, no se manda nada (la compra cae al respaldo de abrir la URL directo).
+const PARENT = (() => {
+  if (window.top === window.self) return location.origin; // sin incrustar: los avisos van a esta misma página
+  try { const a = location.ancestorOrigins && location.ancestorOrigins[0]; if (a && /^https?:\/\//.test(a)) return new URL(a).origin; } catch {}
+  try { if (document.referrer) { const o = new URL(document.referrer).origin; if (/^https?:/.test(o)) return o; } } catch {}
+  return null;
+})();
+function post(msg) { if (!PARENT) return; try { window.parent.postMessage(msg, PARENT); } catch {} }
 let ackT = 0;
-addEventListener('message', (e) => { if (e.data?.vto === 'ack') clearTimeout(ackT); });
+addEventListener('message', (e) => { if (e.source === window.parent && PARENT && e.origin === PARENT && e.data?.vto === 'ack') clearTimeout(ackT); });
 function pedirFalta(f) {
   toast(`Elige ${f.txt} primero.`); const o = $(f.el); if (!o) return;
   o.scrollIntoView({ behavior: 'smooth', block: 'center' }); o.classList.add('pulse'); setTimeout(() => o.classList.remove('pulse'), 1600);
@@ -582,7 +633,7 @@ function buy() {
 async function loadKit() {
   if (DEMO || CFG.kit === false) return;
   try {
-    const r = await fetch(`/api/kit?shop=${encodeURIComponent(SHOP)}&handle=${encodeURIComponent(P.handle)}`);
+    const r = await fetch(`/api/kit?shop=${encodeURIComponent(SHOP)}&t=${encodeURIComponent(TENANT)}&handle=${encodeURIComponent(P.handle)}`);
     const d = await r.json(); if (!d.items?.length) return;
     KIT = d; kitOn = new Set(); // nada marcado por defecto: el cliente decide qué agregar
   } catch {}
@@ -609,16 +660,16 @@ function renderKit() {
     const v = kitChosen(it);
     const on = kitOn.has(it.handle) && !!v;
     const id = 'k_' + it.handle.slice(0, 40);
-    const cb = el('input', { type: 'checkbox', id, checked: on, 'aria-label': `Agregar ${it.title}` });
+    const cb = el('input', { type: 'checkbox', id, checked: on, 'aria-label': `Agregar ${tit(it.title)}` });
     cb.onchange = () => { if (cb.checked && !v) { cb.checked = false; toast('Elige la medida o el color de este producto.'); sel2?.focus(); return; } cb.checked ? kitOn.add(it.handle) : kitOn.delete(it.handle); renderKit(); };
     const vt = (x) => (/^default title$/i.test(x.title) ? 'Presentación única' : prettify(x.title));
-    const sel2 = opts.length < 2 ? null : el('select', { class: 'ki-sel', 'aria-label': `Medida y color de ${it.title}` },
+    const sel2 = opts.length < 2 ? null : el('select', { class: 'ki-sel', 'aria-label': `Medida y color de ${tit(it.title)}` },
       el('option', { value: '', text: v ? 'Cambiar medida o color' : 'Elige medida y color' }),
       ...opts.map((x) => el('option', { value: String(x.id), selected: v && x.id === v.id, text: `${vt(x)} · ${money(x.price, P.currency)}` })));
     if (sel2) sel2.onchange = () => { const nv = opts.find((x) => String(x.id) === sel2.value); if (!nv) return; kitPick.set(it.handle, nv.id); kitOn.add(it.handle); renderKit(); };
     const row = el('div', { class: 'ki' + (on ? ' on' : '') },
       el('img', { src: (v && v.image) || it.image, alt: '', loading: 'lazy' }),
-      el('div', {}, el('label', { for: id }, el('b', { text: it.title })),
+      el('div', {}, el('label', { for: id }, el('b', { text: tit(it.title) })),
         el('small', { class: 'ki-v', text: v ? vt(v) : 'Falta elegir medida o color' }),
         el('span', { text: v ? money(v.price, P.currency) : '' }), sel2),
       cb);
@@ -734,10 +785,11 @@ async function showPicker() {
   setState('picker');
   $('#barT').textContent = 'Probador con IA'; $('#emptyT').textContent = 'Elige un producto para probar'; $('#emptyS').textContent = 'Luego tomas una foto y lo ves puesto en segundos.';
   try {
-    const d = await (await fetch(`/api/tienda?shop=${encodeURIComponent(SHOP)}`)).json();
+    const d = await (await fetch(`/api/tienda?shop=${encodeURIComponent(SHOP)}&t=${encodeURIComponent(TENANT)}`)).json();
+    if (d.error === 'tienda_no_registrada') return fatal(...ERR.tienda_no_registrada);
     const grid = $('#pickGrid'); grid.replaceChildren();
     for (const it of d.items || []) {
-      const b = el('button', { class: 'pk', type: 'button' }, el('img', { src: it.image, alt: '', loading: 'lazy' }), el('b', { text: it.title }));
+      const b = el('button', { class: 'pk', type: 'button' }, el('img', { src: it.image, alt: '', loading: 'lazy' }), el('b', { text: tit(it.title) }));
       b.onclick = () => { history.replaceState(null, '', `?${new URLSearchParams({ ...Object.fromEntries(Q), h: it.handle })}`); $('#picker').hidden = true; loadProduct(it.handle); };
       grid.append(b);
     }
