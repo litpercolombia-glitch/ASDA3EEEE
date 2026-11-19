@@ -1,4 +1,5 @@
-// vto-api v6.6.2 — Zynex Probador (backend). 18-oct-2026
+// vto-api v6.8.0 — Zynex Probador (backend). 19-nov-2026 (cierre auditoría 3: consentimiento verificado o se rechaza, Origin en lista exacta,
+//   topes por IP para CGNAT 60/día y 6 sesiones, devolución atómica de contadores con vto_take3)
 // Acciones (POST JSON {action, ...}):
 //   cfg     → configuración pública mínima de la tienda + ficha de sesión firmada (tok).
 //   ai      → foto realista con Cloudflare Workers AI (FLUX.2 klein 4B). El servidor resuelve el producto él mismo
@@ -15,13 +16,16 @@ const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SE
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-/* ---------- orígenes: lista exacta ---------- */
+/* ---------- orígenes: lista exacta (sin comodines ni localhost) ----------
+   OJO: el Origin NO autentica. Lo pone el navegador, pero cualquier script o servidor puede enviar el que quiera.
+   Solo filtra el uso desde páginas ajenas en un navegador (CORS). El límite real del gasto de IA es:
+   sesión firmada (tok, 8 pruebas) + tope por IP/día + tope diario por tienda (config.tope_dia o plan) + cuota del mes. */
 const ORIGINS = new Set([
   'https://probador.zynexapp.com',
   'https://asda3eeee-git-probador-litpers-projects.vercel.app',
   'https://zynex-probador.vercel.app',
 ]);
-const originOk = (o: string | null) => !!o && (ORIGINS.has(o) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d{2,5})?$/.test(o));
+const originOk = (o: string | null) => !!o && ORIGINS.has(o);
 const headersFor = (o: string | null, open = false) => ({
   'access-control-allow-origin': open && o ? o : originOk(o) ? o! : 'https://probador.zynexapp.com',
   'access-control-allow-methods': 'POST, OPTIONS',
@@ -48,7 +52,9 @@ async function secrets() {
 const enc = new TextEncoder();
 const hex = (b: ArrayBuffer, n = 32) => [...new Uint8Array(b)].slice(0, n).map((x) => x.toString(16).padStart(2, '0')).join('');
 async function ipHash(req: Request, salt: string) {
-  const ip = (req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'sin-ip';
+  // solo la cabecera que pone Cloudflare (el cliente no la puede falsear); x-forwarded-for/x-real-ip se ignoran a propósito
+  const ip = (req.headers.get('cf-connecting-ip') || '').trim() || 'sin-ip';
+  if (ip === 'sin-ip') console.error('ip: sin cf-connecting-ip');
   return hex(await crypto.subtle.digest('SHA-256', enc.encode(salt + '|' + ip)), 16);
 }
 async function hmac(key: string, msg: string) {
@@ -56,6 +62,34 @@ async function hmac(key: string, msg: string) {
   return hex(await crypto.subtle.sign('HMAC', k, enc.encode(msg)), 12);
 }
 const utcDay = (d = new Date()) => d.toISOString().slice(0, 10).replace(/-/g, '');
+const bogDia = () => new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10); // día de vto_usage (America/Bogota, sin DST)
+const SESS_MAX_IP_DIA = 6; // sesiones nuevas por IP, tienda y día (CGNAT: muchos celulares comparten IP); de la 7.ª en adelante cfg devuelve la misma 6.ª (mismo cupo de 8)
+const MAX_IP_DIA = 60; // pruebas por IP y día (antes 25: con CGNAT un barrio entero sale por la misma IP); el costo lo cuidan la sesión (8) y el tope_dia de la tienda
+// sesión atada a IP + día: recargar la página no regala cupo nuevo
+async function sesionIpDia(salt: string, tenant: string, ip: string) {
+  const key = `${ip}#sess:${tenant}`;
+  await sb.rpc('vto_rate', { p_key: key, p_max: SESS_MAX_IP_DIA });
+  const { data } = await sb.from('vto_usage').select('n').eq('ip_hash', key).eq('dia', bogDia()).maybeSingle();
+  const slot = Math.min(Math.max(Number(data?.n) || 1, 1), SESS_MAX_IP_DIA);
+  return (await hmac(salt, `sess|${ip}|${bogDia()}|${tenant}|${slot}`)).slice(0, 16);
+}
+async function tokUsos(tokId: string) {
+  const { data } = await sb.from('vto_usage').select('n').eq('ip_hash', 'tok:' + tokId).eq('dia', bogDia()).maybeSingle();
+  return Number(data?.n) || 0;
+}
+/* consentimiento: textos que ve el comprador (deben coincidir con js/app.js CONSENT) y su huella */
+const CONSENT_TXT: Record<string, string> = {
+  ropa: 'La foto es mía, o tengo permiso de la persona, y es mayor de edad. Autorizo que una copia pequeña se procese con IA en un proveedor externo (Cloudflare) solo para crear esta simulación; no se guarda.',
+  otro: 'La foto es mía, o tengo permiso de quienes aparecen. Autorizo que una copia pequeña se procese con IA en un proveedor externo (Cloudflare) solo para crear esta simulación; no se guarda.',
+};
+const CONSENT_V = '2026-11-19';
+async function consentInfo(c: any) {
+  const v = typeof c?.v === 'string' && /^[0-9a-z.-]{1,20}$/.test(c.v) ? c.v : null;
+  const h = typeof c?.h === 'string' && /^[a-f0-9]{16}$/.test(c.h) ? c.h : null;
+  const conocidos = await Promise.all(Object.values(CONSENT_TXT).map(async (t) => hex(await crypto.subtle.digest('SHA-256', enc.encode(t)), 8)));
+  return { consentimiento: true, consent_v: v, consent_h: h, consent_ok: !!h && conocidos.includes(h) && v === CONSENT_V, consent_ts: new Date().toISOString() };
+}
+const DEMO_SHOPS = ['litper.store', 'www.litper.store', '1wqq1s-2t.myshopify.com']; // la demo solo carga estas tiendas (más config.demo_shops del tenant)
 
 const str = (v: unknown, max = 200) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 const slug = (v: unknown) => { const s = str(v, 60).toLowerCase(); return /^[a-z0-9][a-z0-9-]{0,59}$/.test(s) ? s : ''; };
@@ -66,8 +100,8 @@ const shopHost = (v: unknown) => {
 };
 
 /* ---------- sesión firmada: la emite cfg, la exige ai ---------- */
-async function newTok(salt: string, tenant: string) {
-  const r = hex(crypto.getRandomValues(new Uint8Array(8)).buffer, 8), d = utcDay();
+async function newTok(salt: string, tenant: string, fijo?: string) {
+  const r = fijo || hex(crypto.getRandomValues(new Uint8Array(8)).buffer, 8), d = utcDay();
   return `${r}.${d}.${await hmac(salt, `${r}|${d}|${tenant}`)}`;
 }
 async function tokOk(salt: string, tenant: string, tok: unknown) {
@@ -79,7 +113,7 @@ async function tokOk(salt: string, tenant: string, tok: unknown) {
 }
 
 /* ---------- qué es el producto (mismo clasificador v2 que /api/_util.js) ---------- */
-const normw = (s: unknown) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9ñ]+/g, ' ').trim();
+const normw = (s: unknown) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9ñ]+/g, ' ').trim();
 const has = (t: string, words: string) => new RegExp(`(^| )(${words})( |$)`).test(t);
 const at = (t: string, words: string) => { const m = new RegExp(`(^| )(${words})( |$)`).exec(t); return m ? m.index : -1; };
 const BLOCKED = 'ropa interior|brasier|brasieres|bra|sosten|panty|pantys|tanga|tangas|boxer|boxers|calzon|calzones|calzoncillo|calzoncillos|lenceria|bikini|bikinis|traje de bano|vestido de bano|banador|trusa|cachetero|bodysuit|body|faja|fajas|moldeador|moldeadora|shapewear|levanta gluteos|levanta cola|erotico|erotica|erotic|sexual|intimo|intima|sex|tanguita|hilo dental|lingerie|underwear|swimsuit|swimsuits|swimwear|thong|thongs|briefs|panties|negligee|nightie';
@@ -97,7 +131,7 @@ const RULES: [string, string, string | null, string | null][] = [
   ['forro', 'forro|forros|funda|fundas|cubresillas|cubre silla|cubre sofa|cubresofa|manta|mantas', 'silla|sillas|sofa|sofas|comedor|mueble|muebles|puestos', NOT_HOME + '|almohada|almohadas|cojin|cojines|colchon'],
   ['mueble', 'zapatero|zapateros|estante|estantes|esquinero|esquineros|armario|armarios|closet|perchero|percheros|repisa|repisas|mueble|muebles|organizador de pie|organizador de zapatos|biblioteca|mesa de noche|tapete|tapetes|alfombra|alfombras', null, NOT_HOME + '|viaje|maleta|cosmetiquero|maquillaje|masajeador|masaje|spa|pies|yoga|ejercicio|frutas|verduras|nevera|cocina|carro|luces|led|embarazada|embarazadas|cinturon|salida de bano|pareo'],
 ];
-const GARMENT_WORDS: Record<string, string> = { camiseta: 'camiseta|camisetas|t shirt|tshirt|polo|polos', camisa: 'camisa|camisas', blusa: 'blusa|blusas', buzo: 'buzo|buzos|hoodie|hoodies|sudadera con capota', saco: 'saco|sacos|sueter|sueteres|cardigan', chaqueta: 'chaqueta|chaquetas|chaqueton|abrigo|parka', chaleco: 'chaleco|chalecos', top: 'top|tops|crop top', pantalon: 'pantalon|pantalones|palazzo', jean: 'jean|jeans', sudadera: 'sudadera|sudaderas|jogger|joggers', falda: 'falda|faldas', short: 'short|shorts|bermuda|bermudas', vestido: 'vestido|vestidos', enterizo: 'enterizo|enterizos|jumpsuit|overol', pijama: 'pijama|pijamas', conjunto: 'conjunto deportivo|conjunto de ropa|conjunto casual|conjunto de dos piezas' };
+const GARMENT_WORDS: Record<string, string> = { camiseta: 'camiseta|camisetas|t shirt|tshirt|polo|polos', camisa: 'camisa|camisas', blusa: 'blusa|blusas', buzo: 'buzo|buzos|hoodie|hoodies|sudadera con capota', saco: 'saco|sacos|sueter|sueteres|cardigan', chaqueta: 'chaqueta|chaquetas|chaqueton|abrigo|parka', chaleco: 'chaleco|chalecos', top: 'top|tops|crop top', pantalon: 'pantalon|pantalones|palazzo', jean: 'jean|jeans', sudadera: 'sudadera|sudaderas|jogger|joggers', falda: 'falda|faldas', short: 'short|shorts|bermuda|bermudas', vestido: 'vestido|vestidos', enterizo: 'enterizo|enterizos|jumpsuit|overol', pijama: 'pijama|pijamas', zapato: 'zapato|zapatos|bota|botas|botin|botines|tenis|zapatilla|zapatillas|mocasin|mocasines|calzado', conjunto: 'conjunto deportivo|conjunto de ropa|conjunto casual|conjunto de dos piezas' };
 const HOME_CTX = 'comedor|cama|mesa|silla|sillas|ventana|colchon|sofa|hogar|casa|cocina|bano|sala|habitacion|cuarto|puerta';
 const NOT_GARMENT = 'percha|perchas|gancho|ganchos|organizador|mascota|mascotas|perro|perros|gato|gatos|salvavidas|oil|aceite|crema|serum|celulitis|medias|lavadora|plancha|corrector|postura|lastrado|fitness|faja';
 function kindOf(p: { title?: string; type?: string; product_type?: string; handle?: string; tags?: unknown }) {
@@ -144,14 +178,14 @@ function colorEn(s: string) {
   return out.join(' and ');
 }
 
-const GARMENTS: Record<string, { en: string; zone: 'top' | 'bottom' | 'full' }> = {
+const GARMENTS: Record<string, { en: string; zone: 'top' | 'bottom' | 'full' | 'shoes' }> = {
   camiseta: { en: 't-shirt', zone: 'top' }, polo: { en: 'polo shirt', zone: 'top' }, camisa: { en: 'shirt', zone: 'top' },
   blusa: { en: 'blouse', zone: 'top' }, buzo: { en: 'sweatshirt', zone: 'top' }, hoodie: { en: 'hoodie', zone: 'top' },
   saco: { en: 'sweater', zone: 'top' }, chaqueta: { en: 'jacket', zone: 'top' }, chaleco: { en: 'vest', zone: 'top' }, top: { en: 'top', zone: 'top' },
   pantalon: { en: 'pants', zone: 'bottom' }, jean: { en: 'jeans', zone: 'bottom' }, sudadera: { en: 'sweatpants', zone: 'bottom' },
   falda: { en: 'skirt', zone: 'bottom' }, short: { en: 'shorts', zone: 'bottom' }, jogger: { en: 'joggers', zone: 'bottom' },
   vestido: { en: 'dress', zone: 'full' }, enterizo: { en: 'jumpsuit', zone: 'full' }, pijama: { en: 'pajama set', zone: 'full' },
-  conjunto: { en: 'outfit', zone: 'full' }, uniforme: { en: 'uniform', zone: 'full' },
+  zapato: { en: 'pair of shoes or boots', zone: 'shoes' }, conjunto: { en: 'outfit', zone: 'full' }, uniforme: { en: 'uniform', zone: 'full' },
 };
 const KEEP = 'Keep everything else in image 1 exactly the same: room, walls, floor, furniture, decor, lighting, shadows, camera angle, framing and perspective.';
 const BED = 'Keep the bed frame, headboard, nightstands and lamps of image 1 exactly as they are; do not copy the headboard, bed base, furniture or room from image 2.';
@@ -161,7 +195,7 @@ const NUNCA = 'Never add, remove or replace furniture, decor or objects of image
 function extraV65(kind: string, title: string) {
   const t = normw(title);
   switch (kind) {
-    case 'protector': return ' It is a fitted mattress protector, not a bedspread or a comforter: nothing hangs below the top edge of the mattress; remove any old sheet that hangs down; keep the bed base, legs and headboard of image 1.';
+    case 'protector': return ' It is a fitted mattress protector, not a bedspread or a comforter: nothing hangs below the upper edge of the mattress, the skirt is tucked under the mattress; remove any old blanket that hangs down; keep the bed base, legs and headboard of image 1.';
     case 'sabanas': return ' Keep the bed base, legs and headboard of image 1; only the sheets and pillowcases change.';
     case 'cortina': return (/blackout|apaga la luz|oscurec/.test(t) ? ' The curtain fabric is fully opaque blackout: no light, window or outside view shows through it.' : '') + (/velo|visillo/.test(t) ? ' Keep any white sheer curtain pure white.' : '');
     case 'forro': return ' Keep the exact shape, height and number of the chairs of image 1; only cover them.';
@@ -173,7 +207,7 @@ function buildPrompt(kind: string, garment: string, color: string, hex = '') {
   const c = color ? ` (${color}${hex ? `, exact color ${hex}` : ''})` : hex ? ` (exact color ${hex})` : '';
   switch (kind) {
     case 'protector':
-      return `Put the exact quilted mattress protector${c} from image 2 on the mattress of the bed in image 1, with matching quilted pillow covers on the pillows: same color, same quilting pattern and texture as image 2. It fits like a fitted sheet: it covers the top and the sides of the mattress only, tight with elastic edges tucked under the mattress, no overhang, smooth surface. Remove the existing sheets and blankets. ${BED} ${KEEP} ${CLEAN} ${PHOTO}`;
+      return `Put the exact quilted mattress protector${c} from image 2 on the mattress of the bed in image 1, with matching quilted pillow covers on the pillows: same color, same quilting pattern and texture as image 2. It is a thin quilted layer lying directly on the mattress, never a blanket or comforter: it covers only the top surface and the upper side edge of the mattress, and its elastic skirt and corners are tucked UNDER the mattress, so the mattress sides stay visible below it and nothing drapes down or hangs over the sides or toward the floor. Sheets and pillowcases may stay on top of it. Remove the existing sheets and blankets. ${BED} ${KEEP} ${CLEAN} ${PHOTO}`;
     case 'sabanas':
       return `Replace the sheets and pillowcases on the bed in image 1 with the exact bed sheet set${c} from image 2: same color, same pattern at the same scale, same fabric sheen, fitted sheet tight on the mattress, top sheet neatly folded back at the head, matching pillowcases, natural soft folds. ${BED} ${KEEP} ${CLEAN} ${PHOTO}`;
     case 'cobija':
@@ -191,6 +225,7 @@ function buildPrompt(kind: string, garment: string, color: string, hex = '') {
     case 'ropa': {
       const g = GARMENTS[garment] || GARMENTS.camiseta;
       const other = g.zone === 'top' ? 'pants, shoes' : g.zone === 'bottom' ? 'top, shoes' : 'shoes';
+      if (g.zone === 'shoes') return `Replace the shoes the person is wearing in image 1 with the exact ${g.en}${c} from image 2: same color, same material, same sole, laces and logo placement, natural size on the feet, correct perspective and contact shadows on the floor. Keep the person's legs, pants, body, pose, background and lighting exactly the same as image 1. Ignore any model, text or background in image 2. Photorealistic photo, natural colors.`;
       return `Dress the person in image 1 with the exact ${g.en}${c} shown in image 2: same color, same fabric, same print, graphics and logo placement, natural fit for this body with realistic folds and wrinkles. Keep the person's face, identity, hair, skin tone, body shape, pose, hands, ${other}, background and lighting exactly the same as image 1. Ignore any model, mannequin, text or background in image 2. Photorealistic photo, natural colors.`;
     }
     default: // edredón, colcha, plumón, cubrelecho
@@ -339,7 +374,16 @@ async function actionAI(body: any, req: Request) {
   if (!t) return [404, { error: 'tienda_no_registrada' }];
   const tokId = await tokOk(sec.VTO_SALT || 'x', tenant, body.tok);
   if (!tokId) return [401, { error: 'sesion_invalida' }];
-  const shop = t.plan === 'demo' ? shopHost(body.shop) : shopHost(t.shop_domain);
+  let shop = t.plan === 'demo' ? shopHost(body.shop) : shopHost(t.shop_domain);
+  if (t.plan === 'demo') {
+    const ok = new Set([...DEMO_SHOPS, ...(Array.isArray(t.config?.demo_shops) ? t.config.demo_shops.map((x: unknown) => shopHost(x)).filter(Boolean) : [])]);
+    if (!shop || !ok.has(shop)) return [403, { error: 'tienda_no_permitida' }];
+  }
+  // autorización de la foto (Ley 1581) en TODAS las categorías; se registra versión, fecha y huella del texto
+  if (body.consiento !== true) return [400, { error: 'falta_consentimiento' }];
+  const cons = await consentInfo(body.consent);
+  // la huella debe ser la de un texto vigente y la versión la actual: sin eso no se procesa la foto (antes solo se registraba)
+  if (!cons.consent_ok) return [400, { error: 'consentimiento_invalido' }];
   const handle = handleOk(body.handle);
   if (!shop || !handle) return [400, { error: 'producto_invalido' }];
   const p = await productJson(shop, handle);
@@ -349,7 +393,6 @@ async function actionAI(body: any, req: Request) {
   if (kind === 'otro') return [422, { error: 'producto_sin_probador' }];
   const moderacion = sec.VTO_MODERACION === 'on';
   if (kind === 'ropa' && !moderacion) return [422, { error: 'ropa_no_disponible' }];
-  if (kind === 'ropa' && body.consiento !== true) return [400, { error: 'falta_consentimiento' }];
   // motor v6.5 (recorte de la tela + color medido + instrucciones por categoría): global con VTO_MOTOR=v65 o, para validarlo, en la demo con exp
   const v65 = sec.VTO_MOTOR === 'v65' || (t.plan === 'demo' && body.exp === 'v65');
   const rf = refOk(body.ref);
@@ -362,7 +405,9 @@ async function actionAI(body: any, req: Request) {
   const room = dataUrlBlob(photo, 4_000_000);
   if (!room) return [400, { error: 'foto_invalida' }];
   const ip = await ipHash(req, sec.VTO_SALT || 'x');
-  const { data: take } = await sb.rpc('vto_take2', { p_ip: ip, p_tenant: tenant, p_max_ip: 80, p_tok: tokId, p_max_tok: 15 });
+  if ((await tokUsos(tokId)) >= 8) return [429, { error: 'limite_sesion' }]; // la sesión se revisa antes de contar la IP
+  // vto_take3 cuenta IP, sesión y tienda y, si rechaza por algo que no es la IP, devuelve los contadores en la misma transacción
+  const { data: take } = await sb.rpc('vto_take3', { p_ip: ip, p_tenant: tenant, p_max_ip: MAX_IP_DIA, p_tok: tokId, p_max_tok: 8 });
   if (!take?.ok) {
     if (take?.motivo === 'cuota_agotada') await avisoUnaVezAlDia(`cuota-${tenant}`, `🟠 Probador IA: la tienda "${tenant}" se quedó sin pruebas del mes. El botón se oculta solo hasta que suba de plan.`);
     return [429, { error: take?.motivo || 'limite' }];
@@ -373,11 +418,8 @@ async function actionAI(body: any, req: Request) {
     if (!prod) { err = 'producto_sin_imagen'; return [400, { error: err }]; }
     const [W, H] = outSize(+body.w, +body.h);
     const prompt = v65 ? buildPrompt(kind, garment, color, rf.hex).replace(KEEP, KEEP + extraV65(kind, String(p.title || '')) + ' ' + NUNCA) : buildPrompt(kind, garment, color);
-    // Mejor de 2: dos versiones en paralelo y la app se queda con la más fiel. Con el cupo gratis de Cloudflare
-    // se usa 1 sola versión cuando el día pasa de VTO_N2_MAX_DIA imágenes (por defecto 70).
-    const dia = utcDay(), maxN2 = Number(sec.VTO_N2_MAX_DIA) || 70;
-    const { data: imgsHoy } = await sb.rpc('vto_get_utc', { p_key: `imgs:${dia}` });
-    n = Math.min(2, Math.max(1, Math.floor(+body.n) || 1)); if ((imgsHoy ?? 0) >= maxN2) n = 1;
+    // Costo fijo (auditoría 19-nov-2026): SIEMPRE 1 imagen por prueba. Se ignora body.n: el cliente no decide cuánto gasta la IA.
+    const dia = utcDay(); n = 1;
     const once = async () => {
       const fd = new FormData();
       fd.append('prompt', prompt); fd.append('width', String(W)); fd.append('height', String(H));
@@ -425,7 +467,7 @@ async function actionAI(body: any, req: Request) {
     return [502, { error: err }];
   } finally {
     if (!ok) await sb.rpc('vto_refund2', { p_ip: ip, p_tenant: tenant, p_tok: tokId });
-    await sb.from('vto_events').insert({ tenant_id: tenant, tipo: 'ia', handle, categoria: kind, via: v65 ? 'cf-klein4b-v65' : 'cf-klein4b', ms: Date.now() - t0, ok: ok && !err, detalle: err ? { error: err } : { n, ...(kind === 'ropa' ? { consentimiento: true } : {}) }, ip_hash: ip, sesion: str(body.sesion, 40) || null });
+    await sb.from('vto_events').insert({ tenant_id: tenant, tipo: 'ia', handle, categoria: kind, via: v65 ? 'cf-klein4b-v65' : 'cf-klein4b', ms: Date.now() - t0, ok: ok && !err, detalle: err ? { error: err, ...cons } : { n, ...cons }, ip_hash: ip, sesion: str(body.sesion, 40) || null });
   }
 }
 
@@ -580,7 +622,7 @@ async function actionCfg(body: any, req: Request) {
   const wa = /^\d{8,15}$/.test(String(t.config?.whatsapp || '')) ? String(t.config.whatsapp) : null;
   return [200, {
     id: t.id, dominio: t.plan === 'demo' ? null : t.shop_domain, activo: t.estado === 'activo', estado: t.estado,
-    sello: SELLO.has(t.plan), kit: KIT.has(t.plan) && t.config?.kit !== false, wa, cod: t.config?.cod === true, ropa: sec.VTO_MODERACION === 'on', ia: !(await iaPausada()), tok: await newTok(sec.VTO_SALT || 'x', t.id),
+    sello: SELLO.has(t.plan), kit: KIT.has(t.plan) && t.config?.kit !== false, wa, cod: t.config?.cod === true, ropa: sec.VTO_MODERACION === 'on', ia: !(await iaPausada()), tok: await newTok(sec.VTO_SALT || 'x', t.id, await sesionIpDia(sec.VTO_SALT || 'x', t.id, ip)),
     visto: t.config?.visto || null, desde: t.config?.activada || null,
     verif: typeof t.config?.verificado?.ok === 'boolean' ? t.config.verificado.ok : null, verif_url: t.config?.verificado?.url || null,
   }];

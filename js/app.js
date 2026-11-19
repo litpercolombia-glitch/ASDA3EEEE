@@ -1,4 +1,4 @@
-// Zynex Probador — app del comprador. 2026-11-19 (v4.14: ronda 3 de la auditoría)
+// Zynex Probador — app del comprador. 2026-11-19 (v4.15: auditoría 3, cierre — servidor vto-api v6.8.0)
 // Flujo: producto de la tienda → foto (cámara, galería o ejemplo) → IA (Cloudflare FLUX.2 klein, vía Supabase) → comparar → comprar.
 import { call, track, money, toast, store, el, $, $$, WA, sesion } from './common.js';
 import { fuse, corregir } from './fusion.js';
@@ -43,7 +43,8 @@ const ERR = {
   foto_no_permitida: ['No podemos usar esta foto', 'Solo probamos ropa sobre personas mayores de edad, vestidas. Prueba con otra foto.'],
   falta_consentimiento: ['Falta tu autorización', 'Marca la casilla para confirmar que la foto es tuya o tienes permiso.'],
   moderacion_no_disponible: ['No pudimos revisar la foto', 'Intenta otra vez en un momento.'],
-  ropa_no_disponible: ['La prueba de ropa no está disponible por ahora', 'Puedes comprar normal desde la página del producto.'],
+  ropa_no_disponible: ['La prueba de ropa y zapatos llega próximamente', 'Puedes comprar normal desde la página del producto.'],
+  consentimiento_invalido: ['Vuelve a marcar la autorización', 'Recarga la página, marca la casilla y prueba otra vez.'],
   producto_sin_imagen: ['Este producto no tiene una foto que la IA pueda usar', 'La tienda debe subir una foto clara del producto.'],
   imagen_no_valida: ['Esta foto del producto no se puede usar', 'Elige otro color o diseño.'],
   producto_no_encontrado: ['No encontramos este producto en la tienda', 'Puede que ya no esté disponible.'],
@@ -59,7 +60,7 @@ const ERR_DEMO = {
   limite_ip: ['Ya hiciste muchas pruebas hoy', 'Déjanos tus datos y te la mostramos por WhatsApp con tus productos.'],
   limite_sesion: ['Ya hiciste muchas pruebas en esta visita', 'Déjanos tus datos y te mostramos más por WhatsApp.'],
   tienda_no_permitida: ['La demo en vivo solo carga tiendas de ejemplo', 'Déjanos tus datos y te mostramos el probador con los productos de tu tienda por WhatsApp.'],
-  ropa_no_disponible: ['La prueba de ropa llega muy pronto', 'Mientras tanto prueba un producto de hogar de tu tienda: cama, cortinas o comedor.'],
+  ropa_no_disponible: ['La prueba de ropa y zapatos llega próximamente', 'Mientras tanto prueba un producto de hogar de tu tienda: cama, cortinas o comedor.'],
 };
 let P = null, G = 'cama', C = COPY.cama;
 let sel = { color: null, size: null, qty: null, extra: {} };
@@ -127,10 +128,11 @@ async function loadProduct(handle) {
   }
   if (P.kind === 'bloqueado') return fatal('Esta prenda no está disponible en el probador.', 'Por privacidad no probamos ropa interior ni trajes de baño.');
   if (P.kind === 'otro') return fatal('Este producto aún no tiene probador.', 'Puedes verlo y comprarlo normal en la tienda.');
-  G = GROUP[P.kind] || 'cama'; C = COPY[G];
+  G = GROUP[P.kind] || 'cama'; C = G === 'mueble' ? copyMueble(P) : COPY[G];
+  // ropa/zapatos: con config.ropa=false (moderación apagada) no se muestra ninguna foto ni promesa de prueba; se activa solo con la config
+  if (G === 'ropa') { await cfgReady; if (!CFG.ropa) return DEMO ? fatal(...ERR_DEMO.ropa_no_disponible) : fatal(...ERR.ropa_no_disponible); }
   $('#illu use').setAttribute('href', '#' + ILLU[G]);
   $('#emptyT').textContent = C.empty; $('#emptyS').textContent = C.tip; // antes de cualquier aviso, para que el texto corresponda a la ilustración
-  if (G === 'ropa') { await cfgReady; if (!CFG.ropa) return DEMO ? fatal(...ERR_DEMO.ropa_no_disponible) : fatal('La prueba de ropa no está disponible por ahora.', 'Puedes verla y comprarla normal en la tienda.'); }
   P.title = tit(P.title); P.shopName = tit(P.shopName); for (const o of P.options) o.name = tit(o.name); // textos crudos de la tienda («PROTECTOR OFERTA» → «Protector Oferta»)
   $('#illu use').setAttribute('href', '#' + ILLU[G]); $('#emptyT').hidden = false; $('#emptyS').hidden = false;
   $('#consentT').textContent = G === 'ropa' ? CONSENT.ropa : CONSENT.otro; syncConsent();
@@ -365,8 +367,26 @@ function offerSave(fuente) {
 }
 // etiqueta de cada ejemplo: «Foto de baño 3» / «Foto de espacio 2»; en los demás nichos «Foto de ejemplo N»
 function sampleLabel(s, i) {
-  const m = /^(bano|espacio)_(\d+)$/.exec(s);
-  return m ? `Foto de ${m[1] === 'bano' ? 'baño' : 'espacio'} ${Number(m[2])}` : `Foto de ejemplo ${i + 1}`;
+  const m = /^(bano|espacio|cuarto)_(\d+)$/.exec(s);
+  return m && G === 'mueble' ? `Foto de ${{ bano: 'baño', espacio: 'espacio', cuarto: 'cuarto' }[m[1]]} ${Number(m[2])}` : `Foto de ejemplo ${i + 1}`;
+}
+// Muebles: las fotos de ejemplo y el texto dependen del tipo de mueble (un estante de baño se prueba en un baño, no en una sala)
+const SERIE = (pre, n) => Array.from({ length: n }, (_, i) => `${pre}_${String(i + 1).padStart(2, '0')}`);
+function tipoMueble(p) {
+  const t = `${p?.title || ''} ${p?.type || ''} ${p?.handle || ''}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (/bano|inodoro|sanitario|ducha|toalla|lavamanos/.test(t)) return 'bano';
+  if (/zapat|closet|armario|perchero|entrada|ropa|calzado/.test(t)) return 'zapatero';
+  if (/tapete|alfombra/.test(t)) return 'tapete';
+  if (/mesa de noche|nochero|cama|habitacion|cuarto/.test(t)) return 'cuarto';
+  return 'espacio';
+}
+function copyMueble(p) {
+  const base = COPY.mueble, tipo = tipoMueble(p);
+  if (tipo === 'bano') return { ...base, title: 'Pruébalo en tu baño', empty: 'Toma una foto de tu baño', tip: 'Fotografía la pared o el rincón donde lo pondrías, con buena luz.', cam: 'Tomar foto de mi baño', samples: [...SERIE('bano', 10), ...SERIE('espacio', 4)], sampleLab: 'o usa un baño de ejemplo' };
+  if (tipo === 'zapatero') return { ...base, empty: 'Toma una foto de tu entrada o clóset', tip: 'Fotografía el rincón donde lo pondrías, con el piso y la pared a la vista.', cam: 'Tomar foto de mi entrada', samples: [...SERIE('espacio', 10), ...SERIE('cuarto', 6)], sampleLab: 'o usa un espacio de ejemplo' };
+  if (tipo === 'tapete') return { ...base, empty: 'Toma una foto del piso donde va', tip: 'Que se vea el piso libre donde pondrías el tapete.', cam: 'Tomar foto del piso', samples: [...SERIE('espacio', 10), ...SERIE('cuarto', 6)] };
+  if (tipo === 'cuarto') return { ...base, empty: 'Toma una foto de tu cuarto', tip: 'Fotografía el lado de la cama o el rincón donde lo pondrías.', cam: 'Tomar foto de mi cuarto', samples: [...SERIE('cuarto', 12), ...SERIE('espacio', 4)], sampleLab: 'o usa un cuarto de ejemplo' };
+  return { ...base, samples: SERIE('espacio', 10) };
 }
 function renderSamples() {
   const row = $('#samples'); row.replaceChildren(); Object.assign(row.style, { justifyContent: 'flex-start', overflowX: 'auto', maxWidth: '100%', padding: '2px 2px 8px' });
@@ -615,10 +635,13 @@ async function consentHuella() {
   try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode($('#consentT').textContent)); return [...new Uint8Array(b)].slice(0, 8).map((x) => x.toString(16).padStart(2, '0')).join(''); } catch { return ''; }
 }
 function needConsent() { toast('Primero marca la casilla de autorización.'); const c = $('#consent'); c.scrollIntoView({ behavior: 'smooth', block: 'center' }); c.classList.add('pulse'); setTimeout(() => c.classList.remove('pulse'), 1600); }
+// Sin casilla marcada los botones se ven normales (nada atenuado que parezca roto): al tocarlos se explica qué falta
 function syncConsent() {
   const need = !consentOk();
-  for (const id of ['#fileCam', '#fileGal']) { const i = $(id); i.disabled = need; i.closest('.btn').classList.toggle('off', need); }
+  for (const id of ['#fileCam', '#fileGal']) { const i = $(id); i.disabled = false; i.closest('.btn').classList.remove('off'); }
+  const h = $('#consentHint'); if (h) h.hidden = !need;
 }
+for (const id of ['#fileCam', '#fileGal']) $(id).addEventListener('click', (e) => { if (!consentOk()) { e.preventDefault(); needConsent(); } });
 
 /* ---------- comprar ---------- */
 // Origen exacto de la página que nos incrusta (nunca '*'): ancestorOrigins (Chrome/Safari) o, si no, el referrer.
@@ -735,7 +758,7 @@ async function share() {
     if (navigator.canShare?.({ files: [f] })) { await navigator.share({ files: [f], text, title: P.title }); return; }
     download(blob, 'mi-prueba.jpg');
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
-  } catch (e) { if (e?.name !== 'AbortError') toast('No pudimos compartir. Usa Guardar y envía la tú.'); }
+  } catch (e) { if (e?.name !== 'AbortError') toast('No pudimos compartir. Usa Guardar y envíala tú.'); }
 }
 async function save() {
   trk('descargar', { tenant: TENANT, handle: P.handle });
@@ -808,12 +831,14 @@ async function showPicker() {
     const d = await (await fetch(`/api/tienda?shop=${encodeURIComponent(SHOP)}&t=${encodeURIComponent(TENANT)}`)).json();
     if (d.error === 'tienda_no_registrada') return fatal(...ERR.tienda_no_registrada);
     const grid = $('#pickGrid'); grid.replaceChildren();
-    for (const it of d.items || []) {
+    await cfgReady; const ropaOff = !CFG.ropa, items = (d.items || []).filter((it) => !(ropaOff && it.kind === 'ropa')); // ropa apagada: ni foto ni promesa
+    for (const it of items) {
       const b = el('button', { class: 'pk', type: 'button' }, el('img', { src: it.image, alt: '', loading: 'lazy' }), el('b', { text: tit(it.title) }));
       b.onclick = () => { history.replaceState(null, '', `?${new URLSearchParams({ ...Object.fromEntries(Q), h: it.handle })}`); $('#picker').hidden = true; loadProduct(it.handle); };
       grid.append(b);
     }
-    if (!d.items?.length) $('#pickGrid').append(el('p', { class: 'muted', text: 'Esta tienda aún no tiene productos que se puedan probar.' }));
+    if (!items.length) grid.append(el('p', { class: 'muted', text: 'Esta tienda aún no tiene productos que se puedan probar.' }));
+    if (ropaOff && items.length < (d.items || []).length) grid.append(el('p', { class: 'muted small', text: 'Ropa y zapatos: próximamente.' }));
   } catch { toast('La tienda no respondió.'); }
 }
 

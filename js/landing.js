@@ -52,7 +52,7 @@ const GAL = [
   { tab: 'Colcha', b: 'cuarto_b', a: 'r_colcha', p: 'p_colcha', name: 'Colcha navideña · Renos verde', t: '8,4 s', note: 'Edredón gris liso cambiado por la colcha estampada: respeta el diseño, la escala y la caída.' },
   { tab: 'Edredón', b: 'cuarto_a', a: 'r_edredon', p: 'p_edredon', name: 'Edredón doble faz · Azul oscuro y celeste', t: '6,5 s', note: 'Se ven las dos caras del edredón y los cojines a juego.' },
   { tab: 'Cortina', b: 'ventana_a', a: 'r_cortina_nav', p: 'p_cortina_nav', name: 'Cortina navideña + velo · Azul estrellas', t: '7,6 s', note: 'Ventana con visillos blancos. La cortina se cuelga en la misma varilla.' },
-  { tab: 'Camiseta', b: 'persona_a', a: 'r_camiseta', p: 'p_camiseta', name: 'Camiseta de algodón · Verde oliva (ejemplo)', t: '8,6 s', note: 'La cara, el pelo y el fondo son los píxeles de la foto original: cambia solo la prenda, con su logo en el lugar correcto.' },
+  { tab: 'Camiseta', ropa: true, b: 'persona_a', a: 'r_camiseta', p: 'p_camiseta', name: 'Camiseta de algodón · Verde oliva (ejemplo)', t: '8,6 s', note: 'La cara, el pelo y el fondo son los píxeles de la foto original: cambia solo la prenda, con su logo en el lugar correcto.' },
 ];
 const gc = $('#galCmp');
 function galSet(i) {
@@ -63,7 +63,9 @@ function galSet(i) {
   $('#galName').textContent = g.name; $('#galNote').textContent = g.note; $('#galTime').textContent = `IA: ${g.t} (17-oct-2026)`;
   setCut(50);
 }
-GAL.forEach((g, i) => $('#galTabs').append(el('button', { type: 'button', role: 'tab', 'aria-selected': 'false', onclick: () => { galSet(i); track('demo', { detalle: { galeria: g.tab } }); } }, g.tab)));
+// las pestañas de ropa solo aparecen cuando la prueba de ropa está encendida (ver ROPA más abajo)
+const galTab = (g, i) => $('#galTabs').append(el('button', { type: 'button', role: 'tab', 'aria-selected': 'false', onclick: () => { galSet(i); track('demo', { detalle: { galeria: g.tab } }); } }, g.tab));
+GAL.forEach((g, i) => { if (!g.ropa) galTab(g, i); });
 function setCut(p) { gc.style.setProperty('--cut', p + '%'); gc.dataset.cut = p; }
 let gdrag = false;
 const gat = (e) => { const b = gc.getBoundingClientRect(); setCut(Math.max(0, Math.min(100, ((e.clientX - b.left) / b.width) * 100))); };
@@ -76,17 +78,18 @@ galSet(0);
 new IntersectionObserver((es, o) => { if (es[0].isIntersecting && !reduce) { o.disconnect(); const t0 = performance.now(); const f = (t) => { const k = Math.min(1, (t - t0) / 1600); setCut(50 + Math.sin(k * Math.PI * 2) * 22 * (1 - k)); if (k < 1) requestAnimationFrame(f); }; requestAnimationFrame(f); } }, { threshold: 0.6 }).observe(gc);
 
 /* ---------- ropa: se vende solo cuando la revisión automática de fotos está encendida en el servidor ---------- */
-// Mientras esté apagada, la landing la muestra como «muy pronto» y la demo no deja probar prendas (no hay salida sin revisión).
+// Mientras esté apagada, la landing la muestra como «próximamente» y la demo no deja probar prendas (no hay salida sin revisión).
 const ROPA = call('cfg', { tenant: 'demo' }, { timeout: 8000 }).then((c) => c.ropa === true).catch(() => false);
 ROPA.then((on) => {
   // la página sale sin promesas de ropa; si la prueba de ropa está encendida se agrega aquí
   if (on) {
     $('#catRopaT small')?.remove();
+    const im = $('#catRopa img'); if (im) { im.src = im.dataset.src; im.hidden = false; }
+    GAL.forEach((g, i) => { if (g.ropa) galTab(g, i); });
     const lead = $('.lead'); if (lead) for (const n of lead.childNodes) if (n.nodeType === 3 && /su ventana o su comedor/.test(n.textContent)) n.textContent = n.textContent.replace('su ventana o su comedor', 'su ventana o de sí mismo');
     return;
   }
-  for (const li of $$('#plans li')) if (/y ropa/.test(li.textContent)) li.textContent = li.textContent.replace('y ropa', '(ropa: muy pronto)');
-  for (const b of $$('#galTabs button')) if (b.textContent === 'Camiseta') b.textContent = 'Camiseta · pronto';
+  for (const li of $$('#plans li')) if (/y ropa/.test(li.textContent)) li.textContent = li.textContent.replace('y ropa', '(ropa y zapatos: próximamente)');
 });
 
 /* ---------- demo con la tienda del visitante ---------- */
@@ -108,12 +111,12 @@ async function loadShop(raw, sample = false) {
     const lista = ropaOn ? d.items : [...hogar, ...d.items.filter((it) => it.kind === 'ropa')];
     msg(sample ? `Ejemplo con ${d.shopName}: toca un producto y pruébalo con una foto. Luego escribe tu tienda arriba.`
       : ropaOn || !ropa ? `${d.shopName}: ${d.items.length} productos listos para probar. Toca uno.`
-      : hogar.length ? `${d.shopName}: ${hogar.length} productos listos para probar hoy y ${ropa} de ropa que podrás probar muy pronto. Toca uno.`
-      : `${d.shopName}: encontramos ${ropa} productos de ropa. La prueba de ropa llega muy pronto: déjanos tus datos abajo y te avisamos primero.`);
+      : hogar.length ? `${d.shopName}: ${hogar.length} productos listos para probar hoy y ${ropa} de ropa que podrás probar próximamente. Toca uno.`
+      : `${d.shopName}: encontramos ${ropa} productos de ropa. La prueba de ropa llega próximamente: déjanos tus datos abajo y te avisamos primero.`);
     for (const it of lista.slice(0, 24)) {
       const pronto = !ropaOn && it.kind === 'ropa';
-      grid.append(el('button', { class: 'dp' + (pronto ? ' pronto' : ''), type: 'button', onclick: () => (pronto ? toast('La prueba de ropa llega muy pronto. Déjanos tus datos y te avisamos primero.') : openTry(shop, it.handle)) },
-        el('img', { src: it.image, alt: '', loading: 'lazy' }), el('span', { text: pronto ? 'Ropa · muy pronto' : KIND[it.kind] || 'Probar' }), el('b', { text: it.title })));
+      grid.append(el('button', { class: 'dp' + (pronto ? ' pronto' : ''), type: 'button', onclick: () => (pronto ? toast('La prueba de ropa llega próximamente. Déjanos tus datos y te avisamos primero.') : openTry(shop, it.handle)) },
+        el('img', { src: it.image, alt: '', loading: 'lazy' }), el('span', { text: pronto ? 'Ropa · próximamente' : KIND[it.kind] || 'Probar' }), el('b', { text: it.title })));
     }
     if (!sample) { track('demo', { detalle: { tienda: shop, productos: d.items.length } }); $('#fTienda').value ||= shop; }
   } catch (err) {
