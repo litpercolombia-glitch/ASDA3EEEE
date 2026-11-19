@@ -1,4 +1,4 @@
-// Zynex Probador — app del comprador. 2026-11-19 (v4.13: arreglos de la auditoría externa)
+// Zynex Probador — app del comprador. 2026-11-19 (v4.14: ronda 3 de la auditoría)
 // Flujo: producto de la tienda → foto (cámara, galería o ejemplo) → IA (Cloudflare FLUX.2 klein, vía Supabase) → comparar → comprar.
 import { call, track, money, toast, store, el, $, $$, WA, sesion } from './common.js';
 import { fuse, corregir } from './fusion.js';
@@ -22,13 +22,14 @@ const COPY = {
   cama: { title: 'Pruébalo en tu cama', empty: 'Toma una foto de tu cama', tip: 'Que se vea la cama completa, con buena luz. La IA hace el resto.', cam: 'Tomar foto de mi cama', gal: 'Subir de la galería', samples: ['cuarto_01', 'cuarto_02', 'cuarto_03', 'cuarto_04', 'cuarto_05', 'cuarto_06', 'cuarto_07', 'cuarto_08', 'cuarto_09', 'cuarto_10', 'cuarto_11', 'cuarto_12'], sampleLab: 'o usa un cuarto de ejemplo', steps: ['Leyendo la luz de tu cuarto', 'Ubicando tu cama y el colchón', 'Poniendo la tela en tu cama', 'Ajustando pliegues y sombras'], after: 'Con el producto', facing: 'environment' },
   cortina: { title: 'Pruébala en tu ventana', empty: 'Toma una foto de tu ventana', tip: 'Párate frente a la ventana y que se vea completa.', cam: 'Tomar foto de mi ventana', gal: 'Subir de la galería', samples: ['ventana_01', 'ventana_02', 'ventana_03', 'ventana_04', 'ventana_05', 'ventana_06', 'ventana_07', 'ventana_08', 'ventana_09', 'ventana_10', 'ventana_11', 'ventana_12'], sampleLab: 'o usa una ventana de ejemplo', steps: ['Leyendo la luz', 'Ubicando tu ventana', 'Colgando la cortina', 'Ajustando caída y pliegues'], after: 'Con la cortina', facing: 'environment' },
   mesa: { title: 'Pruébalo en tu comedor', empty: 'Toma una foto de tu comedor', tip: 'Que se vean la mesa y las sillas completas.', cam: 'Tomar foto de mi comedor', gal: 'Subir de la galería', samples: ['comedor_01', 'comedor_02', 'comedor_03', 'comedor_04', 'comedor_05', 'comedor_06', 'comedor_07', 'comedor_08', 'comedor_09', 'comedor_10', 'comedor_11'], sampleLab: 'o usa un comedor de ejemplo', steps: ['Leyendo la luz', 'Ubicando mesa y sillas', 'Poniendo el producto', 'Ajustando pliegues y sombras'], after: 'Con el producto', facing: 'environment' },
-  mueble: { title: 'Pruébalo en tu espacio', empty: 'Toma una foto del lugar', tip: 'Fotografía el sitio donde lo pondrías, con espacio libre.', cam: 'Tomar foto del espacio', gal: 'Subir de la galería', samples: ['espacio_01', 'espacio_02', 'espacio_03', 'espacio_04', 'espacio_05', 'espacio_06', 'espacio_07', 'espacio_08', 'espacio_09', 'espacio_10'], sampleLab: 'o usa un espacio de ejemplo', steps: ['Leyendo la luz', 'Midiendo el espacio', 'Poniendo el producto a escala', 'Ajustando sombras'], after: 'Con el producto', facing: 'environment' },
+  mueble: { title: 'Pruébalo en tu espacio', empty: 'Toma una foto del lugar', tip: 'Fotografía el sitio donde lo pondrías, con espacio libre.', cam: 'Tomar foto del espacio', gal: 'Subir de la galería', samples: ['espacio_01', 'espacio_02', 'espacio_03', 'espacio_04', 'espacio_05', 'espacio_06', 'espacio_07', 'espacio_08', 'espacio_09', 'espacio_10', 'bano_01', 'bano_02', 'bano_03', 'bano_04', 'bano_05', 'bano_06', 'bano_07', 'bano_08', 'bano_09', 'bano_10'], sampleLab: 'o usa un espacio de ejemplo', steps: ['Leyendo la luz', 'Midiendo el espacio', 'Poniendo el producto a escala', 'Ajustando sombras'], after: 'Con el producto', facing: 'environment' },
   ropa: { title: 'Pruébatelo', empty: 'Sube una foto tuya de cuerpo entero', tip: 'De frente, con buena luz y ropa ajustada. Mejor si alguien te la toma.', cam: 'Tomar una foto mía', gal: 'Subir una foto mía', samples: ['persona_01', 'persona_02', 'persona_03', 'persona_04', 'persona_05', 'persona_06', 'persona_07', 'persona_08', 'persona_09', 'persona_10', 'persona_11', 'persona_12'], samplesZapato: ['zapato_01', 'zapato_02', 'zapato_03', 'zapato_04', 'zapato_05', 'zapato_06', 'zapato_07', 'zapato_08', 'zapato_09', 'zapato_10', 'zapato_11'], sampleLab: 'o usa una persona de ejemplo', steps: ['Leyendo la luz', 'Ubicando tu cuerpo y tu postura', 'Ajustando la prenda a tu cuerpo', 'Puliendo arrugas y caída'], after: 'Con la prenda', facing: 'user' },
 };
 const ILLU = { cama: 's-cama', cortina: 's-cortina', mesa: 's-mesa', mueble: 's-mueble', ropa: 's-ropa' };
 const ERR = {
   limite_ip: ['Llegaste al máximo de pruebas de hoy', 'Mañana puedes hacer más. Puedes comprar normal desde la tienda.'],
   limite_sesion: ['Ya hiciste muchas pruebas en esta visita', 'Elige el que más te gustó y cómpralo, o vuelve mañana para probar más.'],
+  tienda_no_permitida: ['Esta tienda no está disponible en la demo', 'Prueba con un producto de Litper o déjanos tus datos y te la mostramos por WhatsApp.'],
   limite_tienda_dia: ['El probador no está disponible por ahora', 'Puedes comprar normal desde la página del producto.'],
   cuota_agotada: ['El probador no está disponible por ahora', 'Puedes comprar normal desde la página del producto.'],
   tienda_inactiva: ['El probador no está disponible por ahora', 'Puedes comprar normal desde la página del producto.'],
@@ -57,6 +58,7 @@ const ERR_DEMO = {
   limite_tienda_dia: ['La demo en vivo llegó a su tope de hoy', 'Mira los ejemplos reales de esta página o déjanos tus datos y te la mostramos por WhatsApp.'],
   limite_ip: ['Ya hiciste muchas pruebas hoy', 'Déjanos tus datos y te la mostramos por WhatsApp con tus productos.'],
   limite_sesion: ['Ya hiciste muchas pruebas en esta visita', 'Déjanos tus datos y te mostramos más por WhatsApp.'],
+  tienda_no_permitida: ['La demo en vivo solo carga tiendas de ejemplo', 'Déjanos tus datos y te mostramos el probador con los productos de tu tienda por WhatsApp.'],
   ropa_no_disponible: ['La prueba de ropa llega muy pronto', 'Mientras tanto prueba un producto de hogar de tu tienda: cama, cortinas o comedor.'],
 };
 let P = null, G = 'cama', C = COPY.cama;
@@ -159,6 +161,14 @@ function fatal(t, s = '') {
   // aviso general: ilustración neutra (nada de «toma una foto de tu cama») y salida clara a la tienda
   $('#illu use').setAttribute('href', '#s-aviso'); $('#emptyT').hidden = true; $('#emptyS').hidden = true;
   setState('error'); showErr(null, t, s); $('#btnRetry').hidden = true; $('#btnBack').hidden = false;
+  brandBar();
+}
+// la pantalla de error conserva la marca de la tienda en el encabezado (nunca queda anónima)
+function brandBar() {
+  const n = P?.shopName || (TENANT === 'litper' ? 'Litper' : SHOP ? tit(SHOP.replace(/^www\./, '').split('.')[0]) : '');
+  if (!n) return;
+  $('#barT').textContent = $('#barT').textContent || 'Probador con IA'; $('#barS').textContent = `${n} · simulación con IA`;
+  if (!document.title.includes(n)) document.title = `Probador con IA · ${n}`;
 }
 function volver() { // «Volver a la tienda»: cierra el modal si está incrustado; si no, va a la tienda
   const url = SHOP ? `https://${SHOP}/` : '';
@@ -353,13 +363,18 @@ function offerSave(fuente) {
     el('button', { class: 'link', type: 'button', onclick: () => { store.set(SAVED_KEY(), { data: photo.data, w: photo.w, h: photo.h, key: photo.key, t: Date.now() }); hint.textContent = 'Listo: tu foto queda solo en este celular (puedes borrarla cuando quieras).'; } }, 'Sí, guardar'),
     ' · ', el('button', { class: 'link', type: 'button', onclick: () => { hint.textContent = 'Desliza sobre la foto para comparar.'; } }, 'No'));
 }
+// etiqueta de cada ejemplo: «Foto de baño 3» / «Foto de espacio 2»; en los demás nichos «Foto de ejemplo N»
+function sampleLabel(s, i) {
+  const m = /^(bano|espacio)_(\d+)$/.exec(s);
+  return m ? `Foto de ${m[1] === 'bano' ? 'baño' : 'espacio'} ${Number(m[2])}` : `Foto de ejemplo ${i + 1}`;
+}
 function renderSamples() {
   const row = $('#samples'); row.replaceChildren(); Object.assign(row.style, { justifyContent: 'flex-start', overflowX: 'auto', maxWidth: '100%', padding: '2px 2px 8px' });
   const list = G === 'ropa' && P && P.garment === 'zapato' && C.samplesZapato ? C.samplesZapato : C.samples;
   sampleClear();
   list.forEach((s, i) => {
     const u = `${SAMPLES}${s}.jpg`;
-    const b = el('button', { type: 'button', 'aria-label': `Foto de ejemplo ${i + 1}`, 'aria-pressed': 'false' }, el('img', { src: u, alt: '', loading: 'lazy', decoding: 'async' }));
+    const b = el('button', { type: 'button', 'aria-label': sampleLabel(s, i), title: sampleLabel(s, i), 'aria-pressed': 'false' }, el('img', { src: u, alt: '', loading: 'lazy', decoding: 'async' }));
     b.style.flex = 'none'; b.dataset.u = u; b.onclick = () => (pendSample === u ? $('#btnSampleGo').click() : samplePick(u));
     row.append(b);
   });
@@ -432,7 +447,7 @@ async function generate(retry = true) {
     await cfgReady;
     // color y zona de la tela en la foto de la variante (en paralelo; si tarda, la IA no la espera)
     const refP = refInfo(prodUrl, sel.color || '', G), ref0 = await Promise.race([refP, wait(1200).then(() => null)]);
-    const d = await call('ai', { tenant: TENANT, tok: CFG.tok, shop: DEMO ? SHOP : undefined, handle: P.handle, photo: photo.ai || photo.data, product: prodUrl, color: sel.color || '', w: photo.w, h: photo.h, sesion, consiento: photo.consent ? true : undefined, ref: ref0?.solid ? { hex: ref0.hex, box: ref0.box } : undefined }, { timeout: 80000 }); // en estampados el recorte cortaría el diseño
+    const d = await call('ai', { tenant: TENANT, tok: CFG.tok, shop: DEMO ? SHOP : undefined, handle: P.handle, photo: photo.ai || photo.data, product: prodUrl, color: sel.color || '', w: photo.w, h: photo.h, sesion, consiento: photo.consent || consentOk() ? true : undefined, consent: photo.consent || consentOk() ? { v: CONSENT_V, h: await consentHuella() } : undefined, ref: ref0?.solid ? { hex: ref0.hex, box: ref0.box } : undefined }, { timeout: 80000 }); // en estampados el recorte cortaría el diseño
     const gens = (d.images?.length ? d.images : [d.image]).filter(Boolean).slice(0, 1); // el servidor entrega 1 sola imagen por prueba
     if (!gens.length) throw Object.assign(new Error('ia_fallo'), { code: 'ia_fallo' });
     const fz = await fuseResult(photo, gens, ref0 || (await refP));
@@ -594,6 +609,11 @@ function showErr(code, t, s) {
 }
 // autorización para toda foto (Ley 1581): casilla visible en todos los nichos antes de tomar, subir o probar con una foto
 function consentOk() { return $('#chkConsent').checked; }
+// versión y huella (SHA-256, 16 hex) del texto EXACTO que vio el comprador; el servidor las guarda con cada prueba
+const CONSENT_V = '2026-11-19';
+async function consentHuella() {
+  try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode($('#consentT').textContent)); return [...new Uint8Array(b)].slice(0, 8).map((x) => x.toString(16).padStart(2, '0')).join(''); } catch { return ''; }
+}
 function needConsent() { toast('Primero marca la casilla de autorización.'); const c = $('#consent'); c.scrollIntoView({ behavior: 'smooth', block: 'center' }); c.classList.add('pulse'); setTimeout(() => c.classList.remove('pulse'), 1600); }
 function syncConsent() {
   const need = !consentOk();
@@ -715,7 +735,7 @@ async function share() {
     if (navigator.canShare?.({ files: [f] })) { await navigator.share({ files: [f], text, title: P.title }); return; }
     download(blob, 'mi-prueba.jpg');
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
-  } catch (e) { if (e?.name !== 'AbortError') toast('No pudimos compartir. Usa Guardar y envíala tú.'); }
+  } catch (e) { if (e?.name !== 'AbortError') toast('No pudimos compartir. Usa Guardar y envía la tú.'); }
 }
 async function save() {
   trk('descargar', { tenant: TENANT, handle: P.handle });
