@@ -21,15 +21,35 @@ const WANT_EXPL = Q.get('vs') === '1'; // el cliente ya eligió medida y color e
 const EMBED = Q.get('embed') === '1' || window.top !== window.self;
 // Tema (19-nov-2026): por defecto el claro de Litper (css/app.css); con el sistema en oscuro, Litper oscuro.
 // A/B: ?tema=oscuro → tema negro neón anterior tal cual; ?tema=claro → claro forzado. La elección queda en la sesión.
-const TEMA = (() => {
+let TEMA = (() => {
   const q = String(Q.get('tema') || '').toLowerCase(); let t = q === 'oscuro' || q === 'claro' ? q : '';
   try { if (t) sessionStorage.setItem('vto_tema', t); else t = sessionStorage.getItem('vto_tema') || ''; } catch {}
   return t === 'oscuro' || t === 'claro' ? t : '';
 })();
-if (TEMA) {
-  document.documentElement.dataset.tema = TEMA;
-  for (const m of document.querySelectorAll('meta[name=theme-color]')) { m.removeAttribute('media'); m.content = TEMA === 'oscuro' ? '#07080a' : '#FAF8F3'; }
+function aplicarTema(t) {
+  if (!t) return;
+  document.documentElement.dataset.tema = t;
+  for (const m of document.querySelectorAll('meta[name=theme-color]')) { m.removeAttribute('media'); m.content = t === 'oscuro' ? '#07080a' : '#FAF8F3'; }
 }
+aplicarTema(TEMA);
+// auditoría 8: botón visible para alternar claro/oscuro (sin recargar: no se pierde la foto). Recuerda la elección en la sesión
+// y la deja en la URL (?tema=) para que el enlace compartido abra igual.
+const temaOscuro = () => TEMA === 'oscuro' || (!TEMA && matchMedia('(prefers-color-scheme: dark)').matches);
+function pintarBtnTema() {
+  const b = document.getElementById('btnTema'); if (!b) return;
+  const os = temaOscuro();
+  b.setAttribute('aria-pressed', String(os));
+  b.title = os ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
+  b.querySelector('use')?.setAttribute('href', os ? '#i-sol' : '#i-luna');
+}
+document.getElementById('btnTema')?.addEventListener('click', () => {
+  TEMA = temaOscuro() ? 'claro' : 'oscuro';
+  aplicarTema(TEMA);
+  try { sessionStorage.setItem('vto_tema', TEMA); } catch {}
+  try { const u = new URL(location.href); u.searchParams.set('tema', TEMA); history.replaceState(history.state, '', u); } catch {}
+  pintarBtnTema();
+});
+pintarBtnTema();
 
 const SAMPLES = 'https://gtsivwbnhcawvmsfujby.supabase.co/storage/v1/object/public/vto-samples/';
 const GROUP = { protector: 'cama', sabanas: 'cama', edredon: 'cama', cobija: 'cama', almohada: 'cama', cama: 'cama', cortina: 'cortina', mantel: 'mesa', forro: 'mesa', mueble: 'mueble', ropa: 'ropa' };
@@ -43,6 +63,7 @@ const COPY = {
 const ILLU = { cama: 's-cama', cortina: 's-cortina', mesa: 's-mesa', mueble: 's-mueble', ropa: 's-ropa' };
 const ERR = {
   limite_ip: ['Llegaste al máximo de pruebas de hoy', 'Mañana puedes hacer más. Puedes comprar normal desde la tienda.'],
+  limite_moderacion: ['Llegaste al máximo de pruebas de ropa de hoy', 'Los productos de hogar siguen disponibles. Mañana puedes volver a probarte ropa.'],
   limite_sesion: ['Ya hiciste muchas pruebas en esta visita', 'Elige el que más te gustó y cómpralo, o vuelve mañana para probar más.'],
   tienda_no_permitida: ['Esta tienda no está disponible en la demo', 'Prueba con un producto de Litper o déjanos tus datos y te la mostramos por WhatsApp.'],
   limite_tienda_dia: ['El probador no está disponible por ahora', 'Puedes comprar normal desde la página del producto.'],
@@ -75,6 +96,7 @@ const ERR = {
 const ERR_DEMO = {
   limite_tienda_dia: ['La demo en vivo llegó a su tope de hoy', 'Mira los ejemplos reales de esta página o déjanos tus datos y te la mostramos por WhatsApp.'],
   limite_ip: ['Ya hiciste muchas pruebas hoy', 'Déjanos tus datos y te la mostramos por WhatsApp con tus productos.'],
+  limite_moderacion: ['Llegaste al máximo de pruebas de ropa de hoy', 'Los productos de hogar siguen disponibles en la demo.'],
   limite_sesion: ['Ya hiciste muchas pruebas en esta visita', 'Déjanos tus datos y te mostramos más por WhatsApp.'],
   tienda_no_permitida: ['La demo en vivo solo carga tiendas de ejemplo', 'Déjanos tus datos y te mostramos el probador con los productos de tu tienda por WhatsApp.'],
   ropa_no_disponible: ['La prueba de ropa y zapatos llega próximamente', 'Mientras tanto prueba un producto de hogar de tu tienda: cama, cortinas o comedor.'],
@@ -655,7 +677,7 @@ function setState(s) {
 function showErr(code, t, s) {
   $('#errT').textContent = t; $('#errS').textContent = s;
   $('#btnWaErr').hidden = !CFG.wa || !['limite_ip', 'limite_sesion', 'ia_fallo', 'ia_rechazo', 'producto_sin_imagen', 'imagen_no_valida'].includes(code);
-  $('#btnRetry').hidden = ['cuota_agotada', 'tienda_inactiva', 'tienda_no_registrada', 'limite_tienda_dia', 'limite_sesion', 'limite_ip', 'ropa_no_disponible', 'prenda_no_permitida', 'producto_sin_probador'].includes(code);
+  $('#btnRetry').hidden = ['cuota_agotada', 'tienda_inactiva', 'tienda_no_registrada', 'limite_tienda_dia', 'limite_sesion', 'limite_ip', 'limite_moderacion', 'ropa_no_disponible', 'prenda_no_permitida', 'producto_sin_probador'].includes(code);
   $('#btnBack').hidden = !$('#btnRetry').hidden || !hayTienda(); // sin «Intentar otra vez», siempre queda una salida a la tienda (si se sabe cuál es)
   if (DEMO) { // en la demo quien lee es un comerciante: siempre hay un paso siguiente
     const wa = $('#btnWaErr');

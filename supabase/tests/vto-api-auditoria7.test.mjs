@@ -15,7 +15,8 @@ const root = path.resolve(here, '../..');
 /* ---------- simulaciones ---------- */
 const calls = { rpc: [], cf: 0, mod: 0 };
 let modRespuestas = []; // cola de respuestas simuladas de Moondream (string | {status} | 'timeout')
-const usage = new Map(); // contador simulado de vto_add_utc / vto_get_utc
+const usage = new Map(); // contador simulado de vto_add_utc / vto_get_utc / vto_mod_cupo
+let modCaida = false;
 const sbMock = {
   rpc: async (name, args) => {
     calls.rpc.push([name, args]);
@@ -23,6 +24,13 @@ const sbMock = {
     if (name === 'vto_take4') return { data: { ok: true, restan: 10, restan_sesion: 7 } };
     if (name === 'vto_add_utc') { const n = (usage.get(args.p_key) || 0) + args.p_n; usage.set(args.p_key, n); return { data: n }; }
     if (name === 'vto_get_utc') return { data: usage.get(args.p_key) || 0 };
+    if (name === 'vto_mod_cupo') { // mismo contrato que la función SQL (reserva condicional; liberar nunca baja de 0)
+      if (modCaida) return { data: null, error: { message: 'db caida' } };
+      await new Promise((r) => setTimeout(r, Math.random() * 3)); // intercalado entre pruebas simultáneas
+      const n = usage.get(args.p_key) || 0;
+      if (args.p_n >= 0) { if (n >= args.p_max) return { data: -1 }; usage.set(args.p_key, n + 1); return { data: n + 1 }; }
+      usage.set(args.p_key, Math.max(0, n - 1)); return { data: Math.max(0, n - 1) };
+    }
     return { data: null };
   },
   from: (table) => {
@@ -135,6 +143,35 @@ test('tope de 6 rechazos de moderación por IP y día (el reembolso no es infini
   }
   assert.deepEqual(sts, [422, 422, 422, 422, 422, 422, 429]);
 });
+// auditoría 8: el tope se reserva ANTES de moderar (atómico): 20 pruebas simultáneas que fallan → solo 6 llegan a moderar
+test('auditoría 8: 20 pruebas simultáneas con moderación fallida → 6 moderan, 14 reciben limite_moderacion', async () => {
+  usage.clear(); calls.mod = 0; calls.rpc = [];
+  const tok = await M.newTok('salt', 'litper');
+  const body = { tenant: 'litper', tok, consiento: true, consent: { v: '2026-11-19', h: await M.consentDe('ropa') }, handle: 'camiseta-basica', product: '//litper.store/cdn/camiseta.jpg', photo: PNG, w: 512, h: 512 };
+  modRespuestas = Array(20).fill('{"minor": true, "nudity_or_underwear": false}');
+  const rs = await Promise.all(Array.from({ length: 20 }, () => M.actionAI(body, new Request('https://x', { method: 'POST', headers: { 'cf-connecting-ip': '203.3.3.3' } }))));
+  const sts = rs.map(([s]) => s);
+  assert.equal(sts.filter((s) => s === 422).length, 6);
+  assert.equal(sts.filter((s) => s === 429).length, 14);
+  assert.ok(rs.filter(([s]) => s === 429).every(([, o]) => o.error === 'limite_moderacion'), 'mensaje propio, no limite_ip');
+  assert.equal(calls.mod, 6, 'solo 6 llamadas a la moderación');
+  assert.equal(calls.rpc.filter(([n]) => n === 'vto_refund2').length, 20, 'todas devuelven el cupo general');
+  assert.ok([...usage.values()].every((n) => n >= 0 && n <= 6));
+});
+test('auditoría 8: prueba limpia libera la reserva (no gasta tope) y nunca queda negativo', async () => {
+  usage.clear();
+  const tok = await M.newTok('salt', 'litper');
+  const body = { tenant: 'litper', tok, consiento: true, consent: { v: '2026-11-19', h: await M.consentDe('ropa') }, handle: 'camiseta-basica', product: '//litper.store/cdn/camiseta.jpg', photo: PNG, w: 512, h: 512 };
+  for (let i = 0; i < 10; i++) { modRespuestas = [OK, OK]; const [s] = await M.actionAI(body, new Request('https://x', { method: 'POST', headers: { 'cf-connecting-ip': '204.4.4.4' } })); assert.equal(s, 200); }
+  assert.ok([...usage.entries()].filter(([k]) => k.startsWith('modfallo:')).every(([, n]) => n === 0));
+});
+test('auditoría 8: base sin respuesta en la reserva → 503 servicio_ocupado, sin moderar ni IA, cupo devuelto', async () => {
+  usage.clear(); calls.mod = 0; calls.cf = 0; calls.rpc = []; modCaida = true;
+  try {
+    const r = await prueba();
+    assert.equal(r.status, 503); assert.equal(r.out.error, 'servicio_ocupado'); assert.equal(r.mod, 0); assert.equal(r.cf, 0); assert.equal(r.refund.length, 1);
+  } finally { modCaida = false; }
+});
 
 /* ---------- 3) clasificador: igual en el servidor y en api/_util.js ---------- */
 const P = (title, extra = {}) => ({ title, ...extra });
@@ -162,6 +199,120 @@ const esperados = [
   [P('Brasier push up'), 'bloqueado'],
   [P('Tanga de encaje'), 'bloqueado'],
   [P('Protector de colchón antifluido'), 'protector'],
+  // auditoría 8 (tallas de dama 4–16, calzado 33–34, little, lencería de cama)
+  [P('Jean mujer talla 14'), 'ropa'],
+  [P('Jean dama talla 8'), 'ropa'],
+  [P('Jean mujer tallas 6 a 16'), 'ropa'],
+  [P('Pantalón dama tallas 4-16'), 'ropa'],
+  [P('Blusa mujer talla 4'), 'ropa'],
+  [P('Camisa caballero talla 16'), 'ropa'],
+  [P('Pantalón hombre talla 12'), 'ropa'],
+  [P('Vestido de mujer talla 10'), 'ropa'],
+  [P('Falda dama talla 6'), 'ropa'],
+  [P('Chaqueta mujer talla 2'), 'ropa'],
+  [P('Jean talla 14'), 'ropa'],
+  [P('Jean talla 10'), 'ropa'],
+  [P('Blusa talla 8'), 'ropa'],
+  [P('Jean clásico', { options: [{ name: 'Talla', values: ['6','8','10','12','14','16'] }] }), 'ropa'],
+  [P('Jean mujer', { options: [{ name: 'Talla', values: ['4','6','8','10','12','14','16'] }] }), 'ropa'],
+  [P('Pantalón dama', { options: [{ name: 'Talla', values: ['2','4','6','8'] }] }), 'ropa'],
+  [P('Jean clásico', { options: [{ name: 'Talla', values: ['4','6','8','10'] }] }), 'bloqueado'],
+  [P('Camiseta', { options: [{ name: 'Talla', values: ['2','3','4'] }] }), 'bloqueado'],
+  [P('Camiseta talla 2'), 'bloqueado'],
+  [P('Camiseta talla 4'), 'bloqueado'],
+  [P('Vestido tallas 2 a 4'), 'bloqueado'],
+  [P('Pijama talla 3'), 'bloqueado'],
+  [P('Jean niña talla 14'), 'bloqueado'],
+  [P('Vestido mujer y niña talla 8'), 'bloqueado'],
+  [P('Camiseta infantil talla 10'), 'bloqueado'],
+  [P('Sudadera colegial talla 12'), 'bloqueado'],
+  [P('Camisa escolar blanca'), 'bloqueado'],
+  [P('Pantalón escolar talla 14'), 'bloqueado'],
+  [P('Conjunto deportivo 4 años'), 'bloqueado'],
+  [P('Pijama 18 meses'), 'bloqueado'],
+  [P('Vestido', { variants: [{ title: '3T' }] }), 'bloqueado'],
+  [P('Camiseta mujer', { options: [{ name: 'Talla', values: ['S', 'M', 'Niña 8'] }] }), 'bloqueado'],
+  [P('Zapatos colegiales'), 'bloqueado'],
+  [P('Zapatos escolares negros'), 'bloqueado'],
+  [P('Zapato colegial de cuero'), 'bloqueado'],
+  [P('Tenis talla 33'), 'bloqueado'],
+  [P('Tenis talla 34'), 'bloqueado'],
+  [P('Zapatos talla 30'), 'bloqueado'],
+  [P('Tenis dama talla 34'), 'ropa'],
+  [P('Tenis hombre talla 33'), 'ropa'],
+  [P('Tenis dama talla 30'), 'bloqueado'],
+  [P('Tenis talla 38'), 'ropa'],
+  [P('Botas mujer talla 36'), 'ropa'],
+  [P('Tenis deportivos', { options: [{ name: 'Talla', values: ['33','34','35','36'] }] }), 'bloqueado'],
+  [P('Tenis deportivos dama', { options: [{ name: 'Talla', values: ['34','35','36','37'] }] }), 'ropa'],
+  [P('Tenis caballero', { options: [{ name: 'Talla', values: ['38','39','40','41','42'] }] }), 'ropa'],
+  [P('Botas', { options: [{ name: 'Talla', values: ['35','36','37','38'] }] }), 'ropa'],
+  [P('Mocasines hombre', { options: [{ name: 'Talla', values: ['32','38'] }] }), 'bloqueado'],
+  [P('Camisa little black'), 'ropa'],
+  [P('Vestido little black dress'), 'ropa'],
+  [P('Camiseta little girls'), 'bloqueado'],
+  [P('Buzo little kids'), 'bloqueado'],
+  [P('Camiseta little boy'), 'bloqueado'],
+  [P('Lencería de cama 3 piezas'), 'sabanas'],
+  [P('Lencería para cama doble'), 'sabanas'],
+  [P('Lencería de cama'), 'sabanas'],
+  [P('Ropa de cama 4 piezas'), 'sabanas'],
+  [P('Lencería de cama sexy'), 'bloqueado'],
+  [P('Lencería de hogar 3 piezas'), 'otro'],
+  [P('Lencería de cama: edredón doble faz'), 'edredon'],
+  [P('Camiseta oversize unisex'), 'ropa'],
+  [P('Camisa de lino hombre'), 'ropa'],
+  [P('Blusa campesina'), 'ropa'],
+  [P('Buzo con capota'), 'ropa'],
+  [P('Saco de lana'), 'ropa'],
+  [P('Chaqueta de jean'), 'ropa'],
+  [P('Chaleco acolchado'), 'ropa'],
+  [P('Crop top deportivo'), 'ropa'],
+  [P('Pantalón palazzo'), 'ropa'],
+  [P('Jean mom fit'), 'ropa'],
+  [P('Jogger cargo'), 'ropa'],
+  [P('Falda plisada'), 'ropa'],
+  [P('Short de jean'), 'ropa'],
+  [P('Vestido largo floral'), 'ropa'],
+  [P('Enterizo largo'), 'ropa'],
+  [P('Pijama de satín mujer'), 'ropa'],
+  [P('Tenis blancos'), 'ropa'],
+  [P('Botines de cuero'), 'ropa'],
+  [P('Conjunto deportivo mujer'), 'ropa'],
+  [P('Camiseta básica', { options: [{ name: 'Talla', values: ['XS','S','M','L','XL'] }] }), 'ropa'],
+  [P('Bikini tropical'), 'bloqueado'],
+  [P('Body manga larga'), 'bloqueado'],
+  [P('Faja colombiana'), 'bloqueado'],
+  [P('Vestido transparente'), 'bloqueado'],
+  [P('Pijama babydoll'), 'bloqueado'],
+  [P('Camiseta niño'), 'bloqueado'],
+  [P('Vestido bebé'), 'otro'],
+  [P('Ropa interior hombre'), 'bloqueado'],
+  [P('Juego de sábanas 1400 hilos'), 'sabanas'],
+  [P('Sábanas queen'), 'sabanas'],
+  [P('Edredón doble faz'), 'edredon'],
+  [P('Cobija ovejera'), 'cobija'],
+  [P('Almohada de plumas'), 'almohada'],
+  [P('Cortina blackout'), 'cortina'],
+  [P('Cortinas de luces led'), 'otro'],
+  [P('Mantel antifluido'), 'mantel'],
+  [P('Forro para sillas de comedor'), 'forro'],
+  [P('Comedor 4 puestos'), 'mueble'],
+  [P('Zapatero de 5 niveles'), 'mueble'],
+  [P('Protector de pantalla'), 'otro'],
+  [P('Protector impermeable para colchón'), 'protector'],
+  [P('Persiana enrollable'), 'cortina'],
+  [P('Cama doble con cabecero'), 'mueble'],
+  [P('Tapete de sala'), 'mueble'],
+  [P('Funda de colchón'), 'protector'],
+  [P('Colcha de patchwork'), 'edredon'],
+  [P('Manta para sofá'), 'forro'],
+  [P('Saco de dormir para camping'), 'otro'],
+  [P('Reloj inteligente'), 'otro'],
+  [P('Audífonos bluetooth'), 'otro'],
+  [P('Crema corporal'), 'otro'],
+  [P('Medias de compresión'), 'otro'],
+  [P('Organizador de ropa'), 'otro'],
 ];
 for (const [p, k] of esperados) test(`clasificador «${p.title}» → ${k}`, () => {
   assert.equal(M.kindOf(p).kind, k, 'servidor');

@@ -50,7 +50,7 @@ const has = (t, words) => new RegExp(`(^| )(${words})( |$)`).test(t);
 const at = (t, words) => { const m = new RegExp(`(^| )(${words})( |$)`).exec(t); return m ? m.index : -1; };
 const BLOCKED = 'ropa interior|brasier|brasieres|bra|sosten|panty|pantys|tanga|tangas|boxer|boxers|calzon|calzones|calzoncillo|calzoncillos|lenceria|bikini|bikinis|traje de bano|vestido de bano|banador|trusa|cachetero|bodysuit|body|faja|fajas|moldeador|moldeadora|shapewear|levanta gluteos|levanta cola|erotico|erotica|erotic|sexual|intimo|intima|sex|tanguita|hilo dental|lingerie|underwear|swimsuit|swimsuits|swimwear|thong|thongs|briefs|panties|negligee|nightie';
 // Solo para ropa (en hogar «transparente» o «malla» son normales: mantel transparente, organizador de malla)
-const BLOCKED_ROPA = 'sexy|transparente|transparentes|transparencia|transparencias|bralette|bralettes|babydoll|baby doll|corset|corsets|corse|corses|corpino|liguero|ligueros|camison|camisones|malla|mallas|encaje|encajes|infantil|infantiles|nino|nina|ninos|ninas|bebe|bebes|bebito|bebita|kids|kid|juvenil|escolar|colegial|colegio|preescolar|primaria|girls|girl|boys|boy|baby|babies|teen|teens|toddler|toddlers|junior|juniors|adolescente|adolescentes|infante|infantes|chicos|nene|nena|nenes|nenas|peques|recien nacido|youth|little|menor|menores|pequenos|pequenas|chiquito|chiquitos|chiquita|chiquitas|anos|meses|encaje transparente';
+const BLOCKED_ROPA = 'sexy|transparente|transparentes|transparencia|transparencias|bralette|bralettes|babydoll|baby doll|corset|corsets|corse|corses|corpino|liguero|ligueros|camison|camisones|malla|mallas|encaje|encajes|infantil|infantiles|nino|nina|ninos|ninas|bebe|bebes|bebito|bebita|kids|kid|juvenil|escolar|escolares|colegial|colegiales|colegio|preescolar|primaria|girls|girl|boys|boy|baby|babies|teen|teens|toddler|toddlers|junior|juniors|adolescente|adolescentes|infante|infantes|chicos|nene|nena|nenes|nenas|peques|recien nacido|youth|little girl|little girls|little boy|little boys|little kid|little kids|little one|little ones|menor|menores|pequenos|pequenas|chiquito|chiquitos|chiquita|chiquitas|anos|meses|encaje transparente';
 const NOT_HOME = 'pantalla|screen|celular|iphone|samsung|xiaomi|telefono|movil|camara|lente|lentes|solar|vidrio|templado|carro|auto|moto|vehiculo|parlante|cargador|bateria|audifonos|reloj|tablet|laptop|portatil|consola|perro|gato|mascota|bebe';
 // Telas de cama y de mesa: si el título las menciona, «comedor» o «cama» hablan de dónde va la tela, no de un mueble
 const TEXTIL_CAMA_MESA = 'kit|kits|sabana|sabanas|juego de cama|juegos de cama|protector|protectores|cobija|cobijas|cobertor|cobertores|frazada|frazadas|manta|mantas|edredon|edredones|colcha|colchas|plumon|plumones|cubrelecho|cubrelechos|duvet|comforter|almohada|almohadas|funda|fundas|forro|forros|cubresillas|cubre silla|mantel|manteles|camino de mesa|individuales|cortina|cortinas|colchon|colchones|cojin|cojines|tendido|tendidos|ropa de cama|lenceria';
@@ -76,18 +76,34 @@ const NOT_GARMENT = 'percha|perchas|gancho|ganchos|organizador|mascota|mascotas|
 const LENC_HOGAR = /(^| )lenceria (para (el |la )?|de (el |la )?|del )?(hogar|casa|cama|mesa|bano|cocina)(?= |$)/g;
 const INTIMO = 'sexy|sensual|intima|intimo|erotica|erotico|erotic|ropa interior|lingerie|underwear|brasier|brasieres|bra|tanga|tangas|panty|pantys|bralette|babydoll|liguero|encaje|encajes|transparente';
 const sinLencHogar = (t) => (has(t, INTIMO) ? t : t.replace(LENC_HOGAR, '$1textil hogar'));
-// auditoría 7: tallas infantiles. En el texto («talla 8», «talla niña», «4 años», «18 meses», «2T») y en la opción de talla
-// (valores numéricos de 2 a 16; en calzado, tallas menores a 33). Si hay duda, se bloquea (falla cerrada).
-const TALLA_NINO = 'talla (2|3|4|5|6|7|8|9|10|11|12|13|14|15|16)|tallas (2|3|4|5|6|7|8|9|10|11|12|13|14|15|16)|talla nino|talla nina|talla ninos|talla ninas|tallas nino|tallas nina|talla infantil|tallas infantiles|talla bebe|talla junior|\\d{1,2} anos|\\d{1,2} meses|[2-9]t|1[0-6]t';
-function tallasNino(p, garment) {
+const LENC_CAMA = 'lenceria de cama|lenceria para cama|lenceria para la cama|ropa de cama';
+// auditoría 7 + 8: tallas infantiles. Las pistas de niño bloquean siempre («talla niña», «4 años», «18 meses», «2T», «colegial»).
+// Los números NO bastan solos: en Colombia las tallas de dama son 4–16. Ropa: 2–4 es infantil solo si el texto no dice
+// dama/mujer/caballero/hombre/adulto. Calzado: menor a 33 siempre infantil; 33–34 infantil si no dice hombre/dama.
+const ADULTO = 'dama|damas|mujer|mujeres|caballero|caballeros|hombre|hombres|adulto|adultos|adulta|adultas';
+const NINO_TXT = 'talla nino|talla nina|talla ninos|talla ninas|tallas nino|tallas nina|talla infantil|tallas infantiles|talla bebe|talla junior|\\d{1,2} anos|\\d{1,2} meses|[2-9]t|1[0-6]t';
+const NINO_VAL = 'nino|nina|ninos|ninas|bebe|bebes|infantil|infantiles|kids|junior|toddler|colegial|colegiales|escolar|escolares';
+const UNE = new Set(['a', 'al', 'hasta', 'y', 'o', 'de']);
+// números de talla escritos en el texto: «talla 8», «tallas 2 a 4», «tallas 6-16» (normw deja «6 16»)
+function numsTalla(t) {
+  const out = [], w = t.split(' ');
+  for (let i = 0; i < w.length; i++) if (w[i] === 'talla' || w[i] === 'tallas') for (let j = i + 1; j < w.length; j++) {
+    if (/^\d{1,2}$/.test(w[j])) out.push(Number(w[j])); else if (!UNE.has(w[j])) break;
+  }
+  return out;
+}
+function tallaNino(nums, garment, adulto) {
+  if (garment === 'zapato') return nums.some((n) => n < 33 || (n < 35 && !adulto));
+  return !adulto && nums.some((n) => n >= 2 && n <= 4);
+}
+function tallasNino(p, garment, adulto) {
   const opts = Array.isArray(p?.options) ? p.options : [];
   const vals = [];
   for (const o of opts) if (o && typeof o === 'object' && /talla|size|tama|edad|medida/.test(normw(o.name)) && Array.isArray(o.values)) vals.push(...o.values.map((v) => normw(v)));
   const vt = (Array.isArray(p?.variants) ? p.variants : []).map((v) => normw(v?.title));
-  if ([...vals, ...vt].some((v) => has(v, TALLA_NINO) || has(v, 'nino|nina|ninos|ninas|bebe|bebes|infantil|kids|junior|toddler'))) return true;
-  const nums = vals.filter((v) => /^\d{1,2}(\.\d)?$/.test(v)).map(Number);
-  if (garment === 'zapato') return nums.some((n) => n < 33);
-  return nums.some((n) => n >= 2 && n <= 16);
+  if ([...vals, ...vt].some((v) => has(v, NINO_TXT) || has(v, NINO_VAL))) return true;
+  const nums = vals.filter((v) => /^\d{1,2}(\.\d)?$/.test(v)).map(Number).concat(...[...vals, ...vt].map(numsTalla));
+  return tallaNino(nums, garment, adulto);
 }
 export function kindOf(p) {
   const title = normw(p.title), type = normw(p.type || p.product_type), handle = normw(p.handle), tags = normw([].concat(p.tags || []).join(' '));
@@ -103,7 +119,9 @@ export function kindOf(p) {
   if (!has(`${title} ${handle}`, HOME_CTX) && !has(title, NOT_HOME) && !has(title, NOT_GARMENT)) {
     for (const [g, words] of Object.entries(GARMENTS)) { const i = at(title, words); if (i >= 0 && (!best || i < best.i)) best = { i, kind: 'ropa', garment: g }; }
   }
-  if (best && best.kind === 'ropa' && (has(all, BLOCKED_ROPA) || has(all, TALLA_NINO) || tallasNino(p, best.garment))) return { kind: 'bloqueado', garment: null };
+  if (!best && has(title, LENC_CAMA)) best = { i: 0, kind: 'sabanas' }; // auditoría 8: «lencería de cama 3 piezas» = juego de cama
+  const adulto = has(all, ADULTO);
+  if (best && best.kind === 'ropa' && (has(all, BLOCKED_ROPA) || has(all, NINO_TXT) || tallaNino(numsTalla(all), best.garment, adulto) || tallasNino(p, best.garment, adulto))) return { kind: 'bloqueado', garment: null };
   if (best) return { kind: best.kind, garment: best.garment || null };
   // sin palabra en el título: miramos el tipo de producto con las mismas reglas
   for (const [kind, words, ctx, excl] of RULES) if (has(type, words) && !(excl && has(`${title} ${type}`, excl)) && (!ctx || has(`${title} ${type} ${handle}`, ctx))) return { kind, garment: null };

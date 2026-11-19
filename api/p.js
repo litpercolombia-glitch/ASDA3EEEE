@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { dominiosTenant, tenantOk } from './_guard.js';
 
-const PROPIOS = ["'self'", 'https://probador.zynexapp.com', 'https://zynex-probador.vercel.app', 'https://asda3eeee-git-probador-litpers-projects.vercel.app'];
+const PROPIOS = ["'self'", 'https://probador.zynexapp.com', 'https://zynex-probador.vercel.app', 'https://asda3eeee.vercel.app', 'https://asda3eeee-git-probador-litpers-projects.vercel.app'];
 // Versión del JS en la URL: cada despliegue (y por tanto cada cambio de CONSENT_V en app.js) fuerza a bajar el app.js nuevo
 const VER = (process.env.VERCEL_GIT_COMMIT_SHA || String(Date.now())).slice(0, 10);
 let SHELL = null;

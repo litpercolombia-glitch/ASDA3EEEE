@@ -1,4 +1,8 @@
-// vto-api v6.14.0 — Zynex Probador (backend). 19-nov-2026, auditoría 7: moderación que falla cerrada (solo pasa con minor y
+// vto-api v6.15.0 — 19-nov-2026, auditoría 8: tope de 6 moderaciones fallidas por IP reservado de forma ATÓMICA antes de moderar
+//   (vto_mod_cupo; se libera si pasa limpia, nunca negativo) con mensaje propio limite_moderacion; tallas de dama 4–16 permitidas
+//   (2–16 es infantil solo con pista de niño o 2–4 sin dama/mujer/caballero/hombre), calzado 33–34 sin hombre/dama infantil,
+//   colegiales/escolares bloqueados, «little» solo con niño, «lencería de cama» = sábanas; origen https://asda3eeee.vercel.app.
+// v6.14.0 — Zynex Probador (backend). 19-nov-2026, auditoría 7: moderación que falla cerrada (solo pasa con minor y
 //   nudity_or_underwear en false booleano), cupo devuelto si la moderación rechaza o falla (tope 6/IP/día), tallas infantiles
 //   bloqueadas, «saco de dormir» fuera de ropa y «lencería para el hogar» permitida.
 // v6.12.0: ropa y zapatos por tienda (config.ropa=true; moderación siempre activa).
@@ -33,6 +37,7 @@ const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SE
    sesión firmada (tok, 8 pruebas) + tope por IP/día + tope diario por tienda (config.tope_dia o plan) + cuota del mes. */
 const ORIGINS = new Set([
   'https://probador.zynexapp.com',
+  'https://asda3eeee.vercel.app', // producción (rama probador)
   'https://asda3eeee-git-probador-litpers-projects.vercel.app',
   'https://zynex-probador.vercel.app',
 ]);
@@ -171,7 +176,7 @@ const has = (t: string, words: string) => new RegExp(`(^| )(${words})( |$)`).tes
 const at = (t: string, words: string) => { const m = new RegExp(`(^| )(${words})( |$)`).exec(t); return m ? m.index : -1; };
 const BLOCKED = 'ropa interior|brasier|brasieres|bra|sosten|panty|pantys|tanga|tangas|boxer|boxers|calzon|calzones|calzoncillo|calzoncillos|lenceria|bikini|bikinis|traje de bano|vestido de bano|banador|trusa|cachetero|bodysuit|body|faja|fajas|moldeador|moldeadora|shapewear|levanta gluteos|levanta cola|erotico|erotica|erotic|sexual|intimo|intima|sex|tanguita|hilo dental|lingerie|underwear|swimsuit|swimsuits|swimwear|thong|thongs|briefs|panties|negligee|nightie';
 // Solo para ropa (en hogar «transparente» o «malla» son normales: mantel transparente, organizador de malla)
-const BLOCKED_ROPA = 'sexy|transparente|transparentes|transparencia|transparencias|bralette|bralettes|babydoll|baby doll|corset|corsets|corse|corses|corpino|liguero|ligueros|camison|camisones|malla|mallas|encaje|encajes|infantil|infantiles|nino|nina|ninos|ninas|bebe|bebes|bebito|bebita|kids|kid|juvenil|escolar|colegial|colegio|preescolar|primaria|girls|girl|boys|boy|baby|babies|teen|teens|toddler|toddlers|junior|juniors|adolescente|adolescentes|infante|infantes|chicos|nene|nena|nenes|nenas|peques|recien nacido|youth|little|menor|menores|pequenos|pequenas|chiquito|chiquitos|chiquita|chiquitas|anos|meses';
+const BLOCKED_ROPA = 'sexy|transparente|transparentes|transparencia|transparencias|bralette|bralettes|babydoll|baby doll|corset|corsets|corse|corses|corpino|liguero|ligueros|camison|camisones|malla|mallas|encaje|encajes|infantil|infantiles|nino|nina|ninos|ninas|bebe|bebes|bebito|bebita|kids|kid|juvenil|escolar|escolares|colegial|colegiales|colegio|preescolar|primaria|girls|girl|boys|boy|baby|babies|teen|teens|toddler|toddlers|junior|juniors|adolescente|adolescentes|infante|infantes|chicos|nene|nena|nenes|nenas|peques|recien nacido|youth|little girl|little girls|little boy|little boys|little kid|little kids|little one|little ones|menor|menores|pequenos|pequenas|chiquito|chiquitos|chiquita|chiquitas|anos|meses';
 const NOT_HOME = 'pantalla|screen|celular|iphone|samsung|xiaomi|telefono|movil|camara|lente|lentes|solar|vidrio|templado|carro|auto|moto|vehiculo|parlante|cargador|bateria|audifonos|reloj|tablet|laptop|portatil|consola|perro|gato|mascota|bebe';
 // Telas de cama y de mesa: si el título las menciona, «comedor» o «cama» hablan de dónde va la tela, no de un mueble
 const TEXTIL_CAMA_MESA = 'kit|kits|sabana|sabanas|juego de cama|juegos de cama|protector|protectores|cobija|cobijas|cobertor|cobertores|frazada|frazadas|manta|mantas|edredon|edredones|colcha|colchas|plumon|plumones|cubrelecho|cubrelechos|duvet|comforter|almohada|almohadas|funda|fundas|forro|forros|cubresillas|cubre silla|mantel|manteles|camino de mesa|individuales|cortina|cortinas|colchon|colchones|cojin|cojines|tendido|tendidos|ropa de cama|lenceria';
@@ -197,18 +202,34 @@ const NOT_GARMENT = 'percha|perchas|gancho|ganchos|organizador|mascota|mascotas|
 const LENC_HOGAR = /(^| )lenceria (para (el |la )?|de (el |la )?|del )?(hogar|casa|cama|mesa|bano|cocina)(?= |$)/g;
 const INTIMO = 'sexy|sensual|intima|intimo|erotica|erotico|erotic|ropa interior|lingerie|underwear|brasier|brasieres|bra|tanga|tangas|panty|pantys|bralette|babydoll|liguero|encaje|encajes|transparente';
 const sinLencHogar = (t: string) => (has(t, INTIMO) ? t : t.replace(LENC_HOGAR, '$1textil hogar'));
-// auditoría 7: tallas infantiles. En el texto («talla 8», «talla niña», «4 años», «18 meses», «2T») y en la opción de talla
-// (valores numéricos de 2 a 16; en calzado, tallas menores a 33). Si hay duda, se bloquea (falla cerrada).
-const TALLA_NINO = 'talla (2|3|4|5|6|7|8|9|10|11|12|13|14|15|16)|tallas (2|3|4|5|6|7|8|9|10|11|12|13|14|15|16)|talla nino|talla nina|talla ninos|talla ninas|tallas nino|tallas nina|talla infantil|tallas infantiles|talla bebe|talla junior|\\d{1,2} anos|\\d{1,2} meses|[2-9]t|1[0-6]t';
-function tallasNino(p: any, garment: string) {
+const LENC_CAMA = 'lenceria de cama|lenceria para cama|lenceria para la cama|ropa de cama';
+// auditoría 7 + 8: tallas infantiles. Las pistas de niño bloquean siempre («talla niña», «4 años», «18 meses», «2T», «colegial»).
+// Los números NO bastan solos: en Colombia las tallas de dama son 4–16. Ropa: 2–4 es infantil solo si el texto no dice
+// dama/mujer/caballero/hombre/adulto. Calzado: menor a 33 siempre infantil; 33–34 infantil si no dice hombre/dama.
+const ADULTO = 'dama|damas|mujer|mujeres|caballero|caballeros|hombre|hombres|adulto|adultos|adulta|adultas';
+const NINO_TXT = 'talla nino|talla nina|talla ninos|talla ninas|tallas nino|tallas nina|talla infantil|tallas infantiles|talla bebe|talla junior|\\d{1,2} anos|\\d{1,2} meses|[2-9]t|1[0-6]t';
+const NINO_VAL = 'nino|nina|ninos|ninas|bebe|bebes|infantil|infantiles|kids|junior|toddler|colegial|colegiales|escolar|escolares';
+const UNE = new Set(['a', 'al', 'hasta', 'y', 'o', 'de']);
+// números de talla escritos en el texto: «talla 8», «tallas 2 a 4», «tallas 6-16» (normw deja «6 16»)
+function numsTalla(t: string) {
+  const out: number[] = [], w = t.split(' ');
+  for (let i = 0; i < w.length; i++) if (w[i] === 'talla' || w[i] === 'tallas') for (let j = i + 1; j < w.length; j++) {
+    if (/^\d{1,2}$/.test(w[j])) out.push(Number(w[j])); else if (!UNE.has(w[j])) break;
+  }
+  return out;
+}
+function tallaNino(nums: number[], garment: string, adulto: boolean) {
+  if (garment === 'zapato') return nums.some((n) => n < 33 || (n < 35 && !adulto));
+  return !adulto && nums.some((n) => n >= 2 && n <= 4);
+}
+function tallasNino(p: any, garment: string, adulto: boolean) {
   const opts = Array.isArray(p?.options) ? p.options : [];
   const vals: string[] = [];
   for (const o of opts) if (o && typeof o === 'object' && /talla|size|tama|edad|medida/.test(normw(o.name)) && Array.isArray(o.values)) vals.push(...o.values.map((v: unknown) => normw(v)));
   const vt = (Array.isArray(p?.variants) ? p.variants : []).map((v: any) => normw(v?.title));
-  if ([...vals, ...vt].some((v) => has(v, TALLA_NINO) || has(v, 'nino|nina|ninos|ninas|bebe|bebes|infantil|kids|junior|toddler'))) return true;
-  const nums = vals.filter((v) => /^\d{1,2}(\.\d)?$/.test(v)).map(Number);
-  if (garment === 'zapato') return nums.some((n) => n < 33);
-  return nums.some((n) => n >= 2 && n <= 16);
+  if ([...vals, ...vt].some((v) => has(v, NINO_TXT) || has(v, NINO_VAL))) return true;
+  const nums = vals.filter((v) => /^\d{1,2}(\.\d)?$/.test(v)).map(Number).concat(...[...vals, ...vt].map(numsTalla));
+  return tallaNino(nums, garment, adulto);
 }
 function kindOf(p: { title?: string; type?: string; product_type?: string; handle?: string; tags?: unknown; options?: unknown; variants?: unknown }) {
   const title = normw(p.title), type = normw(p.type || p.product_type), handle = normw(p.handle);
@@ -224,7 +245,9 @@ function kindOf(p: { title?: string; type?: string; product_type?: string; handl
   if (!has(`${title} ${handle}`, HOME_CTX) && !has(title, NOT_HOME) && !has(title, NOT_GARMENT)) {
     for (const [g, words] of Object.entries(GARMENT_WORDS)) { const i = at(title, words); if (i >= 0 && (!best || i < best.i)) best = { i, kind: 'ropa', garment: g }; }
   }
-  if (best?.kind === 'ropa' && (has(`${type} ${title} ${handle} ${tags}`, BLOCKED_ROPA) || has(`${type} ${title} ${handle} ${tags}`, TALLA_NINO) || tallasNino(p, best.garment || ''))) return { kind: 'bloqueado', garment: '' };
+  if (!best && has(title, LENC_CAMA)) best = { i: 0, kind: 'sabanas' }; // auditoría 8: «lencería de cama 3 piezas» = juego de cama
+  const all = `${type} ${title} ${handle} ${tags}`, adulto = has(all, ADULTO);
+  if (best?.kind === 'ropa' && (has(all, BLOCKED_ROPA) || has(all, NINO_TXT) || tallaNino(numsTalla(all), best.garment || '', adulto) || tallasNino(p, best.garment || '', adulto))) return { kind: 'bloqueado', garment: '' };
   if (best) return { kind: best.kind, garment: best.garment || '' };
   for (const [kind, words, ctx, excl] of RULES) if (has(type, words) && !(excl && has(`${title} ${type}`, excl)) && (!ctx || has(`${title} ${type} ${handle}`, ctx))) return { kind, garment: '' };
   return { kind: 'otro', garment: '' };
@@ -524,7 +547,8 @@ async function actionAI(body: any, req: Request) {
     if (take?.motivo === 'cuota_agotada') await avisoUnaVezAlDia(`cuota-${tenant}`, `🟠 Probador IA: la tienda "${tenant}" se quedó sin pruebas del mes. El botón se oculta solo hasta que suba de plan.`);
     return [429, { error: take?.motivo || 'limite' }];
   }
-  const t0 = Date.now(); let ok = false, err = '', n = 1;
+  const t0 = Date.now(); let ok = false, err = '', n = 1, modRes = false, modFallo = false;
+  const modKey = `modfallo:${ip}:${utcDay()}`;
   try {
     const prod = await productBlob(imgUrl);
     if (!prod) { err = 'producto_sin_imagen'; return [400, { error: err }]; }
@@ -547,10 +571,16 @@ async function actionAI(body: any, req: Request) {
     };
     // ropa: primero se revisa la foto (persona mayor de edad y vestida) y solo después se genera
     if (kind === 'ropa') {
-      if ((await getUtc(`modfallo:${ip}:${dia}`)) >= MOD_FALLOS_IP_DIA) { err = 'limite_moderacion'; return [429, { error: 'limite_ip' }]; }
+      // auditoría 8: el cupo de moderación se RESERVA antes de moderar (vto_mod_cupo: update condicional con candado de fila),
+      // así N pruebas simultáneas no pasan del tope. Si la moderación pasa limpia se libera en finally (nunca queda negativo).
+      const rr = await sb.rpc('vto_mod_cupo', { p_key: modKey, p_max: MOD_FALLOS_IP_DIA, p_n: 1 }).then((x: any) => x, (e: unknown) => ({ data: null, error: e }));
+      const res = rr?.error || rr?.data == null ? NaN : Number(rr.data);
+      if (Number.isNaN(res)) { err = 'servicio_ocupado'; return [503, { error: 'servicio_ocupado' }]; } // base sin respuesta: falla cerrada, sin IA
+      if (res < 1) { err = 'limite_moderacion'; return [429, { error: 'limite_moderacion' }]; } // -1 = tope de 6 lleno (no sumó)
+      modRes = true;
       const mod = await moderar(sec, photo).catch((e) => ({ estado: 'duda' as const, motivo: String((e as Error)?.name === 'TimeoutError' ? 'timeout' : (e as Error)?.message || e).slice(0, 120) }));
       if (mod.estado !== 'ok') { // auditoría 7: 422 o 503 → el cupo vuelve (finally: vto_refund2, IP + sesión + tienda, atómico)
-        await sb.rpc('vto_add_utc', { p_key: `modfallo:${ip}:${dia}`, p_n: 1 }); // tope de intentos fallidos por IP: el reembolso no es gratis infinito
+        modFallo = true; // la reserva queda contada: tope de intentos fallidos por IP, el reembolso no es gratis infinito
         if (mod.estado === 'bloquear') { err = 'foto_no_permitida'; return [422, { error: err }]; }
         err = 'moderacion_no_disponible'; console.error('mod', mod); return [503, { error: err }];
       }
@@ -560,7 +590,7 @@ async function actionAI(body: any, req: Request) {
     if (kind === 'ropa' && images.length) { // también se revisa lo que crea la IA: nada de ropa interior ni desnudos
       const chk = await Promise.all(images.map((im) => moderar(sec, im).catch(() => ({ estado: 'duda' as const }))));
       if (!chk.every((c) => c.estado === 'ok')) { // falla cerrada: ninguna imagen sale si alguna no pasó limpia
-        await sb.rpc('vto_add_utc', { p_key: `modfallo:${ip}:${dia}`, p_n: 1 });
+        modFallo = true; // usa la misma reserva (no suma dos veces)
         if (chk.some((c) => c.estado === 'bloquear')) { err = 'foto_no_permitida'; return [422, { error: err }]; }
         err = 'moderacion_no_disponible'; return [503, { error: err }];
       }
@@ -583,6 +613,7 @@ async function actionAI(body: any, req: Request) {
     err = String((e as Error)?.name === 'TimeoutError' ? 'ia_tiempo' : 'ia_fallo'); console.error('ai', e);
     return [502, { error: err }];
   } finally {
+    if (modRes && !modFallo) await sb.rpc('vto_mod_cupo', { p_key: modKey, p_max: MOD_FALLOS_IP_DIA, p_n: -1 }).then(() => {}, () => {});
     if (!ok) await sb.rpc('vto_refund2', { p_ip: ip, p_tenant: tenant, p_tok: tokId });
     await sb.from('vto_events').insert({ tenant_id: tenant, tipo: 'ia', handle, categoria: kind, via: v65 ? 'cf-klein4b-v65' : 'cf-klein4b', ms: Date.now() - t0, ok: ok && !err, detalle: err ? { error: err, ...cons } : { n, ...cons }, ip_hash: ip, sesion: str(body.sesion, 40) || null });
   }
