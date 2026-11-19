@@ -1,4 +1,5 @@
 // GET /api/kit?shop=tienda.com&handle=producto → productos que completan la compra (cama, ventana, mesa o look).
+import { tiendaPermitida } from './_guard.js';
 import { json, q, shopHost, handleOk, getJSON, img, kindOf } from './_util.js';
 
 const PAIRS = {
@@ -9,7 +10,7 @@ const PAIRS = {
 };
 // Combos y paquetes (dúo, trío, kit, x2, «paga 1 lleva 2»…) piden elegir cada unidad en su ficha: no se sugieren en el kit
 const COMBO = /(^|[^a-z])(duo|trio|combo|kit|pack|packs|paquete|juegos|set de \d)([^a-z]|$)|(^|[^a-z0-9])x ?[2-9]([^0-9]|$)|\d+ ?x ?\d|paga \d+ y? ?lleva|lleva(te)? \d+|a elegir/;
-const sinTilde = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const sinTilde = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 // Espacios: zapatero con clóset y entrada; estante de baño con baño (no mezclar)
 const ZONA_MUEBLE = (t) => /ba[nñ]o|inodoro|ducha|toalla/i.test(t) ? 'bano' : /zapat|closet|cl[oó]set|armario|perchero|entrada|ropa/i.test(t) ? 'ropa' : /cocina|alacena|especiero/i.test(t) ? 'cocina' : 'otro';
 const ZONE = { camiseta: 'top', polo: 'top', camisa: 'top', blusa: 'top', buzo: 'top', hoodie: 'top', saco: 'top', chaqueta: 'top', chaleco: 'top', top: 'top', pantalon: 'bottom', jean: 'bottom', sudadera: 'bottom', jogger: 'bottom', falda: 'bottom', short: 'bottom' };
@@ -18,6 +19,7 @@ export default async function handler(req, res) {
   res.setHeader('access-control-allow-origin', '*');
   const shop = shopHost(q(req, 'shop')), handle = q(req, 'handle').toLowerCase();
   if (!shop || !handleOk(handle)) return json(res, 400, { error: 'datos_invalidos' });
+  if (!(await tiendaPermitida(shop, q(req, 't')))) return json(res, 403, { error: 'tienda_no_registrada' });
   try {
     const all = (await getJSON(`https://${shop}/products.json?limit=250`)).products || [];
     const info = (p) => kindOf({ type: p.product_type, title: p.title, handle: p.handle, tags: typeof p.tags === 'string' ? p.tags.split(',') : p.tags });

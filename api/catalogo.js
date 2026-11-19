@@ -1,4 +1,5 @@
 // GET /api/catalogo?shop=tienda.com&handle=producto → producto normalizado para el probador (catálogo público, sin credenciales).
+import { tiendaPermitida } from './_guard.js';
 import { json, q, shopHost, handleOk, getJSON, shopMeta, img, kindOf, optionRoles, imageForValue } from './_util.js';
 
 export default async function handler(req, res) {
@@ -6,6 +7,7 @@ export default async function handler(req, res) {
   const shop = shopHost(q(req, 'shop')), handle = q(req, 'handle').toLowerCase();
   if (!shop) return json(res, 400, { error: 'tienda_invalida' });
   if (!handleOk(handle)) return json(res, 400, { error: 'producto_invalido' });
+  if (!(await tiendaPermitida(shop, q(req, 't')))) return json(res, 403, { error: 'tienda_no_registrada' });
   try {
     const [p, meta] = await Promise.all([getJSON(`https://${shop}/products/${handle}.js`), shopMeta(shop)]);
     const images = (p.images || []).map((u) => img(u)).filter(Boolean).slice(0, 40);

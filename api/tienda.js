@@ -1,10 +1,12 @@
 // GET /api/tienda?shop=tienda.com → productos que se pueden probar (para la demo de la landing y el selector).
+import { tiendaPermitida } from './_guard.js';
 import { json, q, shopHost, getJSON, shopMeta, img, kindOf } from './_util.js';
 
 export default async function handler(req, res) {
   res.setHeader('access-control-allow-origin', '*');
   const shop = shopHost(q(req, 'shop'));
   if (!shop) return json(res, 400, { error: 'tienda_invalida' });
+  if (!(await tiendaPermitida(shop, q(req, 't')))) return json(res, 403, { error: 'tienda_no_registrada' });
   try {
     const [d, meta] = await Promise.all([getJSON(`https://${shop}/products.json?limit=250`), shopMeta(shop)]);
     if (!Array.isArray(d?.products)) return json(res, 422, { error: 'no_es_shopify' });

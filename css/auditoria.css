@@ -1,0 +1,7 @@
+/* Auditoría 19-nov-2026: título h1, botones ≥24 px, selección de ejemplos y casilla de autorización */
+.bar-t h1 { margin: 0; font: 700 17px/1.15 var(--f-u); letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.link { padding: 4px 2px; min-height: 24px; min-width: 24px; }
+.sample-row button[aria-pressed=true] { border-color: var(--neon); box-shadow: 0 0 0 3px var(--neon-a); }
+.samples #btnSampleGo { margin-top: 8px; width: 100%; }
+.consent.pulse { animation: optpulse .8s 2; }
+@media (prefers-reduced-motion: reduce) { .consent.pulse { animation: none; outline: 2px solid var(--neon); } }
