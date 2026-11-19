@@ -1,4 +1,5 @@
-// vto-api v6.11.0 — Zynex Probador (backend). 19-nov-2026 (auditoría 6: clasificador con comedor, cama y funda de colchón;
+// vto-api v6.12.0 — Zynex Probador (backend). 19-nov-2026: ropa y zapatos por tienda (config.ropa=true; moderación siempre activa).
+// v6.11.0 (auditoría 6: clasificador con comedor, cama y funda de colchón;
 //   si la base falla al descontar el cupo responde «servicio_ocupado» y no culpa a la foto).
 // v6.10.0 (auditoría 5: la huella del consentimiento debe ser la del texto de la
 //   categoría del producto (ropa = texto de mayoría de edad); cfg entrega los dominios de la tienda para el frame-ancestors de /p;
@@ -162,7 +163,7 @@ async function tokOk(salt: string, tenant: string, tok: unknown) {
 }
 
 /* ---------- qué es el producto (mismo clasificador v2 que /api/_util.js) ---------- */
-const normw = (s: unknown) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9ñ]+/g, ' ').trim();
+const normw = (s: unknown) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9ñ]+/g, ' ').trim();
 const has = (t: string, words: string) => new RegExp(`(^| )(${words})( |$)`).test(t);
 const at = (t: string, words: string) => { const m = new RegExp(`(^| )(${words})( |$)`).exec(t); return m ? m.index : -1; };
 const BLOCKED = 'ropa interior|brasier|brasieres|bra|sosten|panty|pantys|tanga|tangas|boxer|boxers|calzon|calzones|calzoncillo|calzoncillos|lenceria|bikini|bikinis|traje de bano|vestido de bano|banador|trusa|cachetero|bodysuit|body|faja|fajas|moldeador|moldeadora|shapewear|levanta gluteos|levanta cola|erotico|erotica|erotic|sexual|intimo|intima|sex|tanguita|hilo dental|lingerie|underwear|swimsuit|swimsuits|swimwear|thong|thongs|briefs|panties|negligee|nightie';
@@ -365,6 +366,18 @@ function outSize(w: number, h: number) {
   return [r16(w), r16(h)];
 }
 
+/* ropa y zapatos: encendido global (VTO_MODERACION=on) o solo para una tienda (config.ropa=true en vto_tenants).
+   Encender no apaga ninguna protección: toda prueba de ropa pasa SIEMPRE por la moderación (antes y después de generar),
+   exige la huella del texto de mayoría de edad y bloquea ropa interior, trajes de baño y prendas infantiles. */
+const ropaOn = (sec: Record<string, string>, t: { config?: any } | null | undefined) => sec.VTO_MODERACION === 'on' || t?.config?.ropa === true;
+const RCACHE = new Map<string, { t: number; v: any }>();
+async function tenantCfg(id: string) {
+  const c = RCACHE.get(id); if (c && Date.now() - c.t < 60_000) return c.v;
+  const { data } = await sb.from('vto_tenants').select('config').eq('id', id).maybeSingle();
+  if (RCACHE.size > 500) RCACHE.clear();
+  RCACHE.set(id, { t: Date.now(), v: data }); return data;
+}
+
 /* ---------- moderación de fotos de personas (Cloudflare Moondream): antes de generar y sobre lo que genera la IA ---------- */
 const MOD_Q = 'Look at the image and answer with JSON only, no other text: {"person": true or false, "minor": true or false, "nudity_or_underwear": true or false}. "minor" is true if any person looks younger than 18. "nudity_or_underwear" is true if anyone is nude, topless, or shown in underwear, lingerie or swimwear.';
 async function moderar(sec: Record<string, string>, photo: string) {
@@ -448,8 +461,7 @@ async function actionAI(body: any, req: Request) {
   if (kind === 'otro') return [422, { error: 'producto_sin_probador' }];
   // la autorización tiene que ser la del texto de ESTA categoría (no sirve la huella de otro texto vigente)
   if (cons.consent_h !== (await consentDe(kind))) return [400, { error: 'consentimiento_invalido' }];
-  const moderacion = sec.VTO_MODERACION === 'on';
-  if (kind === 'ropa' && !moderacion) return [422, { error: 'ropa_no_disponible' }];
+  if (kind === 'ropa' && !ropaOn(sec, t)) return [422, { error: 'ropa_no_disponible' }];
   // motor v6.5 (recorte de la tela + color medido + instrucciones por categoría): global con VTO_MOTOR=v65 o, para validarlo, en la demo con exp
   const v65 = sec.VTO_MOTOR === 'v65' || (t.plan === 'demo' && body.exp === 'v65');
   const rf = refOk(body.ref);
@@ -691,7 +703,7 @@ async function actionCfg(body: any, req: Request) {
   const wa = /^\d{8,15}$/.test(String(t.config?.whatsapp || '')) ? String(t.config.whatsapp) : null;
   return [200, {
     id: t.id, dominio: t.plan === 'demo' ? null : t.shop_domain, dominios: dominiosDe(t), activo: t.estado === 'activo', estado: t.estado,
-    sello: SELLO.has(t.plan), kit: KIT.has(t.plan) && t.config?.kit !== false, wa, cod: t.config?.cod === true, ropa: sec.VTO_MODERACION === 'on', ia: !(await iaPausada()), tok,
+    sello: SELLO.has(t.plan), kit: KIT.has(t.plan) && t.config?.kit !== false, wa, cod: t.config?.cod === true, ropa: ropaOn(sec, t), ia: !(await iaPausada()), tok,
     visto: t.config?.visto || null, desde: t.config?.activada || null,
     verif: typeof t.config?.verificado?.ok === 'boolean' ? t.config.verificado.ok : null, verif_url: t.config?.verificado?.url || null,
   }];
@@ -704,7 +716,8 @@ async function actionEstado(body: any, req: Request, origin: string | null) {
   const sec = await secrets(); const ip = await ipHash(req, sec.VTO_SALT || 'x');
   const { data: okRate } = await sb.rpc('vto_rate', { p_key: ip + '#estado', p_max: 500 });
   if (okRate === false) return [429, { error: 'limite' }];
-  let [{ data }, pausa] = await Promise.all([sb.rpc('vto_activar2', { p_tenant: id, p_host: host, p_activar: false }), iaPausada()]);
+  let [{ data }, pausa, tcfg] = await Promise.all([sb.rpc('vto_activar2', { p_tenant: id, p_host: host, p_activar: false }), iaPausada(), tenantCfg(id)]);
+  const ropa = ropaOn(sec, tcfg);
   if (data?.motivo === 'dominio_distinto' && shopHost(host) && shopHost(data.dominio)) {
     // ¿Es otro dominio de la MISMA tienda (myshopify, dominio de Markets, www)? Shopify lo dice en /meta.json
     const [a, b, dns] = await Promise.all([myshopifyOf(host), myshopifyOf(String(data.dominio)), apuntaAShopify(host)]);
@@ -718,7 +731,7 @@ async function actionEstado(body: any, req: Request, origin: string | null) {
   if (data?.ok && data.pendiente) {
     // la prueba arranca solo si el bloque está de verdad en la página publicada desde donde cargó el botón (máximo 1 lectura por minuto)
     const k = 'p:' + id;
-    if ((VCACHE.get(k) ?? 0) > Date.now() - 60_000) return [200, { mostrar: false, activado: false, ia: !pausa, ropa: sec.VTO_MODERACION === 'on' }];
+    if ((VCACHE.get(k) ?? 0) > Date.now() - 60_000) return [200, { mostrar: false, activado: false, ia: !pausa, ropa }];
     if (VCACHE.size > 500) VCACHE.clear();
     VCACHE.set(k, Date.now());
     const v = await bloqueEnPagina(host, str(body.p, 300), id), avisa = !id.startsWith('zz-prueba-'); // tiendas de prueba del equipo: sin avisos
@@ -729,7 +742,7 @@ async function actionEstado(body: any, req: Request, origin: string | null) {
       if (data?.activado && avisa) await sb.from('slack_cola').insert({ tipo: 'parte', destino: 'dm_ceo', empresa: 'zynex', origen: 'probador', mensaje: `🟢 Probador IA instalado y verificado: la tienda "${id}" activó su prueba de 14 días con 100 fotos. Bloque visto en ${slackSafe(v.url || '')}.` });
     } else {
       if (avisa) await avisoUnaVezAlDia(`sinbloque-${id}`, `🟠 Probador IA: el botón de "${id}" cargó en ${slackSafe(host)}, pero no vemos el bloque publicado en ${slackSafe(v.url || 'su página')}. La prueba no arranca hasta que esté publicado.`);
-      return [200, { mostrar: false, activado: false, ia: !pausa, ropa: sec.VTO_MODERACION === 'on' }];
+      return [200, { mostrar: false, activado: false, ia: !pausa, ropa }];
     }
   } else if (data?.ok && data.activo && host && (VCACHE.get(id) ?? 0) < Date.now() - 3_600_000) {
     // tienda activa sin bloque confirmado: se revisa como máximo una vez por hora, sin frenar la respuesta
@@ -737,7 +750,7 @@ async function actionEstado(body: any, req: Request, origin: string | null) {
     VCACHE.set(id, Date.now());
     await enFondo(verificar(id, host, str(body.p, 300)));
   }
-  return [200, { mostrar: !!(data?.ok && data.activo && data.cupo > 0 && data.hoy_ok !== false), activado: !!data?.activado, ia: !pausa, ropa: sec.VTO_MODERACION === 'on' }];
+  return [200, { mostrar: !!(data?.ok && data.activo && data.cupo > 0 && data.hoy_ok !== false), activado: !!data?.activado, ia: !pausa, ropa }];
 }
 
 async function actionStats(body: any) {
