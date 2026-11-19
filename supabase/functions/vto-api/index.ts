@@ -166,7 +166,7 @@ async function tokOk(salt: string, tenant: string, tok: unknown) {
 }
 
 /* ---------- qué es el producto (mismo clasificador v2 que /api/_util.js) ---------- */
-const normw = (s: unknown) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9ñ]+/g, ' ').trim();
+const normw = (s: unknown) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9ñ]+/g, ' ').trim();
 const has = (t: string, words: string) => new RegExp(`(^| )(${words})( |$)`).test(t);
 const at = (t: string, words: string) => { const m = new RegExp(`(^| )(${words})( |$)`).exec(t); return m ? m.index : -1; };
 const BLOCKED = 'ropa interior|brasier|brasieres|bra|sosten|panty|pantys|tanga|tangas|boxer|boxers|calzon|calzones|calzoncillo|calzoncillos|lenceria|bikini|bikinis|traje de bano|vestido de bano|banador|trusa|cachetero|bodysuit|body|faja|fajas|moldeador|moldeadora|shapewear|levanta gluteos|levanta cola|erotico|erotica|erotic|sexual|intimo|intima|sex|tanguita|hilo dental|lingerie|underwear|swimsuit|swimsuits|swimwear|thong|thongs|briefs|panties|negligee|nightie';

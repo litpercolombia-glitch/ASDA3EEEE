@@ -41,11 +41,11 @@ export async function shopMeta(shop) {
 }
 
 export const img = (u, w) => { if (!u) return null; let s = u.startsWith('//') ? 'https:' + u : u; if (w) s += (s.includes('?') ? '&' : '?') + 'width=' + w; return s; };
-const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 // Qué es el producto: decide el tipo de prueba (v2, 17-oct-2026: palabras completas, contexto obligatorio y exclusiones;
 // probado con 3.000+ productos de 17 tiendas colombianas: evita «protector de pantalla», «cortina de luces», «silla plegable», etc.)
-const normw = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9ñ]+/g, ' ').trim();
+const normw = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9ñ]+/g, ' ').trim();
 const has = (t, words) => new RegExp(`(^| )(${words})( |$)`).test(t);
 const at = (t, words) => { const m = new RegExp(`(^| )(${words})( |$)`).exec(t); return m ? m.index : -1; };
 const BLOCKED = 'ropa interior|brasier|brasieres|bra|sosten|panty|pantys|tanga|tangas|boxer|boxers|calzon|calzones|calzoncillo|calzoncillos|lenceria|bikini|bikinis|traje de bano|vestido de bano|banador|trusa|cachetero|bodysuit|body|faja|fajas|moldeador|moldeadora|shapewear|levanta gluteos|levanta cola|erotico|erotica|erotic|sexual|intimo|intima|sex|tanguita|hilo dental|lingerie|underwear|swimsuit|swimsuits|swimwear|thong|thongs|briefs|panties|negligee|nightie';
