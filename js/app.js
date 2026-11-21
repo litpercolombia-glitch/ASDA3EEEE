@@ -286,14 +286,18 @@ function renderProduct() {
   $('#pImg').src = thumb(productImage(), 160);
   $('#pName').textContent = P.title;
   const pr = $('#pPrice');
-  if (fx || noExiste) {
+  const OF = P.oferta && P.oferta.precio ? P.oferta : null;
+  if (OF) { // combo: el precio de variante es el de 1 unidad; se muestran los dos con su nombre
+    const mn = Math.min(...P.variants.map((x) => x.price));
+    pr.replaceChildren(el('span', { text: `${OF.txt.replace(/\s*\$\s?[\d.,]+/, '')} ${money(OF.precio, P.currency)}`.trim() }), el('small', { class: 'p1', text: `Solo 1 unidad: ${money(mn, P.currency)}` }));
+  } else if (fx || noExiste) {
     const ci = idx('color'), same = P.variants.filter((x) => ci < 0 || x.options[ci] === sel.color), min = Math.min(...same.map((x) => x.price));
     pr.replaceChildren(`Desde ${money(min, P.currency)}`);
   } else {
     pr.replaceChildren(money(v.price, P.currency));
     if (v.compare && v.compare > v.price) pr.append(el('s', { text: money(v.compare, P.currency) }));
   }
-  $('#buyLab').textContent = DEMO ? 'Quiero esto en mi tienda' : fx ? `Elige ${fx.txt} para comprar` : noExiste ? 'Esa combinación no existe' : v.available === false ? 'Pedir este' : `Comprar · ${money(v.price, P.currency)}`;
+  $('#buyLab').textContent = DEMO ? 'Quiero esto en mi tienda' : fx ? `Elige ${fx.txt} para comprar` : noExiste ? 'Esa combinación no existe' : v.available === false ? 'Pedir este' : OF ? 'Ver la oferta y comprar' : `Comprar · ${money(v.price, P.currency)}`;
   if (document.body.dataset.state === 'resultado') renderKit();
 }
 const sinFoto = (val) => !!(P?.sinFoto?.length && P.sinFoto.includes(val));
@@ -774,6 +778,7 @@ function kitChosen(it) {
   return (kitPick.has(it.handle) && opts.find((x) => x.id === kitPick.get(it.handle))) || kitVariant(it);
 }
 function renderKit() {
+  if (P?.oferta?.precio) { $('#kit').hidden = true; return; } // en un combo el carrito del kit sumaría 1 unidad, no el combo: la oferta se compra en la ficha
   if (!KIT?.items?.length || DEMO) return;
   const list = $('#kitList'); list.replaceChildren();
   const main = currentVariant(); let total = main.price, n = 1;

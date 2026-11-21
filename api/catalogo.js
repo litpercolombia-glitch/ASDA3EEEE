@@ -36,10 +36,13 @@ export default async function handler(req, res) {
       for (const v of variants) v.propia = own.get(v.options[ci]) === v.image;
     }
     const sinFoto = ci >= 0 && own.size > 0 ? (options[ci]?.values || []).filter((val) => !own.has(val)) : [];
+    // precio de la oferta (etiqueta «oferta:Paga 3 por $199.900»): el precio de variante es el de 1 unidad y no puede mostrarse como el del combo
+    const tg = [].concat(p.tags || []).map((x) => String(x)), tOf = tg.find((x) => /^oferta:/i.test(x.trim())), mP = tOf && tOf.match(/\$\s?(\d{1,3}(?:[.,]\d{3})+|\d{4,})/);
+    const oferta = tOf ? { txt: tOf.replace(/^oferta:\s*/i, '').slice(0, 80), precio: mP ? parseInt(mP[1].replace(/[.,]/g, ''), 10) : null } : null;
     json(res, 200, {
       shop, shopName: meta.name, currency: meta.currency,
       handle: p.handle, title: p.title, type: p.type || '', vendor: p.vendor || '', url: `https://${shop}/products/${p.handle}`,
-      kind, garment, options: options.map((o, i) => ({ ...o, role: roles[i] })), variants, images, sinFoto,
+      kind, garment, options: options.map((o, i) => ({ ...o, role: roles[i] })), variants, images, sinFoto, oferta,
     }, 'public, s-maxage=600, stale-while-revalidate=86400');
   } catch (e) {
     json(res, e.status === 404 ? 404 : 502, { error: e.status === 404 ? 'no_existe' : 'tienda_no_responde' });
